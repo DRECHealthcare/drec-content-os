@@ -1,0 +1,11 @@
+{
+  "buildCommand": "rm -rf dist && mkdir -p dist && cp -R apps/web/. dist/",
+  "outputDirectory": "dist",
+  "installCommand": "",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

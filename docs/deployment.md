@@ -31,7 +31,9 @@ The API exposes:
 
 ## Vercel Web
 
-Deploy `apps/web` as a static Vercel project.
+Deploy the repository root as a Vercel project. The root `vercel.json` copies
+`apps/web` into `dist` during build, so the project works even if the Vercel
+Root Directory is left as the repository root.
 
 Set:
 

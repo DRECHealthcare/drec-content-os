@@ -49,7 +49,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8080
 ```
 
-5. Open `apps/web/index.html` in a browser, or deploy `apps/web` to Vercel.
+5. Open `apps/web/index.html` in a browser, or deploy the repository root to Vercel.
 
 ## Current Status
 

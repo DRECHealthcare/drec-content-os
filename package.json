@@ -1,0 +1,8 @@
+{
+  "private": true,
+  "name": "drec-content-os",
+  "version": "0.1.0",
+  "scripts": {
+    "build": "rm -rf dist && mkdir -p dist && cp -R apps/web/. dist/"
+  }
+}
