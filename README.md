@@ -55,4 +55,13 @@ uvicorn app.main:app --reload --port 8080
 
 ## Current Status
 
-This is not the full Content OS yet. It is the Stage 1 foundation: database, API surface, contracts, deployment files, and UI shell. See `NEXT.md` for the active build path.
+Stage 1 is now a working thin-core workflow:
+
+- Generate weekly DREC content briefs
+- Draft conservative educational captions
+- Run pre-publish compliance checks
+- Queue and review posts with approval feedback
+- Build a manual publishing handoff while Meta credentials are pending
+- Record performance outcomes and view the first learning summary
+
+Meta auto-publishing and nightly Meta metrics ingestion are intentionally held until the Facebook Page and Instagram permissions are connected. See `NEXT.md` for the active build path.

@@ -24,23 +24,27 @@ Ship Stage 1 of DREC Content OS:
 - [x] Connected API to Supabase REST
 - [x] Added pre-publish compliance check and safety gate
 - [x] Documented conservative Meta publishing path
+- [x] Added weekly plan generation and brief drafting workflow
+- [x] Added review actions, learning summary, and performance outcome tracking
+- [x] Added publishing handoff builder for manual-safe execution before Meta is connected
 
 ## Next Engineering Tasks
 
-- [ ] Create the GitHub repository and push this folder
 - [x] Create the GitHub repository and push this folder
 - [x] Create Supabase project and run `supabase/schema.sql`
 - [x] Fill production environment variables in Fly.io and Vercel
+- [x] Connect web UI actions to the API
+- [x] Add auth protection to the API and token-gated web data access
+- [x] Add weekly plan generation
+- [x] Add first closed-loop learning report
 - [ ] Connect Meta Graph API credentials
 - [ ] Implement real Facebook publish scheduling
 - [ ] Implement Instagram two-step publish worker
 - [ ] Add nightly metrics ingestion from Meta
-- [ ] Add auth protection to the web UI
-- [ ] Connect web UI actions to the API
 
 ## Stage 2 Preview
 
-- Weekly plan generation
-- Approval/edit capture as taste signals
-- Brief routing into Creative Engine
-- First true closed-loop learning report
+- Creative asset library and media upload rail
+- Meta publishing worker after Page/Instagram credentials are approved
+- Nightly Meta metrics ingestion
+- Stronger role-based web login
