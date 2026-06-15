@@ -27,6 +27,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added weekly plan generation and brief drafting workflow
 - [x] Added review actions, learning summary, and performance outcome tracking
 - [x] Added publishing handoff builder for manual-safe execution before Meta is connected
+- [x] Added asset library workflow and Creative Draft packages with caption variants, carousel slides, and reel scripts
 
 ## Next Engineering Tasks
 
@@ -37,6 +38,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add auth protection to the API and token-gated web data access
 - [x] Add weekly plan generation
 - [x] Add first closed-loop learning report
+- [x] Add Creative Engine draft packages
 - [ ] Connect Meta Graph API credentials
 - [ ] Implement real Facebook publish scheduling
 - [ ] Implement Instagram two-step publish worker
@@ -44,7 +46,7 @@ Ship Stage 1 of DREC Content OS:
 
 ## Stage 2 Preview
 
-- Creative asset library and media upload rail
+- Media upload/storage rail
 - Meta publishing worker after Page/Instagram credentials are approved
 - Nightly Meta metrics ingestion
 - Stronger role-based web login
