@@ -17,6 +17,8 @@ This repository starts the Stage 1 build from the unified proposal:
 - **Fly.io**: Python API and background jobs
 - **GitHub**: source control and CI/CD
 
+Current Supabase project details are documented in `docs/supabase.md`.
+
 ## Project Shape
 
 ```text

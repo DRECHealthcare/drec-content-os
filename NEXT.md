@@ -17,11 +17,14 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added Vercel-ready UI shell based on the proposal screens
 - [x] Added core contracts, brand tokens, and compliance rules
 - [x] Added Fly.io and Vercel deployment config
+- [x] Created Supabase project `DREC Content OS`
+- [x] Applied Stage 1 schema and seeded initial Knowledge Base rows
 
 ## Next Engineering Tasks
 
 - [ ] Create the GitHub repository and push this folder
-- [ ] Create Supabase project and run `supabase/schema.sql`
+- [x] Create the GitHub repository and push this folder
+- [x] Create Supabase project and run `supabase/schema.sql`
 - [ ] Fill production environment variables in Fly.io and Vercel
 - [ ] Connect Meta Graph API credentials
 - [ ] Implement real Facebook publish scheduling

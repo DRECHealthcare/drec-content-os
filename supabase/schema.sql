@@ -97,7 +97,7 @@ create table if not exists outcomes (
   channel text,
   audience_label text,
   published_at timestamptz,
-  window text check (window in ('7d', '28d', '90d')),
+  metric_window text check (metric_window in ('7d', '28d', '90d')),
   score numeric,
   watch_metric numeric,
   shares int,
