@@ -19,6 +19,7 @@ document.querySelectorAll("nav button").forEach((button) => {
     document.querySelectorAll(".screen").forEach((item) => item.classList.toggle("active", item.id === screen));
     document.getElementById("title").textContent = titleMap[screen] || screen;
     if (screen === "plan") loadBriefs();
+    if (screen === "learning") loadLearningSummary();
     if (screen === "scheduler" || screen === "review") loadPublishQueue();
   });
 });
@@ -45,6 +46,7 @@ function promptForToken() {
   loadLoopStatus();
   loadKb();
   loadBriefs();
+  loadLearningSummary();
   loadPublishQueue();
 }
 
@@ -199,6 +201,42 @@ async function loadBriefs() {
       : "<p class=\"status-note\">No content briefs yet. Generate this week's plan to start.</p>";
   } catch {
     container.innerHTML = '<p class="status-note">Set the access token to load weekly briefs.</p>';
+  }
+}
+
+function countRows(items, labelKey) {
+  if (!items.length) return "<li>No signals yet.</li>";
+  return items.map((item) => `<li><strong>${escapeHtml(item[labelKey] || "unknown")}</strong> ${Number(item.count || 0)}</li>`).join("");
+}
+
+async function loadLearningSummary() {
+  const container = document.getElementById("learning-summary");
+  if (!container) return;
+  try {
+    const data = await fetchJson("/learning-summary");
+    const briefs = data.recent_briefs || [];
+    container.innerHTML = `
+      <article class="learning-card wide-learning">
+        <h3>Next Best Move</h3>
+        <p>${escapeHtml(data.recommendation)}</p>
+      </article>
+      <article class="learning-card">
+        <h3>Queue</h3>
+        <ul>${countRows(data.queue || [], "status")}</ul>
+      </article>
+      <article class="learning-card">
+        <h3>Feedback</h3>
+        <ul>${countRows(data.feedback || [], "action")}</ul>
+      </article>
+      <article class="learning-card wide-learning">
+        <h3>Recent Briefs</h3>
+        <ul>
+          ${briefs.length ? briefs.map((brief) => `<li><strong>${escapeHtml(brief.format || "brief")}</strong> ${escapeHtml(brief.topic || "")}</li>`).join("") : "<li>No briefs yet.</li>"}
+        </ul>
+      </article>
+    `;
+  } catch {
+    container.innerHTML = '<p class="status-note">Set the access token to load learning signals.</p>';
   }
 }
 
@@ -499,5 +537,6 @@ document.getElementById("review-items").addEventListener("click", async (event) 
 loadLoopStatus();
 loadKb();
 loadBriefs();
+loadLearningSummary();
 loadPublishQueue();
 updateTokenButton();

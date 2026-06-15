@@ -408,6 +408,63 @@ async def capture_feedback(feedback: FeedbackIn, _: None = Depends(require_acces
     return {"item": row or feedback.model_dump()}
 
 
+@app.get("/learning-summary")
+async def learning_summary(_: None = Depends(require_access_token)):
+    queue = await fetch_rows(
+        "select status, count(*)::int as count from publish_queue group by status"
+    )
+    feedback = await fetch_rows(
+        "select action, count(*)::int as count from feedback group by action"
+    )
+    recent_briefs = await fetch_rows(
+        """
+        select topic, format, funnel_stage, language, status, created_at
+        from content_briefs
+        order by created_at desc
+        limit 5
+        """
+    )
+    if supabase_rest.configured() and not queue:
+        queue_rows = await supabase_rest.select("publish_queue", {"select": "status", "limit": "1000"})
+        queue_counts = {}
+        for row in queue_rows:
+            status = row.get("status", "unknown")
+            queue_counts[status] = queue_counts.get(status, 0) + 1
+        queue = [{"status": status, "count": count} for status, count in queue_counts.items()]
+    if supabase_rest.configured() and not feedback:
+        feedback_rows = await supabase_rest.select("feedback", {"select": "action", "limit": "1000"})
+        feedback_counts = {}
+        for row in feedback_rows:
+            action = row.get("action", "unknown")
+            feedback_counts[action] = feedback_counts.get(action, 0) + 1
+        feedback = [{"action": action, "count": count} for action, count in feedback_counts.items()]
+    if supabase_rest.configured() and not recent_briefs:
+        recent_briefs = await supabase_rest.select(
+            "content_briefs",
+            {
+                "select": "topic,format,funnel_stage,language,status,created_at",
+                "order": "created_at.desc",
+                "limit": "5",
+            },
+        )
+
+    queue_total = sum(item.get("count", 0) for item in queue)
+    feedback_total = sum(item.get("count", 0) for item in feedback)
+    recommendation = (
+        "Draft from the weekly plan, then send safe items through review."
+        if queue_total == 0
+        else "Review pending queue items before connecting Meta publishing."
+        if feedback_total == 0
+        else "Use approval and rejection patterns to refine next week's topics."
+    )
+    return {
+        "queue": queue,
+        "feedback": feedback,
+        "recent_briefs": recent_briefs,
+        "recommendation": recommendation,
+    }
+
+
 @app.get("/loop-status")
 async def loop_status(_: None = Depends(require_access_token)):
     queue = await fetch_rows(
