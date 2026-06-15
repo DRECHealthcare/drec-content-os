@@ -391,6 +391,24 @@ button[type="submit"] {
   color: var(--navy);
 }
 
+.media-list {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #FFF;
+}
+
+.media-list strong {
+  color: var(--navy);
+}
+
+.media-list a {
+  color: #0B655F;
+  overflow-wrap: anywhere;
+}
+
 .learning-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

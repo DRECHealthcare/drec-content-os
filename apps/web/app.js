@@ -101,6 +101,17 @@ function splitLines(value) {
     .filter(Boolean);
 }
 
+function mediaList(urls) {
+  const items = Array.isArray(urls) ? urls.filter(Boolean) : [];
+  if (!items.length) return "";
+  return `
+    <div class="media-list">
+      <strong>Media URLs</strong>
+      ${items.map((url) => `<a href="${escapeHtml(url)}" target="_blank" rel="noreferrer">${escapeHtml(url)}</a>`).join("")}
+    </div>
+  `;
+}
+
 function draftCaption({ topic, points, stage, language, format }) {
   const pointLines = points.map((point, index) => `${index + 1}. ${point}`);
   if (language === "en") {
@@ -352,6 +363,7 @@ function assetCard(item) {
       </div>
       <p>${escapeHtml(item.caption || "No caption yet.")}</p>
       <small>${mediaCount} media URL(s)</small>
+      ${mediaList(item.media_urls)}
       <div class="queue-actions">
         <button type="button" data-queue-asset="${escapeHtml(item.id)}">Add To Queue</button>
       </div>
@@ -496,6 +508,7 @@ function renderDraft(draft, compliance) {
         </div>
       ` : ""}
       <textarea id="draft-caption">${escapeHtml(draft.caption)}</textarea>
+      ${mediaList(draft.mediaUrls)}
       ${slidePreview(draft.slides)}
       ${reelPreview(draft.reelScript)}
       <div class="compliance-box ${escapeHtml(compliance?.status || "pending")}">
@@ -581,6 +594,7 @@ document.getElementById("compose-form").addEventListener("submit", async (event)
   event.preventDefault();
   const form = new FormData(event.currentTarget);
   const points = splitLines(form.get("points"));
+  const mediaUrls = splitLines(form.get("media_urls"));
   const draft = {
     channel: form.get("channel"),
     format: form.get("format"),
@@ -588,6 +602,7 @@ document.getElementById("compose-form").addEventListener("submit", async (event)
     language: form.get("language"),
     topic: form.get("topic"),
     points,
+    mediaUrls,
   };
   draft.caption = draftCaption(draft);
   currentDraft = draft;
@@ -653,7 +668,7 @@ document.getElementById("save-asset").addEventListener("click", async () => {
       channel: currentDraft.channel,
       format: currentDraft.format,
       caption,
-      media_urls: [],
+      media_urls: currentDraft.mediaUrls || [],
       metadata: {
         stage: currentDraft.stage,
         topic: currentDraft.topic,
@@ -692,7 +707,7 @@ document.getElementById("queue-draft").addEventListener("click", async () => {
       channel: currentDraft.channel,
       format: currentDraft.format,
       caption,
-      media_urls: [],
+      media_urls: currentDraft.mediaUrls || [],
       planned_slot: null,
       compliance_status: compliance.status === "clear" ? "clear" : "pending",
     }),
