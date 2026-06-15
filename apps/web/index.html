@@ -45,6 +45,7 @@
       </div>
       <div class="grid">
         <article class="card"><h2>Publish Queue</h2><p id="queue-count">Waiting for API</p></article>
+        <article class="card"><h2>Content Briefs</h2><p id="brief-count">Waiting for API</p></article>
         <article class="card"><h2>Knowledge Entries</h2><p id="kb-count">Waiting for API</p></article>
         <article class="card"><h2>Feedback Signals</h2><p id="feedback-count">Waiting for API</p></article>
       </div>
@@ -53,7 +54,28 @@
     <section id="plan" class="screen">
       <div class="card wide">
         <h2>Weekly Plan</h2>
-        <p>The Stage 2 brain will generate the Monday plan here from KB, metrics, ads, and outcomes.</p>
+        <p class="section-note">Generate a conservative weekly content plan, then move any brief into drafting.</p>
+        <form id="plan-form" class="split-form">
+          <label>
+            Language
+            <select name="language">
+              <option value="zh">Mandarin</option>
+              <option value="en">English</option>
+              <option value="mixed">Mixed</option>
+            </select>
+          </label>
+          <label>
+            Number Of Briefs
+            <input name="count" type="number" min="1" max="10" value="5">
+          </label>
+          <label class="full">
+            Weekly Topics
+            <textarea name="topics" placeholder="One topic per line. Leave blank to use DREC default metabolic education topics."></textarea>
+          </label>
+          <button type="submit">Generate Weekly Plan</button>
+        </form>
+        <div id="plan-message" class="status-note"></div>
+        <div id="brief-items" class="brief-list"></div>
       </div>
     </section>
 

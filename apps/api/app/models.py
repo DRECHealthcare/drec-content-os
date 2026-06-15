@@ -11,6 +11,30 @@ class KnowledgeEntryIn(BaseModel):
     tags: List[str] = []
 
 
+class ContentBriefIn(BaseModel):
+    channel: Literal["organic", "ads"] = "organic"
+    format: Literal["reel", "carousel", "single", "story"] = "carousel"
+    pillar: Optional[str] = None
+    funnel_stage: Optional[Literal["TOFU", "MOFU", "BOFU"]] = "TOFU"
+    awareness_stage: Optional[str] = None
+    topic: str
+    hook_primary: Optional[str] = None
+    hook_alt1: Optional[str] = None
+    hook_alt2: Optional[str] = None
+    structure_beats: Dict[str, Any] = {}
+    style_hint: Optional[str] = None
+    cta_type: Optional[str] = None
+    target_signal: Optional[str] = None
+    language: Optional[str] = "zh"
+    compliance_notes: Optional[str] = None
+
+
+class WeeklyPlanIn(BaseModel):
+    topics: List[str] = []
+    language: Literal["zh", "en", "mixed"] = "zh"
+    count: int = 5
+
+
 class PublishQueueIn(BaseModel):
     channel: Literal["facebook", "instagram"]
     format: Literal["carousel", "single", "reel", "story"]

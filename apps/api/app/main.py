@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import json
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,8 +7,29 @@ from fastapi.middleware.cors import CORSMiddleware
 from .auth import require_access_token
 from .compliance import check_text
 from .db import close_db, connect_db, fetch_row, fetch_rows
-from .models import ComplianceCheckIn, FeedbackIn, KnowledgeEntryIn, MetricIn, PublishQueueIn, PublishQueueStatusIn
+from .models import (
+    ComplianceCheckIn,
+    ContentBriefIn,
+    FeedbackIn,
+    KnowledgeEntryIn,
+    MetricIn,
+    PublishQueueIn,
+    PublishQueueStatusIn,
+    WeeklyPlanIn,
+)
 from . import supabase_rest
+
+
+DEFAULT_PLAN_TOPICS = [
+    "为什么空腹血糖正常，不代表胰岛素一定健康",
+    "餐后血糖和腰围，如何一起看代谢风险",
+    "逆转医学内容里，为什么要先谈习惯和数据，而不是奇迹",
+    "看体检报告时，HbA1c、甘油三酯和腰围各自代表什么",
+    "给50岁以上华人的控糖复诊问题清单",
+]
+
+FORMAT_ROTATION = ["carousel", "single", "reel", "carousel", "story"]
+STAGE_ROTATION = ["TOFU", "TOFU", "MOFU", "MOFU", "BOFU"]
 
 
 @asynccontextmanager
@@ -91,6 +113,126 @@ async def create_knowledge_entry(entry: KnowledgeEntryIn, _: None = Depends(requ
             },
         )
     return {"item": row or entry.model_dump()}
+
+
+def brief_payload(brief: ContentBriefIn):
+    return {
+        "channel": brief.channel,
+        "format": brief.format,
+        "pillar": brief.pillar,
+        "funnel_stage": brief.funnel_stage,
+        "awareness_stage": brief.awareness_stage,
+        "topic": brief.topic,
+        "hook_primary": brief.hook_primary,
+        "hook_alt1": brief.hook_alt1,
+        "hook_alt2": brief.hook_alt2,
+        "structure_beats": brief.structure_beats,
+        "style_hint": brief.style_hint,
+        "cta_type": brief.cta_type,
+        "target_signal": brief.target_signal,
+        "language": brief.language,
+        "compliance_notes": brief.compliance_notes,
+    }
+
+
+async def insert_brief(brief: ContentBriefIn):
+    payload = brief_payload(brief)
+    row = await fetch_row(
+        """
+        insert into content_briefs
+          (channel, format, pillar, funnel_stage, awareness_stage, topic,
+           hook_primary, hook_alt1, hook_alt2, structure_beats, style_hint,
+           cta_type, target_signal, language, compliance_notes)
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11, $12, $13, $14, $15)
+        returning id, channel, format, pillar, funnel_stage, awareness_stage, topic,
+                  hook_primary, hook_alt1, hook_alt2, structure_beats, style_hint,
+                  cta_type, target_signal, language, compliance_notes, status, created_at
+        """,
+        payload["channel"],
+        payload["format"],
+        payload["pillar"],
+        payload["funnel_stage"],
+        payload["awareness_stage"],
+        payload["topic"],
+        payload["hook_primary"],
+        payload["hook_alt1"],
+        payload["hook_alt2"],
+        json.dumps(payload["structure_beats"]),
+        payload["style_hint"],
+        payload["cta_type"],
+        payload["target_signal"],
+        payload["language"],
+        payload["compliance_notes"],
+    )
+    if row is None:
+        row = await supabase_rest.insert("content_briefs", payload)
+    return row or payload
+
+
+def make_generated_brief(topic: str, index: int, language: str) -> ContentBriefIn:
+    stage = STAGE_ROTATION[index % len(STAGE_ROTATION)]
+    fmt = FORMAT_ROTATION[index % len(FORMAT_ROTATION)]
+    hook = f"很多人忽略了：{topic}" if language != "en" else f"One thing people often miss: {topic}"
+    return ContentBriefIn(
+        channel="organic",
+        format=fmt,
+        pillar="metabolic_education",
+        funnel_stage=stage,
+        awareness_stage="problem_aware" if stage == "TOFU" else "solution_aware",
+        topic=topic,
+        hook_primary=hook,
+        hook_alt1=f"先别急着下结论，先看懂：{topic}" if language != "en" else f"Before jumping to conclusions, understand: {topic}",
+        hook_alt2=f"用一个简单框架看：{topic}" if language != "en" else f"A simple framework for: {topic}",
+        structure_beats={
+            "opening": "Start with a common misconception.",
+            "body": ["Explain the mechanism simply.", "Give one safe practical observation.", "Invite professional review."],
+            "close": "Save and discuss with a clinician.",
+        },
+        style_hint="DREC educational, calm, evidence-led, Mandarin-first",
+        cta_type="save_or_consult",
+        target_signal="saves, comments, qualified consult interest",
+        language=language,
+        compliance_notes="Education only. Avoid guaranteed outcomes, diagnosis, or personal medical claims.",
+    )
+
+
+@app.get("/briefs")
+async def list_content_briefs(_: None = Depends(require_access_token)):
+    rows = await fetch_rows(
+        """
+        select id, channel, format, pillar, funnel_stage, awareness_stage, topic,
+               hook_primary, hook_alt1, hook_alt2, structure_beats, style_hint,
+               cta_type, target_signal, language, compliance_notes, status, created_at
+        from content_briefs
+        order by created_at desc
+        limit 100
+        """
+    )
+    if not rows:
+        rows = await supabase_rest.select(
+            "content_briefs",
+            {
+                "select": "id,channel,format,pillar,funnel_stage,awareness_stage,topic,hook_primary,hook_alt1,hook_alt2,structure_beats,style_hint,cta_type,target_signal,language,compliance_notes,status,created_at",
+                "order": "created_at.desc",
+                "limit": "100",
+            },
+        )
+    return {"items": rows}
+
+
+@app.post("/briefs")
+async def create_content_brief(brief: ContentBriefIn, _: None = Depends(require_access_token)):
+    return {"item": await insert_brief(brief)}
+
+
+@app.post("/weekly-plan/generate")
+async def generate_weekly_plan(plan: WeeklyPlanIn, _: None = Depends(require_access_token)):
+    topics = [topic.strip() for topic in plan.topics if topic.strip()] or DEFAULT_PLAN_TOPICS
+    count = max(1, min(plan.count, 10))
+    generated = []
+    for index, topic in enumerate(topics[:count]):
+        generated.append(await insert_brief(make_generated_brief(topic, index, plan.language)))
+    return {"items": generated}
 
 
 @app.get("/publish-queue")
@@ -274,6 +416,7 @@ async def loop_status(_: None = Depends(require_access_token)):
     feedback_count = await fetch_row("select count(*)::int as count from feedback")
     kb_count = await fetch_row("select count(*)::int as count from kb_entries")
     metric_count = await fetch_row("select count(*)::int as count from raw_metrics")
+    brief_count = await fetch_row("select count(*)::int as count from content_briefs")
     if not queue and supabase_rest.configured():
         queue_rows = await supabase_rest.select(
             "publish_queue",
@@ -287,6 +430,7 @@ async def loop_status(_: None = Depends(require_access_token)):
         feedback_count = {"count": await supabase_rest.count("feedback")}
         kb_count = {"count": await supabase_rest.count("kb_entries")}
         metric_count = {"count": await supabase_rest.count("raw_metrics")}
+        brief_count = {"count": await supabase_rest.count("content_briefs")}
     return {
         "stage": "stage_1_thin_core",
         "beats": ["sense", "decide", "create", "review", "publish", "measure", "learn"],
@@ -294,4 +438,5 @@ async def loop_status(_: None = Depends(require_access_token)):
         "feedback_count": (feedback_count or {}).get("count", 0),
         "kb_count": (kb_count or {}).get("count", 0),
         "metric_count": (metric_count or {}).get("count", 0),
+        "brief_count": (brief_count or {}).get("count", 0),
     }

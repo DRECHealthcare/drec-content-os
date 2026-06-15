@@ -18,9 +18,15 @@ document.querySelectorAll("nav button").forEach((button) => {
     document.querySelectorAll("nav button").forEach((item) => item.classList.toggle("active", item === button));
     document.querySelectorAll(".screen").forEach((item) => item.classList.toggle("active", item.id === screen));
     document.getElementById("title").textContent = titleMap[screen] || screen;
+    if (screen === "plan") loadBriefs();
     if (screen === "scheduler" || screen === "review") loadPublishQueue();
   });
 });
+
+function showScreen(screen) {
+  const button = document.querySelector(`nav button[data-screen="${screen}"]`);
+  if (button) button.click();
+}
 
 function accessToken() {
   return localStorage.getItem(tokenKey) || "";
@@ -38,6 +44,7 @@ function promptForToken() {
   updateTokenButton();
   loadLoopStatus();
   loadKb();
+  loadBriefs();
   loadPublishQueue();
 }
 
@@ -118,16 +125,28 @@ function draftCaption({ topic, points, stage, language, format }) {
   ].join("\n");
 }
 
+function defaultPointsForBrief(brief) {
+  const beats = brief.structure_beats || {};
+  if (Array.isArray(beats.body) && beats.body.length) return beats.body;
+  return [
+    brief.hook_primary || `Explain ${brief.topic} simply.`,
+    brief.target_signal || "Give one practical observation.",
+    brief.compliance_notes || "Keep it educational and invite professional review.",
+  ];
+}
+
 async function loadLoopStatus() {
   try {
     const data = await fetchJson("/loop-status");
     const scheduled = data.queue?.reduce((sum, item) => sum + item.count, 0) || 0;
     document.getElementById("queue-count").textContent = `${scheduled} queue item(s)`;
+    document.getElementById("brief-count").textContent = `${data.brief_count || 0} brief(s)`;
     document.getElementById("kb-count").textContent = `${data.kb_count} knowledge item(s)`;
     document.getElementById("feedback-count").textContent = `${data.feedback_count} feedback signal(s)`;
   } catch {
     const message = accessToken() ? "API access failed" : "Set access token";
     document.getElementById("queue-count").textContent = message;
+    document.getElementById("brief-count").textContent = message;
     document.getElementById("kb-count").textContent = message;
     document.getElementById("feedback-count").textContent = message;
   }
@@ -146,6 +165,40 @@ async function loadKb() {
     `).join("");
   } catch {
     container.innerHTML = '<p class="status-note">Set the access token to load knowledge entries.</p>';
+  }
+}
+
+function briefCard(item) {
+  return `
+    <article class="brief-item">
+      <div class="queue-meta">
+        <span>${escapeHtml(item.format || "carousel")}</span>
+        <span>${escapeHtml(item.funnel_stage || "TOFU")}</span>
+        <span>${escapeHtml(item.language || "zh")}</span>
+        <span>${escapeHtml(item.status || "draft")}</span>
+      </div>
+      <strong>${escapeHtml(item.topic)}</strong>
+      <p>${escapeHtml(item.hook_primary || "No hook yet.")}</p>
+      <small>${escapeHtml(item.compliance_notes || "Education-only brief.")}</small>
+      <div class="queue-actions">
+        <button type="button" data-draft-brief="${escapeHtml(item.id)}">Draft</button>
+      </div>
+    </article>
+  `;
+}
+
+async function loadBriefs() {
+  const container = document.getElementById("brief-items");
+  if (!container) return;
+  try {
+    const data = await fetchJson("/briefs");
+    const items = data.items || [];
+    container.dataset.briefs = JSON.stringify(items);
+    container.innerHTML = items.length
+      ? items.map(briefCard).join("")
+      : "<p class=\"status-note\">No content briefs yet. Generate this week's plan to start.</p>";
+  } catch {
+    container.innerHTML = '<p class="status-note">Set the access token to load weekly briefs.</p>';
   }
 }
 
@@ -265,6 +318,41 @@ document.getElementById("kb-form").addEventListener("submit", async (event) => {
   await fetchJson("/kb", { method: "POST", body: JSON.stringify(payload) });
   event.currentTarget.reset();
   await Promise.all([loadKb(), loadLoopStatus()]);
+});
+
+document.getElementById("plan-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const message = document.getElementById("plan-message");
+  const form = new FormData(event.currentTarget);
+  const payload = {
+    language: form.get("language"),
+    count: Number(form.get("count")) || 5,
+    topics: splitLines(form.get("topics")),
+  };
+  message.textContent = "Generating weekly plan...";
+  try {
+    await fetchJson("/weekly-plan/generate", { method: "POST", body: JSON.stringify(payload) });
+    message.textContent = "Weekly plan generated.";
+    await Promise.all([loadBriefs(), loadLoopStatus()]);
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not generate weekly plan.";
+  }
+});
+
+document.getElementById("brief-items").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-draft-brief]");
+  if (!button) return;
+  const items = JSON.parse(document.getElementById("brief-items").dataset.briefs || "[]");
+  const brief = items.find((item) => item.id === button.dataset.draftBrief);
+  if (!brief) return;
+  const form = document.getElementById("compose-form");
+  form.elements.channel.value = "facebook";
+  form.elements.format.value = brief.format || "carousel";
+  form.elements.stage.value = brief.funnel_stage || "TOFU";
+  form.elements.language.value = brief.language || "zh";
+  form.elements.topic.value = brief.topic || "";
+  form.elements.points.value = defaultPointsForBrief(brief).join("\n");
+  showScreen("compose");
 });
 
 document.getElementById("compose-form").addEventListener("submit", async (event) => {
@@ -410,5 +498,6 @@ document.getElementById("review-items").addEventListener("click", async (event) 
 
 loadLoopStatus();
 loadKb();
+loadBriefs();
 loadPublishQueue();
 updateTokenButton();
