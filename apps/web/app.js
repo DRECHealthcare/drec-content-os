@@ -548,6 +548,37 @@ function renderHandoff(data) {
   `;
 }
 
+function renderFacebookDispatch(data) {
+  const container = document.getElementById("handoff-result");
+  const blockers = data.blockers || [];
+  const item = data.item || {};
+  container.innerHTML = `
+    <div class="handoff-summary">
+      <article class="learning-card">
+        <h3>Worker Mode</h3>
+        <p>${escapeHtml(data.mode || "dry_run")}</p>
+      </article>
+      <article class="learning-card">
+        <h3>Ready</h3>
+        <p>${data.ready ? "Ready for gated test" : "Blocked"}</p>
+      </article>
+    </div>
+    <article class="learning-card wide-learning">
+      <h3>Selected Item</h3>
+      <p>${item.id ? escapeHtml(item.caption || "") : "No eligible Facebook item selected."}</p>
+      ${item.id ? `<small>${escapeHtml(item.id)} · ${escapeHtml(item.status)} · ${escapeHtml(item.compliance_status)}</small>` : ""}
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Blockers</h3>
+      <ul>${blockers.length ? blockers.map((blocker) => `<li>${escapeHtml(blocker)}</li>`).join("") : "<li>No blockers in dry run.</li>"}</ul>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Safety</h3>
+      <ul>${(data.safety || []).map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ul>
+    </article>
+  `;
+}
+
 async function loadOutcomes() {
   const container = document.getElementById("outcome-items");
   if (!container) return;
@@ -991,6 +1022,21 @@ document.getElementById("build-handoff").addEventListener("click", async () => {
     message.textContent = "Handoff ready.";
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not build handoff.";
+  }
+});
+
+document.getElementById("dry-run-facebook").addEventListener("click", async () => {
+  const message = document.getElementById("queue-message");
+  message.textContent = "Checking Facebook worker...";
+  try {
+    const data = await fetchJson("/publishing/facebook/dispatch", {
+      method: "POST",
+      body: JSON.stringify({ dry_run: true }),
+    });
+    renderFacebookDispatch(data);
+    message.textContent = data.ready ? "Facebook worker dry run is ready." : "Facebook worker dry run is blocked.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not dry run Facebook worker.";
   }
 });
 

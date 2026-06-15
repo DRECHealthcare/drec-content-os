@@ -44,4 +44,5 @@ Current system behavior:
 - `/publish-queue` rejects flagged captions.
 - `/publish-queue/{id}` rejects scheduling unless the item is compliance-clear.
 - `/meta/readiness` checks whether Meta app, Page, IG user, token, and required permissions are ready.
+- `/publishing/facebook/dispatch` dry-runs the next eligible Facebook item and blocks real publishing unless credentials are ready and `META_ENABLE_PUBLISHING=true`.
 - Real Meta publishing is intentionally not enabled until credentials and review flow are ready.

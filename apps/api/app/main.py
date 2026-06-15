@@ -21,6 +21,7 @@ from .models import (
     KnowledgeEntryIn,
     LearningWeightIn,
     MediaAssetIn,
+    MetaDispatchIn,
     MetricIn,
     MetricRollupIn,
     OutcomeIn,
@@ -891,6 +892,138 @@ async def publishing_handoff(_: None = Depends(require_access_token)):
         "ready_items": ready,
         "needs_review": blocked,
     }
+
+
+async def next_facebook_publish_item(item_id: str | None = None):
+    if item_id:
+        row = await fetch_row(
+            """
+            select id, asset_id, channel, format, caption, media_urls, planned_slot, status,
+                   compliance_status, external_post_id, created_at
+            from publish_queue
+            where id = $1
+            """,
+            item_id,
+        )
+        if row is None and supabase_rest.configured():
+            rows = await supabase_rest.select(
+                "publish_queue",
+                {
+                    "select": "id,asset_id,channel,format,caption,media_urls,planned_slot,status,compliance_status,external_post_id,created_at",
+                    "id": f"eq.{item_id}",
+                    "limit": "1",
+                },
+            )
+            row = rows[0] if rows else None
+        return row
+    rows = await fetch_rows(
+        """
+        select id, asset_id, channel, format, caption, media_urls, planned_slot, status,
+               compliance_status, external_post_id, created_at
+        from publish_queue
+        where channel = 'facebook'
+          and status = 'scheduled'
+          and compliance_status = 'clear'
+        order by planned_slot nulls last, created_at asc
+        limit 1
+        """
+    )
+    if not rows and supabase_rest.configured():
+        rows = await supabase_rest.select(
+            "publish_queue",
+            {
+                "select": "id,asset_id,channel,format,caption,media_urls,planned_slot,status,compliance_status,external_post_id,created_at",
+                "channel": "eq.facebook",
+                "status": "eq.scheduled",
+                "compliance_status": "eq.clear",
+                "order": "planned_slot.asc.nullslast,created_at.asc",
+                "limit": "1",
+            },
+        )
+    return rows[0] if rows else None
+
+
+def facebook_dispatch_blockers(item: dict | None, readiness: dict):
+    blockers = []
+    if item is None:
+        blockers.append("No Facebook scheduled compliance-clear item is ready.")
+        return blockers
+    if item.get("channel") != "facebook":
+        blockers.append("Only Facebook items are supported by this worker.")
+    if item.get("status") != "scheduled":
+        blockers.append("Item must be scheduled before Meta dispatch.")
+    if item.get("compliance_status") != "clear":
+        blockers.append("Item must be compliance-clear before Meta dispatch.")
+    if item.get("external_post_id"):
+        blockers.append("Item already has an external Meta post ID.")
+    if readiness.get("overall_status") != "ready_for_worker_testing":
+        blockers.append("Meta credentials or permissions are not ready.")
+    media_urls = [url for url in item.get("media_urls") or [] if url]
+    unsupported_media = [url for url in media_urls if not str(url).startswith("http")]
+    if unsupported_media:
+        blockers.append("Private media needs a public/signed publishing URL before Meta can receive it.")
+    return blockers
+
+
+async def publish_facebook_feed_item(item: dict):
+    url = f"https://graph.facebook.com/{settings.meta_graph_version}/{settings.meta_page_id}/feed"
+    async with httpx.AsyncClient(timeout=30) as client:
+        res = await client.post(
+            url,
+            data={
+                "message": item.get("caption") or "",
+                "access_token": settings.meta_page_access_token,
+            },
+        )
+    if res.status_code >= 400:
+        raise HTTPException(status_code=502, detail="Meta rejected the Facebook publish request.")
+    data = res.json()
+    post_id = data.get("id")
+    if post_id:
+        row = await fetch_row(
+            """
+            update publish_queue
+            set status = 'published', external_post_id = $2, updated_at = now()
+            where id = $1
+            returning id, status, external_post_id
+            """,
+            item["id"],
+            post_id,
+        )
+        if row is None and supabase_rest.configured():
+            await supabase_rest.update(
+                "publish_queue",
+                {"status": "published", "external_post_id": post_id},
+                {"id": f"eq.{item['id']}"},
+            )
+    return {"post_id": post_id, "meta_response": data}
+
+
+@app.post("/publishing/facebook/dispatch")
+async def dispatch_facebook_item(dispatch: MetaDispatchIn, _: None = Depends(require_access_token)):
+    readiness = await meta_readiness()
+    item = await next_facebook_publish_item(dispatch.item_id)
+    blockers = facebook_dispatch_blockers(item, readiness)
+    payload = {
+        "mode": "dry_run" if dispatch.dry_run else "publish",
+        "ready": bool(item) and not blockers,
+        "item": item,
+        "blockers": blockers,
+        "safety": [
+            "Requires scheduled status.",
+            "Requires compliance-clear status.",
+            "Requires Meta readiness to be ready.",
+            "Real publishing also requires META_ENABLE_PUBLISHING=true.",
+        ],
+    }
+    if dispatch.dry_run:
+        return payload
+    if not settings.meta_enable_publishing:
+        raise HTTPException(status_code=423, detail="Real Meta publishing is disabled by configuration.")
+    if blockers:
+        raise HTTPException(status_code=422, detail={"message": "Facebook dispatch is blocked.", "blockers": blockers})
+    published = await publish_facebook_feed_item(item)
+    return {**payload, "published": published}
 
 
 @app.post("/metrics")

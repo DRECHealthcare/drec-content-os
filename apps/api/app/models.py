@@ -82,6 +82,11 @@ class PublishQueueStatusIn(BaseModel):
     status: Literal["draft", "scheduled", "publishing", "published", "failed", "cancelled"]
 
 
+class MetaDispatchIn(BaseModel):
+    item_id: Optional[str] = None
+    dry_run: bool = True
+
+
 class ComplianceCheckIn(BaseModel):
     text: str
 
