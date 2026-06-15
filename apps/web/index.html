@@ -113,8 +113,12 @@
             Media URLs
             <textarea name="media_urls" placeholder="One image or video URL per line"></textarea>
           </label>
-          <button type="submit">Add To Queue</button>
+          <div class="form-actions">
+            <button id="check-compliance" type="button">Check Safety</button>
+            <button type="submit">Add To Queue</button>
+          </div>
         </form>
+        <div id="compliance-result" class="compliance-result"></div>
         <div id="queue-message" class="status-note"></div>
         <div id="queue-items" class="queue-list"></div>
       </div>

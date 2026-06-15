@@ -22,6 +22,8 @@ Ship Stage 1 of DREC Content OS:
 - [x] Deployed web shell to Vercel
 - [x] Deployed API to Fly.io
 - [x] Connected API to Supabase REST
+- [x] Added pre-publish compliance check and safety gate
+- [x] Documented conservative Meta publishing path
 
 ## Next Engineering Tasks
 

@@ -1,11 +1,12 @@
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from .auth import require_access_token
+from .compliance import check_text
 from .db import close_db, connect_db, fetch_row, fetch_rows
-from .models import FeedbackIn, KnowledgeEntryIn, MetricIn, PublishQueueIn, PublishQueueStatusIn
+from .models import ComplianceCheckIn, FeedbackIn, KnowledgeEntryIn, MetricIn, PublishQueueIn, PublishQueueStatusIn
 from . import supabase_rest
 
 
@@ -115,8 +116,23 @@ async def list_publish_queue(_: None = Depends(require_access_token)):
     return {"items": rows}
 
 
+@app.post("/compliance/check")
+async def check_compliance(item: ComplianceCheckIn, _: None = Depends(require_access_token)):
+    return check_text(item.text)
+
+
 @app.post("/publish-queue")
 async def create_publish_queue_item(item: PublishQueueIn, _: None = Depends(require_access_token)):
+    compliance = check_text(item.caption)
+    if compliance["status"] == "flagged":
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "message": "Compliance check blocked this caption.",
+                "compliance": compliance,
+            },
+        )
+    compliance_status = "pending" if compliance["status"] == "pending" else item.compliance_status
     row = await fetch_row(
         """
         insert into publish_queue
@@ -130,7 +146,7 @@ async def create_publish_queue_item(item: PublishQueueIn, _: None = Depends(requ
         item.caption,
         item.media_urls,
         item.planned_slot,
-        item.compliance_status,
+        compliance_status,
     )
     if row is None:
         row = await supabase_rest.insert(
@@ -141,7 +157,7 @@ async def create_publish_queue_item(item: PublishQueueIn, _: None = Depends(requ
                 "caption": item.caption,
                 "media_urls": item.media_urls,
                 "planned_slot": item.planned_slot.isoformat() if item.planned_slot else None,
-                "compliance_status": item.compliance_status,
+                "compliance_status": compliance_status,
             },
         )
     return {"item": row or item.model_dump()}
@@ -153,6 +169,22 @@ async def update_publish_queue_item(
     update: PublishQueueStatusIn,
     _: None = Depends(require_access_token),
 ):
+    if update.status == "scheduled":
+        existing = await fetch_row(
+            "select compliance_status from publish_queue where id = $1",
+            item_id,
+        )
+        if existing is None:
+            rows = await supabase_rest.select(
+                "publish_queue",
+                {"select": "compliance_status", "id": f"eq.{item_id}", "limit": "1"},
+            )
+            existing = rows[0] if rows else None
+        if (existing or {}).get("compliance_status") != "clear":
+            raise HTTPException(
+                status_code=422,
+                detail="Only compliance-clear items can be scheduled.",
+            )
     row = await fetch_row(
         """
         update publish_queue

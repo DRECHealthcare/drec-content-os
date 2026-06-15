@@ -207,8 +207,65 @@ button[type="submit"] {
 }
 
 .split-form .full,
-.split-form button[type="submit"] {
+.split-form .form-actions {
   grid-column: 1 / -1;
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.form-actions button[type="button"] {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 14px;
+  background: #FFF;
+  color: var(--navy);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.compliance-result {
+  max-width: 860px;
+}
+
+.compliance-box {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #FBFDFE;
+}
+
+.compliance-box strong {
+  text-transform: uppercase;
+}
+
+.compliance-box p {
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.compliance-box ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.compliance-box.clear {
+  border-color: #A7F3D0;
+  background: #ECFDF5;
+}
+
+.compliance-box.pending {
+  border-color: #FDE68A;
+  background: #FFFBEB;
+}
+
+.compliance-box.flagged {
+  border-color: #FECACA;
+  background: #FEF2F2;
 }
 
 .queue-list {
@@ -270,6 +327,11 @@ button[type="submit"] {
   border-color: transparent;
   background: var(--teal);
   color: #FFF;
+}
+
+.queue-actions button:disabled {
+  cursor: not-allowed;
+  opacity: .5;
 }
 
 .kb-item {

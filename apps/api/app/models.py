@@ -24,6 +24,23 @@ class PublishQueueStatusIn(BaseModel):
     status: Literal["draft", "scheduled", "publishing", "published", "failed", "cancelled"]
 
 
+class ComplianceCheckIn(BaseModel):
+    text: str
+
+
+class ComplianceFinding(BaseModel):
+    rule_id: str
+    severity: Literal["block", "warn"]
+    message: str
+    matches: List[str] = []
+
+
+class ComplianceCheckOut(BaseModel):
+    status: Literal["clear", "pending", "flagged"]
+    findings: List[ComplianceFinding]
+    recommendation: str
+
+
 class MetricIn(BaseModel):
     source: Literal["facebook", "instagram", "ads", "manual"]
     external_post_id: str

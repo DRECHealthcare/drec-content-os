@@ -111,9 +111,10 @@ async function loadKb() {
 
 function queueCard(item, mode) {
   const mediaCount = Array.isArray(item.media_urls) ? item.media_urls.length : 0;
+  const canApprove = item.compliance_status === "clear";
   const actions = mode === "review" ? `
     <div class="queue-actions">
-      <button type="button" data-feedback="approve" data-id="${escapeHtml(item.id)}">Approve</button>
+      <button type="button" data-feedback="approve" data-id="${escapeHtml(item.id)}" ${canApprove ? "" : "disabled"}>Approve</button>
       <button type="button" data-feedback="edit" data-id="${escapeHtml(item.id)}">Edit</button>
       <button type="button" data-feedback="regen" data-id="${escapeHtml(item.id)}">Regen</button>
       <button type="button" data-feedback="reject" data-id="${escapeHtml(item.id)}">Reject</button>
@@ -132,6 +133,39 @@ function queueCard(item, mode) {
       ${actions}
     </article>
   `;
+}
+
+function renderCompliance(result) {
+  const container = document.getElementById("compliance-result");
+  if (!result) {
+    container.innerHTML = "";
+    return;
+  }
+  const findings = result.findings || [];
+  const rows = findings.length
+    ? findings.map((finding) => `
+      <li>
+        <strong>${escapeHtml(finding.severity)}</strong>
+        ${escapeHtml(finding.message)}
+      </li>
+    `).join("")
+    : "<li>No obvious issue found.</li>";
+  container.innerHTML = `
+    <div class="compliance-box ${escapeHtml(result.status)}">
+      <strong>${escapeHtml(result.status)}</strong>
+      <p>${escapeHtml(result.recommendation)}</p>
+      <ul>${rows}</ul>
+    </div>
+  `;
+}
+
+async function checkCaptionSafety(caption) {
+  const result = await fetchJson("/compliance/check", {
+    method: "POST",
+    body: JSON.stringify({ text: caption }),
+  });
+  renderCompliance(result);
+  return result;
 }
 
 async function loadPublishQueue() {
@@ -186,14 +220,40 @@ document.getElementById("queue-form").addEventListener("submit", async (event) =
     planned_slot: plannedSlot ? new Date(plannedSlot).toISOString() : null,
     compliance_status: form.get("compliance_status"),
   };
-  message.textContent = "Adding item...";
+  message.textContent = "Checking safety...";
   try {
+    const compliance = await checkCaptionSafety(payload.caption);
+    if (compliance.status === "flagged") {
+      message.textContent = "Blocked by safety check. Please rewrite before queueing.";
+      return;
+    }
+    if (compliance.status === "pending") {
+      payload.compliance_status = "pending";
+    }
+    message.textContent = "Adding item...";
     await fetchJson("/publish-queue", { method: "POST", body: JSON.stringify(payload) });
     event.currentTarget.reset();
     message.textContent = "Queue item added.";
     await Promise.all([loadPublishQueue(), loadLoopStatus()]);
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not add queue item.";
+  }
+});
+
+document.getElementById("check-compliance").addEventListener("click", async () => {
+  const form = document.getElementById("queue-form");
+  const message = document.getElementById("queue-message");
+  const caption = new FormData(form).get("caption");
+  if (!caption) {
+    message.textContent = "Add a caption first.";
+    return;
+  }
+  message.textContent = "Checking safety...";
+  try {
+    await checkCaptionSafety(caption);
+    message.textContent = "Safety check complete.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Safety check failed.";
   }
 });
 
