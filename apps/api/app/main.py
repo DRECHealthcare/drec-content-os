@@ -16,6 +16,7 @@ from .models import (
     KnowledgeEntryIn,
     LearningWeightIn,
     MetricIn,
+    MetricRollupIn,
     OutcomeIn,
     PublishQueueIn,
     PublishQueueStatusIn,
@@ -606,6 +607,118 @@ async def ingest_metric(metric: MetricIn, _: None = Depends(require_access_token
             },
         )
     return {"item": row or metric.model_dump()}
+
+
+def numeric_metric(metrics: dict, *keys: str) -> float:
+    for key in keys:
+        value = metrics.get(key)
+        if isinstance(value, (int, float)):
+            return float(value)
+        if isinstance(value, str):
+            try:
+                return float(value)
+            except ValueError:
+                continue
+    return 0.0
+
+
+def score_metrics(metrics: dict) -> dict:
+    reach = max(numeric_metric(metrics, "reach", "impressions"), 1.0)
+    saves = numeric_metric(metrics, "saves", "saved")
+    shares = numeric_metric(metrics, "shares")
+    comments = numeric_metric(metrics, "comments")
+    likes = numeric_metric(metrics, "likes", "reactions")
+    leads = numeric_metric(metrics, "leads", "registrations")
+    spend = numeric_metric(metrics, "spend", "cost")
+    watch_metric = numeric_metric(metrics, "avg_watch_time", "watch_time", "video_avg_time_watched")
+    engagement_rate = ((saves * 3) + (shares * 4) + (comments * 2) + likes) / reach
+    conversion_bonus = min(leads * 2, 20)
+    score = round(min(100, (engagement_rate * 1000) + conversion_bonus + min(watch_metric, 30)), 2)
+    cpl = round(spend / leads, 2) if spend and leads else None
+    return {
+        "score": score,
+        "watch_metric": round(watch_metric, 2) if watch_metric else None,
+        "shares": int(shares) if shares else 0,
+        "saves": int(saves) if saves else 0,
+        "cpl": cpl,
+        "note": f"Rolled up from raw metrics: reach {int(reach)}, saves {int(saves)}, shares {int(shares)}, comments {int(comments)}, leads {int(leads)}.",
+    }
+
+
+async def latest_metric_row(external_post_id: str | None):
+    if external_post_id:
+        row = await fetch_row(
+            """
+            select source, external_post_id, captured_at, metrics
+            from raw_metrics
+            where external_post_id = $1
+            order by captured_at desc
+            limit 1
+            """,
+            external_post_id,
+        )
+        if row is None and supabase_rest.configured():
+            rows = await supabase_rest.select(
+                "raw_metrics",
+                {
+                    "select": "source,external_post_id,captured_at,metrics",
+                    "external_post_id": f"eq.{external_post_id}",
+                    "order": "captured_at.desc",
+                    "limit": "1",
+                },
+            )
+            row = rows[0] if rows else None
+        return row
+    row = await fetch_row(
+        """
+        select source, external_post_id, captured_at, metrics
+        from raw_metrics
+        order by captured_at desc
+        limit 1
+        """
+    )
+    if row is None and supabase_rest.configured():
+        rows = await supabase_rest.select(
+            "raw_metrics",
+            {
+                "select": "source,external_post_id,captured_at,metrics",
+                "order": "captured_at.desc",
+                "limit": "1",
+            },
+        )
+        row = rows[0] if rows else None
+    return row
+
+
+@app.post("/metrics/rollup")
+async def rollup_metric_to_outcome(rollup: MetricRollupIn, _: None = Depends(require_access_token)):
+    metric = await latest_metric_row(rollup.external_post_id)
+    if metric is None:
+        raise HTTPException(status_code=404, detail="No matching raw metric found.")
+    metrics = metric.get("metrics") or {}
+    scored = score_metrics(metrics)
+    source_channel = rollup.channel or metric.get("source") or "manual"
+    if source_channel not in ["facebook", "instagram", "manual"]:
+        source_channel = "manual"
+    outcome = OutcomeIn(
+        post_id=metric.get("external_post_id"),
+        pillar=rollup.pillar,
+        funnel_stage=rollup.funnel_stage,
+        hook_archetype=rollup.hook_archetype,
+        style_key=rollup.style_key,
+        format=rollup.format,
+        channel=source_channel,
+        audience_label=rollup.audience_label,
+        published_at=None,
+        metric_window=rollup.metric_window,
+        score=scored["score"],
+        watch_metric=scored["watch_metric"],
+        shares=scored["shares"],
+        saves=scored["saves"],
+        cpl=scored["cpl"],
+        vs_plan_note=scored["note"],
+    )
+    return await create_outcome(outcome)
 
 
 def outcome_payload(outcome: OutcomeIn, for_rest: bool = False):

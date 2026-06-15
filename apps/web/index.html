@@ -214,6 +214,58 @@
       <div class="card wide">
         <h2>Performance</h2>
         <p class="section-note">Record published post results so the next weekly plan can learn from what worked.</p>
+        <form id="metric-form" class="split-form compact-form">
+          <label>
+            Source
+            <select name="source">
+              <option value="facebook">Facebook</option>
+              <option value="instagram">Instagram</option>
+              <option value="manual">Manual</option>
+              <option value="ads">Ads</option>
+            </select>
+          </label>
+          <label>
+            External Post ID
+            <input name="external_post_id" placeholder="Meta post id or manual label" required>
+          </label>
+          <label>
+            Captured Time
+            <input name="captured_at" type="datetime-local">
+          </label>
+          <label>
+            Reach
+            <input name="reach" type="number" min="0" step="1" placeholder="0">
+          </label>
+          <label>
+            Likes
+            <input name="likes" type="number" min="0" step="1" placeholder="0">
+          </label>
+          <label>
+            Comments
+            <input name="comments" type="number" min="0" step="1" placeholder="0">
+          </label>
+          <label>
+            Saves
+            <input name="saves" type="number" min="0" step="1" placeholder="0">
+          </label>
+          <label>
+            Shares
+            <input name="shares" type="number" min="0" step="1" placeholder="0">
+          </label>
+          <label>
+            Leads
+            <input name="leads" type="number" min="0" step="1" placeholder="0">
+          </label>
+          <label>
+            Spend
+            <input name="spend" type="number" min="0" step="0.01" placeholder="Optional">
+          </label>
+          <div class="form-actions">
+            <button type="submit">Save Raw Metrics</button>
+            <button id="rollup-metric" type="button">Roll Up Latest</button>
+          </div>
+        </form>
+        <div id="metric-message" class="status-note"></div>
         <form id="outcome-form" class="split-form">
           <label>
             Channel

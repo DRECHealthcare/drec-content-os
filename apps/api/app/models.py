@@ -95,6 +95,18 @@ class MetricIn(BaseModel):
     metrics: Dict[str, Any]
 
 
+class MetricRollupIn(BaseModel):
+    external_post_id: Optional[str] = None
+    metric_window: Literal["7d", "28d", "90d"] = "7d"
+    format: Optional[Literal["reel", "carousel", "single", "story"]] = None
+    channel: Optional[Literal["facebook", "instagram", "manual"]] = None
+    pillar: Optional[str] = "metabolic_education"
+    funnel_stage: Optional[Literal["TOFU", "MOFU", "BOFU"]] = None
+    hook_archetype: Optional[str] = None
+    style_key: Optional[str] = None
+    audience_label: Optional[str] = None
+
+
 class OutcomeIn(BaseModel):
     post_id: str
     pillar: Optional[str] = None

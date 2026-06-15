@@ -885,6 +885,62 @@ document.getElementById("weight-form").addEventListener("submit", async (event) 
   }
 });
 
+function metricPayloadFromForm(form) {
+  const capturedAt = form.get("captured_at");
+  const metrics = {
+    reach: integerOrNull(form.get("reach")) || 0,
+    likes: integerOrNull(form.get("likes")) || 0,
+    comments: integerOrNull(form.get("comments")) || 0,
+    saves: integerOrNull(form.get("saves")) || 0,
+    shares: integerOrNull(form.get("shares")) || 0,
+    leads: integerOrNull(form.get("leads")) || 0,
+    spend: numberOrNull(form.get("spend")) || 0,
+  };
+  return {
+    source: form.get("source"),
+    external_post_id: form.get("external_post_id"),
+    captured_at: capturedAt ? new Date(capturedAt).toISOString() : new Date().toISOString(),
+    metrics,
+  };
+}
+
+document.getElementById("metric-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const message = document.getElementById("metric-message");
+  const payload = metricPayloadFromForm(new FormData(event.currentTarget));
+  message.textContent = "Saving raw metrics...";
+  try {
+    await fetchJson("/metrics", { method: "POST", body: JSON.stringify(payload) });
+    message.textContent = "Raw metrics saved.";
+    await loadLoopStatus();
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not save raw metrics.";
+  }
+});
+
+document.getElementById("rollup-metric").addEventListener("click", async () => {
+  const message = document.getElementById("metric-message");
+  const form = new FormData(document.getElementById("metric-form"));
+  const postId = form.get("external_post_id");
+  message.textContent = "Rolling metrics into outcome...";
+  try {
+    await fetchJson("/metrics/rollup", {
+      method: "POST",
+      body: JSON.stringify({
+        external_post_id: postId || null,
+        metric_window: "7d",
+        format: document.querySelector("#outcome-form [name='format']")?.value || null,
+        channel: form.get("source") === "ads" ? "manual" : form.get("source"),
+        pillar: "metabolic_education",
+      }),
+    });
+    message.textContent = "Outcome created from latest metrics.";
+    await Promise.all([loadOutcomes(), loadLoopStatus(), loadLearningSummary()]);
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not roll up metrics.";
+  }
+});
+
 document.getElementById("outcome-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const message = document.getElementById("outcome-message");

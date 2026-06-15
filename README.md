@@ -62,6 +62,6 @@ Stage 1 is now a working thin-core workflow:
 - Run pre-publish compliance checks
 - Queue and review posts with approval feedback
 - Build a manual publishing handoff while Meta credentials are pending
-- Record performance outcomes and view the first learning summary
+- Record raw performance metrics, roll them into scored outcomes, and view the first learning summary
 
 Meta auto-publishing and nightly Meta metrics ingestion are intentionally held until the Facebook Page and Instagram permissions are connected. See `NEXT.md` for the active build path.
