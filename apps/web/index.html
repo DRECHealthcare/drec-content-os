@@ -16,6 +16,7 @@
       <button class="active" data-screen="dashboard">Dashboard</button>
       <button data-screen="plan">Weekly Plan</button>
       <button data-screen="compose">Create Post</button>
+      <button data-screen="assets">Assets</button>
       <button data-screen="review">Review Queue</button>
       <button data-screen="scheduler">Scheduler</button>
       <button data-screen="outcomes">Performance</button>
@@ -47,7 +48,7 @@
       <div class="grid">
         <article class="card"><h2>Publish Queue</h2><p id="queue-count">Waiting for API</p></article>
         <article class="card"><h2>Content Briefs</h2><p id="brief-count">Waiting for API</p></article>
-        <article class="card"><h2>Knowledge Entries</h2><p id="kb-count">Waiting for API</p></article>
+        <article class="card"><h2>Assets</h2><p id="asset-count">Waiting for API</p></article>
         <article class="card"><h2>Performance Records</h2><p id="outcome-count">Waiting for API</p></article>
       </div>
     </section>
@@ -127,10 +128,19 @@
           </label>
           <div class="form-actions">
             <button type="submit">Generate Draft</button>
+            <button id="save-asset" type="button" disabled>Save Asset</button>
             <button id="queue-draft" type="button" disabled>Add Draft To Queue</button>
           </div>
         </form>
         <div id="compose-result" class="draft-panel"></div>
+      </div>
+    </section>
+
+    <section id="assets" class="screen">
+      <div class="card wide">
+        <h2>Assets</h2>
+        <p class="section-note">Save draft captions here before they enter the publishing queue.</p>
+        <div id="asset-items" class="queue-list"></div>
       </div>
     </section>
 

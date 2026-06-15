@@ -8,6 +8,7 @@ from .auth import require_access_token
 from .compliance import check_text
 from .db import close_db, connect_db, fetch_row, fetch_rows
 from .models import (
+    AssetIn,
     ComplianceCheckIn,
     ContentBriefIn,
     FeedbackIn,
@@ -236,11 +237,82 @@ async def generate_weekly_plan(plan: WeeklyPlanIn, _: None = Depends(require_acc
     return {"items": generated}
 
 
+def asset_payload(asset: AssetIn):
+    return {
+        "brief_id": asset.brief_id,
+        "channel": asset.channel,
+        "format": asset.format,
+        "caption": asset.caption,
+        "media_urls": asset.media_urls,
+        "metadata": asset.metadata,
+        "compliance_status": asset.compliance_status,
+        "review_status": asset.review_status,
+    }
+
+
+@app.get("/assets")
+async def list_assets(_: None = Depends(require_access_token)):
+    rows = await fetch_rows(
+        """
+        select id, brief_id, channel, format, caption, media_urls, metadata,
+               compliance_status, review_status, created_at
+        from assets
+        order by created_at desc
+        limit 100
+        """
+    )
+    if not rows:
+        rows = await supabase_rest.select(
+            "assets",
+            {
+                "select": "id,brief_id,channel,format,caption,media_urls,metadata,compliance_status,review_status,created_at",
+                "order": "created_at.desc",
+                "limit": "100",
+            },
+        )
+    return {"items": rows}
+
+
+@app.post("/assets")
+async def create_asset(asset: AssetIn, _: None = Depends(require_access_token)):
+    payload = asset_payload(asset)
+    compliance = check_text(payload["caption"] or "")
+    if compliance["status"] == "flagged":
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "message": "Compliance check blocked this asset.",
+                "compliance": compliance,
+            },
+        )
+    payload["compliance_status"] = "pending" if compliance["status"] == "pending" else payload["compliance_status"]
+    row = await fetch_row(
+        """
+        insert into assets
+          (brief_id, channel, format, caption, media_urls, metadata, compliance_status, review_status)
+        values ($1, $2, $3, $4, $5, $6::jsonb, $7, $8)
+        returning id, brief_id, channel, format, caption, media_urls, metadata,
+                  compliance_status, review_status, created_at
+        """,
+        payload["brief_id"],
+        payload["channel"],
+        payload["format"],
+        payload["caption"],
+        payload["media_urls"],
+        json.dumps(payload["metadata"]),
+        payload["compliance_status"],
+        payload["review_status"],
+    )
+    if row is None:
+        row = await supabase_rest.insert("assets", payload)
+    return {"item": row or payload}
+
+
 @app.get("/publish-queue")
 async def list_publish_queue(_: None = Depends(require_access_token)):
     rows = await fetch_rows(
         """
-        select id, channel, format, caption, media_urls, planned_slot, status,
+        select id, asset_id, channel, format, caption, media_urls, planned_slot, status,
                compliance_status, created_at
         from publish_queue
         order by planned_slot nulls last, created_at desc
@@ -251,7 +323,7 @@ async def list_publish_queue(_: None = Depends(require_access_token)):
         rows = await supabase_rest.select(
             "publish_queue",
             {
-                "select": "id,channel,format,caption,media_urls,planned_slot,status,compliance_status,created_at",
+                "select": "id,asset_id,channel,format,caption,media_urls,planned_slot,status,compliance_status,created_at",
                 "order": "planned_slot.asc.nullslast,created_at.desc",
                 "limit": "100",
             },
@@ -279,11 +351,12 @@ async def create_publish_queue_item(item: PublishQueueIn, _: None = Depends(requ
     row = await fetch_row(
         """
         insert into publish_queue
-          (channel, format, caption, media_urls, planned_slot, compliance_status)
-        values ($1, $2, $3, $4, $5, $6)
-        returning id, channel, format, caption, media_urls, planned_slot, status,
+          (asset_id, channel, format, caption, media_urls, planned_slot, compliance_status)
+        values ($1, $2, $3, $4, $5, $6, $7)
+        returning id, asset_id, channel, format, caption, media_urls, planned_slot, status,
                   compliance_status, created_at
         """,
+        item.asset_id,
         item.channel,
         item.format,
         item.caption,
@@ -295,6 +368,7 @@ async def create_publish_queue_item(item: PublishQueueIn, _: None = Depends(requ
         row = await supabase_rest.insert(
             "publish_queue",
             {
+                "asset_id": item.asset_id,
                 "channel": item.channel,
                 "format": item.format,
                 "caption": item.caption,
@@ -333,7 +407,7 @@ async def update_publish_queue_item(
         update publish_queue
         set status = $2, updated_at = now()
         where id = $1
-        returning id, channel, format, caption, media_urls, planned_slot, status,
+        returning id, asset_id, channel, format, caption, media_urls, planned_slot, status,
                   compliance_status, created_at
         """,
         item_id,
@@ -352,7 +426,7 @@ async def update_publish_queue_item(
 async def publishing_handoff(_: None = Depends(require_access_token)):
     rows = await fetch_rows(
         """
-        select id, channel, format, caption, media_urls, planned_slot, status,
+        select id, asset_id, channel, format, caption, media_urls, planned_slot, status,
                compliance_status, created_at
         from publish_queue
         where status in ('draft', 'scheduled')
@@ -364,7 +438,7 @@ async def publishing_handoff(_: None = Depends(require_access_token)):
         rows = await supabase_rest.select(
             "publish_queue",
             {
-                "select": "id,channel,format,caption,media_urls,planned_slot,status,compliance_status,created_at",
+                "select": "id,asset_id,channel,format,caption,media_urls,planned_slot,status,compliance_status,created_at",
                 "status": "in.(draft,scheduled)",
                 "order": "planned_slot.asc.nullslast,created_at.desc",
                 "limit": "50",
@@ -602,6 +676,7 @@ async def loop_status(_: None = Depends(require_access_token)):
     kb_count = await fetch_row("select count(*)::int as count from kb_entries")
     metric_count = await fetch_row("select count(*)::int as count from raw_metrics")
     brief_count = await fetch_row("select count(*)::int as count from content_briefs")
+    asset_count = await fetch_row("select count(*)::int as count from assets")
     outcome_count = await fetch_row("select count(*)::int as count from outcomes")
     if not queue and supabase_rest.configured():
         queue_rows = await supabase_rest.select(
@@ -617,6 +692,7 @@ async def loop_status(_: None = Depends(require_access_token)):
         kb_count = {"count": await supabase_rest.count("kb_entries")}
         metric_count = {"count": await supabase_rest.count("raw_metrics")}
         brief_count = {"count": await supabase_rest.count("content_briefs")}
+        asset_count = {"count": await supabase_rest.count("assets")}
         outcome_count = {"count": await supabase_rest.count("outcomes")}
     return {
         "stage": "stage_1_thin_core",
@@ -626,5 +702,6 @@ async def loop_status(_: None = Depends(require_access_token)):
         "kb_count": (kb_count or {}).get("count", 0),
         "metric_count": (metric_count or {}).get("count", 0),
         "brief_count": (brief_count or {}).get("count", 0),
+        "asset_count": (asset_count or {}).get("count", 0),
         "outcome_count": (outcome_count or {}).get("count", 0),
     }

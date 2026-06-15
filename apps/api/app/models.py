@@ -29,6 +29,17 @@ class ContentBriefIn(BaseModel):
     compliance_notes: Optional[str] = None
 
 
+class AssetIn(BaseModel):
+    brief_id: Optional[str] = None
+    channel: Literal["facebook", "instagram", "organic"] = "facebook"
+    format: Literal["reel", "carousel", "single", "story"] = "carousel"
+    caption: Optional[str] = None
+    media_urls: List[str] = []
+    metadata: Dict[str, Any] = {}
+    compliance_status: Literal["pending", "clear", "flagged"] = "pending"
+    review_status: Literal["draft", "review", "approved", "rejected"] = "draft"
+
+
 class WeeklyPlanIn(BaseModel):
     topics: List[str] = []
     language: Literal["zh", "en", "mixed"] = "zh"
@@ -36,6 +47,7 @@ class WeeklyPlanIn(BaseModel):
 
 
 class PublishQueueIn(BaseModel):
+    asset_id: Optional[str] = None
     channel: Literal["facebook", "instagram"]
     format: Literal["carousel", "single", "reel", "story"]
     caption: str

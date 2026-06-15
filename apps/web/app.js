@@ -6,6 +6,7 @@ const titleMap = {
   dashboard: "Dashboard",
   plan: "Weekly Plan",
   compose: "Create A Post",
+  assets: "Assets",
   review: "Review Queue",
   scheduler: "Scheduler",
   outcomes: "Performance",
@@ -20,6 +21,7 @@ document.querySelectorAll("nav button").forEach((button) => {
     document.querySelectorAll(".screen").forEach((item) => item.classList.toggle("active", item.id === screen));
     document.getElementById("title").textContent = titleMap[screen] || screen;
     if (screen === "plan") loadBriefs();
+    if (screen === "assets") loadAssets();
     if (screen === "outcomes") loadOutcomes();
     if (screen === "learning") loadLearningSummary();
     if (screen === "scheduler" || screen === "review") loadPublishQueue();
@@ -48,6 +50,7 @@ function promptForToken() {
   loadLoopStatus();
   loadKb();
   loadBriefs();
+  loadAssets();
   loadOutcomes();
   loadLearningSummary();
   loadPublishQueue();
@@ -146,13 +149,13 @@ async function loadLoopStatus() {
     const scheduled = data.queue?.reduce((sum, item) => sum + item.count, 0) || 0;
     document.getElementById("queue-count").textContent = `${scheduled} queue item(s)`;
     document.getElementById("brief-count").textContent = `${data.brief_count || 0} brief(s)`;
-    document.getElementById("kb-count").textContent = `${data.kb_count} knowledge item(s)`;
+    document.getElementById("asset-count").textContent = `${data.asset_count || 0} asset(s)`;
     document.getElementById("outcome-count").textContent = `${data.outcome_count || 0} performance record(s)`;
   } catch {
     const message = accessToken() ? "API access failed" : "Set access token";
     document.getElementById("queue-count").textContent = message;
     document.getElementById("brief-count").textContent = message;
-    document.getElementById("kb-count").textContent = message;
+    document.getElementById("asset-count").textContent = message;
     document.getElementById("outcome-count").textContent = message;
   }
 }
@@ -292,6 +295,40 @@ function handoffItem(item) {
       <p>${escapeHtml(item.caption)}</p>
     </article>
   `;
+}
+
+function assetCard(item) {
+  const mediaCount = Array.isArray(item.media_urls) ? item.media_urls.length : 0;
+  return `
+    <article class="queue-item">
+      <div class="queue-meta">
+        <span>${escapeHtml(item.channel || "facebook")}</span>
+        <span>${escapeHtml(item.format || "post")}</span>
+        <span>${escapeHtml(item.compliance_status || "pending")}</span>
+        <span>${escapeHtml(item.review_status || "draft")}</span>
+      </div>
+      <p>${escapeHtml(item.caption || "No caption yet.")}</p>
+      <small>${mediaCount} media URL(s)</small>
+      <div class="queue-actions">
+        <button type="button" data-queue-asset="${escapeHtml(item.id)}">Add To Queue</button>
+      </div>
+    </article>
+  `;
+}
+
+async function loadAssets() {
+  const container = document.getElementById("asset-items");
+  if (!container) return;
+  try {
+    const data = await fetchJson("/assets");
+    const items = data.items || [];
+    container.dataset.assets = JSON.stringify(items);
+    container.innerHTML = items.length
+      ? items.map(assetCard).join("")
+      : '<p class="status-note">No saved assets yet. Save one from Create Post.</p>';
+  } catch {
+    container.innerHTML = '<p class="status-note">Set the access token to load assets.</p>';
+  }
 }
 
 function renderHandoff(data) {
@@ -502,14 +539,49 @@ document.getElementById("compose-form").addEventListener("submit", async (event)
   draft.caption = draftCaption(draft);
   currentDraft = draft;
   const queueButton = document.getElementById("queue-draft");
+  const saveAssetButton = document.getElementById("save-asset");
   queueButton.disabled = true;
+  saveAssetButton.disabled = true;
   try {
     const compliance = await checkCaptionSafety(draft.caption);
     renderDraft(draft, compliance);
     queueButton.disabled = compliance.status === "flagged";
+    saveAssetButton.disabled = compliance.status === "flagged";
   } catch {
     renderDraft(draft, null);
   }
+});
+
+document.getElementById("save-asset").addEventListener("click", async () => {
+  if (!currentDraft) return;
+  const captionBox = document.getElementById("draft-caption");
+  const caption = captionBox ? captionBox.value : currentDraft.caption;
+  const compliance = await checkCaptionSafety(caption);
+  currentDraft.caption = caption;
+  renderDraft(currentDraft, compliance);
+  if (compliance.status === "flagged") {
+    document.getElementById("save-asset").disabled = true;
+    return;
+  }
+  const data = await fetchJson("/assets", {
+    method: "POST",
+    body: JSON.stringify({
+      channel: currentDraft.channel,
+      format: currentDraft.format,
+      caption,
+      media_urls: [],
+      metadata: {
+        stage: currentDraft.stage,
+        topic: currentDraft.topic,
+        points: currentDraft.points,
+      },
+      compliance_status: compliance.status === "clear" ? "clear" : "pending",
+      review_status: "draft",
+    }),
+  });
+  currentDraft.assetId = data.item?.id || null;
+  await Promise.all([loadAssets(), loadLoopStatus()]);
+  showScreen("assets");
 });
 
 document.getElementById("queue-draft").addEventListener("click", async () => {
@@ -526,6 +598,7 @@ document.getElementById("queue-draft").addEventListener("click", async () => {
   await fetchJson("/publish-queue", {
     method: "POST",
     body: JSON.stringify({
+      asset_id: currentDraft.assetId || null,
       channel: currentDraft.channel,
       format: currentDraft.format,
       caption,
@@ -536,6 +609,35 @@ document.getElementById("queue-draft").addEventListener("click", async () => {
   });
   document.getElementById("queue-draft").disabled = true;
   await Promise.all([loadPublishQueue(), loadLoopStatus()]);
+});
+
+document.getElementById("asset-items").addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-queue-asset]");
+  if (!button) return;
+  const items = JSON.parse(document.getElementById("asset-items").dataset.assets || "[]");
+  const asset = items.find((item) => item.id === button.dataset.queueAsset);
+  if (!asset) return;
+  button.disabled = true;
+  button.textContent = "Adding";
+  try {
+    await fetchJson("/publish-queue", {
+      method: "POST",
+      body: JSON.stringify({
+        asset_id: asset.id,
+        channel: asset.channel === "instagram" ? "instagram" : "facebook",
+        format: asset.format,
+        caption: asset.caption,
+        media_urls: asset.media_urls || [],
+        planned_slot: null,
+        compliance_status: asset.compliance_status === "clear" ? "clear" : "pending",
+      }),
+    });
+    await Promise.all([loadPublishQueue(), loadLoopStatus()]);
+    showScreen("review");
+  } catch {
+    button.disabled = false;
+    button.textContent = "Add To Queue";
+  }
 });
 
 document.getElementById("queue-form").addEventListener("submit", async (event) => {
@@ -674,6 +776,7 @@ document.getElementById("outcome-form").addEventListener("submit", async (event)
 loadLoopStatus();
 loadKb();
 loadBriefs();
+loadAssets();
 loadLearningSummary();
 loadPublishQueue();
 loadOutcomes();
