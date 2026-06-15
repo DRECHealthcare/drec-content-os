@@ -251,6 +251,7 @@ async function loadLearningSummary() {
     const data = await fetchJson("/learning-summary");
     const briefs = data.recent_briefs || [];
     const outcomes = data.recent_outcomes || [];
+    const weights = data.weights || [];
     container.innerHTML = `
       <article class="learning-card wide-learning">
         <h3>Next Best Move</h3>
@@ -275,6 +276,19 @@ async function loadLearningSummary() {
         <ul>
           ${outcomes.length ? outcomes.map((outcome) => `<li><strong>${escapeHtml(outcome.metric_window || "7d")}</strong> ${escapeHtml(outcome.post_id || "")} · score ${escapeHtml(outcome.score ?? "n/a")} · saves ${escapeHtml(outcome.saves ?? 0)}</li>`).join("") : "<li>No performance records yet.</li>"}
         </ul>
+      </article>
+      <article class="learning-card wide-learning">
+        <h3>Active Learning Weights</h3>
+        <div class="weight-list">
+          ${weights.length ? weights.map((weight) => `
+            <div class="weight-row">
+              <span><strong>${escapeHtml(weight.dimension)}</strong> ${escapeHtml(weight.key)}</span>
+              <span>${escapeHtml(weight.previous_value ?? "base")} → ${escapeHtml(weight.value)}</span>
+              <small>${escapeHtml(weight.reason || weight.source || "learning signal")}</small>
+              <button type="button" data-revert-weight="${escapeHtml(weight.id)}">Revert</button>
+            </div>
+          `).join("") : "<p>No active learning weights yet.</p>"}
+        </div>
       </article>
     `;
   } catch {
@@ -815,6 +829,44 @@ document.getElementById("review-items").addEventListener("click", async (event) 
   } catch {
     button.disabled = false;
     button.textContent = action;
+  }
+});
+
+document.getElementById("learning-summary").addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-revert-weight]");
+  if (!button) return;
+  button.disabled = true;
+  button.textContent = "Reverting";
+  try {
+    await fetchJson(`/learning-weights/${button.dataset.revertWeight}/revert`, { method: "PATCH" });
+    await Promise.all([loadLearningSummary(), loadLoopStatus()]);
+  } catch {
+    button.disabled = false;
+    button.textContent = "Revert";
+  }
+});
+
+document.getElementById("weight-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const message = document.getElementById("weight-message");
+  const form = new FormData(event.currentTarget);
+  const previous = numberOrNull(form.get("previous_value"));
+  const payload = {
+    dimension: form.get("dimension"),
+    key: form.get("key"),
+    value: Number(form.get("value")),
+    previous_value: previous,
+    reason: form.get("reason") || null,
+    source: "manual",
+  };
+  message.textContent = "Logging learning...";
+  try {
+    await fetchJson("/learning-weights", { method: "POST", body: JSON.stringify(payload) });
+    event.currentTarget.reset();
+    message.textContent = "Learning logged.";
+    await Promise.all([loadLearningSummary(), loadLoopStatus()]);
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not log learning.";
   }
 });
 

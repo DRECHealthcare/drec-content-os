@@ -14,6 +14,7 @@ from .models import (
     CreativeDraftIn,
     FeedbackIn,
     KnowledgeEntryIn,
+    LearningWeightIn,
     MetricIn,
     OutcomeIn,
     PublishQueueIn,
@@ -709,6 +710,70 @@ async def capture_feedback(feedback: FeedbackIn, _: None = Depends(require_acces
     return {"item": row or feedback.model_dump()}
 
 
+@app.get("/learning-weights")
+async def list_learning_weights(_: None = Depends(require_access_token)):
+    rows = await fetch_rows(
+        """
+        select id, dimension, key, value, previous_value, reason, source, is_active, created_at
+        from learning_weights
+        order by created_at desc
+        limit 100
+        """
+    )
+    if not rows and supabase_rest.configured():
+        rows = await supabase_rest.select(
+            "learning_weights",
+            {
+                "select": "id,dimension,key,value,previous_value,reason,source,is_active,created_at",
+                "order": "created_at.desc",
+                "limit": "100",
+            },
+        )
+    return {"items": rows}
+
+
+@app.post("/learning-weights")
+async def create_learning_weight(weight: LearningWeightIn, _: None = Depends(require_access_token)):
+    row = await fetch_row(
+        """
+        insert into learning_weights
+          (dimension, key, value, previous_value, reason, source)
+        values ($1, $2, $3, $4, $5, $6)
+        returning id, dimension, key, value, previous_value, reason, source, is_active, created_at
+        """,
+        weight.dimension,
+        weight.key,
+        weight.value,
+        weight.previous_value,
+        weight.reason,
+        weight.source,
+    )
+    payload = weight.model_dump()
+    if row is None:
+        row = await supabase_rest.insert("learning_weights", payload)
+    return {"item": row or payload}
+
+
+@app.patch("/learning-weights/{weight_id}/revert")
+async def revert_learning_weight(weight_id: str, _: None = Depends(require_access_token)):
+    row = await fetch_row(
+        """
+        update learning_weights
+        set value = coalesce(previous_value, value), is_active = false, updated_at = now()
+        where id = $1
+        returning id, dimension, key, value, previous_value, reason, source, is_active, created_at
+        """,
+        weight_id,
+    )
+    if row is None:
+        row = await supabase_rest.update(
+            "learning_weights",
+            {"is_active": False},
+            {"id": f"eq.{weight_id}"},
+        )
+    return {"item": row or {"id": weight_id, "is_active": False}}
+
+
 @app.get("/learning-summary")
 async def learning_summary(_: None = Depends(require_access_token)):
     queue = await fetch_rows(
@@ -729,6 +794,15 @@ async def learning_summary(_: None = Depends(require_access_token)):
         """
         select post_id, format, channel, metric_window, score, shares, saves, cpl, vs_plan_note, created_at
         from outcomes
+        order by created_at desc
+        limit 5
+        """
+    )
+    weights = await fetch_rows(
+        """
+        select id, dimension, key, value, previous_value, reason, source, is_active, created_at
+        from learning_weights
+        where is_active = true
         order by created_at desc
         limit 5
         """
@@ -765,6 +839,16 @@ async def learning_summary(_: None = Depends(require_access_token)):
                 "limit": "5",
             },
         )
+    if supabase_rest.configured() and not weights:
+        weights = await supabase_rest.select(
+            "learning_weights",
+            {
+                "select": "id,dimension,key,value,previous_value,reason,source,is_active,created_at",
+                "is_active": "eq.true",
+                "order": "created_at.desc",
+                "limit": "5",
+            },
+        )
 
     queue_total = sum(item.get("count", 0) for item in queue)
     feedback_total = sum(item.get("count", 0) for item in feedback)
@@ -783,6 +867,7 @@ async def learning_summary(_: None = Depends(require_access_token)):
         "feedback": feedback,
         "recent_briefs": recent_briefs,
         "recent_outcomes": recent_outcomes,
+        "weights": weights,
         "recommendation": recommendation,
     }
 
@@ -798,6 +883,7 @@ async def loop_status(_: None = Depends(require_access_token)):
     brief_count = await fetch_row("select count(*)::int as count from content_briefs")
     asset_count = await fetch_row("select count(*)::int as count from assets")
     outcome_count = await fetch_row("select count(*)::int as count from outcomes")
+    weight_count = await fetch_row("select count(*)::int as count from learning_weights where is_active = true")
     if not queue and supabase_rest.configured():
         queue_rows = await supabase_rest.select(
             "publish_queue",
@@ -814,6 +900,8 @@ async def loop_status(_: None = Depends(require_access_token)):
         brief_count = {"count": await supabase_rest.count("content_briefs")}
         asset_count = {"count": await supabase_rest.count("assets")}
         outcome_count = {"count": await supabase_rest.count("outcomes")}
+        active_weights = await supabase_rest.select("learning_weights", {"select": "id", "is_active": "eq.true", "limit": "1000"})
+        weight_count = {"count": len(active_weights)}
     return {
         "stage": "stage_1_thin_core",
         "beats": ["sense", "decide", "create", "review", "publish", "measure", "learn"],
@@ -824,4 +912,5 @@ async def loop_status(_: None = Depends(require_access_token)):
         "brief_count": (brief_count or {}).get("count", 0),
         "asset_count": (asset_count or {}).get("count", 0),
         "outcome_count": (outcome_count or {}).get("count", 0),
+        "weight_count": (weight_count or {}).get("count", 0),
     }

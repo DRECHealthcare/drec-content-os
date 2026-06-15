@@ -211,6 +211,10 @@ button[type="submit"] {
   grid-column: 1 / -1;
 }
 
+.compact-form {
+  margin-bottom: 16px;
+}
+
 .form-actions {
   display: flex;
   flex-wrap: wrap;
@@ -417,6 +421,36 @@ button[type="submit"] {
   grid-column: 1 / -1;
 }
 
+.weight-list {
+  display: grid;
+  gap: 8px;
+}
+
+.weight-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) auto minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #FFF;
+}
+
+.weight-row small {
+  color: var(--muted);
+}
+
+.weight-row button {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 9px;
+  background: #FFF;
+  color: var(--navy);
+  font-weight: 800;
+  cursor: pointer;
+}
+
 .handoff-panel {
   max-width: 860px;
   margin-top: 16px;
@@ -516,6 +550,6 @@ button[type="submit"] {
   aside { width: 100%; }
   header { flex-wrap: wrap; height: auto; padding: 14px 18px; }
   .screen { padding: 18px; }
-  .grid, .loop, .split-form, .learning-grid, .handoff-summary, .creative-preview { grid-template-columns: 1fr; }
+  .grid, .loop, .split-form, .learning-grid, .handoff-summary, .creative-preview, .weight-row { grid-template-columns: 1fr; }
   .loop div { border-right: 0; border-bottom: 1px solid var(--line); }
 }

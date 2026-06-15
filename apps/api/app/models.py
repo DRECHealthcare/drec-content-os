@@ -114,6 +114,15 @@ class OutcomeIn(BaseModel):
     vs_plan_note: Optional[str] = None
 
 
+class LearningWeightIn(BaseModel):
+    dimension: Literal["pillar", "hook", "format", "style", "slot", "cta", "audience"]
+    key: str
+    value: float
+    previous_value: Optional[float] = None
+    reason: Optional[str] = None
+    source: Literal["manual", "performance", "taste", "knowledge"] = "manual"
+
+
 class FeedbackIn(BaseModel):
     module: str
     ref_type: str

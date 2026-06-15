@@ -283,6 +283,38 @@
       <div class="card wide">
         <h2>Insights & Learning</h2>
         <p class="section-note">Read the current loop state and turn feedback into the next content decision.</p>
+        <form id="weight-form" class="split-form compact-form">
+          <label>
+            Dimension
+            <select name="dimension">
+              <option value="pillar">Pillar</option>
+              <option value="hook">Hook</option>
+              <option value="format">Format</option>
+              <option value="style">Style</option>
+              <option value="slot">Time Slot</option>
+              <option value="cta">CTA</option>
+              <option value="audience">Audience</option>
+            </select>
+          </label>
+          <label>
+            Key
+            <input name="key" placeholder="Example: food_expose × contrarian" required>
+          </label>
+          <label>
+            New Weight
+            <input name="value" type="number" step="0.01" value="1.05" required>
+          </label>
+          <label>
+            Previous Weight
+            <input name="previous_value" type="number" step="0.01" placeholder="Optional">
+          </label>
+          <label class="full">
+            Reason
+            <input name="reason" placeholder="Why this should affect the next plan">
+          </label>
+          <button type="submit">Log Learning</button>
+        </form>
+        <div id="weight-message" class="status-note"></div>
         <div id="learning-summary" class="learning-grid"></div>
       </div>
     </section>
