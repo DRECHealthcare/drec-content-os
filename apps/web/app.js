@@ -1,5 +1,6 @@
 const apiBase = window.DREC_API_BASE_URL || localStorage.getItem("DREC_API_BASE_URL") || "https://drec-content-os-api.fly.dev";
 const tokenKey = "DREC_ACCESS_TOKEN";
+let currentDraft = null;
 
 const titleMap = {
   dashboard: "Dashboard",
@@ -76,6 +77,45 @@ function formatDate(value) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
+}
+
+function splitLines(value) {
+  return String(value || "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function draftCaption({ topic, points, stage, language, format }) {
+  const pointLines = points.map((point, index) => `${index + 1}. ${point}`);
+  if (language === "en") {
+    return [
+      `A practical way to think about ${topic}:`,
+      "",
+      ...pointLines,
+      "",
+      stage === "BOFU"
+        ? "This is general education, not medical advice. If this relates to your own health, speak with a qualified clinician before changing treatment."
+        : "This is general education, not a diagnosis or treatment plan.",
+      "",
+      format === "reel" ? "Save this before your next health check." : "Save this as a reference for your next health conversation.",
+    ].join("\n");
+  }
+
+  const intro = language === "mixed"
+    ? `关于 ${topic}，可以这样理解：`
+    : `关于「${topic}」，可以这样理解：`;
+  return [
+    intro,
+    "",
+    ...pointLines,
+    "",
+    stage === "BOFU"
+      ? "以上是一般健康教育，不是个人诊断或治疗建议。如与你的健康状况有关，请先咨询合格医生再调整药物、饮食或治疗。"
+      : "以上是一般健康教育，不等于个人诊断或治疗方案。",
+    "",
+    format === "reel" ? "先收藏，下一次复诊或体检前再看。" : "可以收藏起来，下一次和医生讨论时参考。",
+  ].join("\n");
 }
 
 async function loadLoopStatus() {
@@ -168,6 +208,30 @@ async function checkCaptionSafety(caption) {
   return result;
 }
 
+function renderDraft(draft, compliance) {
+  const container = document.getElementById("compose-result");
+  const findings = compliance?.findings || [];
+  const findingText = findings.length
+    ? findings.map((finding) => `<li><strong>${escapeHtml(finding.severity)}</strong> ${escapeHtml(finding.message)}</li>`).join("")
+    : "<li>No obvious issue found.</li>";
+  container.innerHTML = `
+    <div class="draft-card">
+      <div class="queue-meta">
+        <span>${escapeHtml(draft.channel)}</span>
+        <span>${escapeHtml(draft.format)}</span>
+        <span>${escapeHtml(draft.stage)}</span>
+        <span>${escapeHtml(compliance?.status || "unchecked")}</span>
+      </div>
+      <textarea id="draft-caption">${escapeHtml(draft.caption)}</textarea>
+      <div class="compliance-box ${escapeHtml(compliance?.status || "pending")}">
+        <strong>${escapeHtml(compliance?.status || "pending")}</strong>
+        <p>${escapeHtml(compliance?.recommendation || "Run safety check before queueing.")}</p>
+        <ul>${findingText}</ul>
+      </div>
+    </div>
+  `;
+}
+
 async function loadPublishQueue() {
   const queueContainer = document.getElementById("queue-items");
   const reviewContainer = document.getElementById("review-items");
@@ -201,6 +265,57 @@ document.getElementById("kb-form").addEventListener("submit", async (event) => {
   await fetchJson("/kb", { method: "POST", body: JSON.stringify(payload) });
   event.currentTarget.reset();
   await Promise.all([loadKb(), loadLoopStatus()]);
+});
+
+document.getElementById("compose-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const points = splitLines(form.get("points"));
+  const draft = {
+    channel: form.get("channel"),
+    format: form.get("format"),
+    stage: form.get("stage"),
+    language: form.get("language"),
+    topic: form.get("topic"),
+    points,
+  };
+  draft.caption = draftCaption(draft);
+  currentDraft = draft;
+  const queueButton = document.getElementById("queue-draft");
+  queueButton.disabled = true;
+  try {
+    const compliance = await checkCaptionSafety(draft.caption);
+    renderDraft(draft, compliance);
+    queueButton.disabled = compliance.status === "flagged";
+  } catch {
+    renderDraft(draft, null);
+  }
+});
+
+document.getElementById("queue-draft").addEventListener("click", async () => {
+  if (!currentDraft) return;
+  const captionBox = document.getElementById("draft-caption");
+  const caption = captionBox ? captionBox.value : currentDraft.caption;
+  const compliance = await checkCaptionSafety(caption);
+  currentDraft.caption = caption;
+  renderDraft(currentDraft, compliance);
+  if (compliance.status === "flagged") {
+    document.getElementById("queue-draft").disabled = true;
+    return;
+  }
+  await fetchJson("/publish-queue", {
+    method: "POST",
+    body: JSON.stringify({
+      channel: currentDraft.channel,
+      format: currentDraft.format,
+      caption,
+      media_urls: [],
+      planned_slot: null,
+      compliance_status: compliance.status === "clear" ? "clear" : "pending",
+    }),
+  });
+  document.getElementById("queue-draft").disabled = true;
+  await Promise.all([loadPublishQueue(), loadLoopStatus()]);
 });
 
 document.getElementById("queue-form").addEventListener("submit", async (event) => {

@@ -60,7 +60,54 @@
     <section id="compose" class="screen">
       <div class="card wide">
         <h2>Create A Post</h2>
-        <p>The composer will turn selected insights into carousel, single-image, or reel-script drafts.</p>
+        <p class="section-note">Draft educational captions from a topic and move safe drafts into the review queue.</p>
+        <form id="compose-form" class="split-form">
+          <label>
+            Channel
+            <select name="channel">
+              <option value="facebook">Facebook</option>
+              <option value="instagram">Instagram</option>
+            </select>
+          </label>
+          <label>
+            Format
+            <select name="format">
+              <option value="carousel">Carousel</option>
+              <option value="single">Single Image</option>
+              <option value="reel">Reel</option>
+              <option value="story">Story</option>
+            </select>
+          </label>
+          <label>
+            Funnel Stage
+            <select name="stage">
+              <option value="TOFU">TOFU · education</option>
+              <option value="MOFU">MOFU · consideration</option>
+              <option value="BOFU">BOFU · consult</option>
+            </select>
+          </label>
+          <label>
+            Language
+            <select name="language">
+              <option value="zh">Mandarin</option>
+              <option value="en">English</option>
+              <option value="mixed">Mixed</option>
+            </select>
+          </label>
+          <label class="full">
+            Topic
+            <input name="topic" placeholder="Example: why fasting glucose can look normal while insulin is high" required>
+          </label>
+          <label class="full">
+            Key Points
+            <textarea name="points" placeholder="One point per line. Keep it educational and specific." required></textarea>
+          </label>
+          <div class="form-actions">
+            <button type="submit">Generate Draft</button>
+            <button id="queue-draft" type="button" disabled>Add Draft To Queue</button>
+          </div>
+        </form>
+        <div id="compose-result" class="draft-panel"></div>
       </div>
     </section>
 
