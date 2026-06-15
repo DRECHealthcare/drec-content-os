@@ -457,6 +457,60 @@ async def upload_media_asset(
     return await create_media_asset(media)
 
 
+async def media_asset_by_id(media_id: str):
+    row = await fetch_row(
+        """
+        select id, title, source_url, media_type, rights_status, approval_status,
+               notes, tags, metadata, created_at
+        from media_assets
+        where id = $1
+        """,
+        media_id,
+    )
+    if row is None and supabase_rest.configured():
+        rows = await supabase_rest.select(
+            "media_assets",
+            {
+                "select": "id,title,source_url,media_type,rights_status,approval_status,notes,tags,metadata,created_at",
+                "id": f"eq.{media_id}",
+                "limit": "1",
+            },
+        )
+        row = rows[0] if rows else None
+    return row
+
+
+async def create_signed_storage_url(path: str, expires_in: int = 3600):
+    key = supabase_rest.api_key() or ""
+    url = f"{settings.supabase_url.rstrip('/')}/storage/v1/object/sign/drec-media/{path}"
+    headers = {
+        "apikey": key,
+        "authorization": f"Bearer {key}",
+        "content-type": "application/json",
+    }
+    async with httpx.AsyncClient(timeout=20) as client:
+        res = await client.post(url, headers=headers, json={"expiresIn": expires_in})
+        res.raise_for_status()
+        data = res.json()
+    signed = data.get("signedURL") or data.get("signedUrl") or data.get("signed_url")
+    if signed and signed.startswith("/"):
+        signed = f"{settings.supabase_url.rstrip('/')}/storage/v1{signed}"
+    return signed
+
+
+@app.post("/media-assets/{media_id}/signed-url")
+async def signed_media_asset_url(media_id: str, _: None = Depends(require_access_token)):
+    row = await media_asset_by_id(media_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Media asset not found.")
+    metadata = row.get("metadata") or {}
+    path = metadata.get("storage_path")
+    if not path:
+        return {"url": row.get("source_url"), "expires_in": None}
+    signed_url = await create_signed_storage_url(path)
+    return {"url": signed_url, "expires_in": 3600}
+
+
 def caption_variants(draft: CreativeDraftIn):
     points = draft.points or ["Explain the core idea simply.", "Give one safe practical observation.", "Invite review with a clinician."]
     if draft.language == "en":

@@ -406,6 +406,9 @@ function mediaAssetCard(item) {
       ${sourceMarkup}
       ${item.notes ? `<small>${escapeHtml(item.notes)}</small>` : ""}
       ${Array.isArray(item.tags) && item.tags.length ? `<small>${item.tags.map((tag) => `#${escapeHtml(tag)}`).join(" ")}</small>` : ""}
+      <div class="queue-actions">
+        <button type="button" data-media-link="${escapeHtml(item.id)}">Get Link</button>
+      </div>
     </article>
   `;
 }
@@ -416,6 +419,7 @@ async function loadMediaAssets() {
   try {
     const data = await fetchJson("/media-assets");
     const items = data.items || [];
+    container.dataset.mediaAssets = JSON.stringify(items);
     container.innerHTML = items.length
       ? items.map(mediaAssetCard).join("")
       : '<p class="status-note">No registered media yet. Add approved media URLs here before publishing.</p>';
@@ -423,6 +427,28 @@ async function loadMediaAssets() {
     container.innerHTML = '<p class="status-note">Set the access token to load media.</p>';
   }
 }
+
+document.getElementById("media-items").addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-media-link]");
+  if (!button) return;
+  const message = document.getElementById("media-message");
+  button.disabled = true;
+  button.textContent = "Getting";
+  try {
+    const data = await fetchJson(`/media-assets/${button.dataset.mediaLink}/signed-url`, { method: "POST" });
+    if (data.url) {
+      window.open(data.url, "_blank", "noopener,noreferrer");
+      message.textContent = data.expires_in ? "Private link opened. It expires in 1 hour." : "Media link opened.";
+    } else {
+      message.textContent = "No media link is available.";
+    }
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not create media link.";
+  } finally {
+    button.disabled = false;
+    button.textContent = "Get Link";
+  }
+});
 
 async function loadAssets() {
   const container = document.getElementById("asset-items");

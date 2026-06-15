@@ -32,6 +32,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added media library records with usage-rights and approval status
 - [x] Enabled Supabase RLS with server API policies
 - [x] Added private Supabase Storage upload path for DREC media
+- [x] Added short-lived private media links for review/download
 
 ## Next Engineering Tasks
 
@@ -46,6 +47,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add metrics-to-outcomes rollup before Meta is connected
 - [x] Add media library records before Meta publishing
 - [x] Add private media file upload through the API
+- [x] Add signed links for private media review
 - [ ] Connect Meta Graph API credentials
 - [ ] Implement real Facebook publish scheduling
 - [ ] Implement Instagram two-step publish worker
@@ -53,7 +55,7 @@ Ship Stage 1 of DREC Content OS:
 
 ## Stage 2 Preview
 
-- Signed media preview/download links for private uploaded files
+- Meta credential wizard and permission health checks
 - Meta publishing worker after Page/Instagram credentials are approved
 - Nightly Meta metrics ingestion
 - Stronger role-based web login
