@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DREC Outcome Record",
+  "type": "object",
+  "required": ["format", "channel", "window"],
+  "properties": {
+    "brief_id": { "type": "string" },
+    "asset_id": { "type": "string" },
+    "post_id": { "type": "string" },
+    "pillar": { "type": "string" },
+    "funnel_stage": { "enum": ["TOFU", "MOFU", "BOFU"] },
+    "hook_archetype": { "type": "string" },
+    "style_key": { "type": "string" },
+    "format": { "type": "string" },
+    "channel": { "type": "string" },
+    "audience_label": { "type": "string" },
+    "published_at": { "type": "string", "format": "date-time" },
+    "window": { "enum": ["7d", "28d", "90d"] },
+    "score": { "type": "number" },
+    "watch_metric": { "type": "number" },
+    "shares": { "type": "integer" },
+    "saves": { "type": "integer" },
+    "cpl": { "type": "number" },
+    "vs_plan_note": { "type": "string" }
+  }
+}

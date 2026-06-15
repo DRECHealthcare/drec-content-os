@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DREC Asset Package",
+  "type": "object",
+  "required": ["channel", "format", "caption", "media_urls", "compliance_status"],
+  "properties": {
+    "brief_id": { "type": "string" },
+    "channel": { "enum": ["organic", "ads"] },
+    "format": { "enum": ["carousel", "single", "reel", "story"] },
+    "caption": { "type": "string" },
+    "media_urls": { "type": "array", "items": { "type": "string" } },
+    "planned_slot": { "type": "string", "format": "date-time" },
+    "approved_by": { "type": "string" },
+    "compliance_status": { "enum": ["pending", "clear", "flagged"] }
+  }
+}

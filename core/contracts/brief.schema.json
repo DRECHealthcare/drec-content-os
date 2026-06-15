@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DREC Content Brief",
+  "type": "object",
+  "required": ["channel", "format", "topic"],
+  "properties": {
+    "channel": { "enum": ["organic", "ads"] },
+    "format": { "enum": ["reel", "carousel", "single", "story"] },
+    "pillar": { "type": "string" },
+    "funnel_stage": { "enum": ["TOFU", "MOFU", "BOFU"] },
+    "awareness_stage": { "type": "string" },
+    "topic": { "type": "string" },
+    "hook_primary": { "type": "string" },
+    "hook_alt1": { "type": "string" },
+    "hook_alt2": { "type": "string" },
+    "structure_beats": { "type": "object" },
+    "style_hint": { "type": "string" },
+    "cta_type": { "type": "string" },
+    "target_signal": { "type": "string" },
+    "language": { "type": "string" },
+    "compliance_notes": { "type": "string" }
+  }
+}

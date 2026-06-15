@@ -1,0 +1,30 @@
+{
+  "version": "0.1.0",
+  "rules": [
+    {
+      "id": "no_guaranteed_outcomes",
+      "severity": "block",
+      "description": "Do not promise reversal, cure, weight loss, or lab improvement as guaranteed outcomes."
+    },
+    {
+      "id": "no_personal_attributes",
+      "severity": "block",
+      "description": "Do not imply the viewer has diabetes, obesity, or a medical condition."
+    },
+    {
+      "id": "consent_required",
+      "severity": "block",
+      "description": "Patient stories, photos, reports, or testimonials require documented consent and anonymization."
+    },
+    {
+      "id": "before_after_limits",
+      "severity": "warn",
+      "description": "Before/after style claims need careful context and should avoid unrealistic transformation framing."
+    },
+    {
+      "id": "education_not_diagnosis",
+      "severity": "warn",
+      "description": "Content should educate and invite professional consultation, not diagnose or prescribe."
+    }
+  ]
+}
