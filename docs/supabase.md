@@ -6,6 +6,7 @@
 - Project ref: `ddzqgttrwfwssxnayfsd`
 - Region: `ap-southeast-1`
 - URL: `https://ddzqgttrwfwssxnayfsd.supabase.co`
+- Private storage bucket: `drec-media`
 
 ## Tables Created
 
@@ -37,5 +38,6 @@ server-oriented policies with user/session-aware policies.
 For now, the planned path is:
 
 1. Backend API on Fly.io connects through Supabase REST using server-side Fly secrets.
-2. Web UI talks to the API, not directly to Supabase.
-3. Direct Supabase browser access stays disabled until proper login and RLS policies are added.
+2. Backend API uploads media files into the private `drec-media` bucket.
+3. Web UI talks to the API, not directly to Supabase.
+4. Direct Supabase browser access stays disabled until proper login and RLS policies are added.

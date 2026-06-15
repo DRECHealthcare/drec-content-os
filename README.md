@@ -8,7 +8,7 @@ This repository starts the Stage 1 build from the unified proposal:
 - Publish rail: scheduler-ready publish queue
 - Sense rail: metric ingestion endpoints and storage
 - Human gate: review-ready assets and feedback capture
-- Media library: approved images/videos with rights status before publishing
+- Media library: approved images/videos with rights status and private storage before publishing
 - Learning spine: outcomes + feedback tables that let the weekly loop improve
 
 ## Target Deployment
@@ -63,7 +63,7 @@ Stage 1 is now a working thin-core workflow:
 - Run pre-publish compliance checks
 - Queue and review posts with approval feedback
 - Build a manual publishing handoff while Meta credentials are pending
-- Register approved media URLs with rights and review status
+- Register approved media URLs or upload files into private Supabase Storage
 - Record raw performance metrics, roll them into scored outcomes, and view the first learning summary
 
 Meta auto-publishing and nightly Meta metrics ingestion are intentionally held until the Facebook Page and Instagram permissions are connected. See `NEXT.md` for the active build path.

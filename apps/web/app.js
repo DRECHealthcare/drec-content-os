@@ -75,6 +75,22 @@ async function fetchJson(path, options) {
   return res.json();
 }
 
+async function fetchForm(path, formData) {
+  const token = accessToken();
+  const res = await fetch(`${apiBase}${path}`, {
+    method: "POST",
+    headers: {
+      ...(token ? { "X-DREC-Access-Token": token } : {}),
+    },
+    body: formData,
+  });
+  if (res.status === 401) {
+    throw new Error("Access token required");
+  }
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  return res.json();
+}
+
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (char) => ({
     "&": "&amp;",
@@ -375,6 +391,10 @@ function assetCard(item) {
 }
 
 function mediaAssetCard(item) {
+  const source = item.source_url || "";
+  const sourceMarkup = source.startsWith("http")
+    ? `<a class="media-link" href="${escapeHtml(source)}" target="_blank" rel="noreferrer">${escapeHtml(source)}</a>`
+    : `<small>${escapeHtml(source)}</small>`;
   return `
     <article class="queue-item">
       <div class="queue-meta">
@@ -383,7 +403,7 @@ function mediaAssetCard(item) {
         <span>${escapeHtml(item.approval_status || "needs_review")}</span>
       </div>
       <p><strong>${escapeHtml(item.title || "Untitled media")}</strong></p>
-      <a class="media-link" href="${escapeHtml(item.source_url || "#")}" target="_blank" rel="noreferrer">${escapeHtml(item.source_url || "")}</a>
+      ${sourceMarkup}
       ${item.notes ? `<small>${escapeHtml(item.notes)}</small>` : ""}
       ${Array.isArray(item.tags) && item.tags.length ? `<small>${item.tags.map((tag) => `#${escapeHtml(tag)}`).join(" ")}</small>` : ""}
     </article>
@@ -627,10 +647,28 @@ document.getElementById("media-form").addEventListener("submit", async (event) =
   event.preventDefault();
   const message = document.getElementById("media-message");
   const form = new FormData(event.currentTarget);
+  const file = form.get("file");
   const tags = String(form.get("tags") || "")
     .split(",")
     .map((tag) => tag.trim())
     .filter(Boolean);
+  if (file?.size) {
+    form.set("tags", tags.join(","));
+    message.textContent = "Uploading media...";
+    try {
+      await fetchForm("/media-assets/upload", form);
+      event.currentTarget.reset();
+      message.textContent = "Media uploaded and registered.";
+      await Promise.all([loadMediaAssets(), loadLoopStatus()]);
+    } catch (error) {
+      message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not upload media.";
+    }
+    return;
+  }
+  if (!form.get("source_url")) {
+    message.textContent = "Add a source URL or choose a file to upload.";
+    return;
+  }
   const payload = {
     title: form.get("title"),
     source_url: form.get("source_url"),

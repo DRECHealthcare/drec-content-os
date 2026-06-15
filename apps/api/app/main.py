@@ -1,10 +1,15 @@
 from contextlib import asynccontextmanager
+from datetime import datetime
 import json
+import re
+from uuid import uuid4
 
-from fastapi import Depends, FastAPI, HTTPException
+import httpx
+from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from .auth import require_access_token
+from .config import settings
 from .compliance import check_text
 from .db import close_db, connect_db, fetch_row, fetch_rows
 from .models import (
@@ -371,6 +376,85 @@ async def create_media_asset(media: MediaAssetIn, _: None = Depends(require_acce
     if row is None and supabase_rest.configured():
         row = await supabase_rest.insert("media_assets", payload)
     return {"item": row or payload}
+
+
+def safe_storage_name(filename: str):
+    clean = re.sub(r"[^A-Za-z0-9._-]+", "-", filename or "upload").strip(".-")
+    return clean[:96] or "upload"
+
+
+def media_type_from_content_type(content_type: str):
+    if content_type.startswith("image/"):
+        return "image"
+    if content_type.startswith("video/"):
+        return "video"
+    if content_type == "application/pdf":
+        return "document"
+    return "other"
+
+
+async def upload_to_storage(path: str, content_type: str, data: bytes):
+    if not supabase_rest.configured():
+        raise HTTPException(status_code=500, detail="Supabase storage is not configured.")
+    key = supabase_rest.api_key() or ""
+    url = f"{settings.supabase_url.rstrip('/')}/storage/v1/object/drec-media/{path}"
+    headers = {
+        "apikey": key,
+        "authorization": f"Bearer {key}",
+        "content-type": content_type,
+        "x-upsert": "false",
+    }
+    async with httpx.AsyncClient(timeout=60) as client:
+        res = await client.post(url, headers=headers, content=data)
+        if res.status_code == 409:
+            raise HTTPException(status_code=409, detail="A storage object already exists at this path.")
+        res.raise_for_status()
+        return res.json() if res.content else {"path": path}
+
+
+@app.post("/media-assets/upload")
+async def upload_media_asset(
+    file: UploadFile = File(...),
+    title: str | None = Form(None),
+    rights_status: str = Form("owned"),
+    approval_status: str = Form("needs_review"),
+    notes: str | None = Form(None),
+    tags: str | None = Form(None),
+    _: None = Depends(require_access_token),
+):
+    allowed_rights = {"owned", "licensed", "patient_consented", "stock", "unknown"}
+    allowed_status = {"approved", "needs_review", "blocked"}
+    if rights_status not in allowed_rights:
+        raise HTTPException(status_code=422, detail="Invalid rights status.")
+    if approval_status not in allowed_status:
+        raise HTTPException(status_code=422, detail="Invalid approval status.")
+    content_type = file.content_type or "application/octet-stream"
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=422, detail="Upload file is empty.")
+    if len(content) > 50 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Upload file is larger than 50 MB.")
+    media_type = media_type_from_content_type(content_type)
+    today = datetime.utcnow().strftime("%Y/%m/%d")
+    object_name = f"{today}/{uuid4().hex}-{safe_storage_name(file.filename or 'upload')}"
+    await upload_to_storage(object_name, content_type, content)
+    media = MediaAssetIn(
+        title=title or safe_storage_name(file.filename or "Uploaded media"),
+        source_url=f"supabase://drec-media/{object_name}",
+        media_type=media_type,
+        rights_status=rights_status,
+        approval_status=approval_status,
+        notes=notes,
+        tags=[tag.strip() for tag in (tags or "").split(",") if tag.strip()],
+        metadata={
+            "storage_bucket": "drec-media",
+            "storage_path": object_name,
+            "content_type": content_type,
+            "size_bytes": len(content),
+            "original_filename": file.filename,
+        },
+    )
+    return await create_media_asset(media)
 
 
 def caption_variants(draft: CreativeDraftIn):

@@ -1,5 +1,24 @@
 create extension if not exists pgcrypto;
 
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'drec-media',
+  'drec-media',
+  false,
+  52428800,
+  array['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/quicktime', 'application/pdf']
+)
+on conflict (id) do update
+set public = excluded.public,
+    file_size_limit = excluded.file_size_limit,
+    allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "drec_media_server_access" on storage.objects;
+create policy "drec_media_server_access" on storage.objects
+  for all to anon, authenticated
+  using (bucket_id = 'drec-media')
+  with check (bucket_id = 'drec-media');
+
 create table if not exists kb_entries (
   id uuid primary key default gen_random_uuid(),
   category text not null,
