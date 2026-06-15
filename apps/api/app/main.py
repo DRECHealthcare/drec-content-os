@@ -348,6 +348,45 @@ async def update_publish_queue_item(
     return {"item": row or {"id": item_id, "status": update.status}}
 
 
+@app.get("/publishing-handoff")
+async def publishing_handoff(_: None = Depends(require_access_token)):
+    rows = await fetch_rows(
+        """
+        select id, channel, format, caption, media_urls, planned_slot, status,
+               compliance_status, created_at
+        from publish_queue
+        where status in ('draft', 'scheduled')
+        order by planned_slot nulls last, created_at desc
+        limit 50
+        """
+    )
+    if not rows and supabase_rest.configured():
+        rows = await supabase_rest.select(
+            "publish_queue",
+            {
+                "select": "id,channel,format,caption,media_urls,planned_slot,status,compliance_status,created_at",
+                "status": "in.(draft,scheduled)",
+                "order": "planned_slot.asc.nullslast,created_at.desc",
+                "limit": "50",
+            },
+        )
+
+    ready = [item for item in rows if item.get("status") == "scheduled" and item.get("compliance_status") == "clear"]
+    blocked = [item for item in rows if item not in ready]
+    checklist = [
+        "Publish only items marked scheduled and compliance-clear.",
+        "Keep the caption unchanged unless it goes back through review.",
+        "After posting, record the post ID and first 7-day result in Performance.",
+    ]
+    return {
+        "ready_count": len(ready),
+        "blocked_count": len(blocked),
+        "checklist": checklist,
+        "ready_items": ready,
+        "needs_review": blocked,
+    }
+
+
 @app.post("/metrics")
 async def ingest_metric(metric: MetricIn, _: None = Depends(require_access_token)):
     row = await fetch_row(

@@ -279,6 +279,47 @@ function outcomeCard(item) {
   `;
 }
 
+function handoffItem(item) {
+  return `
+    <article class="queue-item">
+      <div class="queue-meta">
+        <span>${escapeHtml(item.channel)}</span>
+        <span>${escapeHtml(item.format)}</span>
+        <span>${escapeHtml(item.status)}</span>
+        <span>${escapeHtml(item.compliance_status)}</span>
+      </div>
+      <small>${formatDate(item.planned_slot)}</small>
+      <p>${escapeHtml(item.caption)}</p>
+    </article>
+  `;
+}
+
+function renderHandoff(data) {
+  const container = document.getElementById("handoff-result");
+  const ready = data.ready_items || [];
+  const needsReview = data.needs_review || [];
+  container.innerHTML = `
+    <div class="handoff-summary">
+      <article class="learning-card">
+        <h3>Ready To Publish</h3>
+        <p>${Number(data.ready_count || 0)} item(s)</p>
+      </article>
+      <article class="learning-card">
+        <h3>Needs Review</h3>
+        <p>${Number(data.blocked_count || 0)} item(s)</p>
+      </article>
+    </div>
+    <div class="learning-card">
+      <h3>Checklist</h3>
+      <ul>${(data.checklist || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+    </div>
+    <h3 class="handoff-heading">Ready Items</h3>
+    ${ready.length ? ready.map(handoffItem).join("") : '<p class="status-note">No scheduled compliance-clear items yet.</p>'}
+    <h3 class="handoff-heading">Needs Review</h3>
+    ${needsReview.length ? needsReview.map(handoffItem).join("") : '<p class="status-note">Nothing blocked right now.</p>'}
+  `;
+}
+
 async function loadOutcomes() {
   const container = document.getElementById("outcome-items");
   if (!container) return;
@@ -548,6 +589,18 @@ document.getElementById("check-compliance").addEventListener("click", async () =
     message.textContent = "Safety check complete.";
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Safety check failed.";
+  }
+});
+
+document.getElementById("build-handoff").addEventListener("click", async () => {
+  const message = document.getElementById("queue-message");
+  message.textContent = "Building handoff...";
+  try {
+    const data = await fetchJson("/publishing-handoff");
+    renderHandoff(data);
+    message.textContent = "Handoff ready.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not build handoff.";
   }
 });
 

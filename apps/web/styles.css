@@ -340,6 +340,25 @@ button[type="submit"] {
   grid-column: 1 / -1;
 }
 
+.handoff-panel {
+  max-width: 860px;
+  margin-top: 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.handoff-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.handoff-heading {
+  margin: 10px 0 0;
+  color: var(--navy);
+  font-size: 13px;
+}
+
 .queue-list {
   margin-top: 18px;
   display: grid;
@@ -420,6 +439,6 @@ button[type="submit"] {
   aside { width: 100%; }
   header { flex-wrap: wrap; height: auto; padding: 14px 18px; }
   .screen { padding: 18px; }
-  .grid, .loop, .split-form, .learning-grid { grid-template-columns: 1fr; }
+  .grid, .loop, .split-form, .learning-grid, .handoff-summary { grid-template-columns: 1fr; }
   .loop div { border-right: 0; border-bottom: 1px solid var(--line); }
 }
