@@ -123,6 +123,13 @@ class MetricRollupIn(BaseModel):
     audience_label: Optional[str] = None
 
 
+class MetaMetricsIn(BaseModel):
+    item_id: Optional[str] = None
+    limit: int = 10
+    dry_run: bool = True
+    rollup: bool = False
+
+
 class OutcomeIn(BaseModel):
     post_id: str
     pillar: Optional[str] = None

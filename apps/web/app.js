@@ -331,6 +331,38 @@ async function loadMetaReadiness() {
   }
 }
 
+function renderMetaMetricsDryRun(data) {
+  const container = document.getElementById("meta-metrics-result");
+  const planned = data.planned_requests || [];
+  const blockers = data.blockers || [];
+  container.innerHTML = `
+    <div class="handoff-summary">
+      <article class="learning-card">
+        <h3>Metrics Mode</h3>
+        <p>${escapeHtml(data.mode || "dry_run")}</p>
+      </article>
+      <article class="learning-card">
+        <h3>Ready</h3>
+        <p>${data.ready ? "Ready for gated ingestion" : "Blocked"}</p>
+      </article>
+    </div>
+    <article class="learning-card wide-learning">
+      <h3>Planned Requests</h3>
+      <ul>
+        ${planned.length ? planned.map((item) => `<li><strong>${escapeHtml(item.channel)}</strong> ${escapeHtml(item.external_post_id)} · ${escapeHtml(item.endpoint?.params?.metric || "")}</li>`).join("") : "<li>No published Meta post IDs found.</li>"}
+      </ul>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Blockers</h3>
+      <ul>${blockers.length ? blockers.map((blocker) => `<li>${escapeHtml(blocker)}</li>`).join("") : "<li>No blockers in dry run.</li>"}</ul>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Safety</h3>
+      <ul>${(data.safety || []).map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ul>
+    </article>
+  `;
+}
+
 async function loadLearningSummary() {
   const container = document.getElementById("learning-summary");
   if (!container) return;
@@ -1044,6 +1076,21 @@ document.getElementById("refresh-meta").addEventListener("click", async () => {
   const message = document.getElementById("meta-message");
   message.textContent = "Checking Meta readiness...";
   await loadMetaReadiness();
+});
+
+document.getElementById("dry-run-meta-metrics").addEventListener("click", async () => {
+  const message = document.getElementById("meta-message");
+  message.textContent = "Checking Meta metrics worker...";
+  try {
+    const data = await fetchJson("/metrics/meta/ingest", {
+      method: "POST",
+      body: JSON.stringify({ dry_run: true, limit: 10, rollup: false }),
+    });
+    renderMetaMetricsDryRun(data);
+    message.textContent = data.ready ? "Meta metrics dry run is ready." : "Meta metrics dry run is blocked.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not dry run Meta metrics.";
+  }
 });
 
 document.getElementById("review-items").addEventListener("click", async (event) => {

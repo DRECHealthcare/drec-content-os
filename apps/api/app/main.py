@@ -22,6 +22,7 @@ from .models import (
     LearningWeightIn,
     MediaAssetIn,
     MetaDispatchIn,
+    MetaMetricsIn,
     MetricIn,
     MetricRollupIn,
     OutcomeIn,
@@ -1050,6 +1051,164 @@ async def ingest_metric(metric: MetricIn, _: None = Depends(require_access_token
             },
         )
     return {"item": row or metric.model_dump()}
+
+
+async def meta_metric_candidates(item_id: str | None = None, limit: int = 10):
+    bounded_limit = max(1, min(limit, 50))
+    if item_id:
+        row = await fetch_row(
+            """
+            select id, channel, format, caption, status, compliance_status,
+                   external_post_id, created_at, updated_at
+            from publish_queue
+            where id = $1
+            """,
+            item_id,
+        )
+        if row is None and supabase_rest.configured():
+            rows = await supabase_rest.select(
+                "publish_queue",
+                {
+                    "select": "id,channel,format,caption,status,compliance_status,external_post_id,created_at,updated_at",
+                    "id": f"eq.{item_id}",
+                    "limit": "1",
+                },
+            )
+            row = rows[0] if rows else None
+        return [row] if row else []
+    rows = await fetch_rows(
+        """
+        select id, channel, format, caption, status, compliance_status,
+               external_post_id, created_at, updated_at
+        from publish_queue
+        where status = 'published'
+          and external_post_id is not null
+          and channel in ('facebook', 'instagram')
+        order by updated_at desc nulls last, created_at desc
+        limit $1
+        """,
+        bounded_limit,
+    )
+    if not rows and supabase_rest.configured():
+        rows = await supabase_rest.select(
+            "publish_queue",
+            {
+                "select": "id,channel,format,caption,status,compliance_status,external_post_id,created_at,updated_at",
+                "status": "eq.published",
+                "external_post_id": "not.is.null",
+                "channel": "in.(facebook,instagram)",
+                "order": "updated_at.desc.nullslast,created_at.desc",
+                "limit": str(bounded_limit),
+            },
+        )
+    return rows
+
+
+def meta_insights_metrics(channel: str, fmt: str | None):
+    if channel == "instagram":
+        if fmt == "reel":
+            return ["reach", "likes", "comments", "saved", "shares", "plays", "total_interactions"]
+        return ["reach", "likes", "comments", "saved", "shares", "total_interactions"]
+    return ["post_impressions", "post_impressions_unique", "post_engaged_users", "post_reactions_by_type_total"]
+
+
+def meta_metrics_endpoint(item: dict):
+    metric_names = meta_insights_metrics(item.get("channel"), item.get("format"))
+    return {
+        "url": f"https://graph.facebook.com/{settings.meta_graph_version}/{item.get('external_post_id')}/insights",
+        "params": {"metric": ",".join(metric_names)},
+        "metric_names": metric_names,
+    }
+
+
+def normalize_meta_insights(item: dict, insights: dict):
+    metrics = {"raw": insights, "channel": item.get("channel"), "format": item.get("format")}
+    for row in insights.get("data", []):
+        name = row.get("name")
+        values = row.get("values") or []
+        value = values[-1].get("value") if values else None
+        if name == "post_impressions":
+            metrics["impressions"] = value
+        elif name == "post_impressions_unique":
+            metrics["reach"] = value
+        elif name == "post_engaged_users":
+            metrics["engaged_users"] = value
+        elif name == "post_reactions_by_type_total" and isinstance(value, dict):
+            metrics["likes"] = sum(number for number in value.values() if isinstance(number, (int, float)))
+            metrics["reactions"] = metrics["likes"]
+        elif name == "saved":
+            metrics["saves"] = value
+        elif name in {"reach", "likes", "comments", "shares", "plays", "total_interactions"}:
+            metrics[name] = value
+    return metrics
+
+
+async def fetch_meta_insights(item: dict):
+    endpoint = meta_metrics_endpoint(item)
+    params = {**endpoint["params"], "access_token": settings.meta_page_access_token}
+    async with httpx.AsyncClient(timeout=30) as client:
+        res = await client.get(endpoint["url"], params=params)
+    if res.status_code >= 400:
+        raise HTTPException(status_code=502, detail="Meta rejected the metrics request.")
+    return normalize_meta_insights(item, res.json())
+
+
+@app.post("/metrics/meta/ingest")
+async def ingest_meta_metrics(request: MetaMetricsIn, _: None = Depends(require_access_token)):
+    readiness = await meta_readiness()
+    candidates = await meta_metric_candidates(request.item_id, request.limit)
+    planned = [
+        {
+            "item_id": item.get("id"),
+            "channel": item.get("channel"),
+            "format": item.get("format"),
+            "external_post_id": item.get("external_post_id"),
+            "status": item.get("status"),
+            "endpoint": meta_metrics_endpoint(item),
+        }
+        for item in candidates
+    ]
+    blockers = []
+    if not candidates:
+        blockers.append("No published Meta posts with external post IDs are ready for metrics ingestion.")
+    if readiness.get("overall_status") != "ready_for_worker_testing":
+        blockers.append("Meta credentials or permissions are not ready.")
+    payload = {
+        "mode": "dry_run" if request.dry_run else "ingest",
+        "ready": bool(candidates) and not blockers,
+        "planned_requests": planned,
+        "blockers": blockers,
+        "safety": [
+            "Only published queue items with external Meta post IDs are scanned.",
+            "Dry run lists Graph insight calls without contacting Meta for metrics.",
+            "Real ingestion stores raw metrics first, then optional rollup can create outcomes.",
+        ],
+    }
+    if request.dry_run:
+        return payload
+    if blockers:
+        raise HTTPException(status_code=422, detail={"message": "Meta metrics ingestion is blocked.", "blockers": blockers})
+    inserted = []
+    for item in candidates:
+        metrics = await fetch_meta_insights(item)
+        metric = MetricIn(
+            source=item.get("channel"),
+            external_post_id=item.get("external_post_id"),
+            captured_at=datetime.utcnow(),
+            metrics=metrics,
+        )
+        saved = await ingest_metric(metric)
+        inserted.append(saved.get("item"))
+        if request.rollup:
+            await rollup_metric_to_outcome(
+                MetricRollupIn(
+                    external_post_id=item.get("external_post_id"),
+                    format=item.get("format"),
+                    channel=item.get("channel"),
+                    pillar="metabolic_education",
+                )
+            )
+    return {**payload, "inserted": inserted}
 
 
 def numeric_metric(metrics: dict, *keys: str) -> float:
