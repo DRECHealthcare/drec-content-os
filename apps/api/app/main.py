@@ -1,8 +1,9 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .auth import require_access_token
 from .db import close_db, connect_db, fetch_row, fetch_rows
 from .models import FeedbackIn, KnowledgeEntryIn, MetricIn, PublishQueueIn
 from . import supabase_rest
@@ -44,7 +45,7 @@ async def health():
 
 
 @app.get("/kb")
-async def list_knowledge_entries():
+async def list_knowledge_entries(_: None = Depends(require_access_token)):
     rows = await fetch_rows(
         """
         select id, category, title, body, tags, created_at
@@ -66,7 +67,7 @@ async def list_knowledge_entries():
 
 
 @app.post("/kb")
-async def create_knowledge_entry(entry: KnowledgeEntryIn):
+async def create_knowledge_entry(entry: KnowledgeEntryIn, _: None = Depends(require_access_token)):
     row = await fetch_row(
         """
         insert into kb_entries (category, title, body, tags)
@@ -92,7 +93,7 @@ async def create_knowledge_entry(entry: KnowledgeEntryIn):
 
 
 @app.get("/publish-queue")
-async def list_publish_queue():
+async def list_publish_queue(_: None = Depends(require_access_token)):
     rows = await fetch_rows(
         """
         select id, channel, format, caption, media_urls, planned_slot, status,
@@ -115,7 +116,7 @@ async def list_publish_queue():
 
 
 @app.post("/publish-queue")
-async def create_publish_queue_item(item: PublishQueueIn):
+async def create_publish_queue_item(item: PublishQueueIn, _: None = Depends(require_access_token)):
     row = await fetch_row(
         """
         insert into publish_queue
@@ -147,7 +148,7 @@ async def create_publish_queue_item(item: PublishQueueIn):
 
 
 @app.post("/metrics")
-async def ingest_metric(metric: MetricIn):
+async def ingest_metric(metric: MetricIn, _: None = Depends(require_access_token)):
     row = await fetch_row(
         """
         insert into raw_metrics (source, external_post_id, captured_at, metrics)
@@ -173,7 +174,7 @@ async def ingest_metric(metric: MetricIn):
 
 
 @app.post("/feedback")
-async def capture_feedback(feedback: FeedbackIn):
+async def capture_feedback(feedback: FeedbackIn, _: None = Depends(require_access_token)):
     row = await fetch_row(
         """
         insert into feedback
@@ -208,7 +209,7 @@ async def capture_feedback(feedback: FeedbackIn):
 
 
 @app.get("/loop-status")
-async def loop_status():
+async def loop_status(_: None = Depends(require_access_token)):
     queue = await fetch_rows(
         "select status, count(*)::int as count from publish_queue group by status"
     )

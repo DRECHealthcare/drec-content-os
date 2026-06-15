@@ -95,6 +95,17 @@ h1 { color: var(--navy); font-size: 18px; }
 h2 { color: var(--navy); font-size: 15px; margin-bottom: 12px; }
 header span { color: var(--muted); font-size: 12px; }
 
+.token-button {
+  margin-left: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 11px;
+  background: #FFF;
+  color: var(--navy);
+  font-weight: 800;
+  cursor: pointer;
+}
+
 .screen {
   display: none;
   padding: 24px 28px;
@@ -168,6 +179,11 @@ button[type="submit"] {
   margin-top: 18px;
   display: grid;
   gap: 8px;
+}
+
+.status-note {
+  margin-top: 12px;
+  color: var(--muted);
 }
 
 .kb-item {

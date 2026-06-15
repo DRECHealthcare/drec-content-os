@@ -1,4 +1,5 @@
 const apiBase = window.DREC_API_BASE_URL || localStorage.getItem("DREC_API_BASE_URL") || "https://drec-content-os-api.fly.dev";
+const tokenKey = "DREC_ACCESS_TOKEN";
 
 const titleMap = {
   dashboard: "Dashboard",
@@ -19,11 +20,38 @@ document.querySelectorAll("nav button").forEach((button) => {
   });
 });
 
+function accessToken() {
+  return localStorage.getItem(tokenKey) || "";
+}
+
+function updateTokenButton() {
+  const button = document.getElementById("token-button");
+  button.textContent = accessToken() ? "Access set" : "Set access";
+}
+
+function promptForToken() {
+  const token = window.prompt("Enter DREC Content OS access token", accessToken());
+  if (token === null) return;
+  localStorage.setItem(tokenKey, token.trim());
+  updateTokenButton();
+  loadLoopStatus();
+  loadKb();
+}
+
+document.getElementById("token-button").addEventListener("click", promptForToken);
+
 async function fetchJson(path, options) {
+  const token = accessToken();
   const res = await fetch(`${apiBase}${path}`, {
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { "X-DREC-Access-Token": token } : {}),
+    },
     ...options,
   });
+  if (res.status === 401) {
+    throw new Error("Access token required");
+  }
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
   return res.json();
 }
@@ -36,9 +64,10 @@ async function loadLoopStatus() {
     document.getElementById("kb-count").textContent = `${data.kb_count} knowledge item(s)`;
     document.getElementById("feedback-count").textContent = `${data.feedback_count} feedback signal(s)`;
   } catch {
-    document.getElementById("queue-count").textContent = "API not connected yet";
-    document.getElementById("kb-count").textContent = "API not connected yet";
-    document.getElementById("feedback-count").textContent = "API not connected yet";
+    const message = accessToken() ? "API access failed" : "Set access token";
+    document.getElementById("queue-count").textContent = message;
+    document.getElementById("kb-count").textContent = message;
+    document.getElementById("feedback-count").textContent = message;
   }
 }
 
@@ -54,7 +83,7 @@ async function loadKb() {
       </div>
     `).join("");
   } catch {
-    container.innerHTML = '<p class="muted">Connect the API to load knowledge entries.</p>';
+    container.innerHTML = '<p class="status-note">Set the access token to load knowledge entries.</p>';
   }
 }
 
@@ -74,3 +103,4 @@ document.getElementById("kb-form").addEventListener("submit", async (event) => {
 
 loadLoopStatus();
 loadKb();
+updateTokenButton();
