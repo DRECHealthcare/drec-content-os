@@ -19,6 +19,7 @@
       <button data-screen="assets">Assets</button>
       <button data-screen="review">Review Queue</button>
       <button data-screen="scheduler">Scheduler</button>
+      <button data-screen="meta">Meta Setup</button>
       <button data-screen="outcomes">Performance</button>
       <button data-screen="learning">Learning</button>
       <button data-screen="kb">Knowledge Base</button>
@@ -387,6 +388,18 @@
         </form>
         <div id="outcome-message" class="status-note"></div>
         <div id="outcome-items" class="queue-list"></div>
+      </div>
+    </section>
+
+    <section id="meta" class="screen">
+      <div class="card wide">
+        <h2>Meta Setup</h2>
+        <p class="section-note">Check Facebook and Instagram publishing readiness before any real Meta worker is enabled.</p>
+        <div class="form-actions">
+          <button id="refresh-meta" type="button">Refresh Meta Check</button>
+        </div>
+        <div id="meta-message" class="status-note"></div>
+        <div id="meta-readiness" class="learning-grid"></div>
       </div>
     </section>
 

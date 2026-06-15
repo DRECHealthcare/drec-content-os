@@ -41,6 +41,20 @@ DEFAULT_PLAN_TOPICS = [
 
 FORMAT_ROTATION = ["carousel", "single", "reel", "carousel", "story"]
 STAGE_ROTATION = ["TOFU", "TOFU", "MOFU", "MOFU", "BOFU"]
+META_REQUIRED_PERMISSIONS = [
+    "pages_show_list",
+    "pages_read_engagement",
+    "pages_manage_posts",
+    "instagram_basic",
+    "instagram_content_publish",
+]
+META_ENV_REQUIREMENTS = [
+    ("META_APP_ID", "meta_app_id", "Meta app ID"),
+    ("META_APP_SECRET", "meta_app_secret", "Meta app secret"),
+    ("META_PAGE_ID", "meta_page_id", "Facebook Page ID"),
+    ("META_IG_USER_ID", "meta_ig_user_id", "Instagram business user ID"),
+    ("META_PAGE_ACCESS_TOKEN", "meta_page_access_token", "Page access token"),
+]
 
 
 @asynccontextmanager
@@ -75,6 +89,102 @@ async def health():
         "service": "drec-content-os-api",
         "postgres": postgres_status,
         "supabase_rest": supabase_status,
+    }
+
+
+def meta_env_status():
+    checks = []
+    for env_name, setting_name, label in META_ENV_REQUIREMENTS:
+        configured = bool(getattr(settings, setting_name, None))
+        checks.append(
+            {
+                "key": env_name,
+                "label": label,
+                "configured": configured,
+                "status": "ready" if configured else "missing",
+            }
+        )
+    return checks
+
+
+async def inspect_meta_page_token():
+    if not settings.meta_page_access_token:
+        return {
+            "status": "missing",
+            "message": "Page access token is not configured.",
+            "permissions": [],
+            "missing_permissions": META_REQUIRED_PERMISSIONS,
+        }
+    url = f"https://graph.facebook.com/{settings.meta_graph_version}/me"
+    params = {
+        "fields": "id,name,permissions",
+        "access_token": settings.meta_page_access_token,
+    }
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            res = await client.get(url, params=params)
+        if res.status_code >= 400:
+            return {
+                "status": "error",
+                "message": "Meta token check failed. Reconnect or refresh the Page token.",
+                "permissions": [],
+                "missing_permissions": META_REQUIRED_PERMISSIONS,
+            }
+        data = res.json()
+    except httpx.HTTPError:
+        return {
+            "status": "error",
+            "message": "Meta token check could not reach Graph API.",
+            "permissions": [],
+            "missing_permissions": META_REQUIRED_PERMISSIONS,
+        }
+    granted = []
+    for permission in data.get("permissions", {}).get("data", []):
+        if permission.get("status") == "granted":
+            granted.append(permission.get("permission"))
+    missing = [permission for permission in META_REQUIRED_PERMISSIONS if permission not in granted]
+    return {
+        "status": "ready" if not missing else "needs_review",
+        "message": "Meta token is reachable." if not missing else "Meta token is reachable but some permissions are missing.",
+        "page_identity": {"id": data.get("id"), "name": data.get("name")},
+        "permissions": granted,
+        "missing_permissions": missing,
+    }
+
+
+@app.get("/meta/readiness")
+async def meta_readiness(_: None = Depends(require_access_token)):
+    env_checks = meta_env_status()
+    token_check = await inspect_meta_page_token()
+    missing_env = [check["key"] for check in env_checks if not check["configured"]]
+    page_ready = not missing_env and token_check.get("status") == "ready"
+    facebook_status = "ready" if page_ready else "blocked"
+    instagram_status = "ready" if page_ready and settings.meta_ig_user_id else "blocked"
+    return {
+        "graph_version": settings.meta_graph_version,
+        "mode": "manual_handoff" if not page_ready else "ready_for_worker_testing",
+        "overall_status": "ready_for_worker_testing" if page_ready else "not_connected",
+        "env_checks": env_checks,
+        "token_check": token_check,
+        "required_permissions": META_REQUIRED_PERMISSIONS,
+        "channels": [
+            {
+                "channel": "facebook",
+                "status": facebook_status,
+                "next_step": "Run worker against compliance-clear scheduled queue items." if page_ready else "Connect Page credentials first.",
+            },
+            {
+                "channel": "instagram",
+                "status": instagram_status,
+                "next_step": "Enable Instagram two-step container publishing after Facebook is stable." if instagram_status == "ready" else "Connect IG user ID and Page token after Facebook readiness.",
+            },
+        ],
+        "safe_sequence": [
+            "Keep manual handoff active until Meta readiness is ready.",
+            "Test Facebook Page publishing with one compliance-clear scheduled item.",
+            "Add Instagram two-step publishing after Facebook succeeds.",
+            "Turn on nightly metrics ingestion only after publish IDs are stored.",
+        ],
     }
 
 

@@ -10,8 +10,11 @@ class Settings(BaseSettings):
     supabase_api_key: Optional[str] = None
     drec_access_token: Optional[str] = None
     meta_graph_version: str = "v23.0"
+    meta_app_id: Optional[str] = None
+    meta_app_secret: Optional[str] = None
     meta_page_id: Optional[str] = None
     meta_ig_user_id: Optional[str] = None
+    meta_page_access_token: Optional[str] = None
 
     model_config = SettingsConfigDict(
         env_file=".env",

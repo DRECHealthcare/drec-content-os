@@ -9,6 +9,7 @@ const titleMap = {
   assets: "Assets",
   review: "Review Queue",
   scheduler: "Scheduler",
+  meta: "Meta Setup",
   outcomes: "Performance",
   learning: "Insights & Learning",
   kb: "Knowledge Base",
@@ -25,6 +26,7 @@ document.querySelectorAll("nav button").forEach((button) => {
     if (screen === "outcomes") loadOutcomes();
     if (screen === "learning") loadLearningSummary();
     if (screen === "scheduler" || screen === "review") loadPublishQueue();
+    if (screen === "meta") loadMetaReadiness();
   });
 });
 
@@ -55,6 +57,7 @@ function promptForToken() {
   loadOutcomes();
   loadLearningSummary();
   loadPublishQueue();
+  loadMetaReadiness();
 }
 
 document.getElementById("token-button").addEventListener("click", promptForToken);
@@ -272,6 +275,60 @@ async function loadBriefs() {
 function countRows(items, labelKey) {
   if (!items.length) return "<li>No signals yet.</li>";
   return items.map((item) => `<li><strong>${escapeHtml(item[labelKey] || "unknown")}</strong> ${Number(item.count || 0)}</li>`).join("");
+}
+
+function statusList(items, labelKey = "label") {
+  if (!items?.length) return "<li>No checks available.</li>";
+  return items.map((item) => `
+    <li>
+      <strong>${escapeHtml(item.status || (item.configured ? "ready" : "missing"))}</strong>
+      ${escapeHtml(item[labelKey] || item.key || item.channel || "")}
+    </li>
+  `).join("");
+}
+
+function renderMetaReadiness(data) {
+  const container = document.getElementById("meta-readiness");
+  const token = data.token_check || {};
+  container.innerHTML = `
+    <article class="learning-card wide-learning">
+      <h3>Status</h3>
+      <p>${escapeHtml(data.overall_status || "not_connected")} · ${escapeHtml(data.mode || "manual_handoff")} · Graph ${escapeHtml(data.graph_version || "")}</p>
+    </article>
+    <article class="learning-card">
+      <h3>Credentials</h3>
+      <ul>${statusList(data.env_checks || [])}</ul>
+    </article>
+    <article class="learning-card">
+      <h3>Token Check</h3>
+      <p>${escapeHtml(token.message || "No token check yet.")}</p>
+      <ul>
+        <li><strong>${escapeHtml(token.status || "missing")}</strong> Page token</li>
+        ${(token.missing_permissions || []).map((permission) => `<li><strong>missing</strong> ${escapeHtml(permission)}</li>`).join("")}
+      </ul>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Channels</h3>
+      <ul>${(data.channels || []).map((channel) => `<li><strong>${escapeHtml(channel.status)}</strong> ${escapeHtml(channel.channel)} · ${escapeHtml(channel.next_step)}</li>`).join("")}</ul>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Safe Sequence</h3>
+      <ul>${(data.safe_sequence || []).map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ul>
+    </article>
+  `;
+}
+
+async function loadMetaReadiness() {
+  const container = document.getElementById("meta-readiness");
+  if (!container) return;
+  try {
+    const data = await fetchJson("/meta/readiness");
+    renderMetaReadiness(data);
+    document.getElementById("meta-message").textContent = "Meta readiness checked.";
+  } catch (error) {
+    container.innerHTML = '<p class="status-note">Set the access token to check Meta readiness.</p>';
+    document.getElementById("meta-message").textContent = error.message === "Access token required" ? "Set the access token first." : "Could not check Meta readiness.";
+  }
 }
 
 async function loadLearningSummary() {
@@ -937,6 +994,12 @@ document.getElementById("build-handoff").addEventListener("click", async () => {
   }
 });
 
+document.getElementById("refresh-meta").addEventListener("click", async () => {
+  const message = document.getElementById("meta-message");
+  message.textContent = "Checking Meta readiness...";
+  await loadMetaReadiness();
+});
+
 document.getElementById("review-items").addEventListener("click", async (event) => {
   const button = event.target.closest("[data-feedback]");
   if (!button) return;
@@ -1105,5 +1168,6 @@ loadAssets();
 loadMediaAssets();
 loadLearningSummary();
 loadPublishQueue();
+loadMetaReadiness();
 loadOutcomes();
 updateTokenButton();

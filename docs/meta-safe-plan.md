@@ -43,4 +43,5 @@ Current system behavior:
 - `/compliance/check` returns `clear`, `pending`, or `flagged`.
 - `/publish-queue` rejects flagged captions.
 - `/publish-queue/{id}` rejects scheduling unless the item is compliance-clear.
+- `/meta/readiness` checks whether Meta app, Page, IG user, token, and required permissions are ready.
 - Real Meta publishing is intentionally not enabled until credentials and review flow are ready.
