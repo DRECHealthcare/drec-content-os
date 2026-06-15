@@ -72,6 +72,25 @@ class MetricIn(BaseModel):
     metrics: Dict[str, Any]
 
 
+class OutcomeIn(BaseModel):
+    post_id: str
+    pillar: Optional[str] = None
+    funnel_stage: Optional[Literal["TOFU", "MOFU", "BOFU"]] = None
+    hook_archetype: Optional[str] = None
+    style_key: Optional[str] = None
+    format: Optional[Literal["reel", "carousel", "single", "story"]] = None
+    channel: Optional[Literal["facebook", "instagram", "manual"]] = None
+    audience_label: Optional[str] = None
+    published_at: Optional[datetime] = None
+    metric_window: Literal["7d", "28d", "90d"] = "7d"
+    score: Optional[float] = None
+    watch_metric: Optional[float] = None
+    shares: Optional[int] = None
+    saves: Optional[int] = None
+    cpl: Optional[float] = None
+    vs_plan_note: Optional[str] = None
+
+
 class FeedbackIn(BaseModel):
     module: str
     ref_type: str

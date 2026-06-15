@@ -8,6 +8,7 @@ const titleMap = {
   compose: "Create A Post",
   review: "Review Queue",
   scheduler: "Scheduler",
+  outcomes: "Performance",
   learning: "Insights & Learning",
   kb: "Knowledge Base",
 };
@@ -19,6 +20,7 @@ document.querySelectorAll("nav button").forEach((button) => {
     document.querySelectorAll(".screen").forEach((item) => item.classList.toggle("active", item.id === screen));
     document.getElementById("title").textContent = titleMap[screen] || screen;
     if (screen === "plan") loadBriefs();
+    if (screen === "outcomes") loadOutcomes();
     if (screen === "learning") loadLearningSummary();
     if (screen === "scheduler" || screen === "review") loadPublishQueue();
   });
@@ -46,6 +48,7 @@ function promptForToken() {
   loadLoopStatus();
   loadKb();
   loadBriefs();
+  loadOutcomes();
   loadLearningSummary();
   loadPublishQueue();
 }
@@ -144,13 +147,13 @@ async function loadLoopStatus() {
     document.getElementById("queue-count").textContent = `${scheduled} queue item(s)`;
     document.getElementById("brief-count").textContent = `${data.brief_count || 0} brief(s)`;
     document.getElementById("kb-count").textContent = `${data.kb_count} knowledge item(s)`;
-    document.getElementById("feedback-count").textContent = `${data.feedback_count} feedback signal(s)`;
+    document.getElementById("outcome-count").textContent = `${data.outcome_count || 0} performance record(s)`;
   } catch {
     const message = accessToken() ? "API access failed" : "Set access token";
     document.getElementById("queue-count").textContent = message;
     document.getElementById("brief-count").textContent = message;
     document.getElementById("kb-count").textContent = message;
-    document.getElementById("feedback-count").textContent = message;
+    document.getElementById("outcome-count").textContent = message;
   }
 }
 
@@ -215,6 +218,7 @@ async function loadLearningSummary() {
   try {
     const data = await fetchJson("/learning-summary");
     const briefs = data.recent_briefs || [];
+    const outcomes = data.recent_outcomes || [];
     container.innerHTML = `
       <article class="learning-card wide-learning">
         <h3>Next Best Move</h3>
@@ -234,9 +238,58 @@ async function loadLearningSummary() {
           ${briefs.length ? briefs.map((brief) => `<li><strong>${escapeHtml(brief.format || "brief")}</strong> ${escapeHtml(brief.topic || "")}</li>`).join("") : "<li>No briefs yet.</li>"}
         </ul>
       </article>
+      <article class="learning-card wide-learning">
+        <h3>Recent Results</h3>
+        <ul>
+          ${outcomes.length ? outcomes.map((outcome) => `<li><strong>${escapeHtml(outcome.metric_window || "7d")}</strong> ${escapeHtml(outcome.post_id || "")} · score ${escapeHtml(outcome.score ?? "n/a")} · saves ${escapeHtml(outcome.saves ?? 0)}</li>`).join("") : "<li>No performance records yet.</li>"}
+        </ul>
+      </article>
     `;
   } catch {
     container.innerHTML = '<p class="status-note">Set the access token to load learning signals.</p>';
+  }
+}
+
+function numberOrNull(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function integerOrNull(value) {
+  const number = numberOrNull(value);
+  return number === null ? null : Math.max(0, Math.trunc(number));
+}
+
+function outcomeCard(item) {
+  return `
+    <article class="queue-item">
+      <div class="queue-meta">
+        <span>${escapeHtml(item.channel || "manual")}</span>
+        <span>${escapeHtml(item.format || "post")}</span>
+        <span>${escapeHtml(item.funnel_stage || "stage")}</span>
+        <span>${escapeHtml(item.metric_window || "7d")}</span>
+      </div>
+      <p><strong>${escapeHtml(item.post_id)}</strong></p>
+      <small>
+        score ${escapeHtml(item.score ?? "n/a")} · saves ${escapeHtml(item.saves ?? 0)} · shares ${escapeHtml(item.shares ?? 0)} · CPL ${escapeHtml(item.cpl ?? "n/a")}
+      </small>
+      ${item.vs_plan_note ? `<p>${escapeHtml(item.vs_plan_note)}</p>` : ""}
+    </article>
+  `;
+}
+
+async function loadOutcomes() {
+  const container = document.getElementById("outcome-items");
+  if (!container) return;
+  try {
+    const data = await fetchJson("/outcomes");
+    const items = data.items || [];
+    container.innerHTML = items.length
+      ? items.map(outcomeCard).join("")
+      : '<p class="status-note">No performance records yet.</p>';
+  } catch {
+    container.innerHTML = '<p class="status-note">Set the access token to load performance records.</p>';
   }
 }
 
@@ -534,9 +587,41 @@ document.getElementById("review-items").addEventListener("click", async (event) 
   }
 });
 
+document.getElementById("outcome-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const message = document.getElementById("outcome-message");
+  const form = new FormData(event.currentTarget);
+  const publishedAt = form.get("published_at");
+  const payload = {
+    post_id: form.get("post_id"),
+    pillar: "metabolic_education",
+    funnel_stage: form.get("funnel_stage"),
+    format: form.get("format"),
+    channel: form.get("channel"),
+    published_at: publishedAt ? new Date(publishedAt).toISOString() : null,
+    metric_window: form.get("metric_window"),
+    score: numberOrNull(form.get("score")),
+    watch_metric: null,
+    shares: integerOrNull(form.get("shares")),
+    saves: integerOrNull(form.get("saves")),
+    cpl: numberOrNull(form.get("cpl")),
+    vs_plan_note: form.get("vs_plan_note") || null,
+  };
+  message.textContent = "Saving result...";
+  try {
+    await fetchJson("/outcomes", { method: "POST", body: JSON.stringify(payload) });
+    event.currentTarget.reset();
+    message.textContent = "Result saved.";
+    await Promise.all([loadOutcomes(), loadLoopStatus(), loadLearningSummary()]);
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not save result.";
+  }
+});
+
 loadLoopStatus();
 loadKb();
 loadBriefs();
 loadLearningSummary();
 loadPublishQueue();
+loadOutcomes();
 updateTokenButton();

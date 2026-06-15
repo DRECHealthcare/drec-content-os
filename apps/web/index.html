@@ -18,6 +18,7 @@
       <button data-screen="compose">Create Post</button>
       <button data-screen="review">Review Queue</button>
       <button data-screen="scheduler">Scheduler</button>
+      <button data-screen="outcomes">Performance</button>
       <button data-screen="learning">Learning</button>
       <button data-screen="kb">Knowledge Base</button>
     </nav>
@@ -47,7 +48,7 @@
         <article class="card"><h2>Publish Queue</h2><p id="queue-count">Waiting for API</p></article>
         <article class="card"><h2>Content Briefs</h2><p id="brief-count">Waiting for API</p></article>
         <article class="card"><h2>Knowledge Entries</h2><p id="kb-count">Waiting for API</p></article>
-        <article class="card"><h2>Feedback Signals</h2><p id="feedback-count">Waiting for API</p></article>
+        <article class="card"><h2>Performance Records</h2><p id="outcome-count">Waiting for API</p></article>
       </div>
     </section>
 
@@ -190,6 +191,79 @@
         <div id="compliance-result" class="compliance-result"></div>
         <div id="queue-message" class="status-note"></div>
         <div id="queue-items" class="queue-list"></div>
+      </div>
+    </section>
+
+    <section id="outcomes" class="screen">
+      <div class="card wide">
+        <h2>Performance</h2>
+        <p class="section-note">Record published post results so the next weekly plan can learn from what worked.</p>
+        <form id="outcome-form" class="split-form">
+          <label>
+            Channel
+            <select name="channel">
+              <option value="facebook">Facebook</option>
+              <option value="instagram">Instagram</option>
+              <option value="manual">Manual</option>
+            </select>
+          </label>
+          <label>
+            Format
+            <select name="format">
+              <option value="carousel">Carousel</option>
+              <option value="single">Single Image</option>
+              <option value="reel">Reel</option>
+              <option value="story">Story</option>
+            </select>
+          </label>
+          <label>
+            Funnel Stage
+            <select name="funnel_stage">
+              <option value="TOFU">TOFU</option>
+              <option value="MOFU">MOFU</option>
+              <option value="BOFU">BOFU</option>
+            </select>
+          </label>
+          <label>
+            Window
+            <select name="metric_window">
+              <option value="7d">7 days</option>
+              <option value="28d">28 days</option>
+              <option value="90d">90 days</option>
+            </select>
+          </label>
+          <label>
+            Post ID
+            <input name="post_id" placeholder="Meta post id, URL slug, or manual label" required>
+          </label>
+          <label>
+            Published Time
+            <input name="published_at" type="datetime-local">
+          </label>
+          <label>
+            Score
+            <input name="score" type="number" step="0.01" placeholder="Optional">
+          </label>
+          <label>
+            Saves
+            <input name="saves" type="number" min="0" step="1" placeholder="0">
+          </label>
+          <label>
+            Shares
+            <input name="shares" type="number" min="0" step="1" placeholder="0">
+          </label>
+          <label>
+            CPL
+            <input name="cpl" type="number" min="0" step="0.01" placeholder="Optional">
+          </label>
+          <label class="full">
+            Learning Note
+            <textarea name="vs_plan_note" placeholder="What should the next plan learn from this post?"></textarea>
+          </label>
+          <button type="submit">Save Result</button>
+        </form>
+        <div id="outcome-message" class="status-note"></div>
+        <div id="outcome-items" class="queue-list"></div>
       </div>
     </section>
 

@@ -13,6 +13,7 @@ from .models import (
     FeedbackIn,
     KnowledgeEntryIn,
     MetricIn,
+    OutcomeIn,
     PublishQueueIn,
     PublishQueueStatusIn,
     WeeklyPlanIn,
@@ -373,6 +374,73 @@ async def ingest_metric(metric: MetricIn, _: None = Depends(require_access_token
     return {"item": row or metric.model_dump()}
 
 
+def outcome_payload(outcome: OutcomeIn, for_rest: bool = False):
+    payload = outcome.model_dump()
+    if for_rest and outcome.published_at:
+        payload["published_at"] = outcome.published_at.isoformat()
+    return payload
+
+
+@app.get("/outcomes")
+async def list_outcomes(_: None = Depends(require_access_token)):
+    rows = await fetch_rows(
+        """
+        select id, post_id, pillar, funnel_stage, hook_archetype, style_key,
+               format, channel, audience_label, published_at, metric_window,
+               score, watch_metric, shares, saves, cpl, vs_plan_note, created_at
+        from outcomes
+        order by created_at desc
+        limit 100
+        """
+    )
+    if not rows:
+        rows = await supabase_rest.select(
+            "outcomes",
+            {
+                "select": "id,post_id,pillar,funnel_stage,hook_archetype,style_key,format,channel,audience_label,published_at,metric_window,score,watch_metric,shares,saves,cpl,vs_plan_note,created_at",
+                "order": "created_at.desc",
+                "limit": "100",
+            },
+        )
+    return {"items": rows}
+
+
+@app.post("/outcomes")
+async def create_outcome(outcome: OutcomeIn, _: None = Depends(require_access_token)):
+    payload = outcome_payload(outcome)
+    row = await fetch_row(
+        """
+        insert into outcomes
+          (post_id, pillar, funnel_stage, hook_archetype, style_key, format,
+           channel, audience_label, published_at, metric_window, score,
+           watch_metric, shares, saves, cpl, vs_plan_note)
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        returning id, post_id, pillar, funnel_stage, hook_archetype, style_key,
+                  format, channel, audience_label, published_at, metric_window,
+                  score, watch_metric, shares, saves, cpl, vs_plan_note, created_at
+        """,
+        payload["post_id"],
+        payload["pillar"],
+        payload["funnel_stage"],
+        payload["hook_archetype"],
+        payload["style_key"],
+        payload["format"],
+        payload["channel"],
+        payload["audience_label"],
+        payload["published_at"],
+        payload["metric_window"],
+        payload["score"],
+        payload["watch_metric"],
+        payload["shares"],
+        payload["saves"],
+        payload["cpl"],
+        payload["vs_plan_note"],
+    )
+    if row is None:
+        row = await supabase_rest.insert("outcomes", outcome_payload(outcome, for_rest=True))
+    return {"item": row or payload}
+
+
 @app.post("/feedback")
 async def capture_feedback(feedback: FeedbackIn, _: None = Depends(require_access_token)):
     row = await fetch_row(
@@ -424,6 +492,14 @@ async def learning_summary(_: None = Depends(require_access_token)):
         limit 5
         """
     )
+    recent_outcomes = await fetch_rows(
+        """
+        select post_id, format, channel, metric_window, score, shares, saves, cpl, vs_plan_note, created_at
+        from outcomes
+        order by created_at desc
+        limit 5
+        """
+    )
     if supabase_rest.configured() and not queue:
         queue_rows = await supabase_rest.select("publish_queue", {"select": "status", "limit": "1000"})
         queue_counts = {}
@@ -447,12 +523,24 @@ async def learning_summary(_: None = Depends(require_access_token)):
                 "limit": "5",
             },
         )
+    if supabase_rest.configured() and not recent_outcomes:
+        recent_outcomes = await supabase_rest.select(
+            "outcomes",
+            {
+                "select": "post_id,format,channel,metric_window,score,shares,saves,cpl,vs_plan_note,created_at",
+                "order": "created_at.desc",
+                "limit": "5",
+            },
+        )
 
     queue_total = sum(item.get("count", 0) for item in queue)
     feedback_total = sum(item.get("count", 0) for item in feedback)
+    outcome_total = len(recent_outcomes)
     recommendation = (
         "Draft from the weekly plan, then send safe items through review."
         if queue_total == 0
+        else "After approved posts publish, record the first 7-day results."
+        if outcome_total == 0
         else "Review pending queue items before connecting Meta publishing."
         if feedback_total == 0
         else "Use approval and rejection patterns to refine next week's topics."
@@ -461,6 +549,7 @@ async def learning_summary(_: None = Depends(require_access_token)):
         "queue": queue,
         "feedback": feedback,
         "recent_briefs": recent_briefs,
+        "recent_outcomes": recent_outcomes,
         "recommendation": recommendation,
     }
 
@@ -474,6 +563,7 @@ async def loop_status(_: None = Depends(require_access_token)):
     kb_count = await fetch_row("select count(*)::int as count from kb_entries")
     metric_count = await fetch_row("select count(*)::int as count from raw_metrics")
     brief_count = await fetch_row("select count(*)::int as count from content_briefs")
+    outcome_count = await fetch_row("select count(*)::int as count from outcomes")
     if not queue and supabase_rest.configured():
         queue_rows = await supabase_rest.select(
             "publish_queue",
@@ -488,6 +578,7 @@ async def loop_status(_: None = Depends(require_access_token)):
         kb_count = {"count": await supabase_rest.count("kb_entries")}
         metric_count = {"count": await supabase_rest.count("raw_metrics")}
         brief_count = {"count": await supabase_rest.count("content_briefs")}
+        outcome_count = {"count": await supabase_rest.count("outcomes")}
     return {
         "stage": "stage_1_thin_core",
         "beats": ["sense", "decide", "create", "review", "publish", "measure", "learn"],
@@ -496,4 +587,5 @@ async def loop_status(_: None = Depends(require_access_token)):
         "kb_count": (kb_count or {}).get("count", 0),
         "metric_count": (metric_count or {}).get("count", 0),
         "brief_count": (brief_count or {}).get("count", 0),
+        "outcome_count": (outcome_count or {}).get("count", 0),
     }
