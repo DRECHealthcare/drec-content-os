@@ -133,6 +133,35 @@ function draftCaption({ topic, points, stage, language, format }) {
   ].join("\n");
 }
 
+function slidePreview(slides) {
+  if (!slides?.length) return "";
+  return `
+    <div class="creative-preview">
+      ${slides.map((slide) => `
+        <article class="mini-slide">
+          <span>${escapeHtml(slide.slide || "")}/6</span>
+          <strong>${escapeHtml(slide.title || "")}</strong>
+          <p>${escapeHtml(slide.body || "")}</p>
+        </article>
+      `).join("")}
+    </div>
+  `;
+}
+
+function reelPreview(script) {
+  if (!script?.length) return "";
+  return `
+    <div class="script-preview">
+      ${script.map((beat) => `
+        <div>
+          <strong>${escapeHtml(beat.time || "")} · ${escapeHtml(beat.beat || "")}</strong>
+          <p>${escapeHtml(beat.line || "")}</p>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
 function defaultPointsForBrief(brief) {
   const beats = brief.structure_beats || {};
   if (Array.isArray(beats.body) && beats.body.length) return beats.body;
@@ -444,7 +473,17 @@ function renderDraft(draft, compliance) {
         <span>${escapeHtml(draft.stage)}</span>
         <span>${escapeHtml(compliance?.status || "unchecked")}</span>
       </div>
+      ${draft.captionVariants?.length > 1 ? `
+        <div class="caption-variants">
+          <strong>Caption variants</strong>
+          ${draft.captionVariants.map((caption, index) => `
+            <button type="button" data-caption-variant="${index}">Use ${index === 0 ? "A" : "B"}</button>
+          `).join("")}
+        </div>
+      ` : ""}
       <textarea id="draft-caption">${escapeHtml(draft.caption)}</textarea>
+      ${slidePreview(draft.slides)}
+      ${reelPreview(draft.reelScript)}
       <div class="compliance-box ${escapeHtml(compliance?.status || "pending")}">
         <strong>${escapeHtml(compliance?.status || "pending")}</strong>
         <p>${escapeHtml(compliance?.recommendation || "Run safety check before queueing.")}</p>
@@ -543,13 +582,44 @@ document.getElementById("compose-form").addEventListener("submit", async (event)
   queueButton.disabled = true;
   saveAssetButton.disabled = true;
   try {
-    const compliance = await checkCaptionSafety(draft.caption);
+    const creative = await fetchJson("/creative/draft", {
+      method: "POST",
+      body: JSON.stringify({
+        channel: draft.channel,
+        format: draft.format,
+        stage: draft.stage,
+        language: draft.language,
+        topic: draft.topic,
+        points: draft.points,
+        style_key: draft.format === "reel" ? "reel_script_v1" : "edu_carousel_navy",
+      }),
+    });
+    const packageItem = creative.item || {};
+    draft.caption = packageItem.primary_caption || draft.caption;
+    draft.captionVariants = packageItem.caption_variants || [draft.caption];
+    draft.slides = packageItem.slides || [];
+    draft.reelScript = packageItem.reel_script || [];
+    draft.creativeMetadata = packageItem.metadata || {};
+    draft.styleKey = packageItem.style_key || null;
+    draft.targetSignal = packageItem.target_signal || null;
+    const compliance = packageItem.compliance || await checkCaptionSafety(draft.caption);
     renderDraft(draft, compliance);
     queueButton.disabled = compliance.status === "flagged";
     saveAssetButton.disabled = compliance.status === "flagged";
   } catch {
     renderDraft(draft, null);
   }
+});
+
+document.getElementById("compose-result").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-caption-variant]");
+  if (!button || !currentDraft) return;
+  const index = Number(button.dataset.captionVariant);
+  const caption = currentDraft.captionVariants?.[index];
+  if (!caption) return;
+  currentDraft.caption = caption;
+  const captionBox = document.getElementById("draft-caption");
+  if (captionBox) captionBox.value = caption;
 });
 
 document.getElementById("save-asset").addEventListener("click", async () => {
@@ -574,6 +644,12 @@ document.getElementById("save-asset").addEventListener("click", async () => {
         stage: currentDraft.stage,
         topic: currentDraft.topic,
         points: currentDraft.points,
+        style_key: currentDraft.styleKey,
+        target_signal: currentDraft.targetSignal,
+        caption_variants: currentDraft.captionVariants || [],
+        slides: currentDraft.slides || [],
+        reel_script: currentDraft.reelScript || [],
+        creative: currentDraft.creativeMetadata || {},
       },
       compliance_status: compliance.status === "clear" ? "clear" : "pending",
       review_status: "draft",

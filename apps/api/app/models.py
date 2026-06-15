@@ -40,6 +40,17 @@ class AssetIn(BaseModel):
     review_status: Literal["draft", "review", "approved", "rejected"] = "draft"
 
 
+class CreativeDraftIn(BaseModel):
+    channel: Literal["facebook", "instagram"] = "facebook"
+    format: Literal["reel", "carousel", "single", "story"] = "carousel"
+    stage: Literal["TOFU", "MOFU", "BOFU"] = "TOFU"
+    language: Literal["zh", "en", "mixed"] = "zh"
+    topic: str
+    points: List[str] = []
+    style_key: str = "edu_carousel_navy"
+    target_signal: Optional[str] = None
+
+
 class WeeklyPlanIn(BaseModel):
     topics: List[str] = []
     language: Literal["zh", "en", "mixed"] = "zh"

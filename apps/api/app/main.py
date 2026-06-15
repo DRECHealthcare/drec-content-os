@@ -11,6 +11,7 @@ from .models import (
     AssetIn,
     ComplianceCheckIn,
     ContentBriefIn,
+    CreativeDraftIn,
     FeedbackIn,
     KnowledgeEntryIn,
     MetricIn,
@@ -306,6 +307,125 @@ async def create_asset(asset: AssetIn, _: None = Depends(require_access_token)):
     if row is None:
         row = await supabase_rest.insert("assets", payload)
     return {"item": row or payload}
+
+
+def caption_variants(draft: CreativeDraftIn):
+    points = draft.points or ["Explain the core idea simply.", "Give one safe practical observation.", "Invite review with a clinician."]
+    if draft.language == "en":
+        education_line = "This is general education, not a diagnosis or treatment plan."
+        return [
+            "\n".join(
+                [
+                    f"A practical way to understand {draft.topic}:",
+                    "",
+                    *[f"{index + 1}. {point}" for index, point in enumerate(points[:4])],
+                    "",
+                    education_line,
+                    "Save this for your next health conversation.",
+                ]
+            ),
+            "\n".join(
+                [
+                    f"Before you make a health decision about {draft.topic}, check these points:",
+                    "",
+                    *[f"- {point}" for point in points[:4]],
+                    "",
+                    education_line,
+                    "Discuss personal changes with a qualified clinician.",
+                ]
+            ),
+        ]
+    education_line = "以上是一般健康教育，不等于个人诊断或治疗方案。"
+    return [
+        "\n".join(
+            [
+                f"关于「{draft.topic}」，可以这样理解：",
+                "",
+                *[f"{index + 1}. {point}" for index, point in enumerate(points[:4])],
+                "",
+                education_line,
+                "可以收藏起来，下一次和医生讨论时参考。",
+            ]
+        ),
+        "\n".join(
+            [
+                f"先别急着下结论。看懂「{draft.topic}」之前，先看这几个点：",
+                "",
+                *[f"- {point}" for point in points[:4]],
+                "",
+                education_line,
+                "如果与你的健康状况有关，请先咨询合格医生。",
+            ]
+        ),
+    ]
+
+
+def carousel_slides(draft: CreativeDraftIn):
+    points = draft.points or ["先看误区", "再看机制", "最后给一个安全行动"]
+    cta = "收藏这篇，复诊前看一遍" if draft.language != "en" else "Save this before your next check-up"
+    titles = [
+        draft.topic,
+        "大家常误会的地方" if draft.language != "en" else "The common misconception",
+        "关键机制" if draft.language != "en" else "The key mechanism",
+        "可以观察什么" if draft.language != "en" else "What to observe",
+        "安全提醒" if draft.language != "en" else "Safety note",
+        cta,
+    ]
+    bodies = [
+        points[0] if points else draft.topic,
+        points[1] if len(points) > 1 else "不要只看单一数字，要看趋势和背景。",
+        points[2] if len(points) > 2 else "用简单框架解释，不做个人诊断。",
+        points[3] if len(points) > 3 else "记录饮食、腰围、餐后反应，再与医生讨论。",
+        "一般健康教育，不替代诊断、处方或个人治疗建议。" if draft.language != "en" else "General education only, not personal medical advice.",
+        "@drec 逆转医学" if draft.language != "en" else "@drec",
+    ]
+    return [
+        {
+            "slide": index + 1,
+            "title": titles[index],
+            "body": bodies[index],
+            "visual_note": "Use DREC navy/teal template; no small text baked into generated images.",
+        }
+        for index in range(6)
+    ]
+
+
+def reel_script(draft: CreativeDraftIn):
+    points = draft.points or ["Hook with a common belief.", "Explain the mechanism.", "Close with safe next step."]
+    return [
+        {"time": "0-3s", "beat": "Hook", "line": f"{draft.topic}：很多人第一步就看错了。" if draft.language != "en" else f"Most people read {draft.topic} the wrong way first."},
+        {"time": "3-10s", "beat": "Context", "line": points[0]},
+        {"time": "10-25s", "beat": "Mechanism", "line": points[1] if len(points) > 1 else "Explain the mechanism in plain language."},
+        {"time": "25-38s", "beat": "Practical observation", "line": points[2] if len(points) > 2 else "Give one safe thing to observe, not a treatment instruction."},
+        {"time": "38-45s", "beat": "Close", "line": "收藏，复诊前再看；个人调整请先问医生。" if draft.language != "en" else "Save this; ask your clinician before personal changes."},
+    ]
+
+
+@app.post("/creative/draft")
+async def create_creative_draft(draft: CreativeDraftIn, _: None = Depends(require_access_token)):
+    variants = caption_variants(draft)
+    primary_caption = variants[0]
+    compliance = check_text(primary_caption)
+    package = {
+        "channel": draft.channel,
+        "format": draft.format,
+        "stage": draft.stage,
+        "language": draft.language,
+        "topic": draft.topic,
+        "style_key": draft.style_key,
+        "target_signal": draft.target_signal or ("saves" if draft.format == "carousel" else "watch_time"),
+        "caption_variants": variants,
+        "primary_caption": primary_caption,
+        "slides": carousel_slides(draft) if draft.format in ["carousel", "single", "story"] else [],
+        "reel_script": reel_script(draft) if draft.format == "reel" else [],
+        "compliance": compliance,
+        "metadata": {
+            "points": draft.points,
+            "creative_engine": "deterministic_v1",
+            "notes": "Human review is required before publishing.",
+        },
+    }
+    return {"item": package}
 
 
 @app.get("/publish-queue")
