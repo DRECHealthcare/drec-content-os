@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     database_url: Optional[str] = None
     supabase_url: Optional[str] = None
     supabase_service_role_key: Optional[str] = None
+    supabase_api_key: Optional[str] = None
     meta_graph_version: str = "v23.0"
     meta_page_id: Optional[str] = None
     meta_ig_user_id: Optional[str] = None

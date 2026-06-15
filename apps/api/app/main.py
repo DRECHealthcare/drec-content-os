@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .db import close_db, connect_db, fetch_row, fetch_rows
 from .models import FeedbackIn, KnowledgeEntryIn, MetricIn, PublishQueueIn
+from . import supabase_rest
 
 
 @asynccontextmanager
@@ -32,8 +33,14 @@ app.add_middleware(
 
 @app.get("/health")
 async def health():
-    db_status = "configured" if await fetch_row("select 1 as ok") else "not_connected"
-    return {"ok": True, "service": "drec-content-os-api", "database": db_status}
+    postgres_status = "configured" if await fetch_row("select 1 as ok") else "not_connected"
+    supabase_status = "configured" if supabase_rest.configured() else "not_connected"
+    return {
+        "ok": True,
+        "service": "drec-content-os-api",
+        "postgres": postgres_status,
+        "supabase_rest": supabase_status,
+    }
 
 
 @app.get("/kb")
@@ -46,6 +53,15 @@ async def list_knowledge_entries():
         limit 100
         """
     )
+    if not rows:
+        rows = await supabase_rest.select(
+            "kb_entries",
+            {
+                "select": "id,category,title,body,tags,created_at",
+                "order": "created_at.desc",
+                "limit": "100",
+            },
+        )
     return {"items": rows}
 
 
@@ -62,6 +78,16 @@ async def create_knowledge_entry(entry: KnowledgeEntryIn):
         entry.body,
         entry.tags,
     )
+    if row is None:
+        row = await supabase_rest.insert(
+            "kb_entries",
+            {
+                "category": entry.category,
+                "title": entry.title,
+                "body": entry.body,
+                "tags": entry.tags,
+            },
+        )
     return {"item": row or entry.model_dump()}
 
 
@@ -76,6 +102,15 @@ async def list_publish_queue():
         limit 100
         """
     )
+    if not rows:
+        rows = await supabase_rest.select(
+            "publish_queue",
+            {
+                "select": "id,channel,format,caption,media_urls,planned_slot,status,compliance_status,created_at",
+                "order": "planned_slot.asc.nullslast,created_at.desc",
+                "limit": "100",
+            },
+        )
     return {"items": rows}
 
 
@@ -96,6 +131,18 @@ async def create_publish_queue_item(item: PublishQueueIn):
         item.planned_slot,
         item.compliance_status,
     )
+    if row is None:
+        row = await supabase_rest.insert(
+            "publish_queue",
+            {
+                "channel": item.channel,
+                "format": item.format,
+                "caption": item.caption,
+                "media_urls": item.media_urls,
+                "planned_slot": item.planned_slot.isoformat() if item.planned_slot else None,
+                "compliance_status": item.compliance_status,
+            },
+        )
     return {"item": row or item.model_dump()}
 
 
@@ -112,6 +159,16 @@ async def ingest_metric(metric: MetricIn):
         metric.captured_at,
         metric.metrics,
     )
+    if row is None:
+        row = await supabase_rest.insert(
+            "raw_metrics",
+            {
+                "source": metric.source,
+                "external_post_id": metric.external_post_id,
+                "captured_at": metric.captured_at.isoformat(),
+                "metrics": metric.metrics,
+            },
+        )
     return {"item": row or metric.model_dump()}
 
 
@@ -133,6 +190,20 @@ async def capture_feedback(feedback: FeedbackIn):
         feedback.reason,
         feedback.tags,
     )
+    if row is None:
+        row = await supabase_rest.insert(
+            "feedback",
+            {
+                "module": feedback.module,
+                "ref_type": feedback.ref_type,
+                "ref_id": feedback.ref_id,
+                "action": feedback.action,
+                "before_text": feedback.before_text,
+                "after_text": feedback.after_text,
+                "reason": feedback.reason,
+                "tags": feedback.tags,
+            },
+        )
     return {"item": row or feedback.model_dump()}
 
 
@@ -144,6 +215,19 @@ async def loop_status():
     feedback_count = await fetch_row("select count(*)::int as count from feedback")
     kb_count = await fetch_row("select count(*)::int as count from kb_entries")
     metric_count = await fetch_row("select count(*)::int as count from raw_metrics")
+    if not queue and supabase_rest.configured():
+        queue_rows = await supabase_rest.select(
+            "publish_queue",
+            {"select": "status", "limit": "1000"},
+        )
+        counts = {}
+        for row in queue_rows:
+            status = row.get("status", "unknown")
+            counts[status] = counts.get(status, 0) + 1
+        queue = [{"status": status, "count": count} for status, count in counts.items()]
+        feedback_count = {"count": await supabase_rest.count("feedback")}
+        kb_count = {"count": await supabase_rest.count("kb_entries")}
+        metric_count = {"count": await supabase_rest.count("raw_metrics")}
     return {
         "stage": "stage_1_thin_core",
         "beats": ["sense", "decide", "create", "review", "publish", "measure", "learn"],

@@ -1,4 +1,4 @@
-const apiBase = window.DREC_API_BASE_URL || localStorage.getItem("DREC_API_BASE_URL") || "http://localhost:8080";
+const apiBase = window.DREC_API_BASE_URL || localStorage.getItem("DREC_API_BASE_URL") || "https://drec-content-os-api.fly.dev";
 
 const titleMap = {
   dashboard: "Dashboard",
