@@ -52,6 +52,25 @@ async def insert(table: str, payload: Dict[str, Any]) -> Optional[Dict[str, Any]
         return data[0] if data else None
 
 
+async def update(
+    table: str,
+    payload: Dict[str, Any],
+    params: Dict[str, str],
+) -> Optional[Dict[str, Any]]:
+    if not configured():
+        return None
+    async with httpx.AsyncClient(timeout=20) as client:
+        res = await client.patch(
+            table_url(table),
+            headers=headers("return=representation"),
+            params=params,
+            json=payload,
+        )
+        res.raise_for_status()
+        data = res.json()
+        return data[0] if data else None
+
+
 async def count(table: str) -> int:
     if not configured():
         return 0

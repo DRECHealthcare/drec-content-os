@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .auth import require_access_token
 from .db import close_db, connect_db, fetch_row, fetch_rows
-from .models import FeedbackIn, KnowledgeEntryIn, MetricIn, PublishQueueIn
+from .models import FeedbackIn, KnowledgeEntryIn, MetricIn, PublishQueueIn, PublishQueueStatusIn
 from . import supabase_rest
 
 
@@ -145,6 +145,32 @@ async def create_publish_queue_item(item: PublishQueueIn, _: None = Depends(requ
             },
         )
     return {"item": row or item.model_dump()}
+
+
+@app.patch("/publish-queue/{item_id}")
+async def update_publish_queue_item(
+    item_id: str,
+    update: PublishQueueStatusIn,
+    _: None = Depends(require_access_token),
+):
+    row = await fetch_row(
+        """
+        update publish_queue
+        set status = $2, updated_at = now()
+        where id = $1
+        returning id, channel, format, caption, media_urls, planned_slot, status,
+                  compliance_status, created_at
+        """,
+        item_id,
+        update.status,
+    )
+    if row is None:
+        row = await supabase_rest.update(
+            "publish_queue",
+            {"status": update.status},
+            {"id": f"eq.{item_id}"},
+        )
+    return {"item": row or {"id": item_id, "status": update.status}}
 
 
 @app.post("/metrics")

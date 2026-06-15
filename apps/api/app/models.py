@@ -20,6 +20,10 @@ class PublishQueueIn(BaseModel):
     compliance_status: Literal["pending", "clear", "flagged"] = "pending"
 
 
+class PublishQueueStatusIn(BaseModel):
+    status: Literal["draft", "scheduled", "publishing", "published", "failed", "cancelled"]
+
+
 class MetricIn(BaseModel):
     source: Literal["facebook", "instagram", "ads", "manual"]
     external_post_id: str

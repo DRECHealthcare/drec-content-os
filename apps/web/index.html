@@ -67,14 +67,56 @@
     <section id="review" class="screen">
       <div class="card wide">
         <h2>Review Queue</h2>
-        <p>Approvals, edits, regenerations, and rejections will write taste signals to the learning spine.</p>
+        <p class="section-note">Review queued content and send approval signals into the learning spine.</p>
+        <div id="review-items" class="queue-list"></div>
       </div>
     </section>
 
     <section id="scheduler" class="screen">
       <div class="card wide">
         <h2>Scheduler</h2>
-        <p>Facebook native scheduling and Instagram worker publishing will be connected after Meta credentials are added.</p>
+        <p class="section-note">Create scheduler-ready records now. Real Meta publishing connects after Facebook and Instagram credentials are added.</p>
+        <form id="queue-form" class="split-form">
+          <label>
+            Channel
+            <select name="channel">
+              <option value="facebook">Facebook</option>
+              <option value="instagram">Instagram</option>
+            </select>
+          </label>
+          <label>
+            Format
+            <select name="format">
+              <option value="carousel">Carousel</option>
+              <option value="single">Single Image</option>
+              <option value="reel">Reel</option>
+              <option value="story">Story</option>
+            </select>
+          </label>
+          <label>
+            Planned Time
+            <input name="planned_slot" type="datetime-local">
+          </label>
+          <label>
+            Compliance
+            <select name="compliance_status">
+              <option value="pending">Pending Review</option>
+              <option value="clear">Clear</option>
+              <option value="flagged">Flagged</option>
+            </select>
+          </label>
+          <label class="full">
+            Caption
+            <textarea name="caption" placeholder="Paste or draft the caption here" required></textarea>
+          </label>
+          <label class="full">
+            Media URLs
+            <textarea name="media_urls" placeholder="One image or video URL per line"></textarea>
+          </label>
+          <button type="submit">Add To Queue</button>
+        </form>
+        <div id="queue-message" class="status-note"></div>
+        <div id="queue-items" class="queue-list"></div>
       </div>
     </section>
 

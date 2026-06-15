@@ -155,11 +155,21 @@ form {
   max-width: 680px;
 }
 
+label {
+  display: grid;
+  gap: 6px;
+  color: var(--navy);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 input, select, textarea {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 10px 12px;
   font: inherit;
+  color: var(--ink);
+  background: #FFF;
 }
 
 textarea { min-height: 110px; resize: vertical; }
@@ -186,6 +196,82 @@ button[type="submit"] {
   color: var(--muted);
 }
 
+.section-note {
+  margin-bottom: 16px;
+  color: var(--muted);
+}
+
+.split-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 860px;
+}
+
+.split-form .full,
+.split-form button[type="submit"] {
+  grid-column: 1 / -1;
+}
+
+.queue-list {
+  margin-top: 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.queue-item {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #FBFDFE;
+}
+
+.queue-item p {
+  white-space: pre-wrap;
+}
+
+.queue-item small {
+  color: var(--muted);
+}
+
+.queue-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.queue-meta span {
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: #EAF7F6;
+  color: #0B655F;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.queue-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.queue-actions button {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 10px;
+  background: #FFF;
+  color: var(--navy);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.queue-actions button:first-child {
+  border-color: transparent;
+  background: var(--teal);
+  color: #FFF;
+}
+
 .kb-item {
   padding: 10px 12px;
   border: 1px solid var(--line);
@@ -198,6 +284,8 @@ button[type="submit"] {
 @media (max-width: 900px) {
   body { display: block; }
   aside { width: 100%; }
-  .grid, .loop { grid-template-columns: 1fr; }
+  header { flex-wrap: wrap; height: auto; padding: 14px 18px; }
+  .screen { padding: 18px; }
+  .grid, .loop, .split-form { grid-template-columns: 1fr; }
   .loop div { border-right: 0; border-bottom: 1px solid var(--line); }
 }
