@@ -766,9 +766,15 @@ async def revert_learning_weight(weight_id: str, _: None = Depends(require_acces
         weight_id,
     )
     if row is None:
+        existing_rows = await supabase_rest.select(
+            "learning_weights",
+            {"select": "value,previous_value", "id": f"eq.{weight_id}", "limit": "1"},
+        )
+        existing = existing_rows[0] if existing_rows else {}
+        reverted_value = existing.get("previous_value") if existing.get("previous_value") is not None else existing.get("value")
         row = await supabase_rest.update(
             "learning_weights",
-            {"is_active": False},
+            {"value": reverted_value, "is_active": False},
             {"id": f"eq.{weight_id}"},
         )
     return {"item": row or {"id": weight_id, "is_active": False}}
