@@ -40,6 +40,17 @@ class AssetIn(BaseModel):
     review_status: Literal["draft", "review", "approved", "rejected"] = "draft"
 
 
+class MediaAssetIn(BaseModel):
+    title: str
+    source_url: str
+    media_type: Literal["image", "video", "document", "other"] = "image"
+    rights_status: Literal["owned", "licensed", "patient_consented", "stock", "unknown"] = "owned"
+    approval_status: Literal["approved", "needs_review", "blocked"] = "approved"
+    notes: Optional[str] = None
+    tags: List[str] = []
+    metadata: Dict[str, Any] = {}
+
+
 class CreativeDraftIn(BaseModel):
     channel: Literal["facebook", "instagram"] = "facebook"
     format: Literal["reel", "carousel", "single", "story"] = "carousel"

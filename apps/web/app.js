@@ -21,7 +21,7 @@ document.querySelectorAll("nav button").forEach((button) => {
     document.querySelectorAll(".screen").forEach((item) => item.classList.toggle("active", item.id === screen));
     document.getElementById("title").textContent = titleMap[screen] || screen;
     if (screen === "plan") loadBriefs();
-    if (screen === "assets") loadAssets();
+    if (screen === "assets") Promise.all([loadAssets(), loadMediaAssets()]);
     if (screen === "outcomes") loadOutcomes();
     if (screen === "learning") loadLearningSummary();
     if (screen === "scheduler" || screen === "review") loadPublishQueue();
@@ -51,6 +51,7 @@ function promptForToken() {
   loadKb();
   loadBriefs();
   loadAssets();
+  loadMediaAssets();
   loadOutcomes();
   loadLearningSummary();
   loadPublishQueue();
@@ -190,12 +191,14 @@ async function loadLoopStatus() {
     document.getElementById("queue-count").textContent = `${scheduled} queue item(s)`;
     document.getElementById("brief-count").textContent = `${data.brief_count || 0} brief(s)`;
     document.getElementById("asset-count").textContent = `${data.asset_count || 0} asset(s)`;
+    document.getElementById("media-count").textContent = `${data.media_count || 0} media item(s)`;
     document.getElementById("outcome-count").textContent = `${data.outcome_count || 0} performance record(s)`;
   } catch {
     const message = accessToken() ? "API access failed" : "Set access token";
     document.getElementById("queue-count").textContent = message;
     document.getElementById("brief-count").textContent = message;
     document.getElementById("asset-count").textContent = message;
+    document.getElementById("media-count").textContent = message;
     document.getElementById("outcome-count").textContent = message;
   }
 }
@@ -369,6 +372,36 @@ function assetCard(item) {
       </div>
     </article>
   `;
+}
+
+function mediaAssetCard(item) {
+  return `
+    <article class="queue-item">
+      <div class="queue-meta">
+        <span>${escapeHtml(item.media_type || "media")}</span>
+        <span>${escapeHtml(item.rights_status || "unknown")}</span>
+        <span>${escapeHtml(item.approval_status || "needs_review")}</span>
+      </div>
+      <p><strong>${escapeHtml(item.title || "Untitled media")}</strong></p>
+      <a class="media-link" href="${escapeHtml(item.source_url || "#")}" target="_blank" rel="noreferrer">${escapeHtml(item.source_url || "")}</a>
+      ${item.notes ? `<small>${escapeHtml(item.notes)}</small>` : ""}
+      ${Array.isArray(item.tags) && item.tags.length ? `<small>${item.tags.map((tag) => `#${escapeHtml(tag)}`).join(" ")}</small>` : ""}
+    </article>
+  `;
+}
+
+async function loadMediaAssets() {
+  const container = document.getElementById("media-items");
+  if (!container) return;
+  try {
+    const data = await fetchJson("/media-assets");
+    const items = data.items || [];
+    container.innerHTML = items.length
+      ? items.map(mediaAssetCard).join("")
+      : '<p class="status-note">No registered media yet. Add approved media URLs here before publishing.</p>';
+  } catch {
+    container.innerHTML = '<p class="status-note">Set the access token to load media.</p>';
+  }
 }
 
 async function loadAssets() {
@@ -588,6 +621,35 @@ document.getElementById("brief-items").addEventListener("click", (event) => {
   form.elements.topic.value = brief.topic || "";
   form.elements.points.value = defaultPointsForBrief(brief).join("\n");
   showScreen("compose");
+});
+
+document.getElementById("media-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const message = document.getElementById("media-message");
+  const form = new FormData(event.currentTarget);
+  const tags = String(form.get("tags") || "")
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+  const payload = {
+    title: form.get("title"),
+    source_url: form.get("source_url"),
+    media_type: form.get("media_type"),
+    rights_status: form.get("rights_status"),
+    approval_status: form.get("approval_status"),
+    notes: form.get("notes") || null,
+    tags,
+    metadata: {},
+  };
+  message.textContent = "Registering media...";
+  try {
+    await fetchJson("/media-assets", { method: "POST", body: JSON.stringify(payload) });
+    event.currentTarget.reset();
+    message.textContent = "Media registered.";
+    await Promise.all([loadMediaAssets(), loadLoopStatus()]);
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not register media.";
+  }
 });
 
 document.getElementById("compose-form").addEventListener("submit", async (event) => {
@@ -976,6 +1038,7 @@ loadLoopStatus();
 loadKb();
 loadBriefs();
 loadAssets();
+loadMediaAssets();
 loadLearningSummary();
 loadPublishQueue();
 loadOutcomes();

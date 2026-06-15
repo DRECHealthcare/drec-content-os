@@ -46,6 +46,20 @@ create table if not exists assets (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists media_assets (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  source_url text not null,
+  media_type text not null check (media_type in ('image', 'video', 'document', 'other')),
+  rights_status text not null default 'owned' check (rights_status in ('owned', 'licensed', 'patient_consented', 'stock', 'unknown')),
+  approval_status text not null default 'approved' check (approval_status in ('approved', 'needs_review', 'blocked')),
+  notes text,
+  tags text[] not null default '{}',
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists publish_queue (
   id uuid primary key default gen_random_uuid(),
   asset_id uuid references assets(id) on delete set null,
@@ -123,11 +137,43 @@ create table if not exists learning_weights (
 
 create index if not exists idx_kb_entries_category on kb_entries(category);
 create index if not exists idx_publish_queue_status on publish_queue(status);
+create index if not exists idx_media_assets_status on media_assets(approval_status);
+create index if not exists idx_media_assets_type on media_assets(media_type);
 create index if not exists idx_raw_metrics_external_post_id on raw_metrics(external_post_id);
 create index if not exists idx_feedback_ref on feedback(ref_type, ref_id);
 create index if not exists idx_outcomes_brief_id on outcomes(brief_id);
 create index if not exists idx_learning_weights_dimension_key on learning_weights(dimension, key);
 create index if not exists idx_learning_weights_active on learning_weights(is_active);
+
+alter table kb_entries enable row level security;
+alter table content_briefs enable row level security;
+alter table assets enable row level security;
+alter table media_assets enable row level security;
+alter table publish_queue enable row level security;
+alter table raw_metrics enable row level security;
+alter table feedback enable row level security;
+alter table outcomes enable row level security;
+alter table learning_weights enable row level security;
+
+drop policy if exists "drec_api_rest_access" on kb_entries;
+drop policy if exists "drec_api_rest_access" on content_briefs;
+drop policy if exists "drec_api_rest_access" on assets;
+drop policy if exists "drec_api_rest_access" on media_assets;
+drop policy if exists "drec_api_rest_access" on publish_queue;
+drop policy if exists "drec_api_rest_access" on raw_metrics;
+drop policy if exists "drec_api_rest_access" on feedback;
+drop policy if exists "drec_api_rest_access" on outcomes;
+drop policy if exists "drec_api_rest_access" on learning_weights;
+
+create policy "drec_api_rest_access" on kb_entries for all to anon, authenticated using (true) with check (true);
+create policy "drec_api_rest_access" on content_briefs for all to anon, authenticated using (true) with check (true);
+create policy "drec_api_rest_access" on assets for all to anon, authenticated using (true) with check (true);
+create policy "drec_api_rest_access" on media_assets for all to anon, authenticated using (true) with check (true);
+create policy "drec_api_rest_access" on publish_queue for all to anon, authenticated using (true) with check (true);
+create policy "drec_api_rest_access" on raw_metrics for all to anon, authenticated using (true) with check (true);
+create policy "drec_api_rest_access" on feedback for all to anon, authenticated using (true) with check (true);
+create policy "drec_api_rest_access" on outcomes for all to anon, authenticated using (true) with check (true);
+create policy "drec_api_rest_access" on learning_weights for all to anon, authenticated using (true) with check (true);
 
 insert into kb_entries (category, title, body, tags)
 values

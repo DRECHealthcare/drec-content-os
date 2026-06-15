@@ -15,6 +15,7 @@ from .models import (
     FeedbackIn,
     KnowledgeEntryIn,
     LearningWeightIn,
+    MediaAssetIn,
     MetricIn,
     MetricRollupIn,
     OutcomeIn,
@@ -308,6 +309,67 @@ async def create_asset(asset: AssetIn, _: None = Depends(require_access_token)):
     )
     if row is None:
         row = await supabase_rest.insert("assets", payload)
+    return {"item": row or payload}
+
+
+def media_asset_payload(media: MediaAssetIn):
+    return {
+        "title": media.title,
+        "source_url": media.source_url,
+        "media_type": media.media_type,
+        "rights_status": media.rights_status,
+        "approval_status": media.approval_status,
+        "notes": media.notes,
+        "tags": media.tags,
+        "metadata": media.metadata,
+    }
+
+
+@app.get("/media-assets")
+async def list_media_assets(_: None = Depends(require_access_token)):
+    rows = await fetch_rows(
+        """
+        select id, title, source_url, media_type, rights_status, approval_status,
+               notes, tags, metadata, created_at
+        from media_assets
+        order by created_at desc
+        limit 100
+        """
+    )
+    if not rows and supabase_rest.configured():
+        rows = await supabase_rest.select(
+            "media_assets",
+            {
+                "select": "id,title,source_url,media_type,rights_status,approval_status,notes,tags,metadata,created_at",
+                "order": "created_at.desc",
+                "limit": "100",
+            },
+        )
+    return {"items": rows}
+
+
+@app.post("/media-assets")
+async def create_media_asset(media: MediaAssetIn, _: None = Depends(require_access_token)):
+    payload = media_asset_payload(media)
+    row = await fetch_row(
+        """
+        insert into media_assets
+          (title, source_url, media_type, rights_status, approval_status, notes, tags, metadata)
+        values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
+        returning id, title, source_url, media_type, rights_status, approval_status,
+                  notes, tags, metadata, created_at
+        """,
+        payload["title"],
+        payload["source_url"],
+        payload["media_type"],
+        payload["rights_status"],
+        payload["approval_status"],
+        payload["notes"],
+        payload["tags"],
+        json.dumps(payload["metadata"]),
+    )
+    if row is None and supabase_rest.configured():
+        row = await supabase_rest.insert("media_assets", payload)
     return {"item": row or payload}
 
 
@@ -1001,6 +1063,7 @@ async def loop_status(_: None = Depends(require_access_token)):
     metric_count = await fetch_row("select count(*)::int as count from raw_metrics")
     brief_count = await fetch_row("select count(*)::int as count from content_briefs")
     asset_count = await fetch_row("select count(*)::int as count from assets")
+    media_count = await fetch_row("select count(*)::int as count from media_assets")
     outcome_count = await fetch_row("select count(*)::int as count from outcomes")
     weight_count = await fetch_row("select count(*)::int as count from learning_weights where is_active = true")
     if not queue and supabase_rest.configured():
@@ -1018,6 +1081,7 @@ async def loop_status(_: None = Depends(require_access_token)):
         metric_count = {"count": await supabase_rest.count("raw_metrics")}
         brief_count = {"count": await supabase_rest.count("content_briefs")}
         asset_count = {"count": await supabase_rest.count("assets")}
+        media_count = {"count": await supabase_rest.count("media_assets")}
         outcome_count = {"count": await supabase_rest.count("outcomes")}
         active_weights = await supabase_rest.select("learning_weights", {"select": "id", "is_active": "eq.true", "limit": "1000"})
         weight_count = {"count": len(active_weights)}
@@ -1030,6 +1094,7 @@ async def loop_status(_: None = Depends(require_access_token)):
         "metric_count": (metric_count or {}).get("count", 0),
         "brief_count": (brief_count or {}).get("count", 0),
         "asset_count": (asset_count or {}).get("count", 0),
+        "media_count": (media_count or {}).get("count", 0),
         "outcome_count": (outcome_count or {}).get("count", 0),
         "weight_count": (weight_count or {}).get("count", 0),
     }

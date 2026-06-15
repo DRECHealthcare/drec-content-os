@@ -49,6 +49,7 @@
         <article class="card"><h2>Publish Queue</h2><p id="queue-count">Waiting for API</p></article>
         <article class="card"><h2>Content Briefs</h2><p id="brief-count">Waiting for API</p></article>
         <article class="card"><h2>Assets</h2><p id="asset-count">Waiting for API</p></article>
+        <article class="card"><h2>Media Library</h2><p id="media-count">Waiting for API</p></article>
         <article class="card"><h2>Performance Records</h2><p id="outcome-count">Waiting for API</p></article>
       </div>
     </section>
@@ -143,7 +144,57 @@
     <section id="assets" class="screen">
       <div class="card wide">
         <h2>Assets</h2>
-        <p class="section-note">Save draft captions here before they enter the publishing queue.</p>
+        <p class="section-note">Register approved images and videos, then save draft captions before they enter the publishing queue.</p>
+        <form id="media-form" class="split-form compact-form">
+          <label>
+            Title
+            <input name="title" placeholder="Example: clinic food plate photo" required>
+          </label>
+          <label>
+            Media Type
+            <select name="media_type">
+              <option value="image">Image</option>
+              <option value="video">Video</option>
+              <option value="document">Document</option>
+              <option value="other">Other</option>
+            </select>
+          </label>
+          <label>
+            Rights
+            <select name="rights_status">
+              <option value="owned">Owned</option>
+              <option value="licensed">Licensed</option>
+              <option value="patient_consented">Patient Consented</option>
+              <option value="stock">Stock</option>
+              <option value="unknown">Unknown</option>
+            </select>
+          </label>
+          <label>
+            Approval
+            <select name="approval_status">
+              <option value="approved">Approved</option>
+              <option value="needs_review">Needs Review</option>
+              <option value="blocked">Blocked</option>
+            </select>
+          </label>
+          <label class="full">
+            Source URL
+            <input name="source_url" placeholder="https://..." required>
+          </label>
+          <label class="full">
+            Notes
+            <textarea name="notes" placeholder="Usage notes, consent context, crop idea, or campaign fit."></textarea>
+          </label>
+          <label class="full">
+            Tags
+            <input name="tags" placeholder="food, clinic, diabetes">
+          </label>
+          <button type="submit">Register Media</button>
+        </form>
+        <div id="media-message" class="status-note"></div>
+        <h3 class="subsection-heading">Media Library</h3>
+        <div id="media-items" class="queue-list"></div>
+        <h3 class="subsection-heading">Draft Assets</h3>
         <div id="asset-items" class="queue-list"></div>
       </div>
     </section>
