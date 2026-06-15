@@ -10,6 +10,12 @@
 
 ## Fly.io API
 
+Current app:
+
+```text
+https://drec-content-os-api.fly.dev
+```
+
 From `drec-content-os`:
 
 ```bash
@@ -30,6 +36,12 @@ The API exposes:
 - `POST /feedback`
 
 ## Vercel Web
+
+Current production app:
+
+```text
+https://drec-content-os.vercel.app
+```
 
 Deploy the repository root as a Vercel project. The root `vercel.json` copies
 `apps/web` into `dist` during build, so the project works even if the Vercel

@@ -47,6 +47,6 @@ alter table public.outcomes enable row level security;
 
 For now, the planned path is:
 
-1. Backend API on Fly.io connects with server-side database credentials.
+1. Backend API on Fly.io connects through Supabase REST using server-side Fly secrets.
 2. Web UI talks to the API, not directly to Supabase.
 3. RLS policies are added before exposing any direct Supabase browser access.
