@@ -61,6 +61,7 @@ Stage 1 is now a working thin-core workflow:
 - Generate weekly DREC content briefs
 - Pull learning-informed topic recommendations into the next weekly plan
 - Mark content briefs as drafted or archived so weekly plans stay manageable
+- Save a draft asset directly from a weekly brief for faster review prep
 - Draft conservative educational captions
 - Run pre-publish compliance checks
 - Queue and review posts with approval, regen, and rejection feedback trails

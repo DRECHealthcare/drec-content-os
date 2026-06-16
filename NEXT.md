@@ -47,6 +47,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added visible review feedback notes for queued content decisions
 - [x] Added asset and media lifecycle review actions
 - [x] Added copy-ready weekly operating report
+- [x] Added one-click draft asset creation from weekly briefs
 
 ## Next Engineering Tasks
 
@@ -76,6 +77,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add visible review feedback notes
 - [x] Add asset and media lifecycle review controls
 - [x] Add weekly operating report
+- [x] Add one-click draft asset creation from briefs
 - [ ] Connect Meta Graph API credentials
 - [ ] Implement real Facebook publish scheduling
 - [ ] Implement Instagram two-step publish worker

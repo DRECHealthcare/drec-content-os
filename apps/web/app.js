@@ -306,6 +306,7 @@ function briefCard(item) {
       <small>${escapeHtml(item.compliance_notes || "Education-only brief.")}</small>
       <div class="queue-actions">
         <button type="button" data-draft-brief="${escapeHtml(item.id)}" ${status === "archived" ? "disabled" : ""}>Draft</button>
+        <button type="button" data-draft-asset-brief="${escapeHtml(item.id)}" ${status === "archived" ? "disabled" : ""}>Save Asset</button>
         ${status !== "drafted" && status !== "archived" ? `<button type="button" data-brief-status="${escapeHtml(item.id)}" data-status="drafted">Mark Drafted</button>` : ""}
         ${secondaryAction}
       </div>
@@ -1043,6 +1044,23 @@ document.getElementById("brief-items").addEventListener("click", async (event) =
     } catch {
       statusButton.disabled = false;
       statusButton.textContent = originalText;
+    }
+    return;
+  }
+  const assetButton = event.target.closest("[data-draft-asset-brief]");
+  if (assetButton) {
+    const originalText = assetButton.textContent;
+    assetButton.disabled = true;
+    assetButton.textContent = "Saving";
+    try {
+      await fetchJson(`/briefs/${assetButton.dataset.draftAssetBrief}/draft-asset`, { method: "POST" });
+      document.getElementById("plan-message").textContent = "Draft asset saved.";
+      await Promise.all([loadBriefs(), loadAssets(), loadLoopStatus(), loadLearningSummary()]);
+      showScreen("assets");
+    } catch (error) {
+      document.getElementById("plan-message").textContent = error.message === "Access token required" ? "Set the access token first." : "Could not save draft asset.";
+      assetButton.disabled = false;
+      assetButton.textContent = originalText;
     }
     return;
   }

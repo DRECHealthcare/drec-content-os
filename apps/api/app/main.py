@@ -459,6 +459,30 @@ async def create_content_brief(brief: ContentBriefIn, _: None = Depends(require_
     return {"item": await insert_brief(brief)}
 
 
+async def content_brief_by_id(brief_id: str):
+    row = await fetch_row(
+        """
+        select id, channel, format, pillar, funnel_stage, awareness_stage, topic,
+               hook_primary, hook_alt1, hook_alt2, structure_beats, style_hint,
+               cta_type, target_signal, language, compliance_notes, status, created_at
+        from content_briefs
+        where id = $1
+        """,
+        brief_id,
+    )
+    if row is None and supabase_rest.configured():
+        rows = await supabase_rest.select(
+            "content_briefs",
+            {
+                "select": "id,channel,format,pillar,funnel_stage,awareness_stage,topic,hook_primary,hook_alt1,hook_alt2,structure_beats,style_hint,cta_type,target_signal,language,compliance_notes,status,created_at",
+                "id": f"eq.{brief_id}",
+                "limit": "1",
+            },
+        )
+        row = rows[0] if rows else None
+    return row
+
+
 @app.patch("/briefs/{brief_id}")
 async def update_content_brief_status(
     brief_id: str,
@@ -996,6 +1020,67 @@ async def create_creative_draft(draft: CreativeDraftIn, _: None = Depends(requir
         },
     }
     return {"item": package}
+
+
+def draft_points_from_brief(brief: dict):
+    points = [
+        brief.get("hook_primary"),
+        brief.get("hook_alt1"),
+        brief.get("hook_alt2"),
+        brief.get("target_signal"),
+        brief.get("compliance_notes"),
+    ]
+    return [str(point) for point in points if point]
+
+
+@app.post("/briefs/{brief_id}/draft-asset")
+async def create_asset_from_brief(brief_id: str, _: None = Depends(require_access_token)):
+    brief = await content_brief_by_id(brief_id)
+    if brief is None:
+        raise HTTPException(status_code=404, detail="Content brief not found.")
+    draft = CreativeDraftIn(
+        channel="facebook",
+        format=brief.get("format") or "carousel",
+        stage=brief.get("funnel_stage") or "TOFU",
+        language=brief.get("language") or "zh",
+        topic=brief.get("topic") or "DREC education",
+        points=draft_points_from_brief(brief),
+        style_key=brief.get("style_hint") or "edu_carousel_navy",
+        target_signal=brief.get("target_signal"),
+    )
+    creative = (await create_creative_draft(draft)).get("item", {})
+    compliance = creative.get("compliance") or check_text(creative.get("primary_caption") or "")
+    if compliance.get("status") == "flagged":
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "message": "Compliance check blocked this draft asset.",
+                "compliance": compliance,
+            },
+        )
+    asset = AssetIn(
+        brief_id=brief_id,
+        channel="facebook",
+        format=draft.format,
+        caption=creative.get("primary_caption"),
+        media_urls=[],
+        metadata={
+            "topic": brief.get("topic"),
+            "stage": draft.stage,
+            "source": "brief_draft_asset",
+            "caption_variants": creative.get("caption_variants") or [],
+            "slides": creative.get("slides") or [],
+            "reel_script": creative.get("reel_script") or [],
+            "creative": creative.get("metadata") or {},
+            "target_signal": creative.get("target_signal"),
+            "style_key": creative.get("style_key"),
+        },
+        compliance_status="clear" if compliance.get("status") == "clear" else "pending",
+        review_status="draft",
+    )
+    saved = await create_asset(asset)
+    await update_content_brief_status(brief_id, ContentBriefStatusIn(status="drafted"))
+    return {"item": saved.get("item"), "brief": {**brief, "status": "drafted"}, "creative": creative}
 
 
 @app.get("/publish-queue")
