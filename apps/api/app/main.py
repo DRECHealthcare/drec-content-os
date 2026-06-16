@@ -461,6 +461,10 @@ async def create_content_brief(brief: ContentBriefIn, _: None = Depends(require_
 
 
 async def content_brief_by_id(brief_id: str):
+    try:
+        UUID(str(brief_id))
+    except ValueError:
+        return None
     row = await fetch_row(
         """
         select id, channel, format, pillar, funnel_stage, awareness_stage, topic,
