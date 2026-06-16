@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import re
 from uuid import uuid4
@@ -7,6 +7,7 @@ from uuid import uuid4
 import httpx
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 
 from .auth import require_access_token
 from .config import settings
@@ -918,6 +919,105 @@ async def list_publish_queue(_: None = Depends(require_access_token)):
             },
         )
     return {"items": rows}
+
+
+def parse_datetime(value):
+    if isinstance(value, datetime):
+        return value
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def ics_escape(value):
+    return (
+        str(value or "")
+        .replace("\\", "\\\\")
+        .replace(";", "\\;")
+        .replace(",", "\\,")
+        .replace("\n", "\\n")
+    )
+
+
+def ics_timestamp(value):
+    date = parse_datetime(value)
+    if not date:
+        return None
+    if date.tzinfo:
+        date = date.astimezone(timezone.utc)
+    else:
+        date = date.replace(tzinfo=timezone.utc)
+    return date.strftime("%Y%m%dT%H%M%SZ")
+
+
+@app.get("/publish-queue/calendar.ics")
+async def publish_queue_calendar(_: None = Depends(require_access_token)):
+    rows = await fetch_rows(
+        """
+        select id, channel, format, caption, media_urls, planned_slot, status, compliance_status
+        from publish_queue
+        where status = 'scheduled'
+          and planned_slot is not null
+        order by planned_slot asc
+        limit 200
+        """
+    )
+    if not rows and supabase_rest.configured():
+        rows = await supabase_rest.select(
+            "publish_queue",
+            {
+                "select": "id,channel,format,caption,media_urls,planned_slot,status,compliance_status",
+                "status": "eq.scheduled",
+                "planned_slot": "not.is.null",
+                "order": "planned_slot.asc",
+                "limit": "200",
+            },
+        )
+    lines = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//DREC//Content OS//EN",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+        "X-WR-CALNAME:DREC Content OS Publishing Queue",
+    ]
+    now_stamp = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+    for item in rows:
+        start = ics_timestamp(item.get("planned_slot"))
+        if not start:
+            continue
+        media_urls = item.get("media_urls") or []
+        description_parts = [
+            f"Queue ID: {item.get('id')}",
+            f"Compliance: {item.get('compliance_status')}",
+            "",
+            "Caption:",
+            item.get("caption") or "",
+        ]
+        if media_urls:
+            description_parts.extend(["", "Media:", *media_urls])
+        summary = f"DREC {item.get('channel')} {item.get('format')} publish"
+        lines.extend(
+            [
+                "BEGIN:VEVENT",
+                f"UID:{item.get('id')}@drec-content-os",
+                f"DTSTAMP:{now_stamp}",
+                f"DTSTART:{start}",
+                f"DURATION:PT30M",
+                f"SUMMARY:{ics_escape(summary)}",
+                f"DESCRIPTION:{ics_escape(chr(10).join(description_parts))}",
+                "END:VEVENT",
+            ]
+        )
+    lines.append("END:VCALENDAR")
+    return Response(
+        "\r\n".join(lines) + "\r\n",
+        media_type="text/calendar",
+        headers={"Content-Disposition": 'attachment; filename="drec-publishing-calendar.ics"'},
+    )
 
 
 @app.post("/compliance/check")

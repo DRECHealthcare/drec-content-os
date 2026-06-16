@@ -95,6 +95,20 @@ async function fetchForm(path, formData) {
   return res.json();
 }
 
+async function fetchText(path) {
+  const token = accessToken();
+  const res = await fetch(`${apiBase}${path}`, {
+    headers: {
+      ...(token ? { "X-DREC-Access-Token": token } : {}),
+    },
+  });
+  if (res.status === 401) {
+    throw new Error("Access token required");
+  }
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  return res.text();
+}
+
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (char) => ({
     "&": "&amp;",
@@ -1338,6 +1352,26 @@ document.getElementById("build-handoff").addEventListener("click", async () => {
     message.textContent = "Handoff ready.";
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not build handoff.";
+  }
+});
+
+document.getElementById("download-calendar").addEventListener("click", async () => {
+  const message = document.getElementById("queue-message");
+  message.textContent = "Preparing calendar...";
+  try {
+    const text = await fetchText("/publish-queue/calendar.ics");
+    const blob = new Blob([text], { type: "text/calendar" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "drec-publishing-calendar.ics";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    message.textContent = "Publishing calendar downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download calendar.";
   }
 });
 
