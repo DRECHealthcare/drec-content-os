@@ -17,6 +17,7 @@ const requiredRoutes = [
   "GET /operations/test-run-checklist",
   "GET /operations/risk-audit",
   "GET /operations/snapshot.csv",
+  "GET /operations/creative-pack.md",
   "GET /operations/operator-pack.md",
   "GET /weekly-report.md",
   "GET /meta/readiness",
@@ -151,6 +152,16 @@ const requiredSnippets = [
     name: "operations snapshot export",
     file: "main",
     text: "drec-content-os-snapshot.csv",
+  },
+  {
+    name: "creative pack export",
+    file: "main",
+    text: "drec-creative-pack.md",
+  },
+  {
+    name: "creative pack production rules",
+    file: "main",
+    text: "## Production Rules",
   },
   {
     name: "operator pack export",
@@ -321,6 +332,16 @@ const requiredSnippets = [
     name: "web bulk asset queue action",
     file: "web",
     text: "queue-ready-assets",
+  },
+  {
+    name: "web creative pack action",
+    file: "web",
+    text: "download-creative-pack",
+  },
+  {
+    name: "web creative pack endpoint",
+    file: "web",
+    text: "/operations/creative-pack.md",
   },
   {
     name: "web bulk approved scheduling action",

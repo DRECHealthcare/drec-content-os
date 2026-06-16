@@ -1630,6 +1630,16 @@ document.getElementById("download-operator-pack")?.addEventListener("click", asy
   }
 });
 
+document.getElementById("download-creative-pack")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/creative-pack.md", "drec-creative-pack.md", "text/markdown");
+    message.textContent = "Creative pack downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download creative pack.";
+  }
+});
+
 document.getElementById("plan-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const message = document.getElementById("plan-message");

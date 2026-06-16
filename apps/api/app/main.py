@@ -886,6 +886,107 @@ async def operations_snapshot_csv(_: None = Depends(require_access_token)):
     )
 
 
+def markdown_list(items, empty="- None"):
+    clean = [str(item).strip() for item in items or [] if str(item or "").strip()]
+    return [f"- {item}" for item in clean] if clean else [empty]
+
+
+def creative_pack_asset_lines(asset: dict, index: int):
+    metadata = asset.get("metadata") or {}
+    creative = metadata.get("creative") or {}
+    knowledge = creative.get("knowledge_context") or metadata.get("knowledge_context") or {}
+    slides = metadata.get("slides") or []
+    script = metadata.get("reel_script") or []
+    variants = metadata.get("caption_variants") or []
+    media_urls = asset.get("media_urls") or []
+    lines = [
+        f"## Asset {index}: {metadata.get('topic') or asset.get('format') or 'Draft Asset'}",
+        "",
+        f"- Asset ID: {asset.get('id')}",
+        f"- Channel: {asset.get('channel')}",
+        f"- Format: {asset.get('format')}",
+        f"- Review: {asset.get('review_status')}",
+        f"- Safety: {asset.get('compliance_status')}",
+        f"- Target signal: {metadata.get('target_signal') or ''}",
+        f"- Style key: {metadata.get('style_key') or ''}",
+        "",
+        "### Primary Caption",
+        "",
+        asset.get("caption") or "No caption available.",
+        "",
+    ]
+    if variants:
+        lines.extend(["### Caption Variants", ""])
+        for variant_index, caption in enumerate(variants, start=1):
+            lines.extend([f"Variant {variant_index}:", "", caption or "", ""])
+    if slides:
+        lines.extend(["### Carousel / Story Slides", ""])
+        for slide in slides:
+            lines.extend(
+                [
+                    f"{slide.get('slide') or ''}. {slide.get('title') or 'Untitled'}",
+                    f"- Body: {slide.get('body') or ''}",
+                    f"- Visual note: {slide.get('visual_note') or ''}",
+                    "",
+                ]
+            )
+    if script:
+        lines.extend(["### Reel Script", ""])
+        for beat in script:
+            lines.extend([f"- {beat.get('time') or ''} · {beat.get('beat') or ''}: {beat.get('line') or ''}"])
+        lines.append("")
+    lines.extend(["### Media", "", *markdown_list(media_urls, "- Add approved media before publishing."), ""])
+    review_guidance = creative.get("review_guidance") or []
+    lines.extend(["### Review Guidance", "", *markdown_list(review_guidance, "- Human review required before publishing."), ""])
+    safety_rules = knowledge.get("safety_rules") or []
+    style_rules = knowledge.get("style_rules") or []
+    medical_terms = knowledge.get("medical_terms") or []
+    lines.extend(["### Knowledge Context", ""])
+    lines.extend(["Style rules:", *markdown_list(style_rules), ""])
+    lines.extend(["Safety rules:", *markdown_list(safety_rules), ""])
+    if medical_terms:
+        lines.extend(["Medical dictionary:", *markdown_list(medical_terms), ""])
+    return lines
+
+
+@app.get("/operations/creative-pack.md")
+async def operations_creative_pack(_: None = Depends(require_access_token)):
+    assets = await fetch_asset_list(200)
+    active_assets = [asset for asset in assets if asset.get("review_status") != "rejected"]
+    knowledge = await active_knowledge_context()
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    lines = [
+        "# DREC Content OS Creative Pack",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this pack for design, carousel assembly, reel scripting, and final human review before scheduling.",
+        "",
+        "## Production Rules",
+        "",
+        "- Keep captions and visuals educational; do not turn safety notes into tiny unreadable design text.",
+        "- Do not publish rejected assets, flagged safety items, or unapproved media.",
+        "- Preserve DREC voice and compliance context unless the asset returns to review.",
+        "",
+        "## Active Knowledge Context",
+        "",
+        f"- Entries loaded: {knowledge.get('entry_count', 0)}",
+        f"- Categories: {', '.join(f'{key}={value}' for key, value in (knowledge.get('categories') or {}).items()) or 'none'}",
+        "",
+        "## Assets",
+        "",
+    ]
+    if not active_assets:
+        lines.append("No active draft assets found. Generate a weekly plan and save one brief as an asset first.")
+    for index, asset in enumerate(active_assets, start=1):
+        lines.extend(creative_pack_asset_lines(asset, index))
+    return Response(
+        "\n".join(lines) + "\n",
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-creative-pack.md"'},
+    )
+
+
 @app.get("/operations/operator-pack.md")
 async def operations_operator_pack(_: None = Depends(require_access_token)):
     launch = await launch_readiness_payload()
