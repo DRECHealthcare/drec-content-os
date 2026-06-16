@@ -41,6 +41,20 @@ DEFAULT_PLAN_TOPICS = [
     "给50岁以上华人的控糖复诊问题清单",
 ]
 
+LEARNING_TOPIC_LIBRARY = {
+    "reel": "用60秒解释一个常被误会的血糖指标",
+    "carousel": "用5页图文拆解一个代谢误区",
+    "single": "用一张图讲清楚一个复诊前要观察的数据",
+    "story": "用问答形式收集粉丝最想知道的控糖问题",
+    "facebook": "适合Facebook长文讨论的控糖观察清单",
+    "instagram": "适合Instagram保存分享的血糖教育重点",
+    "save_or_consult": "为什么这类内容值得保存并带去问医生",
+    "metabolic_education": "把代谢教育讲成50岁以上华人听得懂的生活判断",
+    "TOFU": "刚开始担心血糖时，应该先看懂哪三个信号",
+    "MOFU": "已经在控糖的人，如何判断方法是否真的适合自己",
+    "BOFU": "复诊前如何整理饮食、血糖和腰围记录",
+}
+
 FORMAT_ROTATION = ["carousel", "single", "reel", "carousel", "story"]
 STAGE_ROTATION = ["TOFU", "TOFU", "MOFU", "MOFU", "BOFU"]
 META_REQUIRED_PERMISSIONS = [
@@ -319,6 +333,99 @@ def make_generated_brief(topic: str, index: int, language: str) -> ContentBriefI
     )
 
 
+async def recent_learning_context():
+    outcomes = await fetch_rows(
+        """
+        select post_id, format, channel, funnel_stage, pillar, score, saves, shares, cpl, vs_plan_note, created_at
+        from outcomes
+        order by score desc nulls last, created_at desc
+        limit 10
+        """
+    )
+    weights = await fetch_rows(
+        """
+        select dimension, key, value, reason, source, created_at
+        from learning_weights
+        where is_active = true
+        order by value desc nulls last, created_at desc
+        limit 10
+        """
+    )
+    if supabase_rest.configured() and not outcomes:
+        outcomes = await supabase_rest.select(
+            "outcomes",
+            {
+                "select": "post_id,format,channel,funnel_stage,pillar,score,saves,shares,cpl,vs_plan_note,created_at",
+                "order": "score.desc.nullslast,created_at.desc",
+                "limit": "10",
+            },
+        )
+    if supabase_rest.configured() and not weights:
+        weights = await supabase_rest.select(
+            "learning_weights",
+            {
+                "select": "dimension,key,value,reason,source,created_at",
+                "is_active": "eq.true",
+                "order": "value.desc.nullslast,created_at.desc",
+                "limit": "10",
+            },
+        )
+    return outcomes, weights
+
+
+def topic_from_signal(signal: str, language: str):
+    topic = LEARNING_TOPIC_LIBRARY.get(signal) or LEARNING_TOPIC_LIBRARY.get(str(signal).lower())
+    if topic:
+        return topic if language != "en" else f"What recent performance suggests about {signal}"
+    return f"围绕「{signal}」做一篇更清楚、更容易保存的控糖教育内容" if language != "en" else f"Create a clearer education post around {signal}"
+
+
+def topic_from_outcome_note(note: str, language: str):
+    lowered = note.lower()
+    if "saves" in lowered or "save" in lowered:
+        return "复盘高保存内容：为什么这个控糖主题值得做成系列" if language != "en" else "Turn a high-save post into a follow-up series"
+    if "shares" in lowered or "share" in lowered:
+        return "复盘高分享内容：把这个代谢误区讲得更容易转发" if language != "en" else "Turn a high-share post into a clearer myth-busting follow-up"
+    if "lead" in lowered or "consult" in lowered:
+        return "复盘有咨询兴趣的内容：下一篇如何更清楚回答复诊前问题" if language != "en" else "Follow up on a consult-interest post with clearer visit-prep education"
+    return f"根据最近表现复盘：{note}" if language != "en" else f"Turn this recent result into a lesson: {note}"
+
+
+async def learning_recommended_topics(language: str = "zh", count: int = 5):
+    outcomes, weights = await recent_learning_context()
+    topics = []
+    reasons = []
+    for weight in weights:
+        key = str(weight.get("key") or "").strip()
+        if not key:
+            continue
+        topics.append(topic_from_signal(key, language))
+        reasons.append(f"Active learning weight: {weight.get('dimension')}={key} ({weight.get('reason') or weight.get('source')}).")
+    for outcome in outcomes:
+        best_signal = outcome.get("format") or outcome.get("channel") or outcome.get("funnel_stage") or outcome.get("pillar")
+        if best_signal:
+            topics.append(topic_from_signal(str(best_signal), language))
+            reasons.append(f"Recent result signal: {best_signal}, score {outcome.get('score') or 'n/a'}.")
+        if outcome.get("vs_plan_note"):
+            topics.append(topic_from_outcome_note(str(outcome.get("vs_plan_note")), language))
+            reasons.append("Recent performance note suggested a follow-up angle.")
+    topics.extend(DEFAULT_PLAN_TOPICS)
+    deduped = []
+    for topic in topics:
+        if topic and topic not in deduped:
+            deduped.append(topic)
+        if len(deduped) >= count:
+            break
+    return {
+        "topics": deduped,
+        "reasons": reasons[: len(deduped)],
+        "signals": {
+            "outcome_count": len(outcomes),
+            "weight_count": len(weights),
+        },
+    }
+
+
 @app.get("/briefs")
 async def list_content_briefs(_: None = Depends(require_access_token)):
     rows = await fetch_rows(
@@ -348,14 +455,32 @@ async def create_content_brief(brief: ContentBriefIn, _: None = Depends(require_
     return {"item": await insert_brief(brief)}
 
 
+@app.get("/weekly-plan/recommendations")
+async def weekly_plan_recommendations(
+    language: str = "zh",
+    count: int = 5,
+    _: None = Depends(require_access_token),
+):
+    safe_language = language if language in {"zh", "en", "mixed"} else "zh"
+    bounded_count = max(1, min(count, 10))
+    return await learning_recommended_topics(safe_language, bounded_count)
+
+
 @app.post("/weekly-plan/generate")
 async def generate_weekly_plan(plan: WeeklyPlanIn, _: None = Depends(require_access_token)):
-    topics = [topic.strip() for topic in plan.topics if topic.strip()] or DEFAULT_PLAN_TOPICS
     count = max(1, min(plan.count, 10))
+    requested_topics = [topic.strip() for topic in plan.topics if topic.strip()]
+    if requested_topics:
+        topics = requested_topics
+        source = "manual"
+    else:
+        recommendation = await learning_recommended_topics(plan.language, count)
+        topics = recommendation["topics"] or DEFAULT_PLAN_TOPICS
+        source = "learning"
     generated = []
     for index, topic in enumerate(topics[:count]):
         generated.append(await insert_brief(make_generated_brief(topic, index, plan.language)))
-    return {"items": generated}
+    return {"items": generated, "source": source}
 
 
 def asset_payload(asset: AssetIn):
@@ -1855,6 +1980,7 @@ async def learning_summary(_: None = Depends(require_access_token)):
         if feedback_total == 0
         else "Use approval and rejection patterns to refine next week's topics."
     )
+    plan_recommendations = await learning_recommended_topics("zh", 5)
     return {
         "queue": queue,
         "feedback": feedback,
@@ -1862,6 +1988,7 @@ async def learning_summary(_: None = Depends(require_access_token)):
         "recent_outcomes": recent_outcomes,
         "weights": weights,
         "recommendation": recommendation,
+        "plan_recommendations": plan_recommendations,
     }
 
 

@@ -396,6 +396,7 @@ async function loadLearningSummary() {
     const briefs = data.recent_briefs || [];
     const outcomes = data.recent_outcomes || [];
     const weights = data.weights || [];
+    const planTopics = data.plan_recommendations?.topics || [];
     container.innerHTML = `
       <article class="learning-card wide-learning">
         <h3>Next Best Move</h3>
@@ -413,6 +414,12 @@ async function loadLearningSummary() {
         <h3>Recent Briefs</h3>
         <ul>
           ${briefs.length ? briefs.map((brief) => `<li><strong>${escapeHtml(brief.format || "brief")}</strong> ${escapeHtml(brief.topic || "")}</li>`).join("") : "<li>No briefs yet.</li>"}
+        </ul>
+      </article>
+      <article class="learning-card wide-learning">
+        <h3>Next Plan Topics</h3>
+        <ul>
+          ${planTopics.length ? planTopics.map((topic) => `<li>${escapeHtml(topic)}</li>`).join("") : "<li>No recommendations yet.</li>"}
         </ul>
       </article>
       <article class="learning-card wide-learning">
@@ -915,6 +922,23 @@ document.getElementById("plan-form").addEventListener("submit", async (event) =>
     await Promise.all([loadBriefs(), loadLoopStatus()]);
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not generate weekly plan.";
+  }
+});
+
+document.getElementById("load-learning-topics").addEventListener("click", async () => {
+  const message = document.getElementById("plan-message");
+  const form = document.getElementById("plan-form");
+  const data = new FormData(form);
+  const language = data.get("language") || "zh";
+  const count = Number(data.get("count")) || 5;
+  message.textContent = "Loading learning topics...";
+  try {
+    const recommendation = await fetchJson(`/weekly-plan/recommendations?language=${encodeURIComponent(language)}&count=${encodeURIComponent(count)}`);
+    form.elements.topics.value = (recommendation.topics || []).join("\n");
+    const signals = recommendation.signals || {};
+    message.textContent = `Loaded ${recommendation.topics?.length || 0} topic(s) from ${signals.outcome_count || 0} result(s) and ${signals.weight_count || 0} active weight(s).`;
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not load learning topics.";
   }
 });
 

@@ -59,6 +59,7 @@ uvicorn app.main:app --reload --port 8080
 Stage 1 is now a working thin-core workflow:
 
 - Generate weekly DREC content briefs
+- Pull learning-informed topic recommendations into the next weekly plan
 - Draft conservative educational captions
 - Run pre-publish compliance checks
 - Queue and review posts with approval feedback

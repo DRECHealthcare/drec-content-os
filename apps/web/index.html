@@ -76,7 +76,10 @@
             Weekly Topics
             <textarea name="topics" placeholder="One topic per line. Leave blank to use DREC default metabolic education topics."></textarea>
           </label>
-          <button type="submit">Generate Weekly Plan</button>
+          <div class="form-actions full">
+            <button id="load-learning-topics" type="button">Load Learning Topics</button>
+            <button type="submit">Generate Weekly Plan</button>
+          </div>
         </form>
         <div id="plan-message" class="status-note"></div>
         <div id="brief-items" class="brief-list"></div>
