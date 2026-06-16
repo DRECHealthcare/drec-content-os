@@ -500,6 +500,66 @@ button[type="submit"] {
   gap: 10px;
 }
 
+.scheduler-toolbar {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(160px, 220px));
+  gap: 12px;
+  align-items: end;
+}
+
+.scheduler-toolbar label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.week-schedule {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+}
+
+.week-day {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #F8FBFA;
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.week-day h3 {
+  margin: 0;
+  font-size: 13px;
+  color: var(--navy);
+}
+
+.week-day button {
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #FFF;
+  padding: 8px;
+  display: grid;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.week-day button strong {
+  font-size: 12px;
+  color: var(--navy);
+}
+
+.week-day button span {
+  font-size: 11px;
+  color: var(--muted);
+}
+
 .queue-item {
   display: grid;
   gap: 10px;
@@ -580,6 +640,6 @@ button[type="submit"] {
   aside { width: 100%; }
   header { flex-wrap: wrap; height: auto; padding: 14px 18px; }
   .screen { padding: 18px; }
-  .grid, .loop, .split-form, .learning-grid, .handoff-summary, .creative-preview, .weight-row { grid-template-columns: 1fr; }
+  .grid, .loop, .split-form, .learning-grid, .handoff-summary, .creative-preview, .weight-row, .scheduler-toolbar, .week-schedule { grid-template-columns: 1fr; }
   .loop div { border-right: 0; border-bottom: 1px solid var(--line); }
 }

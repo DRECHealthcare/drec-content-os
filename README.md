@@ -63,6 +63,7 @@ Stage 1 is now a working thin-core workflow:
 - Run pre-publish compliance checks
 - Queue and review posts with approval feedback
 - Edit queued captions, media URLs, planned time, and channel/format before publishing
+- Filter the scheduler by status/channel and scan the next 7 days of planned posts
 - Build a manual publishing handoff while Meta credentials are pending
 - Mark manually published posts with their Meta post ID so metrics ingestion can learn from them later
 - Dry-run Facebook and Instagram publishing workers before Meta credentials are connected

@@ -130,6 +130,22 @@ function splitLines(value) {
     .filter(Boolean);
 }
 
+function queueFilterValues() {
+  return {
+    status: document.getElementById("queue-status-filter")?.value || "all",
+    channel: document.getElementById("queue-channel-filter")?.value || "all",
+  };
+}
+
+function filterQueueItems(items) {
+  const filters = queueFilterValues();
+  return items.filter((item) => {
+    const statusMatch = filters.status === "all" || item.status === filters.status;
+    const channelMatch = filters.channel === "all" || item.channel === filters.channel;
+    return statusMatch && channelMatch;
+  });
+}
+
 function mediaList(urls) {
   const items = Array.isArray(urls) ? urls.filter(Boolean) : [];
   if (!items.length) return "";
@@ -709,6 +725,43 @@ function queueCard(item, mode) {
   `;
 }
 
+function renderWeekSchedule(items) {
+  const container = document.getElementById("week-schedule");
+  if (!container) return;
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const end = new Date(start);
+  end.setDate(start.getDate() + 7);
+  const scheduled = items
+    .filter((item) => {
+      if (!item.planned_slot) return false;
+      const date = new Date(item.planned_slot);
+      return !Number.isNaN(date.getTime()) && date >= start && date < end;
+    })
+    .sort((a, b) => new Date(a.planned_slot) - new Date(b.planned_slot));
+  if (!scheduled.length) {
+    container.innerHTML = '<p class="status-note">No filtered items planned for the next 7 days.</p>';
+    return;
+  }
+  const groups = scheduled.reduce((acc, item) => {
+    const day = new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric" }).format(new Date(item.planned_slot));
+    acc[day] = acc[day] || [];
+    acc[day].push(item);
+    return acc;
+  }, {});
+  container.innerHTML = Object.entries(groups).map(([day, dayItems]) => `
+    <section class="week-day">
+      <h3>${escapeHtml(day)}</h3>
+      ${dayItems.map((item) => `
+        <button type="button" data-edit-queue="${escapeHtml(item.id)}">
+          <strong>${escapeHtml(item.channel)} · ${escapeHtml(item.format)}</strong>
+          <span>${formatDate(item.planned_slot)}</span>
+        </button>
+      `).join("")}
+    </section>
+  `).join("");
+}
+
 function renderCompliance(result) {
   const container = document.getElementById("compliance-result");
   if (!result) {
@@ -783,8 +836,9 @@ async function loadPublishQueue() {
   try {
     const data = await fetchJson("/publish-queue");
     const items = data.items || [];
-    const queueMarkup = items.length
-      ? items.map((item) => queueCard(item, "queue")).join("")
+    const filteredItems = filterQueueItems(items);
+    const queueMarkup = filteredItems.length
+      ? filteredItems.map((item) => queueCard(item, "queue")).join("")
       : '<p class="status-note">No queue items yet.</p>';
     const reviewMarkup = items.length
       ? items.map((item) => queueCard(item, "review")).join("")
@@ -793,12 +847,14 @@ async function loadPublishQueue() {
     reviewContainer.dataset.items = JSON.stringify(items);
     queueContainer.innerHTML = queueMarkup;
     reviewContainer.innerHTML = reviewMarkup;
+    renderWeekSchedule(filteredItems);
   } catch {
     const message = '<p class="status-note">Set the access token to load the publish queue.</p>';
     queueContainer.dataset.items = "[]";
     reviewContainer.dataset.items = "[]";
     queueContainer.innerHTML = message;
     reviewContainer.innerHTML = message;
+    renderWeekSchedule([]);
   }
 }
 
@@ -1134,6 +1190,15 @@ document.getElementById("queue-form").addEventListener("submit", async (event) =
 document.getElementById("cancel-queue-edit").addEventListener("click", () => {
   resetQueueEdit();
   document.getElementById("queue-message").textContent = "Edit cancelled.";
+});
+
+document.getElementById("queue-status-filter").addEventListener("change", loadPublishQueue);
+document.getElementById("queue-channel-filter").addEventListener("change", loadPublishQueue);
+
+document.getElementById("week-schedule").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-edit-queue]");
+  if (!button) return;
+  startQueueEdit(button.dataset.editQueue);
 });
 
 document.getElementById("queue-items").addEventListener("click", async (event) => {

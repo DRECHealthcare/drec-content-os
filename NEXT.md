@@ -39,6 +39,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added manual post ID capture after safe handoff publishing
 - [x] Added guarded Instagram dispatch dry run with container/publish planning
 - [x] Added safe editing for queued captions, media URLs, planned time, channel, and format
+- [x] Added scheduler filters and a next-7-days operating view
 
 ## Next Engineering Tasks
 
@@ -60,6 +61,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add manual published-post ID capture for metrics learning
 - [x] Add dry-run Instagram dispatch worker
 - [x] Add queue item editing before approval/publishing
+- [x] Add scheduler status/channel filters and week view
 - [ ] Connect Meta Graph API credentials
 - [ ] Implement real Facebook publish scheduling
 - [ ] Implement Instagram two-step publish worker

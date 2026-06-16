@@ -265,6 +265,28 @@
         <div id="compliance-result" class="compliance-result"></div>
         <div id="queue-message" class="status-note"></div>
         <div id="handoff-result" class="handoff-panel"></div>
+        <div class="scheduler-toolbar">
+          <label>
+            Status
+            <select id="queue-status-filter">
+              <option value="all">All</option>
+              <option value="draft">Draft</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="published">Published</option>
+              <option value="failed">Failed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </label>
+          <label>
+            Channel
+            <select id="queue-channel-filter">
+              <option value="all">All</option>
+              <option value="facebook">Facebook</option>
+              <option value="instagram">Instagram</option>
+            </select>
+          </label>
+        </div>
+        <div id="week-schedule" class="week-schedule"></div>
         <div id="queue-items" class="queue-list"></div>
       </div>
     </section>
