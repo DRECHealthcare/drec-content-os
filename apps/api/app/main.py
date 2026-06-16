@@ -1198,6 +1198,85 @@ async def operations_review_log(_: None = Depends(require_access_token)):
     )
 
 
+def review_queue_state(item: dict):
+    feedback = item.get("latest_feedback") or {}
+    action = feedback.get("action")
+    blockers = []
+    if item.get("status") != "draft":
+        blockers.append("Not in draft review queue.")
+    if item.get("compliance_status") != "clear":
+        blockers.append("Needs compliance clear before approval or scheduling.")
+    if action == "approve" and item.get("compliance_status") == "clear":
+        state = "ready_to_schedule"
+    elif action == "reject":
+        state = "rejected_feedback"
+        blockers.append("Latest review rejected this item.")
+    elif action == "regen":
+        state = "needs_regen"
+        blockers.append("Latest review requested regeneration.")
+    elif item.get("compliance_status") != "clear":
+        state = "blocked_safety"
+    else:
+        state = "needs_review"
+        blockers.append("Needs human review approval.")
+    return state, blockers
+
+
+@app.get("/operations/review-queue.csv")
+async def operations_review_queue_csv(_: None = Depends(require_access_token)):
+    rows = await fetch_publish_queue_items(200)
+    review_items = [item for item in rows if item.get("status") == "draft"]
+    output = StringIO()
+    fieldnames = [
+        "queue_id",
+        "asset_id",
+        "review_state",
+        "blockers",
+        "latest_feedback",
+        "latest_feedback_reason",
+        "latest_feedback_at",
+        "status",
+        "compliance_status",
+        "channel",
+        "format",
+        "planned_slot",
+        "media_count",
+        "media_urls",
+        "caption",
+        "created_at",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for item in review_items:
+        feedback = item.get("latest_feedback") or {}
+        state, blockers = review_queue_state(item)
+        writer.writerow(
+            {
+                "queue_id": item.get("id") or "",
+                "asset_id": item.get("asset_id") or "",
+                "review_state": state,
+                "blockers": "; ".join(blockers),
+                "latest_feedback": feedback.get("action") or "",
+                "latest_feedback_reason": feedback.get("reason") or "",
+                "latest_feedback_at": feedback.get("created_at") or "",
+                "status": item.get("status") or "",
+                "compliance_status": item.get("compliance_status") or "",
+                "channel": item.get("channel") or "",
+                "format": item.get("format") or "",
+                "planned_slot": item.get("planned_slot") or "",
+                "media_count": len([url for url in item.get("media_urls") or [] if url]),
+                "media_urls": "\n".join([url for url in item.get("media_urls") or [] if url]),
+                "caption": item.get("caption") or "",
+                "created_at": item.get("created_at") or "",
+            }
+        )
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-review-queue.csv"'},
+    )
+
+
 def learning_snapshot_row(record_type, item_id="", dimension="", key="", value="", created_at="", detail=""):
     return {
         "record_type": record_type,

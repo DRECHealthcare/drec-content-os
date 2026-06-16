@@ -2364,6 +2364,16 @@ document.getElementById("download-review-log")?.addEventListener("click", async 
   }
 });
 
+document.getElementById("download-review-queue")?.addEventListener("click", async () => {
+  const message = document.getElementById("queue-message");
+  try {
+    await downloadProtectedFile("/operations/review-queue.csv", "drec-review-queue.csv", "text/csv");
+    message.textContent = "Review queue CSV downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download review queue CSV.";
+  }
+});
+
 document.getElementById("review-items").addEventListener("click", async (event) => {
   const editButton = event.target.closest("[data-edit-queue]");
   if (editButton) {

@@ -102,6 +102,10 @@ The Assets `Download Asset Review CSV` action calls
 `/operations/asset-review.csv` and exports draft assets plus media-library
 records with readiness, blockers, rights, approval, and source URL fields.
 
+The Review Queue `Download Review Queue CSV` action calls
+`/operations/review-queue.csv` and exports the current unscheduled draft review
+queue with review state, latest feedback, blockers, captions, and media counts.
+
 The Dashboard `Run Risk Audit` action calls `/operations/risk-audit` and scans
 automation gates, assets, queue items, and media for blocked or warning-level
 issues before a publishing run.

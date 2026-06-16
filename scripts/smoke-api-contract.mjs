@@ -20,6 +20,7 @@ const requiredRoutes = [
   "GET /operations/creative-pack.md",
   "GET /operations/asset-review.csv",
   "GET /operations/review-log.md",
+  "GET /operations/review-queue.csv",
   "GET /operations/learning-snapshot.csv",
   "GET /operations/publishing-run-sheet.md",
   "GET /operations/operator-pack.md",
@@ -193,6 +194,11 @@ const requiredSnippets = [
     name: "review log audit trail",
     file: "main",
     text: "## Recent Decisions",
+  },
+  {
+    name: "review queue csv export",
+    file: "main",
+    text: "drec-review-queue.csv",
   },
   {
     name: "learning snapshot export",
@@ -463,6 +469,16 @@ const requiredSnippets = [
     name: "web review log endpoint",
     file: "web",
     text: "/operations/review-log.md",
+  },
+  {
+    name: "web review queue csv action",
+    file: "web",
+    text: "download-review-queue",
+  },
+  {
+    name: "web review queue csv endpoint",
+    file: "web",
+    text: "/operations/review-queue.csv",
   },
   {
     name: "web publishing run sheet action",
