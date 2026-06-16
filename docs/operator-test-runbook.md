@@ -140,10 +140,13 @@ Pass condition: results appear in Performance, the weekly report updates, and re
 
 1. Open `Meta Setup`.
 2. Click `Refresh`.
-3. Expected result before credentials:
+3. Click `Dry Run Publishing Job`.
+4. Click `Dry Run Metrics`.
+5. Expected result before credentials:
    - Overall status is `not_connected`.
    - Missing credentials/permissions are listed.
    - Facebook and Instagram remain blocked.
+   - Scheduled publishing and metrics dry runs show blockers instead of performing real Meta writes.
 
 Pass condition: Meta remains safely blocked until credentials are connected.
 

@@ -217,6 +217,16 @@ const requiredSnippets = [
     file: "web",
     text: "handoff_blockers",
   },
+  {
+    name: "web scheduled publishing job action",
+    file: "web",
+    text: "dry-run-meta-publishing",
+  },
+  {
+    name: "web scheduled publishing job endpoint",
+    file: "web",
+    text: "/jobs/meta-publishing?dry_run=true&channel=all",
+  },
 ];
 
 const routePattern = /@app\.(get|post|patch|delete)\("([^"]+)"/g;

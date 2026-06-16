@@ -987,6 +987,43 @@ function renderHandoff(data) {
   `;
 }
 
+function renderMetaPublishingJobDryRun(data) {
+  const container = document.getElementById("meta-publishing-result");
+  const results = data.results || [];
+  container.innerHTML = `
+    <div class="handoff-summary">
+      <article class="learning-card">
+        <h3>Publishing Job</h3>
+        <p>${escapeHtml(data.job?.name || "meta-publishing")} · ${data.job?.due_only ? "due posts only" : "all scheduled posts"}</p>
+      </article>
+      <article class="learning-card">
+        <h3>Ready Channels</h3>
+        <p>${Number(data.ready_count || 0)} ready</p>
+      </article>
+    </div>
+    <article class="learning-card wide-learning">
+      <h3>Channel Dry Run</h3>
+      <ul>
+        ${results.length ? results.map((item) => `
+          <li>
+            <strong>${escapeHtml(item.channel || "unknown")}</strong>
+            ${item.ready ? "ready" : "blocked"}
+            ${item.item?.planned_slot ? ` · due ${formatDate(item.item.planned_slot)}` : ""}
+          </li>
+        `).join("") : "<li>No publishing job results yet.</li>"}
+      </ul>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Blockers</h3>
+      <ul>
+        ${results.flatMap((item) => item.blockers || []).length
+          ? results.flatMap((item) => (item.blockers || []).map((blocker) => `<li><strong>${escapeHtml(item.channel || "unknown")}</strong> ${escapeHtml(blocker)}</li>`)).join("")
+          : "<li>No blockers in dry run.</li>"}
+      </ul>
+    </article>
+  `;
+}
+
 function renderFacebookDispatch(data) {
   const container = document.getElementById("handoff-result");
   const blockers = data.blockers || [];
@@ -1936,6 +1973,20 @@ document.getElementById("refresh-meta").addEventListener("click", async () => {
   const message = document.getElementById("meta-message");
   message.textContent = "Checking Meta readiness...";
   await loadMetaReadiness();
+});
+
+document.getElementById("dry-run-meta-publishing").addEventListener("click", async () => {
+  const message = document.getElementById("meta-message");
+  message.textContent = "Checking scheduled publishing job...";
+  try {
+    const data = await fetchJson("/jobs/meta-publishing?dry_run=true&channel=all", {
+      method: "POST",
+    });
+    renderMetaPublishingJobDryRun(data);
+    message.textContent = data.ready_count ? "Publishing job dry run has ready due item(s)." : "Publishing job dry run is blocked or has no due posts.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not dry run scheduled publishing.";
+  }
 });
 
 document.getElementById("dry-run-meta-metrics").addEventListener("click", async () => {
