@@ -97,6 +97,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added "Can I Use It Now" decision to Launch Evidence and Operator Pack exports
 - [x] Added Daily Ops Checklist export for repeat manual operating days
 - [x] Added First Test Kit export for safe first manual workflow testing
+- [x] Added First Test Run Tracker export for live manual test evidence capture
 - [x] Added Meta OAuth guide endpoint and UI card for future credential connection
 - [x] Replaced browser prompt access-token entry with an inline token panel for app/browser compatibility
 - [x] Added session-only token storage by default, plus explicit Remember and Clear controls
@@ -178,6 +179,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add test/use decision to downloadable launch evidence and operator pack
 - [x] Add downloadable Daily Ops Checklist for morning checks, blockers, and closeout steps
 - [x] Add downloadable First Test Kit with sample topics, metric values, and acceptance criteria
+- [x] Add downloadable First Test Run Tracker with step status, evidence fields, and pass rules
 - [x] Add Meta OAuth guide with redirect URI, required scopes, and copyable Login dialog URL/template
 - [x] Add inline access-token entry so the app works in browsers that block prompt dialogs
 - [x] Add safer token clear/remember controls before full role-based login

@@ -18,6 +18,7 @@ const requiredRoutes = [
   "POST /operations/scheduler-heartbeat",
   "GET /operations/launch-evidence.md",
   "GET /operations/first-test-kit.md",
+  "GET /operations/test-run-tracker.md",
   "GET /operations/daily-ops-checklist.md",
   "GET /operations/risk-audit",
   "GET /operations/snapshot.csv",
@@ -233,6 +234,16 @@ const requiredSnippets = [
     name: "first test kit sample metrics",
     file: "main",
     text: "## Sample Metric Entry After Manual Publishing",
+  },
+  {
+    name: "test run tracker export",
+    file: "main",
+    text: "drec-first-test-run-tracker.md",
+  },
+  {
+    name: "test run tracker table",
+    file: "main",
+    text: "## Step Tracker",
   },
   {
     name: "daily ops checklist export",
@@ -485,6 +496,11 @@ const requiredSnippets = [
     text: "download-first-test-kit",
   },
   {
+    name: "web test run tracker action",
+    file: "web",
+    text: "download-test-run-tracker",
+  },
+  {
     name: "web daily ops action",
     file: "web",
     text: "download-daily-ops",
@@ -498,6 +514,11 @@ const requiredSnippets = [
     name: "web first test kit endpoint",
     file: "web",
     text: "/operations/first-test-kit.md",
+  },
+  {
+    name: "web test run tracker endpoint",
+    file: "web",
+    text: "/operations/test-run-tracker.md",
   },
   {
     name: "web launch evidence endpoint",

@@ -1755,6 +1755,16 @@ document.getElementById("download-first-test-kit")?.addEventListener("click", as
   }
 });
 
+document.getElementById("download-test-run-tracker")?.addEventListener("click", async () => {
+  const message = document.getElementById("test-path-message");
+  try {
+    await downloadProtectedFile("/operations/test-run-tracker.md", "drec-first-test-run-tracker.md", "text/markdown");
+    message.textContent = "Test tracker downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download test tracker.";
+  }
+});
+
 document.getElementById("download-daily-ops")?.addEventListener("click", async () => {
   const message = document.getElementById("test-path-message");
   try {

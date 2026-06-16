@@ -70,6 +70,7 @@ Stage 1 is now a working thin-core workflow:
 - See overdue scheduled publishing items in risk audit and Daily Ops before missed handoff windows distort the workflow
 - Download a protected launch evidence report with manual test status, readiness, risk, Meta setup, and safe go-live rules
 - Download a protected First Test Kit with current next action, sample topics, manual metric values, acceptance criteria, and safety notes
+- Download a protected First Test Run Tracker with live step status, evidence fields, and pass rules for the first manual workflow test
 - Download a protected CSV operations snapshot for audit or backup before rollout changes
 - Download a protected operator pack with readiness status, setup checklist, publishing handoff, and weekly report in one Markdown file
 - See the same "Can I Use It Now" decision in Launch Evidence and Operator Pack, including safe test scope and not-yet-ready automation blockers

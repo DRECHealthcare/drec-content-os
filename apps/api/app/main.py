@@ -1191,6 +1191,88 @@ async def operations_first_test_kit(_: None = Depends(require_access_token)):
     )
 
 
+@app.get("/operations/test-run-tracker.md")
+async def operations_test_run_tracker(_: None = Depends(require_access_token)):
+    generated_at = datetime.now(timezone.utc).isoformat()
+    checklist = await test_run_checklist_payload()
+    risk = await content_risk_audit_payload()
+    launch = await launch_readiness_payload()
+    next_step = checklist.get("next_step") or {}
+    summary = checklist.get("summary") or {}
+    lines = [
+        "# DREC Content OS First Test Run Tracker",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this during the first live manual test. It is read-only and does not change system records.",
+        "",
+        "## Current Decision",
+        "",
+        f"- Can test now: {'yes' if launch.get('can_test_now') else 'no'}",
+        f"- Manual cycle: {checklist.get('overall_status')} ({checklist.get('done_count')}/{checklist.get('total_required')} required steps done)",
+        f"- Next action: {next_step.get('action') or next_step.get('label') or 'Open Dashboard'}",
+        f"- Next detail: {next_step.get('detail') or 'Follow the first open Dashboard Test Path step.'}",
+        f"- Content risk: {risk.get('overall_status')} ({risk.get('block_count', 0)} block / {risk.get('warn_count', 0)} warn)",
+        "",
+        "## Live Counts Before Testing",
+        "",
+        f"- Briefs: {summary.get('brief_count', 0)}",
+        f"- Ready assets: {summary.get('ready_assets', 0)}",
+        f"- Queue total: {summary.get('queue_total', 0)}",
+        f"- Scheduled queue: {summary.get('scheduled_queue', 0)}",
+        f"- Handoff ready: {summary.get('handoff_ready', 0)}",
+        f"- Published queue: {summary.get('published_queue', 0)}",
+        f"- Metrics: {summary.get('metric_count', 0)}",
+        f"- Outcomes: {summary.get('outcome_count', 0)}",
+        "",
+        "## Step Tracker",
+        "",
+        "| Done | Step | Current Status | What To Prove | Evidence To Record |",
+        "| --- | --- | --- | --- | --- |",
+    ]
+    for step in checklist.get("steps") or []:
+        if step.get("key") == "meta":
+            evidence = "Confirm dry-run/manual mode is still active."
+        elif step.get("key") == "published":
+            evidence = "Write the manual Meta post ID or manual-test label."
+        elif step.get("key") == "metrics":
+            evidence = "Write the post ID and metric window used for rollup."
+        else:
+            evidence = "Write the item ID, screen, or downloaded file name."
+        lines.append(
+            "| [ ] "
+            f"| {step.get('label', '')} "
+            f"| {step.get('status', '')} "
+            f"| {step.get('detail', '')} "
+            f"| {evidence} |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Manual Notes",
+            "",
+            "- Tester:",
+            "- Test start time:",
+            "- Test end time:",
+            "- Published post ID or manual label:",
+            "- Metrics window used:",
+            "- Issues found:",
+            "- Decision after test:",
+            "",
+            "## Pass Rule",
+            "",
+            "- The manual workflow passes when all required non-Meta steps are done.",
+            "- Real Meta automation stays off until Meta credentials, permissions, dry runs, and Supabase service-role security are green.",
+            "- If risk audit shows any block, resolve it before external publishing.",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-first-test-run-tracker.md"'},
+    )
+
+
 @app.get("/operations/daily-ops-checklist.md")
 async def operations_daily_ops_checklist(_: None = Depends(require_access_token)):
     generated_at = datetime.now(timezone.utc).isoformat()
