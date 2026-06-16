@@ -40,6 +40,17 @@ function accessToken() {
   return localStorage.getItem(tokenKey) || "";
 }
 
+function storeAccessTokenFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get("access_token");
+  if (!token) return;
+  localStorage.setItem(tokenKey, token.trim());
+  params.delete("access_token");
+  const cleanQuery = params.toString();
+  const cleanUrl = `${window.location.pathname}${cleanQuery ? `?${cleanQuery}` : ""}${window.location.hash}`;
+  window.history.replaceState({}, "", cleanUrl);
+}
+
 function updateTokenButton() {
   const button = document.getElementById("token-button");
   button.textContent = accessToken() ? "Access set" : "Set access";
@@ -1711,6 +1722,7 @@ document.getElementById("outcome-form").addEventListener("submit", async (event)
   }
 });
 
+storeAccessTokenFromUrl();
 loadLoopStatus();
 loadKb();
 loadBriefs();
