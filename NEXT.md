@@ -75,6 +75,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added local API contract smoke check for route and workflow gate verification
 - [x] Added operator test runbook for the full manual workflow
 - [x] Added scheduler-ready nightly Meta metrics job wrapper with dry-run default and explicit enable flag
+- [x] Added scheduler-ready Meta publishing job wrapper with due-time gate and explicit enable flag
 
 ## Next Engineering Tasks
 
@@ -131,9 +132,10 @@ Ship Stage 1 of DREC Content OS:
 - [x] Document the manual full-cycle test path from brief to weekly report
 - [x] Update Dashboard Test Path to match handoff publishing and Save & Roll Up
 - [x] Add guarded nightly Meta metrics job endpoint for scheduler wiring
+- [x] Add guarded due-only Meta publishing job endpoint for scheduler wiring
 - [ ] Connect Meta Graph API credentials
-- [ ] Implement real Facebook publish scheduling
-- [ ] Implement Instagram two-step publish worker
+- [x] Implement real Facebook publish scheduling behind Meta readiness and enable flags
+- [x] Implement Instagram two-step publish worker behind Meta readiness and enable flags
 - [ ] Wire nightly metrics ingestion to a scheduler after Meta credentials are approved
 
 ## Stage 2 Preview

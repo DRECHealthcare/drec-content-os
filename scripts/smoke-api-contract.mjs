@@ -26,6 +26,7 @@ const requiredRoutes = [
   "GET /publishing-handoff",
   "POST /publishing/facebook/dispatch",
   "POST /publishing/instagram/dispatch",
+  "POST /jobs/meta-publishing",
   "POST /metrics/meta/ingest",
   "POST /jobs/nightly-meta-metrics",
 ];
@@ -75,6 +76,16 @@ const requiredSnippets = [
     name: "planned time publish gate",
     file: "main",
     text: "Item needs a planned publish time before Meta dispatch.",
+  },
+  {
+    name: "scheduled publishing job due gate",
+    file: "main",
+    text: "planned_slot <= $2",
+  },
+  {
+    name: "scheduled publishing job lock",
+    file: "main",
+    text: "META_ENABLE_PUBLISHING_JOB=true",
   },
   {
     name: "handoff blocker reasons",

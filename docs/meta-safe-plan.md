@@ -45,6 +45,7 @@ Current system behavior:
 - `/publish-queue/{id}` rejects scheduling unless the item is compliance-clear.
 - `/meta/readiness` checks whether Meta app, Page, IG user, token, and required permissions are ready.
 - `/publishing/facebook/dispatch` dry-runs the next eligible Facebook item and blocks real publishing unless credentials are ready and `META_ENABLE_PUBLISHING=true`.
+- `/jobs/meta-publishing` wraps Facebook and Instagram dispatch as a scheduler-ready job. It dry-runs by default, only looks at due scheduled posts, and blocks real publishing unless `META_ENABLE_PUBLISHING=true` and `META_ENABLE_PUBLISHING_JOB=true`.
 - `/metrics/meta/ingest` dry-runs published-post metric ingestion and blocks real ingestion until Meta readiness is green.
 - `/jobs/nightly-meta-metrics` wraps Meta metrics ingestion as a scheduler-ready nightly job. It dry-runs by default and blocks real writes unless Meta readiness is green and `META_ENABLE_METRICS_JOB=true`.
 - Real Meta publishing is intentionally not enabled until credentials and review flow are ready.

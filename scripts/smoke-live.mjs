@@ -58,6 +58,16 @@ const checks = [
     },
   },
   {
+    name: "Publishing job dry run",
+    url: `${apiBase}/jobs/meta-publishing?dry_run=true&channel=all`,
+    method: "POST",
+    auth: true,
+    validate: async (res) => {
+      const data = await res.json();
+      return data.job?.name === "meta-publishing" && data.job?.due_only === true && Array.isArray(data.results);
+    },
+  },
+  {
     name: "Nightly metrics dry run",
     url: `${apiBase}/jobs/nightly-meta-metrics?dry_run=true&limit=5&rollup=true`,
     method: "POST",

@@ -2264,6 +2264,100 @@ async def publish_instagram_item(item: dict):
     return {"post_id": post_id, "container_id": container_id, "meta_response": data}
 
 
+async def next_due_publish_item(channel: str):
+    now = datetime.utcnow()
+    rows = await fetch_rows(
+        """
+        select id, asset_id, channel, format, caption, media_urls, planned_slot, status,
+               compliance_status, external_post_id, created_at
+        from publish_queue
+        where channel = $1
+          and status = 'scheduled'
+          and compliance_status = 'clear'
+          and planned_slot is not null
+          and planned_slot <= $2
+        order by planned_slot asc, created_at asc
+        limit 1
+        """,
+        channel,
+        now,
+    )
+    if not rows and supabase_rest.configured():
+        rows = await supabase_rest.select(
+            "publish_queue",
+            {
+                "select": "id,asset_id,channel,format,caption,media_urls,planned_slot,status,compliance_status,external_post_id,created_at",
+                "channel": f"eq.{channel}",
+                "status": "eq.scheduled",
+                "compliance_status": "eq.clear",
+                "planned_slot": f"lte.{now.isoformat()}",
+                "order": "planned_slot.asc,created_at.asc",
+                "limit": "1",
+            },
+        )
+    return rows[0] if rows else None
+
+
+async def meta_publishing_job_result(channel: str, dry_run: bool):
+    readiness = await meta_readiness()
+    item = await next_due_publish_item(channel)
+    if channel == "facebook":
+        blockers = facebook_dispatch_blockers(item, readiness)
+        planned_requests = []
+        publish = publish_facebook_feed_item
+    else:
+        blockers = instagram_dispatch_blockers(item, readiness)
+        planned_requests = instagram_dispatch_plan(item)
+        publish = publish_instagram_item
+    result = {
+        "channel": channel,
+        "mode": "dry_run" if dry_run else "publish",
+        "ready": bool(item) and not blockers,
+        "item": item,
+        "planned_requests": planned_requests,
+        "blockers": blockers,
+    }
+    if dry_run or blockers:
+        return result
+    result["published"] = await publish(item)
+    return result
+
+
+@app.post("/jobs/meta-publishing")
+async def meta_publishing_job(
+    channel: str = "all",
+    dry_run: bool = True,
+    _: None = Depends(require_access_token),
+):
+    channels = ["facebook", "instagram"] if channel == "all" else [channel]
+    unsupported = [item for item in channels if item not in {"facebook", "instagram"}]
+    if unsupported:
+        raise HTTPException(status_code=422, detail="Channel must be facebook, instagram, or all.")
+    if not dry_run and not settings.meta_enable_publishing_job:
+        raise HTTPException(
+            status_code=423,
+            detail="Scheduled Meta publishing is locked. Set META_ENABLE_PUBLISHING_JOB=true after dry-run approval.",
+        )
+    if not dry_run and not settings.meta_enable_publishing:
+        raise HTTPException(
+            status_code=423,
+            detail="Real Meta publishing is disabled. Set META_ENABLE_PUBLISHING=true only after Meta approval.",
+        )
+    results = [await meta_publishing_job_result(item, dry_run) for item in channels]
+    return {
+        "job": {
+            "name": "meta-publishing",
+            "enabled": settings.meta_enable_publishing_job,
+            "dry_run": dry_run,
+            "channel": channel,
+            "due_only": True,
+            "recommended_schedule": "every 15 minutes",
+        },
+        "results": results,
+        "ready_count": sum(1 for item in results if item.get("ready")),
+    }
+
+
 @app.post("/publishing/facebook/dispatch")
 async def dispatch_facebook_item(dispatch: MetaDispatchIn, _: None = Depends(require_access_token)):
     readiness = await meta_readiness()

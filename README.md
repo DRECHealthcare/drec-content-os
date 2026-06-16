@@ -89,6 +89,7 @@ Stage 1 is now a working thin-core workflow:
 - Record the Meta post ID directly from the handoff after manual posting
 - Mark manually published posts with their Meta post ID so metrics ingestion can learn from them later
 - Dry-run Facebook and Instagram publishing workers before Meta credentials are connected
+- Dry-run the scheduler-ready Meta publishing job against due scheduled posts before real posting is enabled
 - Dry-run the scheduler-ready nightly Meta metrics job before real ingestion is enabled
 - Load the latest published post into Performance so raw metrics and outcomes do not require retyping the Meta ID and context
 - Save raw metrics and roll them into a learning outcome in one Performance action

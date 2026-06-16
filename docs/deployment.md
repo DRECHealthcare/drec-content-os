@@ -91,7 +91,13 @@ shell without creating or changing records.
 
 ## Nightly Meta Metrics Job
 
-The API has a guarded job endpoint for future scheduling:
+The API has guarded job endpoints for future scheduling:
+
+```bash
+curl -X POST \
+  -H "X-DREC-Access-Token: ..." \
+  "https://drec-content-os-api.fly.dev/jobs/meta-publishing?dry_run=true&channel=all"
+```
 
 ```bash
 curl -X POST \
@@ -99,8 +105,15 @@ curl -X POST \
   "https://drec-content-os-api.fly.dev/jobs/nightly-meta-metrics?dry_run=true&limit=25&rollup=true"
 ```
 
-Keep it in dry-run mode until Meta credentials and permissions are ready. Real
-nightly ingestion needs all Meta readiness checks to pass plus this Fly secret:
+Keep both jobs in dry-run mode until Meta credentials and permissions are ready.
+Real scheduled publishing needs Meta readiness plus these Fly secrets:
+
+```bash
+fly secrets set META_ENABLE_PUBLISHING=true
+fly secrets set META_ENABLE_PUBLISHING_JOB=true
+```
+
+Real nightly ingestion needs all Meta readiness checks to pass plus this Fly secret:
 
 ```bash
 fly secrets set META_ENABLE_METRICS_JOB=true
