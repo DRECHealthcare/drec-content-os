@@ -11,6 +11,7 @@ const requiredRoutes = [
   "GET /health",
   "GET /workflow/status",
   "GET /security/status",
+  "GET /automation/status",
   "GET /weekly-report.md",
   "GET /meta/readiness",
   "GET /publish-queue/suggest-slot",
@@ -114,6 +115,11 @@ const requiredSnippets = [
     text: "ready_for_rls_hardening",
   },
   {
+    name: "automation readiness status",
+    file: "main",
+    text: "manual_safe_auto_blocked",
+  },
+  {
     name: "nightly metrics job lock",
     file: "main",
     text: "META_ENABLE_METRICS_JOB=true",
@@ -142,6 +148,11 @@ const requiredSnippets = [
     name: "web security gate card",
     file: "web",
     text: "security-count",
+  },
+  {
+    name: "web automation gate card",
+    file: "web",
+    text: "automation-count",
   },
   {
     name: "web queue reuse message",

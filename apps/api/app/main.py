@@ -253,6 +253,86 @@ async def security_status(_: None = Depends(require_access_token)):
     return security_status_payload()
 
 
+async def automation_status_payload():
+    loop = await build_loop_status()
+    workflow = build_workflow_guidance(loop)
+    meta = await meta_readiness(None)
+    security = security_status_payload()
+    total_queue = total_queue_count(loop.get("queue"))
+    scheduled_queue = sum(
+        int(item.get("count") or 0)
+        for item in loop.get("queue") or []
+        if item.get("status") == "scheduled"
+    )
+    published_queue = sum(
+        int(item.get("count") or 0)
+        for item in loop.get("queue") or []
+        if item.get("status") == "published"
+    )
+    ready_assets = queue_ready_asset_count(loop.get("asset_status"))
+    gates = [
+        {
+            "key": "manual_workflow",
+            "label": "Manual workflow",
+            "status": "ready" if total_queue or ready_assets else "needs_content",
+            "detail": "Queue or approved clear assets are available." if total_queue or ready_assets else "Create and approve one asset first.",
+        },
+        {
+            "key": "handoff",
+            "label": "Manual publishing handoff",
+            "status": "ready" if scheduled_queue else "waiting",
+            "detail": f"{scheduled_queue} scheduled item(s) can be checked for handoff." if scheduled_queue else "Schedule a reviewed item before handoff.",
+        },
+        {
+            "key": "learning",
+            "label": "Learning loop",
+            "status": "ready" if loop.get("outcome_count") else "waiting",
+            "detail": f"{loop.get('outcome_count', 0)} outcome(s) recorded." if loop.get("outcome_count") else "Record metrics after publishing.",
+        },
+        {
+            "key": "meta",
+            "label": "Meta workers",
+            "status": "ready" if meta.get("overall_status") == "ready_for_worker_testing" else "blocked",
+            "detail": meta.get("mode", "manual_handoff"),
+        },
+        {
+            "key": "security",
+            "label": "Strict Supabase RLS",
+            "status": "ready" if security.get("rls_hardening_ready") else "blocked",
+            "detail": security.get("next_step"),
+        },
+    ]
+    blocked = [gate for gate in gates if gate["status"] == "blocked"]
+    waiting = [gate for gate in gates if gate["status"] in {"waiting", "needs_content"}]
+    if blocked:
+        overall = "manual_safe_auto_blocked"
+    elif waiting:
+        overall = "manual_workflow_in_progress"
+    else:
+        overall = "automation_ready"
+    return {
+        "overall_status": overall,
+        "ready_count": sum(1 for gate in gates if gate["status"] == "ready"),
+        "blocked_count": len(blocked),
+        "waiting_count": len(waiting),
+        "gates": gates,
+        "summary": {
+            "queue_total": total_queue,
+            "scheduled_queue": scheduled_queue,
+            "published_queue": published_queue,
+            "ready_assets": ready_assets,
+            "outcomes": loop.get("outcome_count", 0),
+            "next_action": workflow.get("next_action", {}),
+        },
+        "next_step": blocked[0]["detail"] if blocked else waiting[0]["detail"] if waiting else "Automation gates are ready for controlled rollout.",
+    }
+
+
+@app.get("/automation/status")
+async def automation_status(_: None = Depends(require_access_token)):
+    return await automation_status_payload()
+
+
 @app.get("/kb")
 async def list_knowledge_entries(_: None = Depends(require_access_token)):
     rows = await fetch_rows(
@@ -3438,6 +3518,7 @@ async def workflow_status(_: None = Depends(require_access_token)):
         "loop": loop,
         "workflow": build_workflow_guidance(loop),
         "security": security_status_payload(),
+        "automation": await automation_status_payload(),
     }
 
 

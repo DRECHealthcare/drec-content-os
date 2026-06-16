@@ -18,7 +18,7 @@ const checks = [
     auth: true,
     validate: async (res) => {
       const data = await res.json();
-      return Boolean(data.workflow?.next_action?.title) && Array.isArray(data.workflow?.steps) && Boolean(data.security?.overall_status);
+      return Boolean(data.workflow?.next_action?.title) && Array.isArray(data.workflow?.steps) && Boolean(data.security?.overall_status) && Boolean(data.automation?.overall_status);
     },
   },
   {
@@ -37,6 +37,15 @@ const checks = [
     validate: async (res) => {
       const text = await res.text();
       return text.includes("## Workflow Readiness") && text.includes("Queue-ready assets");
+    },
+  },
+  {
+    name: "Automation status",
+    url: `${apiBase}/automation/status`,
+    auth: true,
+    validate: async (res) => {
+      const data = await res.json();
+      return Boolean(data.overall_status) && Array.isArray(data.gates) && Object.prototype.hasOwnProperty.call(data.summary || {}, "ready_assets");
     },
   },
   {
@@ -92,7 +101,7 @@ const checks = [
     auth: false,
     validate: async (res) => {
       const text = await res.text();
-      return text.includes("DREC") && text.includes("workflow-next") && text.includes("copy-test-path") && text.includes("Ready Assets") && text.includes("Learning Loop") && text.includes("Security Gate") && text.includes("Record Published") && text.includes("Save & Roll Up") && text.includes("Use Topics In Weekly Plan") && text.includes("save-all-assets") && text.includes("archive-drafted-briefs") && text.includes("approve-clear-assets") && text.includes("queue-ready-assets") && text.includes("schedule-approved-items") && text.includes("dry-run-meta-publishing");
+      return text.includes("DREC") && text.includes("workflow-next") && text.includes("copy-test-path") && text.includes("Ready Assets") && text.includes("Learning Loop") && text.includes("Security Gate") && text.includes("Automation Gate") && text.includes("Record Published") && text.includes("Save & Roll Up") && text.includes("Use Topics In Weekly Plan") && text.includes("save-all-assets") && text.includes("archive-drafted-briefs") && text.includes("approve-clear-assets") && text.includes("queue-ready-assets") && text.includes("schedule-approved-items") && text.includes("dry-run-meta-publishing");
     },
   },
   {
@@ -101,7 +110,7 @@ const checks = [
     auth: false,
     validate: async (res) => {
       const text = await res.text();
-      return text.includes("/workflow/status") && text.includes("Existing queue item opened") && text.includes("function testPathText()") && text.includes("countByStatus") && text.includes("security-count") && text.includes("Record Published: After manual posting") && text.includes("Save & Roll Up: Add metrics") && text.includes("Use Topics: Send learning recommendations") && text.includes("loadLearningTopicsIntoPlan") && text.includes("needsReviewQueue") && text.includes("handoff_blockers") && text.includes("schedule-next") && text.includes("load-published-post") && text.includes("save-rollup-metric") && text.includes("/briefs/draft-assets") && text.includes("/briefs/archive-drafted") && text.includes("/assets/queue-ready") && text.includes("/publish-queue/schedule-approved") && text.includes("data-handoff-published") && text.includes("/jobs/meta-publishing?dry_run=true&channel=all");
+      return text.includes("/workflow/status") && text.includes("Existing queue item opened") && text.includes("function testPathText()") && text.includes("countByStatus") && text.includes("security-count") && text.includes("automation-count") && text.includes("Record Published: After manual posting") && text.includes("Save & Roll Up: Add metrics") && text.includes("Use Topics: Send learning recommendations") && text.includes("loadLearningTopicsIntoPlan") && text.includes("needsReviewQueue") && text.includes("handoff_blockers") && text.includes("schedule-next") && text.includes("load-published-post") && text.includes("save-rollup-metric") && text.includes("/briefs/draft-assets") && text.includes("/briefs/archive-drafted") && text.includes("/assets/queue-ready") && text.includes("/publish-queue/schedule-approved") && text.includes("data-handoff-published") && text.includes("/jobs/meta-publishing?dry_run=true&channel=all");
     },
   },
 ];
