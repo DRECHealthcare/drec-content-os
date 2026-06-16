@@ -76,6 +76,11 @@ const requiredSnippets = [
     text: "Item needs a planned publish time before Meta dispatch.",
   },
   {
+    name: "handoff blocker reasons",
+    file: "main",
+    text: "handoff_blockers",
+  },
+  {
     name: "bulk review-approved scheduling",
     file: "main",
     text: "schedule_review_approved_queue",
@@ -184,6 +189,11 @@ const requiredSnippets = [
     name: "web handoff published action",
     file: "web",
     text: "data-handoff-published",
+  },
+  {
+    name: "web handoff blockers",
+    file: "web",
+    text: "handoff_blockers",
   },
 ];
 

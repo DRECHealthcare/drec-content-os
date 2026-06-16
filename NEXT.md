@@ -49,6 +49,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added content brief lifecycle actions for drafted and archived briefs
 - [x] Added batch archive cleanup for drafted briefs
 - [x] Added copy-ready publishing handoff package
+- [x] Added blocker reasons for handoff readiness
 - [x] Added calendar export for scheduled publishing reminders
 - [x] Added visible review feedback notes for queued content decisions
 - [x] Filtered Review Queue to unscheduled draft items
@@ -101,6 +102,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add content brief status management after drafting
 - [x] Add batch archive action for drafted briefs
 - [x] Add copy-ready manual publishing package
+- [x] Add handoff blocker reasons for not-ready items
 - [x] Add downloadable publishing calendar
 - [x] Add visible review feedback notes
 - [x] Keep Review Queue focused on unscheduled draft items

@@ -1898,13 +1898,25 @@ async def publishing_handoff(_: None = Depends(require_access_token)):
             },
         )
 
-    ready = [
-        item for item in rows
-        if item.get("status") == "scheduled"
-        and item.get("compliance_status") == "clear"
-        and item.get("planned_slot")
-    ]
-    blocked = [item for item in rows if item not in ready]
+    def handoff_blockers(item: dict):
+        blockers = []
+        if item.get("status") != "scheduled":
+            blockers.append("Needs scheduling approval and scheduled status.")
+        if item.get("compliance_status") != "clear":
+            blockers.append("Needs compliance clear.")
+        if not item.get("planned_slot"):
+            blockers.append("Needs a planned publish time.")
+        return blockers
+
+    ready = []
+    blocked = []
+    for item in rows:
+        blockers = handoff_blockers(item)
+        enriched = {**item, "handoff_blockers": blockers}
+        if not blockers:
+            ready.append(enriched)
+        else:
+            blocked.append(enriched)
     checklist = [
         "Publish only items marked scheduled, compliance-clear, and carrying a planned time.",
         "Keep the caption unchanged unless it goes back through review.",
@@ -1936,7 +1948,12 @@ async def publishing_handoff(_: None = Depends(require_access_token)):
         if media_urls:
             lines.append("Media:")
             lines.extend([f"- {url}" for url in media_urls])
-        lines.append("After publishing: paste the Meta post ID back into Scheduler with Mark Published.")
+        lines.append("After publishing: paste the Meta post ID back into the handoff with Record Published.")
+    if blocked:
+        lines.extend(["", "Needs Review Items:"])
+        for index, item in enumerate(blocked, start=1):
+            lines.append(f"{index}. {item.get('channel')}/{item.get('format')} · {item.get('id')}")
+            lines.extend([f"   - {blocker}" for blocker in item.get("handoff_blockers") or []])
     return {
         "ready_count": len(ready),
         "blocked_count": len(blocked),

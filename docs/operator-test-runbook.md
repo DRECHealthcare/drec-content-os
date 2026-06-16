@@ -97,6 +97,7 @@ Goal: produce the manual handoff while Meta auto-publishing is locked.
 2. Expected result:
    - The scheduled, compliance-clear item appears under `Ready To Publish`.
    - Items without planned time stay out of the ready list.
+   - Blocked items show the exact missing requirement, such as scheduling, compliance clear, or planned time.
 3. Click `Copy Handoff` if you want to paste it into a manual publishing task.
 
 Pass condition: only scheduled, safety-clear items with planned time are ready.

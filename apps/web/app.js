@@ -668,6 +668,10 @@ function handoffItem(item) {
   const publishedAction = canRecordPublished
     ? `<div class="queue-actions"><button type="button" data-handoff-published="${escapeHtml(item.id)}">Record Published</button></div>`
     : "";
+  const blockers = Array.isArray(item.handoff_blockers) ? item.handoff_blockers : [];
+  const blockerList = blockers.length
+    ? `<ul class="feedback-note">${blockers.map((blocker) => `<li>${escapeHtml(blocker)}</li>`).join("")}</ul>`
+    : "";
   return `
     <article class="queue-item">
       <div class="queue-meta">
@@ -678,6 +682,7 @@ function handoffItem(item) {
       </div>
       <small>${formatDate(item.planned_slot)}</small>
       <p>${escapeHtml(item.caption)}</p>
+      ${blockerList}
       ${publishedAction}
     </article>
   `;
