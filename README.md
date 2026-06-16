@@ -63,6 +63,7 @@ Stage 1 is now a working thin-core workflow:
 - Pull learning-informed topic recommendations into the next weekly plan
 - Mark content briefs as drafted or archived so weekly plans stay manageable
 - Save a draft asset directly from a weekly brief for faster review prep
+- Reuse an existing brief asset on repeated Save Asset clicks instead of creating duplicates
 - Draft conservative educational captions
 - Preview and copy saved asset packages with caption variants, carousel slides, or reel scripts
 - Run pre-publish compliance checks

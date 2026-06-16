@@ -639,6 +639,34 @@ async def asset_by_id(asset_id: str):
     return row
 
 
+async def existing_asset_for_brief(brief_id: str):
+    row = await fetch_row(
+        """
+        select id, brief_id, channel, format, caption, media_urls, metadata,
+               compliance_status, review_status, created_at
+        from assets
+        where brief_id = $1
+          and review_status != 'rejected'
+        order by created_at desc
+        limit 1
+        """,
+        brief_id,
+    )
+    if row is None and supabase_rest.configured():
+        rows = await supabase_rest.select(
+            "assets",
+            {
+                "select": "id,brief_id,channel,format,caption,media_urls,metadata,compliance_status,review_status,created_at",
+                "brief_id": f"eq.{brief_id}",
+                "review_status": "neq.rejected",
+                "order": "created_at.desc",
+                "limit": "1",
+            },
+        )
+        row = rows[0] if rows else None
+    return row
+
+
 @app.patch("/assets/{asset_id}")
 async def update_asset_status(
     asset_id: str,
@@ -1112,6 +1140,15 @@ async def create_asset_from_brief(brief_id: str, _: None = Depends(require_acces
     brief = await content_brief_by_id(brief_id)
     if brief is None:
         raise HTTPException(status_code=404, detail="Content brief not found.")
+    existing_asset = await existing_asset_for_brief(brief_id)
+    if existing_asset is not None:
+        await update_content_brief_status(brief_id, ContentBriefStatusIn(status="drafted"))
+        return {
+            "item": existing_asset,
+            "brief": {**brief, "status": "drafted"},
+            "reused": True,
+            "message": "Existing draft asset reused for this brief.",
+        }
     draft = CreativeDraftIn(
         channel="facebook",
         format=brief.get("format") or "carousel",
@@ -1154,7 +1191,7 @@ async def create_asset_from_brief(brief_id: str, _: None = Depends(require_acces
     )
     saved = await create_asset(asset)
     await update_content_brief_status(brief_id, ContentBriefStatusIn(status="drafted"))
-    return {"item": saved.get("item"), "brief": {**brief, "status": "drafted"}, "creative": creative}
+    return {"item": saved.get("item"), "brief": {**brief, "status": "drafted"}, "creative": creative, "reused": False}
 
 
 @app.get("/publish-queue")

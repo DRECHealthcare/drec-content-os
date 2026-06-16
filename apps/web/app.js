@@ -1271,8 +1271,8 @@ document.getElementById("brief-items").addEventListener("click", async (event) =
     assetButton.disabled = true;
     assetButton.textContent = "Saving";
     try {
-      await fetchJson(`/briefs/${assetButton.dataset.draftAssetBrief}/draft-asset`, { method: "POST" });
-      document.getElementById("plan-message").textContent = "Draft asset saved.";
+      const data = await fetchJson(`/briefs/${assetButton.dataset.draftAssetBrief}/draft-asset`, { method: "POST" });
+      document.getElementById("plan-message").textContent = data.reused ? "Existing draft asset opened." : "Draft asset saved.";
       await Promise.all([loadBriefs(), loadAssets(), loadLoopStatus(), loadLearningSummary()]);
       showScreen("assets");
     } catch (error) {
