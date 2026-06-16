@@ -72,7 +72,7 @@ const checks = [
     auth: false,
     validate: async (res) => {
       const text = await res.text();
-      return text.includes("/workflow/status") && text.includes("Existing queue item opened") && text.includes("function testPathText()") && text.includes("schedule-next") && text.includes("load-published-post") && text.includes("/briefs/draft-assets") && text.includes("/assets/queue-ready") && text.includes("/publish-queue/schedule-approved") && text.includes("data-handoff-published");
+      return text.includes("/workflow/status") && text.includes("Existing queue item opened") && text.includes("function testPathText()") && text.includes("schedule-next") && text.includes("load-published-post") && text.includes("save-rollup-metric") && text.includes("/briefs/draft-assets") && text.includes("/assets/queue-ready") && text.includes("/publish-queue/schedule-approved") && text.includes("data-handoff-published");
     },
   },
 ];

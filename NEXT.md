@@ -39,6 +39,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added manual post ID capture after safe handoff publishing
 - [x] Added direct Record Published action inside handoff ready items
 - [x] Added latest published post prefill for manual metric entry
+- [x] Added one-click Save & Roll Up for Performance metrics
 - [x] Added guarded Instagram dispatch dry run with container/publish planning
 - [x] Added safe editing for queued captions, media URLs, planned time, channel, and format
 - [x] Added scheduler filters and a next-7-days operating view

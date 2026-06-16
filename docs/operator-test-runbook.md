@@ -119,11 +119,11 @@ Goal: feed results back into future planning.
 
 1. Open `Performance`.
 2. Click `Load Published Post` to fill the latest published Meta post ID and context.
-3. Enter raw metrics or save a manual outcome.
-4. Use `Roll Up Metric` if raw metrics were entered.
+3. Enter raw metrics.
+4. Click `Save & Roll Up` to store the raw metrics and create the learning outcome in one step.
 5. Open `Learning`.
-5. Click `Build Weekly Report`.
-6. Expected result:
+6. Click `Build Weekly Report`.
+7. Expected result:
    - Weekly report includes workflow readiness.
    - It includes queue-ready asset counts.
    - It includes recent results and next topic recommendations.

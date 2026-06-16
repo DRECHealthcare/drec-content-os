@@ -120,6 +120,11 @@ const requiredSnippets = [
     text: "load-published-post",
   },
   {
+    name: "web save and rollup metrics action",
+    file: "web",
+    text: "save-rollup-metric",
+  },
+  {
     name: "web bulk asset action",
     file: "web",
     text: "save-all-assets",

@@ -2096,6 +2096,28 @@ function prefillPerformanceFromQueueItem(item) {
     : "";
 }
 
+async function saveRawMetricFromCurrentForm() {
+  const metricForm = document.getElementById("metric-form");
+  const payload = metricPayloadFromForm(new FormData(metricForm));
+  await fetchJson("/metrics", { method: "POST", body: JSON.stringify(payload) });
+  return payload;
+}
+
+async function rollupLatestMetricFromCurrentForm() {
+  const form = new FormData(document.getElementById("metric-form"));
+  const postId = form.get("external_post_id");
+  return fetchJson("/metrics/rollup", {
+    method: "POST",
+    body: JSON.stringify({
+      external_post_id: postId || null,
+      metric_window: "7d",
+      format: document.querySelector("#outcome-form [name='format']")?.value || null,
+      channel: form.get("source") === "ads" ? "manual" : form.get("source"),
+      pillar: "metabolic_education",
+    }),
+  });
+}
+
 document.getElementById("load-published-post").addEventListener("click", async () => {
   const message = document.getElementById("metric-message");
   message.textContent = "Loading latest published post...";
@@ -2115,10 +2137,9 @@ document.getElementById("load-published-post").addEventListener("click", async (
 document.getElementById("metric-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const message = document.getElementById("metric-message");
-  const payload = metricPayloadFromForm(new FormData(event.currentTarget));
   message.textContent = "Saving raw metrics...";
   try {
-    await fetchJson("/metrics", { method: "POST", body: JSON.stringify(payload) });
+    await saveRawMetricFromCurrentForm();
     message.textContent = "Raw metrics saved.";
     await loadLoopStatus();
   } catch (error) {
@@ -2126,22 +2147,31 @@ document.getElementById("metric-form").addEventListener("submit", async (event) 
   }
 });
 
+document.getElementById("save-rollup-metric").addEventListener("click", async () => {
+  const message = document.getElementById("metric-message");
+  const button = document.getElementById("save-rollup-metric");
+  const originalText = button.textContent;
+  message.textContent = "Saving metrics and creating outcome...";
+  button.disabled = true;
+  button.textContent = "Working";
+  try {
+    await saveRawMetricFromCurrentForm();
+    await rollupLatestMetricFromCurrentForm();
+    message.textContent = "Metrics saved and outcome created.";
+    await Promise.all([loadOutcomes(), loadLoopStatus(), loadLearningSummary()]);
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not save and roll up metrics.";
+  } finally {
+    button.disabled = false;
+    button.textContent = originalText;
+  }
+});
+
 document.getElementById("rollup-metric").addEventListener("click", async () => {
   const message = document.getElementById("metric-message");
-  const form = new FormData(document.getElementById("metric-form"));
-  const postId = form.get("external_post_id");
   message.textContent = "Rolling metrics into outcome...";
   try {
-    await fetchJson("/metrics/rollup", {
-      method: "POST",
-      body: JSON.stringify({
-        external_post_id: postId || null,
-        metric_window: "7d",
-        format: document.querySelector("#outcome-form [name='format']")?.value || null,
-        channel: form.get("source") === "ads" ? "manual" : form.get("source"),
-        pillar: "metabolic_education",
-      }),
-    });
+    await rollupLatestMetricFromCurrentForm();
     message.textContent = "Outcome created from latest metrics.";
     await Promise.all([loadOutcomes(), loadLoopStatus(), loadLearningSummary()]);
   } catch (error) {

@@ -87,6 +87,7 @@ Stage 1 is now a working thin-core workflow:
 - Mark manually published posts with their Meta post ID so metrics ingestion can learn from them later
 - Dry-run Facebook and Instagram publishing workers before Meta credentials are connected
 - Load the latest published post into Performance so raw metrics and outcomes do not require retyping the Meta ID and context
+- Save raw metrics and roll them into a learning outcome in one Performance action
 - Register approved media URLs or upload files into private Supabase Storage
 - Approve, review, or block draft assets and media before they enter publishing
 - Record raw performance metrics, roll them into scored outcomes, and view the first learning summary
