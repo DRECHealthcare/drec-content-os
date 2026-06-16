@@ -811,6 +811,8 @@ async function loadLearningSummary() {
     const outcomes = data.recent_outcomes || [];
     const weights = data.weights || [];
     const planTopics = data.plan_recommendations?.topics || [];
+    const insights = data.outcome_insights || {};
+    const topSignals = insights.top_signals || [];
     container.innerHTML = `
       <article class="learning-card wide-learning">
         <h3>Next Best Move</h3>
@@ -840,6 +842,13 @@ async function loadLearningSummary() {
         <h3>Recent Results</h3>
         <ul>
           ${outcomes.length ? outcomes.map((outcome) => `<li><strong>${escapeHtml(outcome.metric_window || "7d")}</strong> ${escapeHtml(outcome.post_id || "")} · score ${escapeHtml(outcome.score ?? "n/a")} · saves ${escapeHtml(outcome.saves ?? 0)}</li>`).join("") : "<li>No performance records yet.</li>"}
+        </ul>
+      </article>
+      <article class="learning-card wide-learning">
+        <h3>Outcome Insights</h3>
+        <p>${escapeHtml(insights.summary || "No outcome insights yet.")}</p>
+        <ul>
+          ${topSignals.length ? topSignals.map((item) => `<li><strong>${escapeHtml(item.label || `${item.dimension}: ${item.key}`)}</strong> · avg score ${escapeHtml(item.avg_score ?? "n/a")} · saves ${escapeHtml(item.saves_total ?? 0)} · shares ${escapeHtml(item.shares_total ?? 0)}<br><small>${escapeHtml(item.recommendation || "")}</small></li>`).join("") : "<li>Record more outcomes to compare formats, channels, pillars, and audiences.</li>"}
         </ul>
       </article>
       <article class="learning-card wide-learning">

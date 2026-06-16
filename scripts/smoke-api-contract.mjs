@@ -187,6 +187,16 @@ const requiredSnippets = [
     text: "raw_metric",
   },
   {
+    name: "outcome insights aggregation",
+    file: "main",
+    text: "outcome_insights",
+  },
+  {
+    name: "weekly report outcome insights",
+    file: "main",
+    text: "## Outcome Insights",
+  },
+  {
     name: "publishing run sheet export",
     file: "main",
     text: "drec-publishing-run-sheet.md",
@@ -340,6 +350,11 @@ const requiredSnippets = [
     name: "web learning topics helper",
     file: "web",
     text: "loadLearningTopicsIntoPlan",
+  },
+  {
+    name: "web outcome insights card",
+    file: "web",
+    text: "Outcome Insights",
   },
   {
     name: "web suggested slot action",

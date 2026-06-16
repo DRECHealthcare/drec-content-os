@@ -1725,6 +1725,110 @@ async def learning_recommended_topics(language: str = "zh", count: int = 5):
     }
 
 
+def safe_float(value, default: float = 0.0):
+    try:
+        if value is None:
+            return default
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def outcome_group_insights(outcomes: list[dict], dimension: str):
+    groups = {}
+    for outcome in outcomes:
+        key = str(outcome.get(dimension) or "").strip()
+        if not key:
+            continue
+        group = groups.setdefault(
+            key,
+            {
+                "dimension": dimension,
+                "key": key,
+                "count": 0,
+                "score_total": 0.0,
+                "saves_total": 0,
+                "shares_total": 0,
+                "best_post_id": None,
+                "best_score": None,
+                "note": "",
+            },
+        )
+        score = safe_float(outcome.get("score"))
+        saves = int(safe_float(outcome.get("saves")))
+        shares = int(safe_float(outcome.get("shares")))
+        group["count"] += 1
+        group["score_total"] += score
+        group["saves_total"] += saves
+        group["shares_total"] += shares
+        if group["best_score"] is None or score > group["best_score"]:
+            group["best_score"] = score
+            group["best_post_id"] = outcome.get("post_id")
+            group["note"] = outcome.get("vs_plan_note") or ""
+    insights = []
+    for group in groups.values():
+        count = max(group["count"], 1)
+        avg_score = round(group["score_total"] / count, 2)
+        insight = {
+            "dimension": group["dimension"],
+            "key": group["key"],
+            "count": group["count"],
+            "avg_score": avg_score,
+            "saves_total": group["saves_total"],
+            "shares_total": group["shares_total"],
+            "best_post_id": group["best_post_id"],
+            "best_score": group["best_score"],
+            "note": group["note"],
+            "recommendation": f"Repeat or extend {group['key']} if it still fits safety and brand context."
+            if avg_score >= 1
+            else f"Treat {group['key']} as exploratory until more results confirm it.",
+        }
+        insights.append(insight)
+    return sorted(insights, key=lambda item: (item["avg_score"], item["saves_total"], item["shares_total"], item["count"]), reverse=True)[:5]
+
+
+async def outcome_insights():
+    outcomes = await fetch_rows(
+        """
+        select post_id, pillar, funnel_stage, format, channel, audience_label,
+               score, shares, saves, cpl, vs_plan_note, created_at
+        from outcomes
+        order by created_at desc
+        limit 200
+        """
+    )
+    if supabase_rest.configured() and not outcomes:
+        outcomes = await supabase_rest.select(
+            "outcomes",
+            {
+                "select": "post_id,pillar,funnel_stage,format,channel,audience_label,score,shares,saves,cpl,vs_plan_note,created_at",
+                "order": "created_at.desc",
+                "limit": "200",
+            },
+        )
+    dimensions = ["format", "channel", "pillar", "funnel_stage", "audience_label"]
+    by_dimension = {dimension: outcome_group_insights(outcomes, dimension) for dimension in dimensions}
+    top_signals = []
+    for dimension, items in by_dimension.items():
+        if items:
+            top = items[0]
+            top_signals.append(
+                {
+                    **top,
+                    "label": f"{dimension}: {top['key']}",
+                }
+            )
+    top_signals = sorted(top_signals, key=lambda item: (item["avg_score"], item["saves_total"], item["shares_total"]), reverse=True)
+    return {
+        "sample_size": len(outcomes),
+        "by_dimension": by_dimension,
+        "top_signals": top_signals[:6],
+        "summary": "No performance outcomes yet. Publish and record metrics to activate insights."
+        if not outcomes
+        else f"{len(outcomes)} outcome(s) analyzed across format, channel, pillar, funnel stage, and audience.",
+    }
+
+
 @app.get("/briefs")
 async def list_content_briefs(_: None = Depends(require_access_token)):
     rows = await fetch_rows(
@@ -4297,6 +4401,7 @@ async def learning_summary(_: None = Depends(require_access_token)):
     queue_total = sum(item.get("count", 0) for item in queue)
     feedback_total = sum(item.get("count", 0) for item in feedback)
     outcome_total = len(recent_outcomes)
+    insights = await outcome_insights()
     recommendation = (
         "Draft from the weekly plan, then send safe items through review."
         if queue_total == 0
@@ -4315,6 +4420,7 @@ async def learning_summary(_: None = Depends(require_access_token)):
         "weights": weights,
         "recommendation": recommendation,
         "plan_recommendations": plan_recommendations,
+        "outcome_insights": insights,
     }
 
 
@@ -4379,6 +4485,8 @@ async def weekly_report(_: None = Depends(require_access_token)):
     recent_outcomes = summary.get("recent_outcomes", [])
     weights = summary.get("weights", [])
     plan_topics = summary.get("plan_recommendations", {}).get("topics", [])
+    insights = summary.get("outcome_insights", {})
+    top_signals = insights.get("top_signals", [])
     next_action = workflow.get("next_action", {})
     workflow_summary = workflow.get("summary", {})
     workflow_lines = report_lines(
@@ -4413,6 +4521,11 @@ async def weekly_report(_: None = Depends(require_access_token)):
         "No active learning weights yet.",
     )
     topic_lines = [report_bullet(topic) for topic in plan_topics] if plan_topics else ["- No recommendations yet."]
+    insight_lines = report_lines(
+        top_signals,
+        lambda insight: f"{insight.get('label')} · avg score {insight.get('avg_score')} · saves {insight.get('saves_total')} · shares {insight.get('shares_total')} · {insight.get('recommendation')}",
+        "No outcome insights yet.",
+    )
     lines = [
         "# DREC Content OS Weekly Operating Report",
         "",
@@ -4444,6 +4557,11 @@ async def weekly_report(_: None = Depends(require_access_token)):
         "## Recent Results",
         "",
         *outcome_lines,
+        "",
+        "## Outcome Insights",
+        "",
+        report_bullet(insights.get("summary")),
+        *insight_lines,
         "",
         "## Active Learning Weights",
         "",

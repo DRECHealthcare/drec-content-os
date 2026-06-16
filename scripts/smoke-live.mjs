@@ -36,7 +36,7 @@ const checks = [
     auth: true,
     validate: async (res) => {
       const text = await res.text();
-      return text.includes("## Workflow Readiness") && text.includes("Queue-ready assets");
+      return text.includes("## Workflow Readiness") && text.includes("Queue-ready assets") && text.includes("## Outcome Insights");
     },
   },
   {
@@ -109,6 +109,15 @@ const checks = [
     validate: async (res) => {
       const text = await res.text();
       return text.includes("record_type,id,dimension,key,value,created_at,detail") && text.includes("raw_metric");
+    },
+  },
+  {
+    name: "Learning summary insights",
+    url: `${apiBase}/learning-summary`,
+    auth: true,
+    validate: async (res) => {
+      const data = await res.json();
+      return Boolean(data.outcome_insights?.summary) && Array.isArray(data.outcome_insights?.top_signals);
     },
   },
   {
@@ -209,7 +218,7 @@ const checks = [
     auth: false,
     validate: async (res) => {
       const text = await res.text();
-      return text.includes("/workflow/status") && text.includes("/operations/launch-readiness") && text.includes("/operations/test-run-checklist") && text.includes("data-test-run-screen") && text.includes("/operations/risk-audit") && text.includes("/operations/snapshot.csv") && text.includes("/operations/creative-pack.md") && text.includes("/operations/review-log.md") && text.includes("/operations/learning-snapshot.csv") && text.includes("/operations/publishing-run-sheet.md") && text.includes("/operations/operator-pack.md") && text.includes("Existing queue item opened") && text.includes("function testPathText()") && text.includes("saveAccessTokenFromPanel") && text.includes("countByStatus") && text.includes("security-count") && text.includes("automation-count") && text.includes("Record Published: After manual posting") && text.includes("Save & Roll Up: Add metrics") && text.includes("Use Topics: Send learning recommendations") && text.includes("loadLearningTopicsIntoPlan") && text.includes("needsReviewQueue") && text.includes("handoff_blockers") && text.includes("schedule-next") && text.includes("load-published-post") && text.includes("save-rollup-metric") && text.includes("/kb/context") && text.includes("Active Knowledge Context") && text.includes("/briefs/draft-assets") && text.includes("/briefs/archive-drafted") && text.includes("/assets/queue-ready") && text.includes("/publish-queue/schedule-approved") && text.includes("data-handoff-published") && text.includes("/meta/setup-checklist") && text.includes("meta-setup-commands") && text.includes("GitHub Scheduler Setup") && text.includes("scheduler_setup") && text.includes("/jobs/meta-publishing?dry_run=true&channel=all");
+      return text.includes("/workflow/status") && text.includes("/operations/launch-readiness") && text.includes("/operations/test-run-checklist") && text.includes("data-test-run-screen") && text.includes("/operations/risk-audit") && text.includes("/operations/snapshot.csv") && text.includes("/operations/creative-pack.md") && text.includes("/operations/review-log.md") && text.includes("/operations/learning-snapshot.csv") && text.includes("/operations/publishing-run-sheet.md") && text.includes("/operations/operator-pack.md") && text.includes("Existing queue item opened") && text.includes("function testPathText()") && text.includes("saveAccessTokenFromPanel") && text.includes("countByStatus") && text.includes("security-count") && text.includes("automation-count") && text.includes("Record Published: After manual posting") && text.includes("Save & Roll Up: Add metrics") && text.includes("Use Topics: Send learning recommendations") && text.includes("loadLearningTopicsIntoPlan") && text.includes("Outcome Insights") && text.includes("outcome_insights") && text.includes("needsReviewQueue") && text.includes("handoff_blockers") && text.includes("schedule-next") && text.includes("load-published-post") && text.includes("save-rollup-metric") && text.includes("/kb/context") && text.includes("Active Knowledge Context") && text.includes("/briefs/draft-assets") && text.includes("/briefs/archive-drafted") && text.includes("/assets/queue-ready") && text.includes("/publish-queue/schedule-approved") && text.includes("data-handoff-published") && text.includes("/meta/setup-checklist") && text.includes("meta-setup-commands") && text.includes("GitHub Scheduler Setup") && text.includes("scheduler_setup") && text.includes("/jobs/meta-publishing?dry_run=true&channel=all");
     },
   },
 ];
