@@ -72,6 +72,7 @@ Stage 1 is now a working thin-core workflow:
 - Record GitHub dry-run scheduler heartbeats so the app can show whether the every-6-hour checks are actually running
 - See the GitHub Scheduler Setup steps in Meta Setup and the Operator Pack before turning on recurring dry-run checks
 - See the Supabase service-role readiness gate before stricter RLS policies are applied
+- Use safer session-only access-token storage by default, with explicit Remember and Clear controls for shared testing devices
 - Pull learning-informed topic recommendations into the next weekly plan
 - Load active Knowledge Base context into weekly planning and creative drafts so brand, voice, compliance, and medical dictionary entries are visible during review
 - Download the Knowledge Base as CSV so brand, voice, compliance, offer, and medical dictionary entries can be backed up or reviewed outside the app

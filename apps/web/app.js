@@ -1,5 +1,6 @@
 const apiBase = window.DREC_API_BASE_URL || localStorage.getItem("DREC_API_BASE_URL") || "https://drec-content-os-api.fly.dev";
 const tokenKey = "DREC_ACCESS_TOKEN";
+const rememberTokenKey = "DREC_REMEMBER_ACCESS_TOKEN";
 let currentDraft = null;
 let editingQueueItem = null;
 let latestMetaSetupCommands = [];
@@ -38,14 +39,14 @@ function showScreen(screen) {
 }
 
 function accessToken() {
-  return localStorage.getItem(tokenKey) || "";
+  return sessionStorage.getItem(tokenKey) || localStorage.getItem(tokenKey) || "";
 }
 
 function storeAccessTokenFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const token = params.get("access_token");
   if (!token) return;
-  localStorage.setItem(tokenKey, token.trim());
+  sessionStorage.setItem(tokenKey, token.trim());
   params.delete("access_token");
   const cleanQuery = params.toString();
   const cleanUrl = `${window.location.pathname}${cleanQuery ? `?${cleanQuery}` : ""}${window.location.hash}`;
@@ -75,22 +76,42 @@ function refreshProtectedData() {
 function showTokenPanel() {
   const panel = document.getElementById("token-panel");
   const input = document.getElementById("token-input");
+  const remember = document.getElementById("token-remember");
   panel.hidden = !panel.hidden;
   input.value = accessToken();
+  remember.checked = localStorage.getItem(rememberTokenKey) === "true" && Boolean(localStorage.getItem(tokenKey));
   if (!panel.hidden) input.focus();
 }
 
 function saveAccessTokenFromPanel() {
   const panel = document.getElementById("token-panel");
   const input = document.getElementById("token-input");
+  const remember = document.getElementById("token-remember");
   const token = input.value;
-  localStorage.setItem(tokenKey, token.trim());
+  sessionStorage.setItem(tokenKey, token.trim());
+  if (remember.checked) {
+    localStorage.setItem(tokenKey, token.trim());
+    localStorage.setItem(rememberTokenKey, "true");
+  } else {
+    localStorage.removeItem(tokenKey);
+    localStorage.removeItem(rememberTokenKey);
+  }
   panel.hidden = true;
+  refreshProtectedData();
+}
+
+function clearAccessToken() {
+  sessionStorage.removeItem(tokenKey);
+  localStorage.removeItem(tokenKey);
+  localStorage.removeItem(rememberTokenKey);
+  document.getElementById("token-input").value = "";
+  document.getElementById("token-remember").checked = false;
   refreshProtectedData();
 }
 
 document.getElementById("token-button").addEventListener("click", showTokenPanel);
 document.getElementById("token-save").addEventListener("click", saveAccessTokenFromPanel);
+document.getElementById("token-clear").addEventListener("click", clearAccessToken);
 document.getElementById("token-input").addEventListener("keydown", (event) => {
   if (event.key === "Enter") saveAccessTokenFromPanel();
   if (event.key === "Escape") document.getElementById("token-panel").hidden = true;

@@ -330,6 +330,16 @@ const requiredSnippets = [
     text: "token-input",
   },
   {
+    name: "web session token storage",
+    file: "web",
+    text: "sessionStorage.setItem(tokenKey",
+  },
+  {
+    name: "web token clear action",
+    file: "web",
+    text: "clearAccessToken",
+  },
+  {
     name: "web token panel refresh",
     file: "web",
     text: "saveAccessTokenFromPanel",
