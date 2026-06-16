@@ -67,6 +67,7 @@ Stage 1 is now a working thin-core workflow:
 - See an automation readiness gate that combines manual workflow, handoff, learning, Meta, and security status
 - Run a protected content risk audit across automation gates, assets, active queue items, and media before publishing or enabling automation
 - Download a protected Daily Ops Checklist with morning checks, today's priority, ready-to-publish items, blockers, learning prompts, and closeout steps
+- See overdue scheduled publishing items in risk audit and Daily Ops before missed handoff windows distort the workflow
 - Download a protected launch evidence report with manual test status, readiness, risk, Meta setup, and safe go-live rules
 - Download a protected First Test Kit with current next action, sample topics, manual metric values, acceptance criteria, and safety notes
 - Download a protected CSV operations snapshot for audit or backup before rollout changes

@@ -568,6 +568,16 @@ def audit_score(items: list[dict]):
     return "clear"
 
 
+def is_overdue_scheduled_item(item: dict):
+    if item.get("status") != "scheduled":
+        return False
+    planned_slot = parse_datetime(item.get("planned_slot"))
+    if not planned_slot:
+        return False
+    planned_utc = planned_slot.astimezone(timezone.utc) if planned_slot.tzinfo else planned_slot.replace(tzinfo=timezone.utc)
+    return planned_utc < datetime.now(timezone.utc) - timedelta(minutes=30)
+
+
 async def content_risk_audit_payload():
     automation = await automation_status_payload()
     assets = await fetch_asset_list(200)
@@ -623,6 +633,7 @@ async def content_risk_audit_payload():
         status = item.get("status")
         if status == "cancelled":
             continue
+        planned_slot = parse_datetime(item.get("planned_slot"))
         compliance = item.get("compliance_status")
         latest_action = (item.get("latest_feedback") or {}).get("action")
         if compliance == "flagged":
@@ -631,6 +642,9 @@ async def content_risk_audit_payload():
             items.append(audit_item("queue", item.get("id"), "warn", "Queue item is not safety clear", f"Current safety status: {compliance or 'unknown'}.", "Run safety check before scheduling.", item.get("channel"), item.get("format")))
         if status == "scheduled" and not item.get("planned_slot"):
             items.append(audit_item("queue", item.get("id"), "block", "Scheduled item has no planned time", "Publishing workers and handoff need a real planned time.", "Set a planned publish time.", item.get("channel"), item.get("format")))
+        if is_overdue_scheduled_item(item) and planned_slot:
+            planned_utc = planned_slot.astimezone(timezone.utc) if planned_slot.tzinfo else planned_slot.replace(tzinfo=timezone.utc)
+            items.append(audit_item("queue", item.get("id"), "warn", "Scheduled item is overdue", f"Planned time was {planned_utc.isoformat()}.", "Publish and record the post ID, or reschedule/cancel this item.", item.get("channel"), item.get("format")))
         if status == "draft" and latest_action != "approve":
             items.append(audit_item("queue", item.get("id"), "warn", "Draft queue item is not review-approved", "Draft items need approval feedback before batch scheduling.", "Review and approve, regenerate, or reject.", item.get("channel"), item.get("format")))
         if status == "published" and not item.get("external_post_id"):
@@ -657,6 +671,7 @@ async def content_risk_audit_payload():
             "assets": len(assets),
             "queue": len(queue),
             "cancelled_queue": sum(1 for item in queue if item.get("status") == "cancelled"),
+            "overdue_scheduled_queue": sum(1 for item in queue if is_overdue_scheduled_item(item)),
             "media": len(media),
             "automation_gates": len(automation.get("gates", [])),
         },
@@ -1191,6 +1206,7 @@ async def operations_daily_ops_checklist(_: None = Depends(require_access_token)
     blocked_items = handoff.get("blocked_items") or []
     insight_payload = learning.get("outcome_insights") or {}
     learning_items = (insight_payload.get("top_signals") or [])[:5]
+    risk_checked = risk.get("checked") or {}
     lines = [
         "# DREC Content OS Daily Ops Checklist",
         "",
@@ -1224,6 +1240,7 @@ async def operations_daily_ops_checklist(_: None = Depends(require_access_token)
         f"- Queue total: {summary.get('queue_total', 0)}",
         f"- Scheduled queue: {summary.get('scheduled_queue', 0)}",
         f"- Handoff ready: {summary.get('handoff_ready', 0)}",
+        f"- Overdue scheduled: {risk_checked.get('overdue_scheduled_queue', 0)}",
         f"- Published queue: {summary.get('published_queue', 0)}",
         f"- Metrics: {summary.get('metric_count', 0)}",
         f"- Outcomes: {summary.get('outcome_count', 0)}",

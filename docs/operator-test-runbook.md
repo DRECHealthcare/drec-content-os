@@ -87,6 +87,9 @@ Goal: give the approved item a real planned time.
    - The item status becomes `scheduled`.
    - The app chooses the next open DREC publishing slot in MYT.
    - It appears in the next-7-days operating view if the date is within seven days.
+   - If a scheduled item is more than 30 minutes overdue, `Run Risk Audit` and
+     `Download Daily Ops` should call it out so it can be posted, rescheduled,
+     or cancelled.
 
 Pass condition: the queue item is scheduled and has a planned time.
 

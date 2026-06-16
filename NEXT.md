@@ -48,6 +48,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added safe editing for queued captions, media URLs, planned time, channel, and format
 - [x] Added safe queue-item cancellation before publishing
 - [x] Excluded cancelled queue items from active risk-audit scoring
+- [x] Added overdue scheduled item warnings to risk audit and Daily Ops
 - [x] Added scheduler filters and a next-7-days operating view
 - [x] Added batch scheduling for review-approved queue items
 - [x] Added learning-informed weekly topic recommendations
@@ -127,6 +128,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add queue item editing before approval/publishing
 - [x] Add queue item cancellation before publishing with feedback trail
 - [x] Keep cancelled queue items out of active content-risk scoring
+- [x] Flag overdue scheduled items before handoff/learning drift
 - [x] Add scheduler status/channel filters and week view
 - [x] Add batch schedule action for review-approved queue items
 - [x] Feed learning signals back into weekly plan generation

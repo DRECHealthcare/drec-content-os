@@ -109,6 +109,7 @@ const checks = [
       const text = await res.text();
       return text.includes("# DREC Content OS Daily Ops Checklist")
         && text.includes("## Morning Checks")
+        && text.includes("Overdue scheduled")
         && text.includes("## Ready To Publish Today")
         && text.includes("## End-Of-Day Closeout");
     },

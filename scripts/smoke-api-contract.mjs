@@ -125,6 +125,21 @@ const requiredSnippets = [
     text: "cancelled_queue",
   },
   {
+    name: "overdue scheduled helper",
+    file: "main",
+    text: "is_overdue_scheduled_item",
+  },
+  {
+    name: "overdue scheduled risk audit",
+    file: "main",
+    text: "Scheduled item is overdue",
+  },
+  {
+    name: "overdue scheduled daily ops count",
+    file: "main",
+    text: "Overdue scheduled",
+  },
+  {
     name: "scheduled publishing job due gate",
     file: "main",
     text: "planned_slot <= $2",
