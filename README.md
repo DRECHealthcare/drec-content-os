@@ -92,6 +92,7 @@ Stage 1 is now a working thin-core workflow:
 - Reuse an existing brief asset on repeated Save Asset clicks instead of creating duplicates
 - Draft conservative educational captions
 - Preview and copy saved asset packages with caption variants, carousel slides, or reel scripts
+- Download an Asset Review Worklist that shows briefs to save, asset review blockers, and approved clear assets ready to queue
 - Download a creative production pack with active assets, captions, slides, scripts, media notes, and KB review context
 - Download an asset review CSV that combines draft asset readiness, media rights, approval status, blockers, and source URLs
 - Run pre-publish compliance checks

@@ -1966,6 +1966,115 @@ async def operations_asset_review_csv(_: None = Depends(require_access_token)):
     )
 
 
+@app.get("/operations/asset-review-worklist.md")
+async def operations_asset_review_worklist(_: None = Depends(require_access_token)):
+    generated_at = datetime.now(timezone.utc).isoformat()
+    briefs = await fetch_content_brief_list(100)
+    assets = await fetch_asset_list(200)
+    assets_by_brief = {str(asset.get("brief_id")): asset for asset in assets if asset.get("brief_id")}
+    unsaved_briefs = [
+        brief
+        for brief in briefs
+        if brief.get("status") not in {"drafted", "archived"}
+        and str(brief.get("id")) not in assets_by_brief
+    ]
+    needs_review = [
+        asset
+        for asset in assets
+        if asset.get("review_status") != "rejected" and asset_review_blockers(asset)
+    ]
+    ready_to_queue = [
+        asset
+        for asset in assets
+        if asset.get("review_status") == "approved" and asset.get("compliance_status") == "clear"
+    ]
+    lines = [
+        "# DREC Content OS Asset Review Worklist",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this as the working sheet for turning weekly briefs into queue-ready assets. It is read-only and does not change records.",
+        "",
+        "## Decision",
+        "",
+        f"- Unsaved briefs: {len(unsaved_briefs)}",
+        f"- Assets needing review: {len(needs_review)}",
+        f"- Ready to queue: {len(ready_to_queue)}",
+        "- Next action: Save Asset from Weekly Plan." if unsaved_briefs else "- Next action: Review and queue approved clear assets.",
+        "",
+        "## Briefs To Save As Assets",
+        "",
+    ]
+    if unsaved_briefs:
+        for index, brief in enumerate(unsaved_briefs[:20], start=1):
+            lines.extend(
+                [
+                    f"### {index}. {brief.get('topic') or 'Untitled brief'}",
+                    "",
+                    f"- Brief ID: {brief.get('id')}",
+                    f"- Format: {brief.get('format')}",
+                    f"- Funnel stage: {brief.get('funnel_stage') or 'n/a'}",
+                    f"- Hook: {brief.get('hook_primary') or 'No hook'}",
+                    f"- Action: Open Weekly Plan and click Save Asset.",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["- No unsaved active briefs found.", ""])
+    lines.extend(["## Assets Needing Review", ""])
+    if needs_review:
+        for index, asset in enumerate(needs_review[:30], start=1):
+            metadata = asset.get("metadata") or {}
+            blockers = asset_review_blockers(asset)
+            lines.extend(
+                [
+                    f"### {index}. {metadata.get('topic') or asset.get('format') or 'Untitled asset'}",
+                    "",
+                    f"- Asset ID: {asset.get('id')}",
+                    f"- Review: {asset.get('review_status')}",
+                    f"- Safety: {asset.get('compliance_status')}",
+                    f"- Blockers: {', '.join(blockers) or 'None'}",
+                    f"- Action: Mark Safety Clear and Approve only after human review.",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["- No active assets need review.", ""])
+    lines.extend(["## Ready To Queue", ""])
+    if ready_to_queue:
+        for index, asset in enumerate(ready_to_queue[:30], start=1):
+            metadata = asset.get("metadata") or {}
+            lines.extend(
+                [
+                    f"### {index}. {metadata.get('topic') or asset.get('format') or 'Untitled asset'}",
+                    "",
+                    f"- Asset ID: {asset.get('id')}",
+                    f"- Channel: {asset.get('channel')}",
+                    f"- Format: {asset.get('format')}",
+                    f"- Media count: {len([url for url in asset.get('media_urls') or [] if url])}",
+                    "- Action: Add To Queue, then approve and schedule from Review Queue/Scheduler.",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["- No approved clear assets are ready to queue yet.", ""])
+    lines.extend(
+        [
+            "## Review Rules",
+            "",
+            "- Do not queue rejected assets.",
+            "- Do not queue pending or flagged safety items.",
+            "- Add approved media before publishing if the format needs a visual.",
+            "- Keep Meta automation off; use manual handoff until credential gates are green.",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-asset-review-worklist.md"'},
+    )
+
+
 async def fetch_feedback_log(limit: int = 200):
     bounded_limit = max(1, min(int(limit or 200), 500))
     rows = await fetch_rows(
@@ -2933,6 +3042,11 @@ async def outcome_insights():
 
 @app.get("/briefs")
 async def list_content_briefs(_: None = Depends(require_access_token)):
+    return {"items": await fetch_content_brief_list()}
+
+
+async def fetch_content_brief_list(limit: int = 100):
+    bounded_limit = max(1, min(int(limit or 100), 200))
     rows = await fetch_rows(
         """
         select id, channel, format, pillar, funnel_stage, awareness_stage, topic,
@@ -2940,8 +3054,9 @@ async def list_content_briefs(_: None = Depends(require_access_token)):
                cta_type, target_signal, language, compliance_notes, status, created_at
         from content_briefs
         order by created_at desc
-        limit 100
-        """
+        limit $1
+        """,
+        bounded_limit,
     )
     if not rows:
         rows = await supabase_rest.select(
@@ -2949,10 +3064,10 @@ async def list_content_briefs(_: None = Depends(require_access_token)):
             {
                 "select": "id,channel,format,pillar,funnel_stage,awareness_stage,topic,hook_primary,hook_alt1,hook_alt2,structure_beats,style_hint,cta_type,target_signal,language,compliance_notes,status,created_at",
                 "order": "created_at.desc",
-                "limit": "100",
+                "limit": str(bounded_limit),
             },
         )
-    return {"items": rows}
+    return rows
 
 
 @app.get("/briefs/plan.csv")

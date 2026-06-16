@@ -25,6 +25,7 @@ const requiredRoutes = [
   "GET /operations/snapshot.csv",
   "GET /operations/creative-pack.md",
   "GET /operations/asset-review.csv",
+  "GET /operations/asset-review-worklist.md",
   "GET /operations/review-log.md",
   "GET /operations/review-queue.csv",
   "GET /operations/learning-snapshot.csv",
@@ -295,6 +296,16 @@ const requiredSnippets = [
     name: "asset review csv export",
     file: "main",
     text: "drec-asset-review.csv",
+  },
+  {
+    name: "asset review worklist export",
+    file: "main",
+    text: "drec-asset-review-worklist.md",
+  },
+  {
+    name: "asset review worklist sections",
+    file: "main",
+    text: "## Briefs To Save As Assets",
   },
   {
     name: "review log export",
@@ -692,9 +703,19 @@ const requiredSnippets = [
     text: "download-asset-review",
   },
   {
+    name: "web asset worklist action",
+    file: "web",
+    text: "download-asset-worklist",
+  },
+  {
     name: "web asset review csv endpoint",
     file: "web",
     text: "/operations/asset-review.csv",
+  },
+  {
+    name: "web asset worklist endpoint",
+    file: "web",
+    text: "/operations/asset-review-worklist.md",
   },
   {
     name: "web bulk approved scheduling action",

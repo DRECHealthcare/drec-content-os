@@ -1815,6 +1815,16 @@ document.getElementById("download-asset-review")?.addEventListener("click", asyn
   }
 });
 
+document.getElementById("download-asset-worklist")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/asset-review-worklist.md", "drec-asset-review-worklist.md", "text/markdown");
+    message.textContent = "Asset worklist downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download asset worklist.";
+  }
+});
+
 document.getElementById("plan-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const message = document.getElementById("plan-message");
