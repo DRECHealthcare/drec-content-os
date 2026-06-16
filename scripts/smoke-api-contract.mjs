@@ -17,6 +17,7 @@ const requiredRoutes = [
   "GET /operations/test-run-checklist",
   "POST /operations/scheduler-heartbeat",
   "GET /operations/launch-evidence.md",
+  "GET /operations/first-test-kit.md",
   "GET /operations/risk-audit",
   "GET /operations/snapshot.csv",
   "GET /operations/creative-pack.md",
@@ -189,6 +190,16 @@ const requiredSnippets = [
     name: "launch evidence usability section",
     file: "main",
     text: "## Can I Use It Now",
+  },
+  {
+    name: "first test kit export",
+    file: "main",
+    text: "drec-first-test-kit.md",
+  },
+  {
+    name: "first test kit sample metrics",
+    file: "main",
+    text: "## Sample Metric Entry After Manual Publishing",
   },
   {
     name: "operator pack test run checklist",
@@ -399,6 +410,16 @@ const requiredSnippets = [
     name: "web launch evidence action",
     file: "web",
     text: "download-launch-evidence",
+  },
+  {
+    name: "web first test kit action",
+    file: "web",
+    text: "download-first-test-kit",
+  },
+  {
+    name: "web first test kit endpoint",
+    file: "web",
+    text: "/operations/first-test-kit.md",
   },
   {
     name: "web launch evidence endpoint",

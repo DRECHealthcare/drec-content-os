@@ -1710,6 +1710,16 @@ document.getElementById("download-launch-evidence")?.addEventListener("click", a
   }
 });
 
+document.getElementById("download-first-test-kit")?.addEventListener("click", async () => {
+  const message = document.getElementById("test-path-message");
+  try {
+    await downloadProtectedFile("/operations/first-test-kit.md", "drec-first-test-kit.md", "text/markdown");
+    message.textContent = "First test kit downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download first test kit.";
+  }
+});
+
 document.getElementById("download-operator-pack")?.addEventListener("click", async () => {
   const message = document.getElementById("test-path-message");
   try {

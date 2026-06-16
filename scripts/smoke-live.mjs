@@ -90,6 +90,18 @@ const checks = [
     },
   },
   {
+    name: "First test kit",
+    url: `${apiBase}/operations/first-test-kit.md`,
+    auth: true,
+    validate: async (res) => {
+      const text = await res.text();
+      return text.includes("# DREC Content OS First Test Kit")
+        && text.includes("## Copy/Paste Weekly Topics")
+        && text.includes("## Sample Metric Entry After Manual Publishing")
+        && text.includes("## Acceptance Criteria");
+    },
+  },
+  {
     name: "Content risk audit",
     url: `${apiBase}/operations/risk-audit`,
     auth: true,

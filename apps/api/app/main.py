@@ -1080,6 +1080,99 @@ async def operations_launch_evidence(_: None = Depends(require_access_token)):
     )
 
 
+@app.get("/operations/first-test-kit.md")
+async def operations_first_test_kit(_: None = Depends(require_access_token)):
+    generated_at = datetime.now(timezone.utc).isoformat()
+    launch = await launch_readiness_payload()
+    checklist = await test_run_checklist_payload()
+    risk = await content_risk_audit_payload()
+    meta = await meta_setup_checklist(None)
+    next_step = checklist.get("next_step") or {}
+    summary = checklist.get("summary") or {}
+    sample_topics = [
+        "空腹血糖正常，为什么还要看餐后血糖？",
+        "腰围变小，为什么可能比体重下降更重要？",
+        "HbA1c、甘油三酯、腰围：复诊前如何一起看？",
+        "控糖期间最容易误会的三个饮食信号",
+        "50岁以后，如何用一周记录看懂代谢改善？",
+    ]
+    sample_metrics = [
+        "Post ID: manual-test-001",
+        "Source: manual",
+        "Impressions: 1000",
+        "Engagements: 60",
+        "Saves: 12",
+        "Shares: 8",
+        "Comments: 5",
+        "Leads: 1",
+        "Notes: First manual workflow test result.",
+    ]
+    lines = [
+        "# DREC Content OS First Test Kit",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this kit to move one safe sample post through the manual workflow before connecting Meta automation.",
+        "",
+        *usability_markdown_lines(launch),
+        "## Current Test State",
+        "",
+        f"- Manual cycle: {checklist.get('overall_status')} ({checklist.get('done_count')}/{checklist.get('total_required')} required steps done)",
+        f"- Next action: {next_step.get('action') or next_step.get('label') or 'Open Dashboard'}",
+        f"- Next detail: {next_step.get('detail') or 'Follow the Dashboard Test Path.'}",
+        f"- Content risk: {risk.get('overall_status')} ({risk.get('block_count', 0)} block / {risk.get('warn_count', 0)} warn)",
+        f"- Meta setup: {meta.get('overall_status')}",
+        "",
+        "## Operating Counts",
+        "",
+        f"- Briefs: {summary.get('brief_count', 0)}",
+        f"- Ready assets: {summary.get('ready_assets', 0)}",
+        f"- Queue total: {summary.get('queue_total', 0)}",
+        f"- Scheduled queue: {summary.get('scheduled_queue', 0)}",
+        f"- Handoff ready: {summary.get('handoff_ready', 0)}",
+        f"- Published queue: {summary.get('published_queue', 0)}",
+        f"- Metrics: {summary.get('metric_count', 0)}",
+        f"- Outcomes: {summary.get('outcome_count', 0)}",
+        "",
+        "## Copy/Paste Weekly Topics",
+        "",
+        *markdown_list(sample_topics),
+        "",
+        "## Manual Test Steps",
+        "",
+    ]
+    for step in checklist.get("steps") or []:
+        lines.append(f"- {step.get('status')}: {step.get('label')} - {step.get('detail')}")
+    lines.extend(
+        [
+            "",
+            "## Sample Metric Entry After Manual Publishing",
+            "",
+            *markdown_list(sample_metrics),
+            "",
+            "## Acceptance Criteria",
+            "",
+            "- At least one brief is saved as an asset.",
+            "- The asset is safety-clear and approved.",
+            "- One queue item is approved, scheduled, and appears in the publishing handoff.",
+            "- A manual Meta post ID or manual-test label is recorded after posting.",
+            "- Performance metrics are saved and rolled up into learning.",
+            "- Weekly report and Launch Evidence download successfully after the test.",
+            "",
+            "## Safety Notes",
+            "",
+            "- Keep this as manual handoff only until Meta credentials and Supabase service-role key are installed.",
+            "- Do not publish medical claims, diagnosis promises, or guaranteed reversal claims.",
+            "- Use the content risk audit before any external posting.",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-first-test-kit.md"'},
+    )
+
+
 def snapshot_row(record_type, item_id="", status="", channel="", fmt="", title="", created_at="", detail=""):
     return {
         "record_type": record_type,
