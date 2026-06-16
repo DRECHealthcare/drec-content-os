@@ -45,6 +45,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added scheduler filters and a next-7-days operating view
 - [x] Added batch scheduling for review-approved queue items
 - [x] Added learning-informed weekly topic recommendations
+- [x] Added Learning-to-Weekly Plan topic handoff
 - [x] Added content brief lifecycle actions for drafted and archived briefs
 - [x] Added copy-ready publishing handoff package
 - [x] Added calendar export for scheduled publishing reminders
@@ -94,6 +95,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add scheduler status/channel filters and week view
 - [x] Add batch schedule action for review-approved queue items
 - [x] Feed learning signals back into weekly plan generation
+- [x] Add Learning page action to send recommended topics into Weekly Plan
 - [x] Add content brief status management after drafting
 - [x] Add copy-ready manual publishing package
 - [x] Add downloadable publishing calendar

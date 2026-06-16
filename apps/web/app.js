@@ -370,7 +370,8 @@ function testPathText() {
     "7. Record Published: After manual posting, paste the Meta post ID from the handoff ready item.",
     "8. Save & Roll Up: Add metrics under Performance, then save and roll them into learning.",
     "9. Build Report: Open Learning and build the weekly report.",
-    "10. Meta Setup: Keep Meta in dry-run mode until real credentials and permissions are approved.",
+    "10. Use Topics: Send learning recommendations back into Weekly Plan.",
+    "11. Meta Setup: Keep Meta in dry-run mode until real credentials and permissions are approved.",
   ].join("\n");
 }
 
@@ -1336,8 +1337,7 @@ document.getElementById("plan-form").addEventListener("submit", async (event) =>
   }
 });
 
-document.getElementById("load-learning-topics").addEventListener("click", async () => {
-  const message = document.getElementById("plan-message");
+async function loadLearningTopicsIntoPlan(message, options = {}) {
   const form = document.getElementById("plan-form");
   const data = new FormData(form);
   const language = data.get("language") || "zh";
@@ -1347,10 +1347,15 @@ document.getElementById("load-learning-topics").addEventListener("click", async 
     const recommendation = await fetchJson(`/weekly-plan/recommendations?language=${encodeURIComponent(language)}&count=${encodeURIComponent(count)}`);
     form.elements.topics.value = (recommendation.topics || []).join("\n");
     const signals = recommendation.signals || {};
+    if (options.openPlan) showScreen("plan");
     message.textContent = `Loaded ${recommendation.topics?.length || 0} topic(s) from ${signals.outcome_count || 0} result(s) and ${signals.weight_count || 0} active weight(s).`;
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not load learning topics.";
   }
+}
+
+document.getElementById("load-learning-topics").addEventListener("click", async () => {
+  await loadLearningTopicsIntoPlan(document.getElementById("plan-message"));
 });
 
 document.getElementById("save-all-assets").addEventListener("click", async () => {
@@ -2033,6 +2038,10 @@ document.getElementById("copy-weekly-report").addEventListener("click", async ()
     reportBox.select();
     message.textContent = "Select the report text and copy it manually.";
   }
+});
+
+document.getElementById("use-topics-weekly-plan").addEventListener("click", async () => {
+  await loadLearningTopicsIntoPlan(document.getElementById("weight-message"), { openPlan: true });
 });
 
 document.getElementById("weight-form").addEventListener("submit", async (event) => {

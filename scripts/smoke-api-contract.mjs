@@ -120,6 +120,16 @@ const requiredSnippets = [
     text: "Save & Roll Up: Add metrics",
   },
   {
+    name: "web learning topics handoff",
+    file: "web",
+    text: "use-topics-weekly-plan",
+  },
+  {
+    name: "web learning topics helper",
+    file: "web",
+    text: "loadLearningTopicsIntoPlan",
+  },
+  {
     name: "web suggested slot action",
     file: "web",
     text: "schedule-next",

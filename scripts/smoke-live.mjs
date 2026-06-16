@@ -63,7 +63,7 @@ const checks = [
     auth: false,
     validate: async (res) => {
       const text = await res.text();
-      return text.includes("DREC") && text.includes("workflow-next") && text.includes("copy-test-path") && text.includes("Record Published") && text.includes("Save & Roll Up") && text.includes("save-all-assets") && text.includes("approve-clear-assets") && text.includes("queue-ready-assets") && text.includes("schedule-approved-items");
+      return text.includes("DREC") && text.includes("workflow-next") && text.includes("copy-test-path") && text.includes("Record Published") && text.includes("Save & Roll Up") && text.includes("Use Topics In Weekly Plan") && text.includes("save-all-assets") && text.includes("approve-clear-assets") && text.includes("queue-ready-assets") && text.includes("schedule-approved-items");
     },
   },
   {
@@ -72,7 +72,7 @@ const checks = [
     auth: false,
     validate: async (res) => {
       const text = await res.text();
-      return text.includes("/workflow/status") && text.includes("Existing queue item opened") && text.includes("function testPathText()") && text.includes("Record Published: After manual posting") && text.includes("Save & Roll Up: Add metrics") && text.includes("schedule-next") && text.includes("load-published-post") && text.includes("save-rollup-metric") && text.includes("/briefs/draft-assets") && text.includes("/assets/queue-ready") && text.includes("/publish-queue/schedule-approved") && text.includes("data-handoff-published");
+      return text.includes("/workflow/status") && text.includes("Existing queue item opened") && text.includes("function testPathText()") && text.includes("Record Published: After manual posting") && text.includes("Save & Roll Up: Add metrics") && text.includes("Use Topics: Send learning recommendations") && text.includes("loadLearningTopicsIntoPlan") && text.includes("schedule-next") && text.includes("load-published-post") && text.includes("save-rollup-metric") && text.includes("/briefs/draft-assets") && text.includes("/assets/queue-ready") && text.includes("/publish-queue/schedule-approved") && text.includes("data-handoff-published");
     },
   },
 ];

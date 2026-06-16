@@ -123,12 +123,14 @@ Goal: feed results back into future planning.
 4. Click `Save & Roll Up` to store the raw metrics and create the learning outcome in one step.
 5. Open `Learning`.
 6. Click `Build Weekly Report`.
-7. Expected result:
+7. Click `Use Topics In Weekly Plan`.
+8. Expected result:
    - Weekly report includes workflow readiness.
    - It includes queue-ready asset counts.
    - It includes recent results and next topic recommendations.
+   - Weekly Plan opens with recommended topics filled in.
 
-Pass condition: results appear in Performance and the weekly report updates.
+Pass condition: results appear in Performance, the weekly report updates, and recommended topics are ready for the next plan.
 
 ## Meta Setup Test
 

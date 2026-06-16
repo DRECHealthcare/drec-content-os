@@ -92,6 +92,7 @@ Stage 1 is now a working thin-core workflow:
 - Approve, review, or block draft assets and media before they enter publishing
 - Record raw performance metrics, roll them into scored outcomes, and view the first learning summary
 - Build a copy-ready weekly operating report from briefs, queue, assets, feedback, outcomes, and next-topic recommendations
+- Send learning topic recommendations directly back into Weekly Plan for the next cycle
 - Include workflow readiness and queue-ready asset counts in the weekly operating report
 - Run a non-mutating live smoke check after deploys to confirm the API, workflow, report, schedule suggestion, Meta readiness, and web shell are healthy
 - Run a local API contract smoke check before deploys to catch missing routes or broken workflow gates
