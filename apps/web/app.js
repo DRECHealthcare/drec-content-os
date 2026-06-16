@@ -1765,6 +1765,16 @@ document.getElementById("download-test-run-tracker")?.addEventListener("click", 
   }
 });
 
+document.getElementById("download-manual-cycle-qa")?.addEventListener("click", async () => {
+  const message = document.getElementById("test-path-message");
+  try {
+    await downloadProtectedFile("/operations/manual-cycle-qa.md", "drec-manual-cycle-qa.md", "text/markdown");
+    message.textContent = "Manual QA report downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download manual QA report.";
+  }
+});
+
 document.getElementById("download-daily-ops")?.addEventListener("click", async () => {
   const message = document.getElementById("test-path-message");
   try {

@@ -1273,6 +1273,142 @@ async def operations_test_run_tracker(_: None = Depends(require_access_token)):
     )
 
 
+@app.get("/operations/manual-cycle-qa.md")
+async def operations_manual_cycle_qa(_: None = Depends(require_access_token)):
+    generated_at = datetime.now(timezone.utc).isoformat()
+    checklist = await test_run_checklist_payload()
+    launch = await launch_readiness_payload()
+    risk = await content_risk_audit_payload()
+    handoff = await publishing_handoff(None)
+    learning = await learning_summary(None)
+    next_step = checklist.get("next_step") or {}
+    steps = checklist.get("steps") or []
+    open_steps = [step for step in steps if step.get("status") == "open"]
+    locked_steps = [step for step in steps if step.get("status") == "locked"]
+    blocked_handoff = handoff.get("blocked_items") or []
+    ready_handoff = handoff.get("ready_items") or []
+    insight_payload = learning.get("outcome_insights") or {}
+    learning_signals = insight_payload.get("top_signals") or []
+    qa_decision = (
+        "PASS - manual cycle verified"
+        if checklist.get("overall_status") == "manual_cycle_verified" and risk.get("block_count", 0) == 0
+        else "HOLD - resolve content risk blocks"
+        if risk.get("block_count", 0)
+        else "CONTINUE - next manual step is open"
+    )
+    lines = [
+        "# DREC Content OS Manual Cycle QA",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this after or during a manual workflow test to see what is proven, what is stuck, and what should happen next.",
+        "",
+        "## QA Decision",
+        "",
+        f"- Decision: {qa_decision}",
+        f"- Manual cycle: {checklist.get('overall_status')} ({checklist.get('done_count')}/{checklist.get('total_required')} required steps done)",
+        f"- Can test now: {'yes' if launch.get('can_test_now') else 'no'}",
+        f"- Can use for manual ops: {'yes' if launch.get('can_use_for_manual_ops') else 'no'}",
+        f"- Can auto-publish: {'yes' if launch.get('can_auto_publish') else 'no'}",
+        f"- Next action: {next_step.get('action') or next_step.get('label') or 'Open Dashboard'}",
+        f"- Next detail: {next_step.get('detail') or 'Follow the first open manual test step.'}",
+        "",
+        "## Step QA",
+        "",
+    ]
+    for step in steps:
+        status = step.get("status") or "unknown"
+        marker = "[x]" if status == "done" else "[ ]"
+        lines.append(f"- {marker} {status}: {step.get('label')} - {step.get('detail')}")
+    lines.extend(
+        [
+            "",
+            "## Open Work",
+            "",
+        ]
+    )
+    if open_steps:
+        for step in open_steps:
+            lines.append(f"- Open: {step.get('label')} - {step.get('action')} on {step.get('screen')}.")
+    else:
+        lines.append("- No open required steps.")
+    if locked_steps:
+        lines.append("")
+        lines.append("Locked steps:")
+        for step in locked_steps:
+            lines.append(f"- {step.get('label')}: {step.get('detail')}")
+    lines.extend(
+        [
+            "",
+            "## Risk QA",
+            "",
+            f"- Risk status: {risk.get('overall_status')} ({risk.get('block_count', 0)} block / {risk.get('warn_count', 0)} warn)",
+            f"- Risk next step: {risk.get('next_step')}",
+        ]
+    )
+    if risk.get("items"):
+        for item in risk.get("items")[:15]:
+            lines.append(f"- {item.get('severity')}: {item.get('title')} - {item.get('action')}")
+    else:
+        lines.append("- No active risk items found.")
+    lines.extend(
+        [
+            "",
+            "## Publishing Handoff QA",
+            "",
+            f"- Ready to publish: {len(ready_handoff)}",
+            f"- Blocked or needs work: {len(blocked_handoff)}",
+        ]
+    )
+    if ready_handoff:
+        for item in ready_handoff[:10]:
+            lines.append(f"- Ready: {item.get('channel')} / {item.get('format')} - {item.get('planned_slot') or 'No planned time'}")
+    if blocked_handoff:
+        for item in blocked_handoff[:10]:
+            blockers = ", ".join(item.get("handoff_blockers") or []) or "Needs review"
+            lines.append(f"- Blocked: {item.get('channel')} / {item.get('format')} - {blockers}")
+    lines.extend(
+        [
+            "",
+            "## Learning QA",
+            "",
+            f"- Learning summary: {insight_payload.get('summary') or 'No learning insight summary yet.'}",
+            f"- Active signals: {len(learning_signals)}",
+        ]
+    )
+    if learning_signals:
+        for item in learning_signals[:8]:
+            lines.append(
+                f"- {item.get('label') or item.get('key')}: avg score {item.get('avg_score', 0)}, "
+                f"saves {item.get('saves_total', 0)}, shares {item.get('shares_total', 0)}"
+            )
+    else:
+        lines.append("- Save and roll up manual metrics to create stronger learning signals.")
+    lines.extend(
+        [
+            "",
+            "## QA Notes",
+            "",
+            "- Tester:",
+            "- What worked:",
+            "- What failed:",
+            "- Changes needed before next run:",
+            "- Decision owner:",
+            "",
+            "## Safe Operating Rule",
+            "",
+            "- Publish manually until Meta readiness and security gates are green.",
+            "- Run Risk Audit before external posting.",
+            "- Record every manual post ID and metric window so learning stays useful.",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-manual-cycle-qa.md"'},
+    )
+
+
 @app.get("/operations/daily-ops-checklist.md")
 async def operations_daily_ops_checklist(_: None = Depends(require_access_token)):
     generated_at = datetime.now(timezone.utc).isoformat()

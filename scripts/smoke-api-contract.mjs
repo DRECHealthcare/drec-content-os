@@ -19,6 +19,7 @@ const requiredRoutes = [
   "GET /operations/launch-evidence.md",
   "GET /operations/first-test-kit.md",
   "GET /operations/test-run-tracker.md",
+  "GET /operations/manual-cycle-qa.md",
   "GET /operations/daily-ops-checklist.md",
   "GET /operations/risk-audit",
   "GET /operations/snapshot.csv",
@@ -244,6 +245,16 @@ const requiredSnippets = [
     name: "test run tracker table",
     file: "main",
     text: "## Step Tracker",
+  },
+  {
+    name: "manual cycle qa export",
+    file: "main",
+    text: "drec-manual-cycle-qa.md",
+  },
+  {
+    name: "manual cycle qa decision",
+    file: "main",
+    text: "## QA Decision",
   },
   {
     name: "daily ops checklist export",
@@ -501,6 +512,11 @@ const requiredSnippets = [
     text: "download-test-run-tracker",
   },
   {
+    name: "web manual cycle qa action",
+    file: "web",
+    text: "download-manual-cycle-qa",
+  },
+  {
     name: "web daily ops action",
     file: "web",
     text: "download-daily-ops",
@@ -519,6 +535,11 @@ const requiredSnippets = [
     name: "web test run tracker endpoint",
     file: "web",
     text: "/operations/test-run-tracker.md",
+  },
+  {
+    name: "web manual cycle qa endpoint",
+    file: "web",
+    text: "/operations/manual-cycle-qa.md",
   },
   {
     name: "web launch evidence endpoint",
