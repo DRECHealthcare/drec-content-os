@@ -727,8 +727,12 @@ function queueCard(item, mode) {
   const canApprove = item.compliance_status === "clear";
   const canMarkPublished = mode === "queue" && item.status === "scheduled" && item.compliance_status === "clear";
   const canEdit = item.status !== "published";
+  const feedback = item.latest_feedback || null;
   const postIdLine = item.external_post_id
     ? `<small>Meta ID: ${escapeHtml(item.external_post_id)}</small>`
+    : "";
+  const feedbackLine = feedback
+    ? `<small class="feedback-note">Latest review: ${escapeHtml(feedback.action || "note")}${feedback.reason ? ` · ${escapeHtml(feedback.reason)}` : ""}</small>`
     : "";
   const actions = mode === "review" ? `
     <div class="queue-actions">
@@ -754,6 +758,7 @@ function queueCard(item, mode) {
       <p>${escapeHtml(item.caption)}</p>
       <small>${formatDate(item.planned_slot)} · ${mediaCount} media URL(s)</small>
       ${postIdLine}
+      ${feedbackLine}
       ${actions}
     </article>
   `;
@@ -1436,6 +1441,20 @@ document.getElementById("review-items").addEventListener("click", async (event) 
   if (!button) return;
   const action = button.dataset.feedback;
   const id = button.dataset.id;
+  const originalText = button.textContent;
+  const items = JSON.parse(document.getElementById("review-items").dataset.items || "[]");
+  const item = items.find((entry) => entry.id === id) || {};
+  const defaultReason = {
+    approve: "Approved for scheduled manual publishing.",
+    regen: "Needs a stronger draft before publishing.",
+    reject: "Rejected during content review.",
+  }[action] || `Review action: ${action}`;
+  let reason = defaultReason;
+  if (action === "regen" || action === "reject") {
+    const entered = window.prompt("Add the review reason so the system can learn from it.", defaultReason);
+    if (entered === null) return;
+    reason = entered.trim() || defaultReason;
+  }
   button.disabled = true;
   button.textContent = "Saving";
   const statusMap = {
@@ -1452,7 +1471,8 @@ document.getElementById("review-items").addEventListener("click", async (event) 
         ref_type: "publish_queue",
         ref_id: id,
         action,
-        reason: `Review action: ${action}`,
+        reason,
+        before_text: item.caption || null,
         tags: ["web_review"],
       }),
     });
@@ -1463,7 +1483,7 @@ document.getElementById("review-items").addEventListener("click", async (event) 
     await Promise.all([loadPublishQueue(), loadLoopStatus()]);
   } catch {
     button.disabled = false;
-    button.textContent = action;
+    button.textContent = originalText;
   }
 });
 

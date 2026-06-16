@@ -918,7 +918,43 @@ async def list_publish_queue(_: None = Depends(require_access_token)):
                 "limit": "100",
             },
         )
+    rows = await attach_latest_feedback(rows)
     return {"items": rows}
+
+
+async def attach_latest_feedback(rows: list[dict]):
+    ids = [str(row.get("id")) for row in rows if row.get("id")]
+    if not ids:
+        return rows
+    feedback_rows = await fetch_rows(
+        """
+        select ref_id, action, reason, tags, created_at
+        from feedback
+        where ref_type = 'publish_queue'
+          and ref_id = any($1::text[])
+        order by created_at desc
+        """,
+        ids,
+    )
+    if not feedback_rows and supabase_rest.configured():
+        feedback_rows = await supabase_rest.select(
+            "feedback",
+            {
+                "select": "ref_id,action,reason,tags,created_at",
+                "ref_type": "eq.publish_queue",
+                "ref_id": f"in.({','.join(ids)})",
+                "order": "created_at.desc",
+                "limit": "500",
+            },
+        )
+    latest_by_ref = {}
+    for feedback in feedback_rows:
+        ref_id = str(feedback.get("ref_id"))
+        if ref_id not in latest_by_ref:
+            latest_by_ref[ref_id] = feedback
+    for row in rows:
+        row["latest_feedback"] = latest_by_ref.get(str(row.get("id")))
+    return rows
 
 
 def parse_datetime(value):

@@ -63,7 +63,7 @@ Stage 1 is now a working thin-core workflow:
 - Mark content briefs as drafted or archived so weekly plans stay manageable
 - Draft conservative educational captions
 - Run pre-publish compliance checks
-- Queue and review posts with approval feedback
+- Queue and review posts with approval, regen, and rejection feedback trails
 - Edit queued captions, media URLs, planned time, and channel/format before publishing
 - Filter the scheduler by status/channel and scan the next 7 days of planned posts
 - Download scheduled posts as a calendar file for manual publishing reminders

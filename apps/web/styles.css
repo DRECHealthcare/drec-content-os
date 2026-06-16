@@ -585,6 +585,14 @@ button[type="submit"] {
   color: var(--muted);
 }
 
+.queue-item .feedback-note {
+  color: #6B4B00;
+  background: #FFF8E5;
+  border-left: 3px solid var(--orange);
+  padding: 7px 9px;
+  border-radius: 4px;
+}
+
 .media-link {
   color: #0B655F;
   overflow-wrap: anywhere;

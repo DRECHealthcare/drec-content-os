@@ -44,6 +44,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added content brief lifecycle actions for drafted and archived briefs
 - [x] Added copy-ready publishing handoff package
 - [x] Added calendar export for scheduled publishing reminders
+- [x] Added visible review feedback notes for queued content decisions
 
 ## Next Engineering Tasks
 
@@ -70,6 +71,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add content brief status management after drafting
 - [x] Add copy-ready manual publishing package
 - [x] Add downloadable publishing calendar
+- [x] Add visible review feedback notes
 - [ ] Connect Meta Graph API credentials
 - [ ] Implement real Facebook publish scheduling
 - [ ] Implement Instagram two-step publish worker
