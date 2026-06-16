@@ -1642,6 +1642,16 @@ document.getElementById("download-snapshot")?.addEventListener("click", async ()
   }
 });
 
+document.getElementById("download-launch-evidence")?.addEventListener("click", async () => {
+  const message = document.getElementById("test-path-message");
+  try {
+    await downloadProtectedFile("/operations/launch-evidence.md", "drec-launch-evidence.md", "text/markdown");
+    message.textContent = "Launch evidence downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download launch evidence.";
+  }
+});
+
 document.getElementById("download-operator-pack")?.addEventListener("click", async () => {
   const message = document.getElementById("test-path-message");
   try {

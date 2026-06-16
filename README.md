@@ -65,6 +65,7 @@ Stage 1 is now a working thin-core workflow:
 - See launch readiness on the Dashboard, separating manual-use readiness from real Meta automation readiness
 - See an automation readiness gate that combines manual workflow, handoff, learning, Meta, and security status
 - Run a protected content risk audit across automation gates, assets, queue items, and media before publishing or enabling automation
+- Download a protected launch evidence report with manual test status, readiness, risk, Meta setup, and safe go-live rules
 - Download a protected CSV operations snapshot for audit or backup before rollout changes
 - Download a protected operator pack with readiness status, setup checklist, publishing handoff, and weekly report in one Markdown file
 - Use the GitHub Actions dry-run scheduler template to check publishing, metrics, automation, and risk gates without mutating live records

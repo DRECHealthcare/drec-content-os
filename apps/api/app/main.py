@@ -672,7 +672,7 @@ async def test_run_checklist_payload():
         test_run_step(
             "assets",
             "Approved clear asset",
-            "done" if ready_assets else "open" if asset_count else "locked",
+            "done" if ready_assets else "open" if brief_count else "locked",
             f"{ready_assets} approved clear asset(s) ready." if ready_assets else f"{asset_count} asset(s) exist; approve one and mark safety clear." if asset_count else "Save one brief as an asset first.",
             "assets" if asset_count else "plan",
             "Open Assets" if asset_count else "Save Asset",
@@ -769,6 +769,106 @@ async def test_run_checklist_payload():
 @app.get("/operations/test-run-checklist")
 async def operations_test_run_checklist(_: None = Depends(require_access_token)):
     return await test_run_checklist_payload()
+
+
+@app.get("/operations/launch-evidence.md")
+async def operations_launch_evidence(_: None = Depends(require_access_token)):
+    generated_at = datetime.now(timezone.utc).isoformat()
+    launch = await launch_readiness_payload()
+    checklist = await test_run_checklist_payload()
+    automation = await automation_status_payload()
+    security = security_status_payload()
+    risk = await content_risk_audit_payload()
+    meta = await meta_setup_checklist(None)
+    next_step = checklist.get("next_step") or {}
+    summary = checklist.get("summary") or {}
+    lines = [
+        "# DREC Content OS Launch Evidence",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "## Decision Summary",
+        "",
+        f"- Launch readiness: {launch.get('overall_status')}",
+        f"- Manual cycle: {checklist.get('overall_status')} ({checklist.get('done_count')}/{checklist.get('total_required')} required steps done)",
+        f"- Automation gate: {automation.get('overall_status')}",
+        f"- Content risk: {risk.get('overall_status')} ({risk.get('block_count', 0)} block, {risk.get('warn_count', 0)} warn)",
+        f"- Meta setup: {meta.get('overall_status')}",
+        f"- Supabase security: {security.get('overall_status')}",
+        "",
+        "## Next Best Action",
+        "",
+        f"- {next_step.get('action') or next_step.get('label') or 'Continue manual test cycle'}",
+        f"- {next_step.get('detail') or 'Use the Dashboard test path for the next action.'}",
+        "",
+        "## Operating Counts",
+        "",
+        f"- Briefs: {summary.get('brief_count', 0)}",
+        f"- Ready assets: {summary.get('ready_assets', 0)}",
+        f"- Queue total: {summary.get('queue_total', 0)}",
+        f"- Scheduled queue: {summary.get('scheduled_queue', 0)}",
+        f"- Handoff ready: {summary.get('handoff_ready', 0)}",
+        f"- Published queue: {summary.get('published_queue', 0)}",
+        f"- Raw metrics: {summary.get('metric_count', 0)}",
+        f"- Outcomes: {summary.get('outcome_count', 0)}",
+        "",
+        "## Manual Test Path",
+        "",
+    ]
+    for step in checklist.get("steps") or []:
+        lines.append(f"- {step.get('status')}: {step.get('label')} - {step.get('detail')}")
+    lines.extend(
+        [
+            "",
+            "## Launch Readiness Stages",
+            "",
+        ]
+    )
+    for stage in launch.get("stages") or []:
+        lines.append(f"- {stage.get('status')}: {stage.get('label')} - {stage.get('detail')}")
+    lines.extend(
+        [
+            "",
+            "## Automation Gates",
+            "",
+        ]
+    )
+    for gate in automation.get("gates") or []:
+        lines.append(f"- {gate.get('status')}: {gate.get('label')} - {gate.get('detail')}")
+    lines.extend(
+        [
+            "",
+            "## Risk Items",
+            "",
+        ]
+    )
+    if risk.get("items"):
+        for item in risk.get("items")[:25]:
+            lines.append(f"- {item.get('severity')}: {item.get('kind')} {item.get('id')} - {item.get('title')} | {item.get('action')}")
+    else:
+        lines.append("- No current content risk items found.")
+    lines.extend(
+        [
+            "",
+            "## Meta And Credential Evidence",
+            "",
+            f"- Missing credentials: {', '.join(meta.get('missing_credentials') or []) or 'None'}",
+            f"- Missing permissions: {', '.join(meta.get('missing_permissions') or []) or 'None'}",
+            "- Required secrets: " + ", ".join(meta.get("required_secrets") or []),
+            "",
+            "## Safe Go-Live Rule",
+            "",
+            "- Use manual handoff while Meta setup is not ready_to_enable.",
+            "- Enable real Meta publishing only after dry-run jobs pass and Meta permissions are approved.",
+            "- Keep recording published IDs and metrics so the learning loop continues improving weekly plans.",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-launch-evidence.md"'},
+    )
 
 
 def snapshot_row(record_type, item_id="", status="", channel="", fmt="", title="", created_at="", detail=""):

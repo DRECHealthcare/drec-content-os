@@ -30,6 +30,7 @@ The API exposes:
 
 - `GET /health`
 - `GET /loop-status`
+- `GET /operations/launch-evidence.md`
 - `GET/POST /kb`
 - `GET /kb/export.csv`
 - `GET/POST /publish-queue`
@@ -94,6 +95,11 @@ The Dashboard `Download Operator Pack` action calls
 `/operations/operator-pack.md` and produces one Markdown handoff file with
 readiness status, credential setup, publishing handoff copy, and the weekly
 operating report.
+
+The Dashboard `Download Launch Evidence` action calls
+`/operations/launch-evidence.md` and produces one Markdown evidence file with
+manual test progress, launch readiness, automation gates, risk items, Meta
+credential status, and safe go-live rules.
 
 The Weekly Plan `Download Plan CSV` action calls `/briefs/plan.csv` and exports
 recent briefs for spreadsheet review, including topics, hooks, stages, status,

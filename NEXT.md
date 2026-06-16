@@ -153,6 +153,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add safe dry-run scheduler workflow before enabling real Meta jobs
 - [x] Add Dashboard launch readiness summary for manual-use vs automation-ready status
 - [x] Add inline access-token entry so the app works in browsers that block prompt dialogs
+- [x] Add launch evidence export for manual test status, risk gates, Meta setup, and safe go-live rules
 - [ ] Connect Meta Graph API credentials
 - [x] Implement real Facebook publish scheduling behind Meta readiness and enable flags
 - [x] Implement Instagram two-step publish worker behind Meta readiness and enable flags

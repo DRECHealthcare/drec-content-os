@@ -15,6 +15,7 @@ const requiredRoutes = [
   "GET /automation/status",
   "GET /operations/launch-readiness",
   "GET /operations/test-run-checklist",
+  "GET /operations/launch-evidence.md",
   "GET /operations/risk-audit",
   "GET /operations/snapshot.csv",
   "GET /operations/creative-pack.md",
@@ -155,6 +156,11 @@ const requiredSnippets = [
     name: "test run checklist route",
     file: "main",
     text: "test_run_checklist_payload",
+  },
+  {
+    name: "launch evidence export",
+    file: "main",
+    text: "drec-launch-evidence.md",
   },
   {
     name: "operator pack test run checklist",
@@ -325,6 +331,16 @@ const requiredSnippets = [
     name: "web operations snapshot action",
     file: "web",
     text: "download-snapshot",
+  },
+  {
+    name: "web launch evidence action",
+    file: "web",
+    text: "download-launch-evidence",
+  },
+  {
+    name: "web launch evidence endpoint",
+    file: "web",
+    text: "/operations/launch-evidence.md",
   },
   {
     name: "web content risk audit action",
