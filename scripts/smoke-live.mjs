@@ -217,6 +217,7 @@ const checks = [
       return text.includes("# DREC Content OS Asset Safety Review Pack")
         && text.includes("## Human Review Checklist")
         && text.includes("## Assets To Review")
+        && text.includes("## Review Decision CSV Import")
         && text.includes("## Approval Rule");
     },
   },
@@ -323,7 +324,7 @@ const checks = [
     auth: true,
     validate: async (res) => {
       const text = await res.text();
-      return text.includes("# DREC Content OS Operator Pack") && text.includes("## Can I Use It Now") && text.includes("## Meta OAuth Guide") && text.includes("## Launch Readiness") && text.includes("## Content Risk Audit") && text.includes("## Publishing Handoff") && text.includes("## Weekly Operating Report");
+      return text.includes("# DREC Content OS Operator Pack") && text.includes("## Can I Use It Now") && text.includes("## Meta OAuth Guide") && text.includes("## Launch Readiness") && text.includes("## Content Risk Audit") && text.includes("## Review Decision CSV Import") && text.includes("## Publishing Handoff") && text.includes("## Weekly Operating Report");
     },
   },
   {

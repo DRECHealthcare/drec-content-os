@@ -396,6 +396,11 @@ const requiredSnippets = [
     text: "Approval requires reviewer_safety_decision=clear",
   },
   {
+    name: "asset review decision import pack section",
+    file: "main",
+    text: "## Review Decision CSV Import",
+  },
+  {
     name: "asset safety review checklist",
     file: "main",
     text: "## Human Review Checklist",

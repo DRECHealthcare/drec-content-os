@@ -122,6 +122,9 @@ After the reviewer fills the CSV, `Preview Decisions` and `Import Decisions`
 call `/operations/import-asset-review-decisions`. Preview is read-only. Import
 updates asset safety/review status only, records feedback notes, and never queues
 or publishes content.
+The same import rules are also printed inside the Safety Review Pack and
+Operator Pack so operators can follow the reviewer handoff even while frontend
+deploys are delayed.
 
 The Assets `Download Safety Review` action calls
 `/operations/asset-safety-review.md` and exports draft captions, detector

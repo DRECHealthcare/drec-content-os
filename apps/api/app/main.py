@@ -2200,6 +2200,21 @@ def media_review_blockers(media: dict):
     return blockers
 
 
+def asset_review_decision_import_lines():
+    return [
+        "## Review Decision CSV Import",
+        "",
+        "- Download `drec-asset-review-decisions.csv` from Assets.",
+        "- Fill `reviewer_safety_decision` with `clear`, `pending`, or `flagged`.",
+        "- Fill `reviewer_review_decision` with `approved`, `review`, or `rejected`.",
+        "- Add `reviewer_name` and `review_notes` for the audit trail.",
+        "- Use Preview Decisions before Import Decisions when the frontend button is available.",
+        "- Import updates asset safety/review status only; it does not queue, schedule, or publish.",
+        "- Approval is rejected unless safety is already clear or the same row marks safety as clear.",
+        "",
+    ]
+
+
 @app.get("/operations/asset-review.csv")
 async def operations_asset_review_csv(_: None = Depends(require_access_token)):
     assets = await fetch_asset_list(200)
@@ -2468,6 +2483,7 @@ async def operations_asset_safety_review(_: None = Depends(require_access_token)
         lines.extend(["- No active assets need safety review.", ""])
     lines.extend(
         [
+            *asset_review_decision_import_lines(),
             "## Approval Rule",
             "",
             "- Only assets marked Safety Clear and Approved can be queued.",
@@ -3213,6 +3229,7 @@ async def operations_operator_pack(_: None = Depends(require_access_token)):
         "",
         *risk_lines,
         "",
+        *asset_review_decision_import_lines(),
         "## Publishing Handoff",
         "",
         "```text",
