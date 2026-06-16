@@ -86,6 +86,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added GitHub Actions dry-run scheduler template for publishing, metrics, automation, and risk checks
 - [x] Added GitHub scheduler heartbeat recording so recurring dry-run checks can prove they are running
 - [x] Added launch readiness status combining manual workflow, handoff, scheduler dry run, security, Meta, and risk gates
+- [x] Added Dashboard "Can I Use It?" decision showing safe test scope and not-yet-ready scope
 - [x] Replaced browser prompt access-token entry with an inline token panel for app/browser compatibility
 - [x] Added session-only token storage by default, plus explicit Remember and Clear controls
 
@@ -155,6 +156,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add safe dry-run scheduler workflow before enabling real Meta jobs
 - [x] Add scheduler heartbeat evidence for recurring GitHub dry-run checks
 - [x] Add Dashboard launch readiness summary for manual-use vs automation-ready status
+- [x] Add plain-language Dashboard test/use decision before full Meta automation
 - [x] Add inline access-token entry so the app works in browsers that block prompt dialogs
 - [x] Add safer token clear/remember controls before full role-based login
 - [x] Add launch evidence export for manual test status, risk gates, Meta setup, and safe go-live rules

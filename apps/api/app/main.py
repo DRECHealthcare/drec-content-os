@@ -667,9 +667,46 @@ async def launch_readiness_payload():
         overall = "manual_ops_ready_needs_review"
     else:
         overall = "setup_needed"
+    can_test_now = manual_ops_ready
+    can_use_for_manual_ops = manual_ops_ready and risk_blocks == 0
+    can_auto_publish = automation_ready
+    if can_auto_publish:
+        usability_label = "Ready for controlled Meta automation"
+        usability_detail = "Manual workflow, risk gates, Meta credentials, and security gates are green."
+    elif can_use_for_manual_ops:
+        usability_label = "Ready to test and use manually"
+        usability_detail = "You can plan, draft, review, schedule, build handoff, record metrics, and learn. Keep real Meta posting manual until credentials and security gates are complete."
+    elif can_test_now:
+        usability_label = "Ready to test with review"
+        usability_detail = "The workflow is available, but resolve current risk warnings or blockers before publishing anything externally."
+    else:
+        usability_label = "Setup needed before testing"
+        usability_detail = "Connect the API and Supabase base workflow before starting the manual test path."
     return {
         "overall_status": overall,
         "manual_use_ready": manual_ops_ready,
+        "can_test_now": can_test_now,
+        "can_use_for_manual_ops": can_use_for_manual_ops,
+        "can_auto_publish": can_auto_publish,
+        "usability": {
+            "label": usability_label,
+            "detail": usability_detail,
+            "safe_test_scope": [
+                "Generate weekly plans and draft content packages",
+                "Review assets and safety status",
+                "Schedule items and build manual handoff",
+                "Record manual post IDs and metrics for learning",
+            ] if can_test_now else [],
+            "not_ready_scope": [
+                item
+                for item in [
+                    "Hands-off Facebook/Instagram publishing" if not can_auto_publish else None,
+                    "Strict Supabase RLS hardening" if not rls_ready else None,
+                    "Meta metrics auto-ingestion" if not meta_ready else None,
+                ]
+                if item
+            ],
+        },
         "manual_publish_status": manual_publish_status,
         "automation_ready": automation_ready,
         "next_step": next((stage.get("detail") for stage in stages if stage.get("status") != "ready"), "Manual and automation readiness gates are green."),

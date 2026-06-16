@@ -63,6 +63,7 @@ Stage 1 is now a working thin-core workflow:
 - See the next best workflow action, operating counts, and copyable Test Path on the Dashboard, backed by the API, so testing and automation can move from brief to approved asset to queue, handoff, published ID, metrics, and report without guessing
 - Use the Dashboard's live Test Path checklist to see which manual-cycle step is complete and jump to the next screen
 - See launch readiness on the Dashboard, separating manual-use readiness from real Meta automation readiness
+- See a plain "Can I Use It?" Dashboard decision that says what is safe to test now and what is not ready yet
 - See an automation readiness gate that combines manual workflow, handoff, learning, Meta, and security status
 - Run a protected content risk audit across automation gates, assets, queue items, and media before publishing or enabling automation
 - Download a protected launch evidence report with manual test status, readiness, risk, Meta setup, and safe go-live rules

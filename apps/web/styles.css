@@ -180,6 +180,35 @@ header span { color: var(--muted); font-size: 12px; }
   margin-top: 14px;
 }
 
+.launch-use-card {
+  border-left: 5px solid var(--orange);
+}
+
+.launch-use-card.ready {
+  border-left-color: var(--teal);
+}
+
+.launch-use-card.blocked {
+  border-left-color: #B91C1C;
+}
+
+.launch-use-card p {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--navy);
+}
+
+.launch-scope {
+  margin-top: 12px;
+}
+
+.launch-scope strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--navy2);
+  font-size: 12px;
+}
+
 .test-path-card {
   margin-top: 14px;
 }

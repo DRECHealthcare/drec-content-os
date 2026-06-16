@@ -548,7 +548,27 @@ function renderLaunchReadiness(data) {
   document.getElementById("launch-count").textContent = data.overall_status || "Unknown";
   const stages = data.stages || [];
   const blockers = data.external_blockers || [];
+  const usability = data.usability || {};
+  const safeScope = usability.safe_test_scope || [];
+  const notReadyScope = usability.not_ready_scope || [];
   container.innerHTML = `
+    <article class="learning-card wide-learning launch-use-card ${data.can_auto_publish ? "ready" : data.can_test_now ? "testing" : "blocked"}">
+      <h3>Can I Use It?</h3>
+      <p>${escapeHtml(usability.label || "Checking readiness")}</p>
+      <small>${escapeHtml(usability.detail || data.next_step || "")}</small>
+      ${safeScope.length ? `
+        <div class="launch-scope">
+          <strong>Safe now</strong>
+          <ul>${safeScope.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+        </div>
+      ` : ""}
+      ${notReadyScope.length ? `
+        <div class="launch-scope">
+          <strong>Not yet</strong>
+          <ul>${notReadyScope.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+        </div>
+      ` : ""}
+    </article>
     <article class="learning-card wide-learning">
       <h3>Launch Readiness</h3>
       <p>${escapeHtml(data.overall_status || "unknown")}</p>

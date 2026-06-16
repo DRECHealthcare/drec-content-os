@@ -170,6 +170,11 @@ const requiredSnippets = [
     text: "launch_readiness_payload",
   },
   {
+    name: "launch readiness usability scope",
+    file: "main",
+    text: "can_use_for_manual_ops",
+  },
+  {
     name: "test run checklist route",
     file: "main",
     text: "test_run_checklist_payload",
@@ -308,6 +313,11 @@ const requiredSnippets = [
     name: "web launch readiness card",
     file: "web",
     text: "launch-count",
+  },
+  {
+    name: "web can-use readiness card",
+    file: "web",
+    text: "Can I Use It?",
   },
   {
     name: "web launch readiness endpoint",
