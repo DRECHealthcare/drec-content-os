@@ -705,8 +705,15 @@ function assetPackageText(asset) {
 
 function assetCard(item) {
   const mediaCount = Array.isArray(item.media_urls) ? item.media_urls.length : 0;
-  const canQueue = item.review_status !== "rejected" && item.compliance_status !== "flagged";
+  const canQueue = item.review_status === "approved" && item.compliance_status === "clear";
   const metadata = item.metadata || {};
+  const queueNote = canQueue
+    ? "Ready for queue."
+    : item.compliance_status !== "clear"
+      ? "Queue requires a clear safety check."
+      : item.review_status === "rejected"
+        ? "Rejected assets cannot enter the queue."
+        : "Approve this asset before adding it to the queue.";
   return `
     <article class="queue-item">
       <div class="queue-meta">
@@ -716,7 +723,7 @@ function assetCard(item) {
         <span>${escapeHtml(item.review_status || "draft")}</span>
       </div>
       <p>${escapeHtml(item.caption || "No caption yet.")}</p>
-      <small>${mediaCount} media URL(s)</small>
+      <small>${mediaCount} media URL(s) · ${escapeHtml(queueNote)}</small>
       ${mediaList(item.media_urls)}
       ${captionVariantPreview(metadata.caption_variants)}
       ${slidePreview(metadata.slides)}
@@ -1512,21 +1519,11 @@ document.getElementById("asset-items").addEventListener("click", async (event) =
   button.disabled = true;
   button.textContent = "Adding";
   try {
-    await fetchJson("/publish-queue", {
-      method: "POST",
-      body: JSON.stringify({
-        asset_id: asset.id,
-        channel: asset.channel === "instagram" ? "instagram" : "facebook",
-        format: asset.format,
-        caption: asset.caption,
-        media_urls: asset.media_urls || [],
-        planned_slot: null,
-        compliance_status: asset.compliance_status === "clear" ? "clear" : "pending",
-      }),
-    });
+    await fetchJson(`/assets/${button.dataset.queueAsset}/queue`, { method: "POST" });
     await Promise.all([loadPublishQueue(), loadLoopStatus()]);
     showScreen("review");
-  } catch {
+  } catch (error) {
+    document.getElementById("media-message").textContent = error.message === "Access token required" ? "Set the access token first." : "Could not add asset to queue.";
     button.disabled = false;
     button.textContent = "Add To Queue";
   }

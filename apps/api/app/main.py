@@ -675,6 +675,34 @@ async def update_asset_status(
     return {"item": row or {**existing, "review_status": update.review_status}}
 
 
+@app.post("/assets/{asset_id}/queue")
+async def queue_asset(asset_id: str, _: None = Depends(require_access_token)):
+    asset = await asset_by_id(asset_id)
+    if asset is None:
+        raise HTTPException(status_code=404, detail="Asset not found.")
+    if asset.get("review_status") != "approved":
+        raise HTTPException(
+            status_code=422,
+            detail="Only approved assets can be added to the publishing queue.",
+        )
+    if asset.get("compliance_status") != "clear":
+        raise HTTPException(
+            status_code=422,
+            detail="Only compliance-clear assets can be added to the publishing queue.",
+        )
+    item = PublishQueueIn(
+        asset_id=asset.get("id"),
+        channel="instagram" if asset.get("channel") == "instagram" else "facebook",
+        format=asset.get("format") or "carousel",
+        caption=asset.get("caption") or "",
+        media_urls=asset.get("media_urls") or [],
+        planned_slot=None,
+        compliance_status="clear",
+    )
+    queued = await create_publish_queue_item(item)
+    return {"item": queued.get("item"), "asset": asset}
+
+
 def media_asset_payload(media: MediaAssetIn):
     return {
         "title": media.title,
