@@ -27,6 +27,7 @@ const requiredRoutes = [
   "POST /publishing/facebook/dispatch",
   "POST /publishing/instagram/dispatch",
   "POST /metrics/meta/ingest",
+  "POST /jobs/nightly-meta-metrics",
 ];
 
 const requiredSnippets = [
@@ -94,6 +95,11 @@ const requiredSnippets = [
     name: "workflow readiness report",
     file: "main",
     text: "## Workflow Readiness",
+  },
+  {
+    name: "nightly metrics job lock",
+    file: "main",
+    text: "META_ENABLE_METRICS_JOB=true",
   },
   {
     name: "asset compliance model",

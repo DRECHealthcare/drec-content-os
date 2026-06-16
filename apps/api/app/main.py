@@ -2512,6 +2512,33 @@ async def ingest_meta_metrics(request: MetaMetricsIn, _: None = Depends(require_
     return {**payload, "inserted": inserted}
 
 
+@app.post("/jobs/nightly-meta-metrics")
+async def nightly_meta_metrics_job(
+    dry_run: bool = True,
+    limit: int = 25,
+    rollup: bool = True,
+    _: None = Depends(require_access_token),
+):
+    request = MetaMetricsIn(limit=limit, dry_run=dry_run, rollup=rollup)
+    if not dry_run and not settings.meta_enable_metrics_job:
+        raise HTTPException(
+            status_code=423,
+            detail="Nightly Meta metrics ingestion is locked. Set META_ENABLE_METRICS_JOB=true after dry-run approval.",
+        )
+    result = await ingest_meta_metrics(request, None)
+    return {
+        **result,
+        "job": {
+            "name": "nightly-meta-metrics",
+            "enabled": settings.meta_enable_metrics_job,
+            "dry_run": dry_run,
+            "limit": limit,
+            "rollup": rollup,
+            "recommended_schedule": "daily 02:30 Asia/Kuala_Lumpur",
+        },
+    }
+
+
 def numeric_metric(metrics: dict, *keys: str) -> float:
     for key in keys:
         value = metrics.get(key)

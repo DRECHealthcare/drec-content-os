@@ -86,7 +86,25 @@ npm run smoke:live
 ```
 
 The check verifies API health, workflow status, weekly report readiness, Meta
-readiness, and the production web shell without creating or changing records.
+readiness, the scheduler-ready nightly metrics dry run, and the production web
+shell without creating or changing records.
+
+## Nightly Meta Metrics Job
+
+The API has a guarded job endpoint for future scheduling:
+
+```bash
+curl -X POST \
+  -H "X-DREC-Access-Token: ..." \
+  "https://drec-content-os-api.fly.dev/jobs/nightly-meta-metrics?dry_run=true&limit=25&rollup=true"
+```
+
+Keep it in dry-run mode until Meta credentials and permissions are ready. Real
+nightly ingestion needs all Meta readiness checks to pass plus this Fly secret:
+
+```bash
+fly secrets set META_ENABLE_METRICS_JOB=true
+```
 
 ## GitHub
 

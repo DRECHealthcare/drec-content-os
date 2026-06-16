@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     meta_ig_user_id: Optional[str] = None
     meta_page_access_token: Optional[str] = None
     meta_enable_publishing: bool = False
+    meta_enable_metrics_job: bool = False
 
     model_config = SettingsConfigDict(
         env_file=".env",

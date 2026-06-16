@@ -58,6 +58,16 @@ const checks = [
     },
   },
   {
+    name: "Nightly metrics dry run",
+    url: `${apiBase}/jobs/nightly-meta-metrics?dry_run=true&limit=5&rollup=true`,
+    method: "POST",
+    auth: true,
+    validate: async (res) => {
+      const data = await res.json();
+      return data.mode === "dry_run" && data.job?.name === "nightly-meta-metrics" && Array.isArray(data.planned_requests);
+    },
+  },
+  {
     name: "Web shell",
     url: webBase,
     auth: false,
@@ -83,7 +93,7 @@ function headersFor(check) {
 }
 
 async function runCheck(check) {
-  const res = await fetch(check.url, { headers: headersFor(check) });
+  const res = await fetch(check.url, { method: check.method || "GET", headers: headersFor(check) });
   if (!res.ok) {
     return { ok: false, name: check.name, detail: `${res.status} ${res.statusText}` };
   }
