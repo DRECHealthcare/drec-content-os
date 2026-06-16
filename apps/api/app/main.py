@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 import json
 import re
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import httpx
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
@@ -612,6 +612,10 @@ async def create_asset(asset: AssetIn, _: None = Depends(require_access_token)):
 
 
 async def asset_by_id(asset_id: str):
+    try:
+        UUID(str(asset_id))
+    except ValueError:
+        return None
     row = await fetch_row(
         """
         select id, brief_id, channel, format, caption, media_urls, metadata,
