@@ -21,6 +21,7 @@ const requiredRoutes = [
   "POST /assets/{asset_id}/queue",
   "PATCH /assets/{asset_id}/compliance",
   "POST /publish-queue/{item_id}/schedule-next",
+  "POST /publish-queue/schedule-approved",
   "GET /publishing-handoff",
   "POST /publishing/facebook/dispatch",
   "POST /publishing/instagram/dispatch",
@@ -67,6 +68,11 @@ const requiredSnippets = [
     name: "planned time publish gate",
     file: "main",
     text: "Item needs a planned publish time before Meta dispatch.",
+  },
+  {
+    name: "bulk review-approved scheduling",
+    file: "main",
+    text: "schedule_review_approved_queue",
   },
   {
     name: "schedule suggestion rotation",
@@ -127,6 +133,11 @@ const requiredSnippets = [
     name: "web bulk asset queue action",
     file: "web",
     text: "queue-ready-assets",
+  },
+  {
+    name: "web bulk approved scheduling action",
+    file: "web",
+    text: "schedule-approved-items",
   },
 ];
 

@@ -1366,14 +1366,20 @@ async def create_assets_from_recent_briefs(limit: int = 5, _: None = Depends(req
 
 @app.get("/publish-queue")
 async def list_publish_queue(_: None = Depends(require_access_token)):
+    return {"items": await fetch_publish_queue_items()}
+
+
+async def fetch_publish_queue_items(limit: int = 100):
+    bounded_limit = max(1, min(int(limit or 100), 200))
     rows = await fetch_rows(
         """
         select id, asset_id, channel, format, caption, media_urls, planned_slot, status,
                compliance_status, external_post_id, created_at
         from publish_queue
         order by planned_slot nulls last, created_at desc
-        limit 100
-        """
+        limit $1
+        """,
+        bounded_limit,
     )
     if not rows:
         rows = await supabase_rest.select(
@@ -1381,11 +1387,11 @@ async def list_publish_queue(_: None = Depends(require_access_token)):
             {
                 "select": "id,asset_id,channel,format,caption,media_urls,planned_slot,status,compliance_status,external_post_id,created_at",
                 "order": "planned_slot.asc.nullslast,created_at.desc",
-                "limit": "100",
+                "limit": str(bounded_limit),
             },
         )
     rows = await attach_latest_feedback(rows)
-    return {"items": rows}
+    return rows
 
 
 async def attach_latest_feedback(rows: list[dict]):
@@ -1702,6 +1708,42 @@ async def schedule_publish_queue_next_slot(item_id: str, _: None = Depends(requi
             {"id": f"eq.{item_id}"},
         )
     return {"item": row or {**existing, "status": "scheduled", "planned_slot": suggestion.get("suggested_slot")}, "suggestion": suggestion}
+
+
+@app.post("/publish-queue/schedule-approved")
+async def schedule_review_approved_queue(limit: int = 20, _: None = Depends(require_access_token)):
+    items = await fetch_publish_queue_items(limit)
+    results = []
+    for item in items:
+        latest_feedback = item.get("latest_feedback") or {}
+        if item.get("status") == "scheduled" and item.get("planned_slot"):
+            results.append({
+                "item_id": item.get("id"),
+                "status": "already_scheduled",
+                "planned_slot": item.get("planned_slot"),
+            })
+            continue
+        if item.get("status") != "draft" or item.get("compliance_status") != "clear" or latest_feedback.get("action") != "approve":
+            results.append({
+                "item_id": item.get("id"),
+                "status": "skipped",
+                "detail": "Item must be draft, compliance-clear, and review-approved.",
+            })
+            continue
+        scheduled = await schedule_publish_queue_next_slot(str(item.get("id")))
+        results.append({
+            "item_id": item.get("id"),
+            "status": "scheduled",
+            "planned_slot": scheduled.get("item", {}).get("planned_slot"),
+            "suggestion": scheduled.get("suggestion"),
+        })
+    return {
+        "processed": len(results),
+        "scheduled": sum(1 for item in results if item.get("status") == "scheduled"),
+        "already_scheduled": sum(1 for item in results if item.get("status") == "already_scheduled"),
+        "skipped": sum(1 for item in results if item.get("status") == "skipped"),
+        "items": results,
+    }
 
 
 @app.patch("/publish-queue/{item_id}")

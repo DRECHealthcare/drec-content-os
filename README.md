@@ -75,6 +75,7 @@ Stage 1 is now a working thin-core workflow:
 - Reuse an existing active queue item when the same asset is added to queue again
 - Queue and review posts with approval, regen, and rejection feedback trails
 - Show reviewed queue items as approved-but-unscheduled until a planned publish time is selected
+- Schedule review-approved, compliance-clear queue items in batches into suggested MYT publishing slots
 - Edit queued captions, media URLs, planned time, and channel/format before publishing
 - Keep review approval separate from scheduling so approved content still needs a real planned time before handoff or Meta workers can use it
 - Suggest the next open MYT publishing slot for compliance-clear queue items and schedule them without guessing

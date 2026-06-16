@@ -65,6 +65,7 @@ Pass condition: one active queue item exists for the asset, without duplicates.
 Goal: record human review before scheduling.
 
 1. In `Review Queue`, click `Approve`.
+   - For multiple already-approved items, use `Schedule Approved` after approval.
 2. Expected result:
    - The item displays as `approved`.
    - It also says it is ready to schedule.
@@ -76,9 +77,9 @@ Pass condition: the item is approved-but-unscheduled.
 
 Goal: give the approved item a real planned time.
 
-1. Open `Scheduler`.
+1. Open `Scheduler`, or use `Schedule Approved` from `Review Queue`.
 2. Find the approved queue item.
-3. Click `Suggest Slot`.
+3. Click `Suggest Slot` if it has not already been batch-scheduled.
 5. Expected result:
    - The item status becomes `scheduled`.
    - The app chooses the next open DREC publishing slot in MYT.

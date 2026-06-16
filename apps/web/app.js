@@ -1886,6 +1886,26 @@ document.getElementById("dry-run-meta-metrics").addEventListener("click", async 
   }
 });
 
+document.getElementById("schedule-approved-items").addEventListener("click", async (event) => {
+  const button = event.currentTarget;
+  const originalText = button.textContent;
+  const message = document.getElementById("queue-message");
+  button.disabled = true;
+  button.textContent = "Scheduling";
+  message.textContent = "Scheduling review-approved items...";
+  try {
+    const data = await fetchJson("/publish-queue/schedule-approved?limit=20", { method: "POST" });
+    message.textContent = `Schedule approved complete: ${data.scheduled || 0} scheduled, ${data.already_scheduled || 0} already scheduled, ${data.skipped || 0} skipped.`;
+    await Promise.all([loadPublishQueue(), loadLoopStatus()]);
+    showScreen("scheduler");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not schedule approved items.";
+  } finally {
+    button.disabled = false;
+    button.textContent = originalText;
+  }
+});
+
 document.getElementById("review-items").addEventListener("click", async (event) => {
   const editButton = event.target.closest("[data-edit-queue]");
   if (editButton) {
