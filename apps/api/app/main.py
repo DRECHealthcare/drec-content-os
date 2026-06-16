@@ -2131,6 +2131,16 @@ async def ingest_metric(metric: MetricIn, _: None = Depends(require_access_token
     return {"item": row or metric.model_dump()}
 
 
+@app.get("/metrics/published-source")
+async def published_metric_source(limit: int = 10, _: None = Depends(require_access_token)):
+    candidates = await meta_metric_candidates(None, limit)
+    return {
+        "items": candidates,
+        "latest": candidates[0] if candidates else None,
+        "message": "Use the latest published post as the starting point for manual metric entry." if candidates else "No published posts with Meta IDs are ready for metric entry.",
+    }
+
+
 async def meta_metric_candidates(item_id: str | None = None, limit: int = 10):
     bounded_limit = max(1, min(limit, 50))
     if item_id:

@@ -49,6 +49,15 @@ const checks = [
     },
   },
   {
+    name: "Published metrics source",
+    url: `${apiBase}/metrics/published-source?limit=5`,
+    auth: true,
+    validate: async (res) => {
+      const data = await res.json();
+      return Array.isArray(data.items) && Object.prototype.hasOwnProperty.call(data, "latest");
+    },
+  },
+  {
     name: "Web shell",
     url: webBase,
     auth: false,
@@ -63,7 +72,7 @@ const checks = [
     auth: false,
     validate: async (res) => {
       const text = await res.text();
-      return text.includes("/workflow/status") && text.includes("Existing queue item opened") && text.includes("function testPathText()") && text.includes("schedule-next");
+      return text.includes("/workflow/status") && text.includes("Existing queue item opened") && text.includes("function testPathText()") && text.includes("schedule-next") && text.includes("load-published-post");
     },
   },
 ];

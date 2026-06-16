@@ -1981,6 +1981,40 @@ function metricPayloadFromForm(form) {
   };
 }
 
+function prefillPerformanceFromQueueItem(item) {
+  const metricForm = document.getElementById("metric-form");
+  const outcomeForm = document.getElementById("outcome-form");
+  const source = item.channel === "instagram" ? "instagram" : "facebook";
+  const postId = item.external_post_id || "";
+  const publishedAt = item.updated_at || item.planned_slot || item.created_at || "";
+  metricForm.elements.source.value = source;
+  metricForm.elements.external_post_id.value = postId;
+  metricForm.elements.captured_at.value = formatDatetimeLocal(new Date().toISOString());
+  outcomeForm.elements.channel.value = source;
+  outcomeForm.elements.format.value = item.format || "carousel";
+  outcomeForm.elements.post_id.value = postId;
+  outcomeForm.elements.published_at.value = formatDatetimeLocal(publishedAt);
+  outcomeForm.elements.vs_plan_note.value = item.caption
+    ? `Manual metrics entered for ${source} ${item.format || "post"}. Review whether this caption angle should be repeated: ${item.caption.slice(0, 160)}`
+    : "";
+}
+
+document.getElementById("load-published-post").addEventListener("click", async () => {
+  const message = document.getElementById("metric-message");
+  message.textContent = "Loading latest published post...";
+  try {
+    const data = await fetchJson("/metrics/published-source?limit=10");
+    if (!data.latest) {
+      message.textContent = data.message || "No published post with a Meta ID is ready for metrics.";
+      return;
+    }
+    prefillPerformanceFromQueueItem(data.latest);
+    message.textContent = `Loaded ${data.latest.channel} post ${data.latest.external_post_id}. Add metrics, then save or roll up.`;
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not load a published post.";
+  }
+});
+
 document.getElementById("metric-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const message = document.getElementById("metric-message");

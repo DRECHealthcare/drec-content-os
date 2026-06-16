@@ -13,6 +13,7 @@ const requiredRoutes = [
   "GET /weekly-report.md",
   "GET /meta/readiness",
   "GET /publish-queue/suggest-slot",
+  "GET /metrics/published-source",
   "POST /briefs/{brief_id}/draft-asset",
   "POST /assets/{asset_id}/queue",
   "PATCH /assets/{asset_id}/compliance",
@@ -88,6 +89,11 @@ const requiredSnippets = [
     name: "web suggested slot action",
     file: "web",
     text: "schedule-next",
+  },
+  {
+    name: "web published metrics helper",
+    file: "web",
+    text: "load-published-post",
   },
 ];
 
