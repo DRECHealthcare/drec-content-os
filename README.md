@@ -67,6 +67,7 @@ Stage 1 is now a working thin-core workflow:
 - Edit queued captions, media URLs, planned time, and channel/format before publishing
 - Filter the scheduler by status/channel and scan the next 7 days of planned posts
 - Build a manual publishing handoff while Meta credentials are pending
+- Copy a ready-to-send publishing handoff package for manual posting
 - Mark manually published posts with their Meta post ID so metrics ingestion can learn from them later
 - Dry-run Facebook and Instagram publishing workers before Meta credentials are connected
 - Register approved media URLs or upload files into private Supabase Storage

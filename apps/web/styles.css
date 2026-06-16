@@ -488,6 +488,14 @@ button[type="submit"] {
   font-size: 13px;
 }
 
+#handoff-copy-text {
+  min-height: 220px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre;
+}
+
 .subsection-heading {
   margin: 18px 0 0;
   color: var(--navy);

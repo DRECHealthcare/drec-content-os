@@ -42,6 +42,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added scheduler filters and a next-7-days operating view
 - [x] Added learning-informed weekly topic recommendations
 - [x] Added content brief lifecycle actions for drafted and archived briefs
+- [x] Added copy-ready publishing handoff package
 
 ## Next Engineering Tasks
 
@@ -66,6 +67,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add scheduler status/channel filters and week view
 - [x] Feed learning signals back into weekly plan generation
 - [x] Add content brief status management after drafting
+- [x] Add copy-ready manual publishing package
 - [ ] Connect Meta Graph API credentials
 - [ ] Implement real Facebook publish scheduling
 - [ ] Implement Instagram two-step publish worker

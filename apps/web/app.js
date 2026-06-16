@@ -611,6 +611,13 @@ function renderHandoff(data) {
       <h3>Checklist</h3>
       <ul>${(data.checklist || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
     </div>
+    <div class="learning-card wide-learning">
+      <h3>Copy Package</h3>
+      <textarea id="handoff-copy-text" readonly>${escapeHtml(data.handoff_text || "")}</textarea>
+      <div class="queue-actions">
+        <button type="button" data-copy-handoff>Copy Handoff</button>
+      </div>
+    </div>
     <h3 class="handoff-heading">Ready Items</h3>
     ${ready.length ? ready.map(handoffItem).join("") : '<p class="status-note">No scheduled compliance-clear items yet.</p>'}
     <h3 class="handoff-heading">Needs Review</h3>
@@ -1247,6 +1254,29 @@ document.getElementById("queue-form").addEventListener("submit", async (event) =
 document.getElementById("cancel-queue-edit").addEventListener("click", () => {
   resetQueueEdit();
   document.getElementById("queue-message").textContent = "Edit cancelled.";
+});
+
+document.getElementById("handoff-result").addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-copy-handoff]");
+  if (!button) return;
+  const box = document.getElementById("handoff-copy-text");
+  const message = document.getElementById("queue-message");
+  if (!box?.value) {
+    message.textContent = "No handoff text to copy yet.";
+    return;
+  }
+  button.disabled = true;
+  button.textContent = "Copying";
+  try {
+    await navigator.clipboard.writeText(box.value);
+    message.textContent = "Publishing handoff copied.";
+  } catch {
+    box.select();
+    message.textContent = "Select the handoff text and copy it manually.";
+  } finally {
+    button.disabled = false;
+    button.textContent = "Copy Handoff";
+  }
 });
 
 document.getElementById("queue-status-filter").addEventListener("change", loadPublishQueue);

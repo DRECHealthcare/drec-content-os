@@ -1099,12 +1099,40 @@ async def publishing_handoff(_: None = Depends(require_access_token)):
         "Keep the caption unchanged unless it goes back through review.",
         "After posting, record the post ID and first 7-day result in Performance.",
     ]
+    lines = [
+        "DREC Content OS Publishing Handoff",
+        "",
+        "Checklist:",
+        *[f"- {item}" for item in checklist],
+        "",
+        f"Ready to publish: {len(ready)}",
+        f"Needs review: {len(blocked)}",
+    ]
+    for index, item in enumerate(ready, start=1):
+        media_urls = [url for url in item.get("media_urls") or [] if url]
+        lines.extend(
+            [
+                "",
+                f"Ready Item {index}",
+                f"Channel: {item.get('channel')}",
+                f"Format: {item.get('format')}",
+                f"Planned time: {item.get('planned_slot') or 'Not set'}",
+                f"Queue ID: {item.get('id')}",
+                "Caption:",
+                item.get("caption") or "",
+            ]
+        )
+        if media_urls:
+            lines.append("Media:")
+            lines.extend([f"- {url}" for url in media_urls])
+        lines.append("After publishing: paste the Meta post ID back into Scheduler with Mark Published.")
     return {
         "ready_count": len(ready),
         "blocked_count": len(blocked),
         "checklist": checklist,
         "ready_items": ready,
         "needs_review": blocked,
+        "handoff_text": "\n".join(lines),
     }
 
 
