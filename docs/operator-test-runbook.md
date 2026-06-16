@@ -90,6 +90,11 @@ Goal: give the approved item a real planned time.
 
 Pass condition: the queue item is scheduled and has a planned time.
 
+Optional cleanup: if a queued item should not be published, open `Scheduler`,
+click `Cancel Item`, add the reason, and confirm it moves to `cancelled`.
+Cancelled items must not appear in the handoff ready list or be rescheduled by
+`Suggest Slot`.
+
 ### 6. Manual Publishing Handoff
 
 Goal: produce the manual handoff while Meta auto-publishing is locked.

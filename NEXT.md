@@ -46,6 +46,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added one-click Save & Roll Up for Performance metrics
 - [x] Added guarded Instagram dispatch dry run with container/publish planning
 - [x] Added safe editing for queued captions, media URLs, planned time, channel, and format
+- [x] Added safe queue-item cancellation before publishing
 - [x] Added scheduler filters and a next-7-days operating view
 - [x] Added batch scheduling for review-approved queue items
 - [x] Added learning-informed weekly topic recommendations
@@ -123,6 +124,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add latest published post prefill for Performance metrics
 - [x] Add dry-run Instagram dispatch worker
 - [x] Add queue item editing before approval/publishing
+- [x] Add queue item cancellation before publishing with feedback trail
 - [x] Add scheduler status/channel filters and week view
 - [x] Add batch schedule action for review-approved queue items
 - [x] Feed learning signals back into weekly plan generation

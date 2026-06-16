@@ -4107,6 +4107,8 @@ async def schedule_publish_queue_next_slot(item_id: str, _: None = Depends(requi
         raise HTTPException(status_code=404, detail="Queue item not found.")
     if existing.get("status") == "published":
         raise HTTPException(status_code=422, detail="Published items cannot be rescheduled.")
+    if existing.get("status") == "cancelled":
+        raise HTTPException(status_code=422, detail="Cancelled items cannot be rescheduled. Create a new queue item instead.")
     if existing.get("compliance_status") != "clear":
         raise HTTPException(status_code=422, detail="Only compliance-clear items can be scheduled.")
 

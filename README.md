@@ -103,6 +103,7 @@ Stage 1 is now a working thin-core workflow:
 - Show reviewed queue items as approved-but-unscheduled until a planned publish time is selected
 - Schedule review-approved, compliance-clear queue items in batches into suggested MYT publishing slots
 - Edit queued captions, media URLs, planned time, and channel/format before publishing
+- Cancel draft, scheduled, or failed queue items before publishing while keeping the feedback trail
 - Keep review approval separate from scheduling so approved content still needs a real planned time before handoff or Meta workers can use it
 - Suggest the next open MYT publishing slot for compliance-clear queue items and schedule them without guessing
 - Filter the scheduler by status/channel and scan the next 7 days of planned posts

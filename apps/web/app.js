@@ -1394,8 +1394,10 @@ function queueCard(item, mode) {
   const mediaCount = Array.isArray(item.media_urls) ? item.media_urls.length : 0;
   const canApprove = item.compliance_status === "clear";
   const canMarkPublished = mode === "queue" && item.status === "scheduled" && item.compliance_status === "clear";
-  const canQuickSchedule = mode === "queue" && item.status !== "published" && item.compliance_status === "clear";
-  const canEdit = item.status !== "published";
+  const activeQueueItem = !["published", "cancelled"].includes(item.status);
+  const canQuickSchedule = mode === "queue" && activeQueueItem && item.compliance_status === "clear";
+  const canEdit = activeQueueItem;
+  const canCancel = mode === "queue" && ["draft", "scheduled", "failed"].includes(item.status || "draft");
   const feedback = item.latest_feedback || null;
   const reviewApproved = feedback?.action === "approve" && item.status === "draft";
   const displayStatus = reviewApproved ? "approved" : item.status || "draft";
@@ -1421,6 +1423,7 @@ function queueCard(item, mode) {
       <button type="button" data-edit-queue="${escapeHtml(item.id)}" ${canEdit ? "" : "disabled"}>Edit Item</button>
       <button type="button" data-schedule-next="${escapeHtml(item.id)}" ${canQuickSchedule ? "" : "disabled"}>Suggest Slot</button>
       <button type="button" data-mark-published="${escapeHtml(item.id)}" ${canMarkPublished ? "" : "disabled"}>Mark Published</button>
+      <button type="button" data-cancel-queue-item="${escapeHtml(item.id)}" ${canCancel ? "" : "disabled"}>Cancel Item</button>
     </div>
   `;
   return `
@@ -1491,6 +1494,38 @@ async function scheduleNextQueueSlot(button, messageElement) {
     await Promise.all([loadPublishQueue(), loadLoopStatus()]);
   } catch (error) {
     messageElement.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not suggest a slot.";
+    button.disabled = false;
+    button.textContent = originalText;
+  }
+}
+
+async function cancelQueueItem(itemId, button) {
+  const message = document.getElementById("queue-message");
+  const reason = window.prompt("Why should this queue item be cancelled?", "Cancelled from Scheduler before publishing.");
+  if (reason === null) return;
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = "Cancelling";
+  try {
+    await fetchJson("/feedback", {
+      method: "POST",
+      body: JSON.stringify({
+        module: "scheduler",
+        ref_type: "publish_queue",
+        ref_id: itemId,
+        action: "reject",
+        reason: reason.trim() || "Cancelled from Scheduler before publishing.",
+        tags: ["web_scheduler", "cancelled"],
+      }),
+    });
+    await fetchJson(`/publish-queue/${itemId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status: "cancelled", planned_slot_changed: true, planned_slot: null }),
+    });
+    message.textContent = "Queue item cancelled and removed from active handoff.";
+    await Promise.all([loadPublishQueue(), loadLoopStatus()]);
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not cancel queue item.";
     button.disabled = false;
     button.textContent = originalText;
   }
@@ -2278,6 +2313,11 @@ document.getElementById("queue-items").addEventListener("click", async (event) =
   const scheduleButton = event.target.closest("[data-schedule-next]");
   if (scheduleButton) {
     await scheduleNextQueueSlot(scheduleButton, document.getElementById("queue-message"));
+    return;
+  }
+  const cancelButton = event.target.closest("[data-cancel-queue-item]");
+  if (cancelButton) {
+    await cancelQueueItem(cancelButton.dataset.cancelQueueItem, cancelButton);
     return;
   }
   const button = event.target.closest("[data-mark-published]");

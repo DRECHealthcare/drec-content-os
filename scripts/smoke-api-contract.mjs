@@ -110,6 +110,11 @@ const requiredSnippets = [
     text: "Item needs a planned publish time before Meta dispatch.",
   },
   {
+    name: "cancelled item schedule guard",
+    file: "main",
+    text: "Cancelled items cannot be rescheduled",
+  },
+  {
     name: "scheduled publishing job due gate",
     file: "main",
     text: "planned_slot <= $2",
@@ -563,6 +568,16 @@ const requiredSnippets = [
     name: "web suggested slot action",
     file: "web",
     text: "schedule-next",
+  },
+  {
+    name: "web queue cancel action",
+    file: "web",
+    text: "data-cancel-queue-item",
+  },
+  {
+    name: "web queue cancel handler",
+    file: "web",
+    text: "cancelQueueItem",
   },
   {
     name: "web published metrics helper",
