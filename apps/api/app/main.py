@@ -2389,6 +2389,100 @@ async def operations_asset_review_worklist(_: None = Depends(require_access_toke
     )
 
 
+@app.get("/operations/asset-safety-review.md")
+async def operations_asset_safety_review(_: None = Depends(require_access_token)):
+    generated_at = datetime.now(timezone.utc).isoformat()
+    assets = await fetch_asset_list(100)
+    active_assets = [asset for asset in assets if asset.get("review_status") != "rejected"]
+    review_assets = [
+        asset
+        for asset in active_assets
+        if asset.get("review_status") != "approved" or asset.get("compliance_status") != "clear"
+    ]
+    lines = [
+        "# DREC Content OS Asset Safety Review Pack",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this pack for human safety review before any asset is approved, queued, scheduled, or published. It is read-only and does not change records.",
+        "",
+        "## Review Summary",
+        "",
+        f"- Active assets: {len(active_assets)}",
+        f"- Assets needing review: {len(review_assets)}",
+        f"- Approved clear assets: {sum(1 for asset in active_assets if asset.get('review_status') == 'approved' and asset.get('compliance_status') == 'clear')}",
+        "- Next action: Open Assets, review each caption below, then mark Safety Clear and Approve only when the human reviewer agrees.",
+        "",
+        "## Human Review Checklist",
+        "",
+        "- The caption is general health education, not personal diagnosis or treatment advice.",
+        "- It does not promise reversal, cure, lab improvement, weight loss, or guaranteed outcomes.",
+        "- It does not imply the viewer has a condition.",
+        "- It does not use patient stories, reports, testimonials, or before/after framing without documented consent.",
+        "- Any media is owned, licensed, or explicitly approved for use.",
+        "- If in doubt, keep Safety Pending or Safety Flag and rewrite before queueing.",
+        "",
+        "## Assets To Review",
+        "",
+    ]
+    if review_assets:
+        for index, asset in enumerate(review_assets[:40], start=1):
+            metadata = asset.get("metadata") or {}
+            caption = asset.get("caption") or ""
+            findings = check_text(caption)
+            finding_lines = [
+                f"- [{finding.get('severity')}] {finding.get('rule_id')}: {finding.get('message')} Matches: {', '.join(finding.get('matches') or [])}"
+                for finding in findings.get("findings", [])
+            ] or ["- No obvious detector finding. Human review is still required."]
+            lines.extend(
+                [
+                    f"### {index}. {metadata.get('topic') or asset.get('format') or 'Untitled asset'}",
+                    "",
+                    f"- Asset ID: {asset.get('id')}",
+                    f"- Brief ID: {asset.get('brief_id') or 'n/a'}",
+                    f"- Channel / format: {asset.get('channel')} / {asset.get('format')}",
+                    f"- Review / safety: {asset.get('review_status')} / {asset.get('compliance_status')}",
+                    f"- Media count: {len([url for url in asset.get('media_urls') or [] if url])}",
+                    f"- Target signal: {metadata.get('target_signal') or 'n/a'}",
+                    f"- Detector status: {findings.get('status')}",
+                    f"- Detector recommendation: {findings.get('recommendation')}",
+                    "",
+                    "Detector findings:",
+                    "",
+                    *finding_lines,
+                    "",
+                    "Caption:",
+                    "",
+                    caption or "No caption available.",
+                    "",
+                    "Reviewer decision:",
+                    "",
+                    "- [ ] Safety Clear",
+                    "- [ ] Approve",
+                    "- [ ] Keep Pending / Rewrite",
+                    "- [ ] Flag",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["- No active assets need safety review.", ""])
+    lines.extend(
+        [
+            "## Approval Rule",
+            "",
+            "- Only assets marked Safety Clear and Approved can be queued.",
+            "- Do not use this pack to bypass human review.",
+            "- Keep Meta automation off until Meta Setup and Launch Evidence are green.",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-asset-safety-review.md"'},
+    )
+
+
 async def fetch_feedback_log(limit: int = 200):
     bounded_limit = max(1, min(int(limit or 200), 500))
     rows = await fetch_rows(

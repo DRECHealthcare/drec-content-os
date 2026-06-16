@@ -114,6 +114,10 @@ The Assets `Download Asset Review CSV` action calls
 `/operations/asset-review.csv` and exports draft assets plus media-library
 records with readiness, blockers, rights, approval, and source URL fields.
 
+The Assets `Download Safety Review` action calls
+`/operations/asset-safety-review.md` and exports draft captions, detector
+findings, human review checklist, and approval rules before queueing.
+
 The Review Queue `Download Review Queue CSV` action calls
 `/operations/review-queue.csv` and exports the current unscheduled draft review
 queue with review state, latest feedback, blockers, captions, and media counts.

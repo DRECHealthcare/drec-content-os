@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "scripts": {
     "build": "rm -rf dist && mkdir -p dist && cp -R apps/web/. dist/",
-    "smoke:contract": "node scripts/smoke-api-contract.mjs",
+    "smoke:contract": "node scripts/smoke-api-contract.mjs && python3 scripts/smoke-compliance.py",
     "smoke:live": "node scripts/smoke-live.mjs"
   }
 }

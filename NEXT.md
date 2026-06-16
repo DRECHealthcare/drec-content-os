@@ -64,6 +64,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added asset and media lifecycle review actions
 - [x] Added batch approval for safety-clear assets and batch queueing for ready assets
 - [x] Added Asset Review Worklist for briefs-to-save, review blockers, and queue-ready assets
+- [x] Added Asset Safety Review Pack for human review of generated draft assets
 - [x] Added copy-ready weekly operating report
 - [x] Added one-click draft asset creation from weekly briefs
 - [x] Added batch draft asset creation from current weekly briefs
@@ -150,6 +151,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add asset and media lifecycle review controls
 - [x] Add batch asset approval and queueing controls
 - [x] Add downloadable Asset Review Worklist for first-test asset production and approval
+- [x] Add downloadable Asset Safety Review Pack for captions, detector findings, and reviewer decisions
 - [x] Add weekly operating report
 - [x] Add one-click draft asset creation from briefs
 - [x] Add batch draft asset creation from weekly briefs

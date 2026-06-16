@@ -1835,6 +1835,16 @@ document.getElementById("download-asset-worklist")?.addEventListener("click", as
   }
 });
 
+document.getElementById("download-asset-safety-review")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/asset-safety-review.md", "drec-asset-safety-review.md", "text/markdown");
+    message.textContent = "Asset safety review pack downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download asset safety review.";
+  }
+});
+
 document.getElementById("plan-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const message = document.getElementById("plan-message");

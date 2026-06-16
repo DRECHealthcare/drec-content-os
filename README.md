@@ -99,6 +99,7 @@ Stage 1 is now a working thin-core workflow:
 - Download an Asset Review Worklist that shows briefs to save, asset review blockers, and approved clear assets ready to queue
 - Download a creative production pack with active assets, captions, slides, scripts, media notes, and KB review context
 - Download an asset review CSV that combines draft asset readiness, media rights, approval status, blockers, and source URLs
+- Download an Asset Safety Review Pack with each asset caption, detector findings, reviewer checklist, and approval rules
 - Run pre-publish compliance checks
 - Record human safety review on assets before queueing
 - Approve safety-clear assets and queue approved clear assets in batches
