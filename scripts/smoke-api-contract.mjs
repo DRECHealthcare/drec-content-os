@@ -27,6 +27,7 @@ const requiredRoutes = [
   "GET /weekly-report.md",
   "GET /meta/readiness",
   "GET /meta/setup-checklist",
+  "GET /kb/export.csv",
   "GET /kb/context",
   "GET /publish-queue/suggest-slot",
   "GET /publish-queue/schedule.csv",
@@ -544,6 +545,16 @@ const requiredSnippets = [
     name: "web knowledge context display",
     file: "web",
     text: "Active Knowledge Context",
+  },
+  {
+    name: "web knowledge base csv action",
+    file: "web",
+    text: "download-kb-csv",
+  },
+  {
+    name: "web knowledge base csv endpoint",
+    file: "web",
+    text: "/kb/export.csv",
   },
   {
     name: "web knowledge context endpoint",

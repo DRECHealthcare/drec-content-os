@@ -1637,6 +1637,31 @@ async def list_knowledge_entries(_: None = Depends(require_access_token)):
     return {"items": await fetch_knowledge_entries()}
 
 
+@app.get("/kb/export.csv")
+async def export_knowledge_entries(_: None = Depends(require_access_token)):
+    items = await fetch_knowledge_entries(200)
+    output = StringIO()
+    fieldnames = ["id", "category", "title", "body", "tags", "created_at"]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for item in items:
+        writer.writerow(
+            {
+                "id": item.get("id"),
+                "category": item.get("category"),
+                "title": item.get("title"),
+                "body": item.get("body"),
+                "tags": ", ".join(item.get("tags") or []),
+                "created_at": item.get("created_at"),
+            }
+        )
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-knowledge-base.csv"'},
+    )
+
+
 async def fetch_knowledge_entries(limit: int = 100):
     bounded_limit = max(1, min(int(limit or 100), 200))
     rows = await fetch_rows(

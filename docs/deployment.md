@@ -31,6 +31,7 @@ The API exposes:
 - `GET /health`
 - `GET /loop-status`
 - `GET/POST /kb`
+- `GET /kb/export.csv`
 - `GET/POST /publish-queue`
 - `POST /metrics`
 - `POST /feedback`

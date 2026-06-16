@@ -1564,6 +1564,7 @@ function startQueueEdit(id) {
 
 document.getElementById("kb-form").addEventListener("submit", async (event) => {
   event.preventDefault();
+  const message = document.getElementById("kb-message");
   const form = new FormData(event.currentTarget);
   const payload = {
     title: form.get("title"),
@@ -1571,9 +1572,21 @@ document.getElementById("kb-form").addEventListener("submit", async (event) => {
     body: form.get("body"),
     tags: [],
   };
+  if (message) message.textContent = "Saving knowledge entry...";
   await fetchJson("/kb", { method: "POST", body: JSON.stringify(payload) });
   event.currentTarget.reset();
   await Promise.all([loadKb(), loadLoopStatus()]);
+  if (message) message.textContent = "Knowledge entry saved.";
+});
+
+document.getElementById("download-kb-csv")?.addEventListener("click", async () => {
+  const message = document.getElementById("kb-message");
+  try {
+    await downloadProtectedFile("/kb/export.csv", "drec-knowledge-base.csv", "text/csv");
+    if (message) message.textContent = "Knowledge Base CSV downloaded.";
+  } catch (error) {
+    if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download Knowledge Base CSV.";
+  }
 });
 
 document.getElementById("workflow-next").addEventListener("click", (event) => {
