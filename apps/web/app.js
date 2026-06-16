@@ -360,8 +360,8 @@ function workflowSteps(data) {
 function renderWorkflowNext(data) {
   const container = document.getElementById("workflow-next");
   if (!container) return;
-  const steps = workflowSteps(data);
-  const firstOpen = steps.find((step) => step.state === "open" && !step.optional) || steps.find((step) => step.state === "open") || steps[0];
+  const steps = data.steps || workflowSteps(data);
+  const firstOpen = data.next_action || steps.find((step) => step.state === "open" && !step.optional) || steps.find((step) => step.state === "open") || steps[0];
   container.innerHTML = `
     <article class="workflow-primary ${escapeHtml(firstOpen.state)}">
       <div>
@@ -384,14 +384,15 @@ function renderWorkflowNext(data) {
 
 async function loadLoopStatus() {
   try {
-    const data = await fetchJson("/loop-status");
-    const scheduled = queueTotal(data.queue);
+    const data = await fetchJson("/workflow/status");
+    const loop = data.loop || data;
+    const scheduled = queueTotal(loop.queue);
     document.getElementById("queue-count").textContent = `${scheduled} queue item(s)`;
-    document.getElementById("brief-count").textContent = `${data.brief_count || 0} brief(s)`;
-    document.getElementById("asset-count").textContent = `${data.asset_count || 0} asset(s)`;
-    document.getElementById("media-count").textContent = `${data.media_count || 0} media item(s)`;
-    document.getElementById("outcome-count").textContent = `${data.outcome_count || 0} performance record(s)`;
-    renderWorkflowNext(data);
+    document.getElementById("brief-count").textContent = `${loop.brief_count || 0} brief(s)`;
+    document.getElementById("asset-count").textContent = `${loop.asset_count || 0} asset(s)`;
+    document.getElementById("media-count").textContent = `${loop.media_count || 0} media item(s)`;
+    document.getElementById("outcome-count").textContent = `${loop.outcome_count || 0} performance record(s)`;
+    renderWorkflowNext(data.workflow || loop);
   } catch {
     const message = accessToken() ? "API access failed" : "Set access token";
     document.getElementById("queue-count").textContent = message;

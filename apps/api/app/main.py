@@ -2509,8 +2509,7 @@ async def weekly_report(_: None = Depends(require_access_token)):
     )
 
 
-@app.get("/loop-status")
-async def loop_status(_: None = Depends(require_access_token)):
+async def build_loop_status():
     queue = await fetch_rows(
         "select status, count(*)::int as count from publish_queue group by status"
     )
@@ -2554,3 +2553,154 @@ async def loop_status(_: None = Depends(require_access_token)):
         "outcome_count": (outcome_count or {}).get("count", 0),
         "weight_count": (weight_count or {}).get("count", 0),
     }
+
+
+def total_queue_count(queue):
+    return sum(int(item.get("count") or 0) for item in queue or [])
+
+
+def workflow_step(state, title, body, screen, action, optional=False):
+    return {
+        "state": state,
+        "title": title,
+        "body": body,
+        "screen": screen,
+        "action": action,
+        "optional": optional,
+    }
+
+
+def build_workflow_guidance(loop):
+    total_queue = total_queue_count(loop.get("queue"))
+    brief_count = int(loop.get("brief_count") or 0)
+    asset_count = int(loop.get("asset_count") or 0)
+    media_count = int(loop.get("media_count") or 0)
+    outcome_count = int(loop.get("outcome_count") or 0)
+    steps = []
+
+    if not brief_count:
+        steps.append(
+            workflow_step(
+                "open",
+                "Generate this week's briefs",
+                "Start from Weekly Plan so the system has topics, formats, hooks, and safety notes.",
+                "plan",
+                "Open Weekly Plan",
+            )
+        )
+    else:
+        steps.append(
+            workflow_step(
+                "done",
+                "Weekly briefs ready",
+                f"{brief_count} brief(s) are available for drafting.",
+                "plan",
+                "View Briefs",
+            )
+        )
+
+    if not asset_count:
+        steps.append(
+            workflow_step(
+                "open" if brief_count else "locked",
+                "Save one brief as an asset",
+                "Use Save Asset on a brief to create a reusable caption package with slides or script notes.",
+                "plan",
+                "Save Asset",
+            )
+        )
+    else:
+        steps.append(
+            workflow_step(
+                "done",
+                "Draft assets ready",
+                f"{asset_count} asset(s) are saved for review and queueing.",
+                "assets",
+                "Review Assets",
+            )
+        )
+
+    if not total_queue:
+        steps.append(
+            workflow_step(
+                "open" if asset_count else "locked",
+                "Add an asset to the queue",
+                "Move one clear asset into Review Queue before scheduling.",
+                "assets",
+                "Open Assets",
+            )
+        )
+    else:
+        steps.append(
+            workflow_step(
+                "done",
+                "Queue has content",
+                f"{total_queue} item(s) are waiting in the publishing workflow.",
+                "review",
+                "Review Queue",
+            )
+        )
+
+    steps.append(
+        workflow_step(
+            "open" if total_queue else "locked",
+            "Review and schedule",
+            "Approve safe content, choose a planned publish time, then build the manual handoff.",
+            "review" if total_queue else "scheduler",
+            "Open Review" if total_queue else "Open Scheduler",
+        )
+    )
+
+    steps.append(
+        workflow_step(
+            "done" if outcome_count else "open",
+            "Record performance",
+            f"{outcome_count} result(s) are feeding the learning loop."
+            if outcome_count
+            else "After a post is published, add results so future topics improve.",
+            "outcomes",
+            "Open Performance",
+        )
+    )
+
+    if not media_count:
+        steps.append(
+            workflow_step(
+                "open",
+                "Optional: add approved media",
+                "Register owned or approved images/videos before using media-heavy posts.",
+                "assets",
+                "Add Media",
+                optional=True,
+            )
+        )
+
+    next_action = next(
+        (step for step in steps if step["state"] == "open" and not step["optional"]),
+        next((step for step in steps if step["state"] == "open"), steps[0]),
+    )
+    return {
+        "next_action": next_action,
+        "steps": steps,
+        "summary": {
+            "queue_total": total_queue,
+            "brief_count": brief_count,
+            "asset_count": asset_count,
+            "media_count": media_count,
+            "outcome_count": outcome_count,
+        },
+    }
+
+
+@app.get("/workflow/status")
+async def workflow_status(_: None = Depends(require_access_token)):
+    loop = await build_loop_status()
+    return {
+        "loop": loop,
+        "workflow": build_workflow_guidance(loop),
+    }
+
+
+@app.get("/loop-status")
+async def loop_status(_: None = Depends(require_access_token)):
+    return await build_loop_status()
