@@ -71,6 +71,7 @@ Goal: record human review before scheduling.
    - The item displays as `approved`.
    - It also says it is ready to schedule.
    - It is not treated as published or scheduled yet.
+   - Already scheduled or published items stay out of `Review Queue`.
 
 Pass condition: the item is approved-but-unscheduled.
 

@@ -263,6 +263,10 @@ function queueTotal(queue) {
   return Array.isArray(queue) ? queue.reduce((sum, item) => sum + Number(item.count || 0), 0) : 0;
 }
 
+function needsReviewQueue(item) {
+  return item.status === "draft";
+}
+
 function workflowSteps(data) {
   const totalQueue = queueTotal(data.queue);
   const briefCount = Number(data.brief_count || 0);
@@ -1231,14 +1235,15 @@ async function loadPublishQueue() {
     const data = await fetchJson("/publish-queue");
     const items = data.items || [];
     const filteredItems = filterQueueItems(items);
+    const reviewItems = items.filter(needsReviewQueue);
     const queueMarkup = filteredItems.length
       ? filteredItems.map((item) => queueCard(item, "queue")).join("")
       : '<p class="status-note">No queue items yet.</p>';
-    const reviewMarkup = items.length
-      ? items.map((item) => queueCard(item, "review")).join("")
+    const reviewMarkup = reviewItems.length
+      ? reviewItems.map((item) => queueCard(item, "review")).join("")
       : '<p class="status-note">No content waiting for review.</p>';
     queueContainer.dataset.items = JSON.stringify(items);
-    reviewContainer.dataset.items = JSON.stringify(items);
+    reviewContainer.dataset.items = JSON.stringify(reviewItems);
     queueContainer.innerHTML = queueMarkup;
     reviewContainer.innerHTML = reviewMarkup;
     renderWeekSchedule(filteredItems);

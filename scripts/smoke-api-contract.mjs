@@ -176,6 +176,11 @@ const requiredSnippets = [
     text: "schedule-approved-items",
   },
   {
+    name: "web review queue filter",
+    file: "web",
+    text: "needsReviewQueue",
+  },
+  {
     name: "web handoff published action",
     file: "web",
     text: "data-handoff-published",
