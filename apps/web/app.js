@@ -2630,6 +2630,35 @@ document.getElementById("download-metrics-template")?.addEventListener("click", 
   }
 });
 
+function renderMetricsImportPreview(data) {
+  const container = document.getElementById("metrics-import-preview");
+  if (!container) return;
+  const planned = data.planned || [];
+  const imported = data.imported || [];
+  const skipped = data.skipped || [];
+  const visibleRows = planned.length ? planned : imported;
+  container.innerHTML = `
+    <article class="learning-card wide-learning">
+      <h3>Metrics CSV Check</h3>
+      <p>${escapeHtml(data.message || "No CSV check has run yet.")}</p>
+      <small>${escapeHtml(data.mode === "dry_run" ? "Preview only. No records were written." : "Import completed. Refresh Learning for updated outcomes.")}</small>
+      <div class="summary-row">
+        <span>Ready/imported: ${escapeHtml(data.mode === "dry_run" ? data.planned_count || 0 : data.imported_count || 0)}</span>
+        <span>Outcomes: ${escapeHtml(data.outcome_count || 0)}</span>
+        <span>Skipped: ${escapeHtml(data.skipped_count || 0)}</span>
+      </div>
+      ${visibleRows.length ? `
+        <h4>${data.mode === "dry_run" ? "Importable Rows" : "Imported Rows"}</h4>
+        <ul>${visibleRows.slice(0, 8).map((row) => `<li><strong>Row ${escapeHtml(row.row || "")}</strong> ${escapeHtml(row.source || "")} · ${escapeHtml(row.external_post_id || "")}</li>`).join("")}</ul>
+      ` : ""}
+      ${skipped.length ? `
+        <h4>Skipped Rows</h4>
+        <ul>${skipped.slice(0, 8).map((row) => `<li><strong>Row ${escapeHtml(row.row || "")}</strong> ${escapeHtml(row.external_post_id || "")}${row.external_post_id ? " · " : ""}${escapeHtml(row.reason || "")}</li>`).join("")}</ul>
+      ` : ""}
+    </article>
+  `;
+}
+
 async function uploadMetricsCsv({ dryRun }) {
   const message = document.getElementById("metric-message");
   const fileInput = document.getElementById("metrics-csv-file");
@@ -2648,6 +2677,7 @@ async function uploadMetricsCsv({ dryRun }) {
     const data = await fetchForm("/metrics/import-csv", body);
     if (!dryRun) fileInput.value = "";
     message.textContent = data.message || `Imported ${data.imported_count || 0} metric row(s).`;
+    renderMetricsImportPreview(data);
     if (!dryRun) await Promise.all([loadOutcomes(), loadLoopStatus(), loadLearningSummary()]);
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : dryRun ? "Could not preview metrics CSV." : "Could not import metrics CSV.";

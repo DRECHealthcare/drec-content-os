@@ -125,10 +125,16 @@ Goal: feed results back into future planning.
 2. Click `Load Published Post` to fill the latest published Meta post ID and context.
 3. Enter raw metrics.
 4. Click `Save & Roll Up` to store the raw metrics and create the learning outcome in one step.
-5. Open `Learning`.
-6. Click `Build Weekly Report`.
-7. Click `Use Topics In Weekly Plan`.
-8. Expected result:
+5. Optional CSV path:
+   - Click `Download Metrics Template`.
+   - Fill the CSV for one or more published posts.
+   - Choose the completed CSV under `Import CSV`.
+   - Click `Preview CSV` and confirm the importable and skipped row counts.
+   - Click `Import Metrics CSV` when the preview looks correct.
+6. Open `Learning`.
+7. Click `Build Weekly Report`.
+8. Click `Use Topics In Weekly Plan`.
+9. Expected result:
    - Weekly report includes workflow readiness.
    - It includes queue-ready asset counts.
    - It includes recent results and next topic recommendations.

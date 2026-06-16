@@ -700,6 +700,16 @@ const requiredSnippets = [
     text: "preview-metrics-csv",
   },
   {
+    name: "web metrics csv preview panel",
+    file: "web",
+    text: "metrics-import-preview",
+  },
+  {
+    name: "web metrics csv preview renderer",
+    file: "web",
+    text: "renderMetricsImportPreview",
+  },
+  {
     name: "web metrics csv import endpoint",
     file: "web",
     text: "/metrics/import-csv",

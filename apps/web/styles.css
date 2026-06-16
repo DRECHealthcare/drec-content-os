@@ -734,6 +734,28 @@ button[type="submit"] {
   font-size: 13px;
 }
 
+.learning-card h4 {
+  margin: 4px 0 0;
+  color: var(--navy);
+  font-size: 12px;
+}
+
+.summary-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.summary-row span {
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #FFF;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .learning-card ul {
   margin: 0;
   padding-left: 18px;
