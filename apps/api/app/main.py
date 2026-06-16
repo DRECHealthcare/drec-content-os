@@ -753,6 +753,34 @@ async def update_asset_compliance(
     return {"item": row or {**existing, "compliance_status": update.compliance_status}}
 
 
+async def existing_queue_for_asset(asset_id: str):
+    row = await fetch_row(
+        """
+        select id, asset_id, channel, format, caption, media_urls, planned_slot, status,
+               compliance_status, external_post_id, created_at
+        from publish_queue
+        where asset_id = $1
+          and status in ('draft', 'scheduled', 'publishing')
+        order by created_at desc
+        limit 1
+        """,
+        asset_id,
+    )
+    if row is None and supabase_rest.configured():
+        rows = await supabase_rest.select(
+            "publish_queue",
+            {
+                "select": "id,asset_id,channel,format,caption,media_urls,planned_slot,status,compliance_status,external_post_id,created_at",
+                "asset_id": f"eq.{asset_id}",
+                "status": "in.(draft,scheduled,publishing)",
+                "order": "created_at.desc",
+                "limit": "1",
+            },
+        )
+        row = rows[0] if rows else None
+    return row
+
+
 @app.post("/assets/{asset_id}/queue")
 async def queue_asset(asset_id: str, _: None = Depends(require_access_token)):
     asset = await asset_by_id(asset_id)
@@ -768,6 +796,14 @@ async def queue_asset(asset_id: str, _: None = Depends(require_access_token)):
             status_code=422,
             detail="Only compliance-clear assets can be added to the publishing queue.",
         )
+    existing_queue = await existing_queue_for_asset(asset.get("id"))
+    if existing_queue is not None:
+        return {
+            "item": existing_queue,
+            "asset": asset,
+            "reused": True,
+            "message": "Existing queue item reused for this asset.",
+        }
     item = PublishQueueIn(
         asset_id=asset.get("id"),
         channel="instagram" if asset.get("channel") == "instagram" else "facebook",
@@ -778,7 +814,7 @@ async def queue_asset(asset_id: str, _: None = Depends(require_access_token)):
         compliance_status="clear",
     )
     queued = await create_publish_queue_item(item)
-    return {"item": queued.get("item"), "asset": asset}
+    return {"item": queued.get("item"), "asset": asset, "reused": False}
 
 
 def media_asset_payload(media: MediaAssetIn):

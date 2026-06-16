@@ -1557,7 +1557,8 @@ document.getElementById("asset-items").addEventListener("click", async (event) =
   button.disabled = true;
   button.textContent = "Adding";
   try {
-    await fetchJson(`/assets/${button.dataset.queueAsset}/queue`, { method: "POST" });
+    const data = await fetchJson(`/assets/${button.dataset.queueAsset}/queue`, { method: "POST" });
+    document.getElementById("media-message").textContent = data.reused ? "Existing queue item opened." : "Asset added to queue.";
     await Promise.all([loadPublishQueue(), loadLoopStatus()]);
     showScreen("review");
   } catch (error) {
