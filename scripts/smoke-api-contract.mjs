@@ -14,6 +14,7 @@ const requiredRoutes = [
   "GET /security/status",
   "GET /automation/status",
   "GET /operations/launch-readiness",
+  "GET /operations/test-run-checklist",
   "GET /operations/risk-audit",
   "GET /operations/snapshot.csv",
   "GET /operations/operator-pack.md",
@@ -131,6 +132,16 @@ const requiredSnippets = [
     text: "launch_readiness_payload",
   },
   {
+    name: "test run checklist route",
+    file: "main",
+    text: "test_run_checklist_payload",
+  },
+  {
+    name: "operator pack test run checklist",
+    file: "main",
+    text: "## Manual Test Run Checklist",
+  },
+  {
     name: "content risk audit",
     file: "main",
     text: "content_risk_audit_payload",
@@ -184,6 +195,16 @@ const requiredSnippets = [
     name: "web launch readiness endpoint",
     file: "web",
     text: "/operations/launch-readiness",
+  },
+  {
+    name: "web test run checklist endpoint",
+    file: "web",
+    text: "/operations/test-run-checklist",
+  },
+  {
+    name: "web test run screen jump",
+    file: "web",
+    text: "data-test-run-screen",
   },
   {
     name: "web inline token input",

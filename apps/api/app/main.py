@@ -628,6 +628,149 @@ async def launch_readiness(_: None = Depends(require_access_token)):
     return await launch_readiness_payload()
 
 
+def test_run_step(key, label, status, detail, screen, action, evidence=None):
+    return {
+        "key": key,
+        "label": label,
+        "status": status,
+        "detail": detail,
+        "screen": screen,
+        "action": action,
+        "evidence": evidence or {},
+    }
+
+
+async def test_run_checklist_payload():
+    loop = await build_loop_status()
+    handoff = await publishing_handoff(None)
+    workflow = build_workflow_guidance(loop)
+    queue_counts = {
+        item.get("status", "unknown"): int(item.get("count") or 0)
+        for item in loop.get("queue") or []
+    }
+    brief_count = int(loop.get("brief_count") or 0)
+    asset_count = int(loop.get("asset_count") or 0)
+    ready_assets = queue_ready_asset_count(loop.get("asset_status"))
+    queue_total = total_queue_count(loop.get("queue"))
+    draft_queue = queue_counts.get("draft", 0)
+    scheduled_queue = queue_counts.get("scheduled", 0)
+    published_queue = queue_counts.get("published", 0)
+    metric_count = int(loop.get("metric_count") or 0)
+    outcome_count = int(loop.get("outcome_count") or 0)
+    weight_count = int(loop.get("weight_count") or 0)
+    ready_handoff = int(handoff.get("ready_count") or 0)
+    steps = [
+        test_run_step(
+            "briefs",
+            "Briefs generated",
+            "done" if brief_count else "open",
+            f"{brief_count} brief(s) available." if brief_count else "Generate weekly briefs from the Plan screen.",
+            "plan",
+            "Open Weekly Plan",
+            {"brief_count": brief_count},
+        ),
+        test_run_step(
+            "assets",
+            "Approved clear asset",
+            "done" if ready_assets else "open" if asset_count else "locked",
+            f"{ready_assets} approved clear asset(s) ready." if ready_assets else f"{asset_count} asset(s) exist; approve one and mark safety clear." if asset_count else "Save one brief as an asset first.",
+            "assets" if asset_count else "plan",
+            "Open Assets" if asset_count else "Save Asset",
+            {"asset_count": asset_count, "ready_assets": ready_assets},
+        ),
+        test_run_step(
+            "queue",
+            "Queue item created",
+            "done" if queue_total else "open" if ready_assets else "locked",
+            f"{queue_total} queue item(s) exist." if queue_total else "Add one approved clear asset to the queue.",
+            "review" if queue_total else "assets",
+            "Review Queue" if queue_total else "Queue Ready Asset",
+            {"queue_total": queue_total, "draft_queue": draft_queue},
+        ),
+        test_run_step(
+            "schedule",
+            "Approved and scheduled",
+            "done" if scheduled_queue or ready_handoff or published_queue else "open" if queue_total else "locked",
+            f"{scheduled_queue} scheduled item(s) waiting for handoff." if scheduled_queue else "Approve a queue item, then schedule a planned publish time.",
+            "scheduler" if queue_total else "review",
+            "Open Scheduler",
+            {"scheduled_queue": scheduled_queue},
+        ),
+        test_run_step(
+            "handoff",
+            "Handoff ready",
+            "done" if ready_handoff else "open" if scheduled_queue else "locked",
+            f"{ready_handoff} item(s) ready in the publishing handoff." if ready_handoff else "Build handoff after an item is scheduled, clear, and planned.",
+            "scheduler",
+            "Build Handoff",
+            {"ready_handoff": ready_handoff, "blocked_handoff": handoff.get("blocked_count", 0)},
+        ),
+        test_run_step(
+            "published",
+            "Published ID recorded",
+            "done" if published_queue else "open" if ready_handoff else "locked",
+            f"{published_queue} published queue item(s) have been recorded." if published_queue else "After manual posting, record the Meta post ID from the handoff item.",
+            "scheduler",
+            "Record Published",
+            {"published_queue": published_queue},
+        ),
+        test_run_step(
+            "metrics",
+            "Metrics saved and rolled up",
+            "done" if metric_count and outcome_count else "open" if published_queue else "locked",
+            f"{metric_count} metric(s) and {outcome_count} outcome(s) are available." if metric_count or outcome_count else "Save metrics after publishing, then roll them into learning.",
+            "outcomes",
+            "Save & Roll Up",
+            {"metric_count": metric_count, "outcome_count": outcome_count},
+        ),
+        test_run_step(
+            "learning",
+            "Learning loop active",
+            "done" if outcome_count and weight_count else "open" if outcome_count else "locked",
+            f"{outcome_count} outcome(s) and {weight_count} active learning weight(s)." if outcome_count or weight_count else "Build the weekly report and send topics back into the next plan.",
+            "learning",
+            "Build Weekly Report",
+            {"outcome_count": outcome_count, "weight_count": weight_count},
+        ),
+        test_run_step(
+            "meta",
+            "Meta remains safely gated",
+            "done",
+            "Meta publishing stays in dry-run/manual mode until credentials, permissions, and service-role security are ready.",
+            "meta",
+            "Open Meta Setup",
+        ),
+    ]
+    required_steps = [step for step in steps if step["key"] != "meta"]
+    done_count = sum(1 for step in required_steps if step["status"] == "done")
+    first_open = next((step for step in required_steps if step["status"] == "open"), None)
+    first_locked = next((step for step in required_steps if step["status"] == "locked"), None)
+    next_step = first_open or first_locked or steps[-1]
+    return {
+        "overall_status": "manual_cycle_verified" if done_count == len(required_steps) else "manual_cycle_in_progress",
+        "done_count": done_count,
+        "total_required": len(required_steps),
+        "next_step": next_step,
+        "steps": steps,
+        "workflow_next_action": workflow.get("next_action", {}),
+        "summary": {
+            "brief_count": brief_count,
+            "ready_assets": ready_assets,
+            "queue_total": queue_total,
+            "scheduled_queue": scheduled_queue,
+            "handoff_ready": ready_handoff,
+            "published_queue": published_queue,
+            "metric_count": metric_count,
+            "outcome_count": outcome_count,
+        },
+    }
+
+
+@app.get("/operations/test-run-checklist")
+async def operations_test_run_checklist(_: None = Depends(require_access_token)):
+    return await test_run_checklist_payload()
+
+
 def snapshot_row(record_type, item_id="", status="", channel="", fmt="", title="", created_at="", detail=""):
     return {
         "record_type": record_type,
@@ -746,6 +889,7 @@ async def operations_snapshot_csv(_: None = Depends(require_access_token)):
 @app.get("/operations/operator-pack.md")
 async def operations_operator_pack(_: None = Depends(require_access_token)):
     launch = await launch_readiness_payload()
+    test_run = await test_run_checklist_payload()
     workflow = await workflow_status(None)
     automation = await automation_status_payload()
     security = security_status_payload()
@@ -784,6 +928,10 @@ async def operations_operator_pack(_: None = Depends(require_access_token)):
         f"- {stage.get('label')}: {stage.get('status')} — {stage.get('detail')}"
         for stage in launch.get("stages", [])
     ] or ["- No launch readiness stages available."]
+    test_run_lines = [
+        f"- {step.get('label')}: {step.get('status')} — {step.get('detail')}"
+        for step in test_run.get("steps", [])
+    ] or ["- No test-run checklist available."]
     lines = [
         "# DREC Content OS Operator Pack",
         "",
@@ -802,6 +950,13 @@ async def operations_operator_pack(_: None = Depends(require_access_token)):
         "## Launch Readiness",
         "",
         *launch_lines,
+        "",
+        "## Manual Test Run Checklist",
+        "",
+        f"Status: {test_run.get('overall_status')} ({test_run.get('done_count', 0)}/{test_run.get('total_required', 0)} required steps done)",
+        f"Next: {(test_run.get('next_step') or {}).get('label', 'Unknown')} — {(test_run.get('next_step') or {}).get('detail', '')}",
+        "",
+        *test_run_lines,
         "",
         "## Automation Gates",
         "",

@@ -306,6 +306,20 @@ header span { color: var(--muted); font-size: 12px; }
   counter-increment: test-step;
 }
 
+.test-path-list li.done {
+  border-color: #BBF7D0;
+  background: #F0FFF4;
+}
+
+.test-path-list li.open {
+  border-color: #B8E7E2;
+  background: #EFFCFB;
+}
+
+.test-path-list li.locked {
+  background: #F8FAFC;
+}
+
 .test-path-list li::before {
   content: counter(test-step);
   width: 26px;
@@ -319,14 +333,39 @@ header span { color: var(--muted); font-size: 12px; }
   font-weight: 900;
 }
 
+.test-path-list li.done::before {
+  background: #DCFCE7;
+  color: #166534;
+}
+
+.test-path-list li.locked::before {
+  background: #E2E8F0;
+  color: #475569;
+}
+
+.test-path-list button {
+  display: grid;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
 .test-path-list strong {
   color: var(--navy);
 }
 
 .test-path-list span {
-  grid-column: 2;
   color: var(--muted);
   font-size: 12px;
+}
+
+.test-path-list > li > span {
+  grid-column: 2;
 }
 
 .loop {

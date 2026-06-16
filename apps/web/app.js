@@ -428,6 +428,36 @@ function testPathText() {
   ].join("\n");
 }
 
+function renderTestRunChecklist(data) {
+  const list = document.getElementById("test-path-list");
+  const message = document.getElementById("test-path-message");
+  if (!list || !message) return;
+  const steps = data.steps || [];
+  const next = data.next_step || {};
+  message.textContent = `${data.overall_status || "manual_cycle_in_progress"} · ${data.done_count || 0}/${data.total_required || 0} required steps done · Next: ${next.label || "Follow the first open step"}`;
+  if (!steps.length) return;
+  list.innerHTML = steps.map((step) => `
+    <li class="test-path-step ${escapeHtml(step.status || "open")}">
+      <button type="button" data-test-run-screen="${escapeHtml(step.screen || "dashboard")}">
+        <strong>${escapeHtml(step.label || "")}</strong>
+        <span>${escapeHtml(step.status || "open")} · ${escapeHtml(step.detail || "")}</span>
+      </button>
+    </li>
+  `).join("");
+}
+
+async function loadTestRunChecklist() {
+  const list = document.getElementById("test-path-list");
+  if (!list) return;
+  try {
+    const data = await fetchJson("/operations/test-run-checklist");
+    renderTestRunChecklist(data);
+  } catch (error) {
+    const message = document.getElementById("test-path-message");
+    if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not load the live test checklist.";
+  }
+}
+
 function renderWorkflowNext(data) {
   const container = document.getElementById("workflow-next");
   if (!container) return;
@@ -475,6 +505,7 @@ async function loadLoopStatus() {
     document.getElementById("automation-count").textContent = `${automation.ready_count || 0} ready · ${automation.blocked_count || 0} blocked`;
     renderWorkflowNext(data.workflow || loop);
     loadLaunchReadiness();
+    loadTestRunChecklist();
   } catch {
     const message = accessToken() ? "API access failed" : "Set access token";
     document.getElementById("queue-count").textContent = message;
@@ -1539,6 +1570,12 @@ document.getElementById("copy-test-path")?.addEventListener("click", async () =>
   } catch {
     message.textContent = "Could not copy automatically. Use the visible checklist.";
   }
+});
+
+document.getElementById("test-path-list")?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-test-run-screen]");
+  if (!button) return;
+  showScreen(button.dataset.testRunScreen);
 });
 
 document.getElementById("run-risk-audit")?.addEventListener("click", async () => {
