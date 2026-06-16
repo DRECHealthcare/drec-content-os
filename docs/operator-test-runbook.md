@@ -14,7 +14,8 @@ https://drec-content-os.vercel.app
 1. Open the live app.
 2. Confirm the top button says `Access set`.
 3. On Dashboard, read `Next Best Action`.
-4. If the page looks stale, click `Refresh` in the Next Best Action card.
+4. Check the Dashboard operating counts for review, handoff, ready assets, outcomes, and active weights.
+5. If the page looks stale, click `Refresh` in the Next Best Action card.
 
 ## Full Workflow Test
 

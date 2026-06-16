@@ -62,6 +62,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added quick scheduling for compliance-clear queue items
 - [x] Added next-open-slot schedule suggestion for MYT publishing times
 - [x] Added Dashboard next-best-action guidance for moving through the workflow
+- [x] Added Dashboard operating counts for review, handoff, ready assets, and learning signals
 - [x] Added API-backed workflow status for shared next-action guidance
 - [x] Tightened review-to-schedule safety so approval and planned publishing time stay separate
 - [x] Added server-enforced asset-to-queue readiness gates
@@ -115,6 +116,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add quick queue scheduling
 - [x] Add next-open-slot schedule suggestions
 - [x] Add workflow guidance on the Dashboard
+- [x] Add operational readiness counts to Dashboard
 - [x] Add server-side workflow state for dashboard and future workers
 - [x] Require planned time before handoff or Meta dispatch treats an item as publish-ready
 - [x] Require asset approval and clear compliance before queueing from Assets

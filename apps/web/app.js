@@ -263,6 +263,11 @@ function queueTotal(queue) {
   return Array.isArray(queue) ? queue.reduce((sum, item) => sum + Number(item.count || 0), 0) : 0;
 }
 
+function countByStatus(rows, key, value) {
+  const row = Array.isArray(rows) ? rows.find((item) => item[key] === value) : null;
+  return Number(row?.count || 0);
+}
+
 function needsReviewQueue(item) {
   return item.status === "draft";
 }
@@ -408,12 +413,18 @@ async function loadLoopStatus() {
   try {
     const data = await fetchJson("/workflow/status");
     const loop = data.loop || data;
-    const scheduled = queueTotal(loop.queue);
-    document.getElementById("queue-count").textContent = `${scheduled} queue item(s)`;
+    const totalQueue = queueTotal(loop.queue);
+    const draftQueue = countByStatus(loop.queue, "status", "draft");
+    const scheduledQueue = countByStatus(loop.queue, "status", "scheduled");
+    const publishedQueue = countByStatus(loop.queue, "status", "published");
+    const workflowSummary = data.workflow?.summary || {};
+    const readyAssets = Number(workflowSummary.queue_ready_asset_count || 0);
+    const totalAssets = Number(workflowSummary.asset_count || loop.asset_count || 0);
+    document.getElementById("queue-count").textContent = `${totalQueue} total · ${draftQueue} review · ${scheduledQueue} handoff · ${publishedQueue} published`;
     document.getElementById("brief-count").textContent = `${loop.brief_count || 0} brief(s)`;
-    document.getElementById("asset-count").textContent = `${loop.asset_count || 0} asset(s)`;
+    document.getElementById("asset-count").textContent = `${readyAssets} ready of ${totalAssets} asset(s)`;
     document.getElementById("media-count").textContent = `${loop.media_count || 0} media item(s)`;
-    document.getElementById("outcome-count").textContent = `${loop.outcome_count || 0} performance record(s)`;
+    document.getElementById("outcome-count").textContent = `${loop.outcome_count || 0} outcome(s) · ${loop.weight_count || 0} active weight(s)`;
     renderWorkflowNext(data.workflow || loop);
   } catch {
     const message = accessToken() ? "API access failed" : "Set access token";

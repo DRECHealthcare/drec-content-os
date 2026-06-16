@@ -111,6 +111,11 @@ const requiredSnippets = [
     text: 'fetchJson("/workflow/status")',
   },
   {
+    name: "web dashboard status helper",
+    file: "web",
+    text: "countByStatus",
+  },
+  {
     name: "web queue reuse message",
     file: "web",
     text: "Existing queue item opened.",
