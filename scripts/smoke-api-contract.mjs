@@ -18,6 +18,7 @@ const requiredRoutes = [
   "GET /operations/risk-audit",
   "GET /operations/snapshot.csv",
   "GET /operations/creative-pack.md",
+  "GET /operations/review-log.md",
   "GET /operations/operator-pack.md",
   "GET /weekly-report.md",
   "GET /meta/readiness",
@@ -162,6 +163,16 @@ const requiredSnippets = [
     name: "creative pack production rules",
     file: "main",
     text: "## Production Rules",
+  },
+  {
+    name: "review log export",
+    file: "main",
+    text: "drec-review-log.md",
+  },
+  {
+    name: "review log audit trail",
+    file: "main",
+    text: "## Recent Decisions",
   },
   {
     name: "operator pack export",
@@ -347,6 +358,16 @@ const requiredSnippets = [
     name: "web bulk approved scheduling action",
     file: "web",
     text: "schedule-approved-items",
+  },
+  {
+    name: "web review log action",
+    file: "web",
+    text: "download-review-log",
+  },
+  {
+    name: "web review log endpoint",
+    file: "web",
+    text: "/operations/review-log.md",
   },
   {
     name: "web review queue filter",

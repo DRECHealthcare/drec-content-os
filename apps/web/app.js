@@ -2302,6 +2302,16 @@ document.getElementById("schedule-approved-items").addEventListener("click", asy
   }
 });
 
+document.getElementById("download-review-log")?.addEventListener("click", async () => {
+  const message = document.getElementById("queue-message");
+  try {
+    await downloadProtectedFile("/operations/review-log.md", "drec-review-log.md", "text/markdown");
+    message.textContent = "Review log downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download review log.";
+  }
+});
+
 document.getElementById("review-items").addEventListener("click", async (event) => {
   const editButton = event.target.closest("[data-edit-queue]");
   if (editButton) {

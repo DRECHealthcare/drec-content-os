@@ -86,6 +86,7 @@ Stage 1 is now a working thin-core workflow:
 - Add assets to the publishing queue only after asset approval and a clear safety check
 - Reuse an existing active queue item when the same asset is added to queue again
 - Queue and review posts with approval, regen, and rejection feedback trails
+- Download a review log audit trail with recent approval, regeneration, rejection, and safety decisions
 - Keep Review Queue focused on unscheduled draft items while Scheduler handles scheduled and published records
 - Show reviewed queue items as approved-but-unscheduled until a planned publish time is selected
 - Schedule review-approved, compliance-clear queue items in batches into suggested MYT publishing slots

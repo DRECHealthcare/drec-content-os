@@ -987,6 +987,91 @@ async def operations_creative_pack(_: None = Depends(require_access_token)):
     )
 
 
+async def fetch_feedback_log(limit: int = 200):
+    bounded_limit = max(1, min(int(limit or 200), 500))
+    rows = await fetch_rows(
+        """
+        select id, module, ref_type, ref_id, action, reason, before_text, after_text, tags, created_at
+        from feedback
+        order by created_at desc
+        limit $1
+        """,
+        bounded_limit,
+    )
+    if not rows and supabase_rest.configured():
+        rows = await supabase_rest.select(
+            "feedback",
+            {
+                "select": "id,module,ref_type,ref_id,action,reason,before_text,after_text,tags,created_at",
+                "order": "created_at.desc",
+                "limit": str(bounded_limit),
+            },
+        )
+    return rows
+
+
+def feedback_excerpt(value: str | None, limit: int = 260):
+    text = re.sub(r"\s+", " ", str(value or "")).strip()
+    if len(text) > limit:
+        text = text[: limit - 1].rstrip() + "…"
+    return text
+
+
+@app.get("/operations/review-log.md")
+async def operations_review_log(_: None = Depends(require_access_token)):
+    feedback_rows = await fetch_feedback_log()
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    action_counts = {}
+    module_counts = {}
+    for item in feedback_rows:
+        action = item.get("action") or "unknown"
+        module = item.get("module") or "unknown"
+        action_counts[action] = action_counts.get(action, 0) + 1
+        module_counts[module] = module_counts.get(module, 0) + 1
+    lines = [
+        "# DREC Content OS Review Log",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this audit trail to review human approvals, regeneration requests, rejections, and safety decisions before publishing or enabling automation.",
+        "",
+        "## Summary",
+        "",
+        f"- Total feedback records: {len(feedback_rows)}",
+        f"- Actions: {', '.join(f'{key}={value}' for key, value in action_counts.items()) or 'none'}",
+        f"- Modules: {', '.join(f'{key}={value}' for key, value in module_counts.items()) or 'none'}",
+        "",
+        "## Recent Decisions",
+        "",
+    ]
+    if not feedback_rows:
+        lines.append("No review feedback has been recorded yet.")
+    for index, item in enumerate(feedback_rows, start=1):
+        lines.extend(
+            [
+                f"### {index}. {item.get('action', 'unknown')} · {item.get('module', 'unknown')}",
+                "",
+                f"- Feedback ID: {item.get('id')}",
+                f"- Reference: {item.get('ref_type')} / {item.get('ref_id')}",
+                f"- Created: {item.get('created_at')}",
+                f"- Tags: {', '.join(item.get('tags') or []) or 'none'}",
+                f"- Reason: {item.get('reason') or 'No reason recorded.'}",
+                "",
+            ]
+        )
+        before = feedback_excerpt(item.get("before_text"))
+        after = feedback_excerpt(item.get("after_text"))
+        if before:
+            lines.extend(["Before:", "", before, ""])
+        if after:
+            lines.extend(["After:", "", after, ""])
+    return Response(
+        "\n".join(lines) + "\n",
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-review-log.md"'},
+    )
+
+
 @app.get("/operations/operator-pack.md")
 async def operations_operator_pack(_: None = Depends(require_access_token)):
     launch = await launch_readiness_payload()
