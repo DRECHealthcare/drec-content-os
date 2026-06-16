@@ -4866,6 +4866,7 @@ async def decode_metrics_csv(file: UploadFile):
 async def import_metrics_csv(
     file: UploadFile = File(...),
     rollup: bool = Form(False),
+    dry_run: bool = Form(False),
     _: None = Depends(require_access_token),
 ):
     csv_text = await decode_metrics_csv(file)
@@ -4877,6 +4878,7 @@ async def import_metrics_csv(
         raise HTTPException(status_code=400, detail={"message": "Metrics CSV is missing required columns.", "missing": missing})
 
     imported = []
+    planned = []
     skipped = []
     outcomes = []
     allowed_sources = {"facebook", "instagram", "manual", "ads"}
@@ -4909,6 +4911,18 @@ async def import_metrics_csv(
                 "import_notes": (row.get("notes") or "").strip(),
             },
         )
+        if dry_run:
+            planned.append(
+                {
+                    "row": index,
+                    "external_post_id": external_post_id,
+                    "source": source,
+                    "captured_at": captured_at.isoformat(),
+                    "metrics": metric.metrics,
+                    "rollup": bool(rollup),
+                }
+            )
+            continue
         saved = await ingest_metric(metric)
         imported.append({"row": index, "external_post_id": external_post_id, "source": source, "item": saved.get("item")})
         if rollup:
@@ -4939,14 +4953,22 @@ async def import_metrics_csv(
             except HTTPException as exc:
                 skipped.append({"row": index, "external_post_id": external_post_id, "reason": f"Metric saved but rollup failed: {exc.detail}"})
 
+    message = (
+        f"Previewed {len(planned)} importable metric row(s), skipped {len(skipped)} row(s)."
+        if dry_run
+        else f"Imported {len(imported)} metric row(s), created {len(outcomes)} outcome(s), skipped {len(skipped)} row(s)."
+    )
     return {
+        "mode": "dry_run" if dry_run else "import",
+        "planned_count": len(planned),
         "imported_count": len(imported),
         "outcome_count": len(outcomes),
         "skipped_count": len(skipped),
+        "planned": planned,
         "imported": imported,
         "outcomes": outcomes,
         "skipped": skipped,
-        "message": f"Imported {len(imported)} metric row(s), created {len(outcomes)} outcome(s), skipped {len(skipped)} row(s).",
+        "message": message,
     }
 
 

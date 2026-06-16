@@ -285,6 +285,11 @@ const requiredSnippets = [
     text: "import_metrics_csv",
   },
   {
+    name: "metrics csv import dry run",
+    file: "main",
+    text: "Previewed {len(planned)} importable metric row(s)",
+  },
+  {
     name: "metrics csv import rollup",
     file: "main",
     text: "Imported {len(imported)} metric row(s)",
@@ -688,6 +693,11 @@ const requiredSnippets = [
     name: "web metrics csv import action",
     file: "web",
     text: "import-metrics-csv",
+  },
+  {
+    name: "web metrics csv preview action",
+    file: "web",
+    text: "preview-metrics-csv",
   },
   {
     name: "web metrics csv import endpoint",

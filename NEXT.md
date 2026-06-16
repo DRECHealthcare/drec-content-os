@@ -31,6 +31,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added raw metrics entry and rollup into scored learning outcomes
 - [x] Added metrics CSV template for manual performance capture
 - [x] Added metrics CSV import with optional automatic learning rollup
+- [x] Added dry-run metrics CSV preview before importing results
 - [x] Added media library records with usage-rights and approval status
 - [x] Enabled Supabase RLS with server API policies
 - [x] Added private Supabase Storage upload path for DREC media
@@ -109,6 +110,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add metrics-to-outcomes rollup before Meta is connected
 - [x] Add downloadable metrics template for manual performance capture
 - [x] Add bulk metrics CSV import for manual reporting days
+- [x] Add metrics CSV preview before import so manual results can be checked safely
 - [x] Add media library records before Meta publishing
 - [x] Add private media file upload through the API
 - [x] Add signed links for private media review

@@ -2630,7 +2630,7 @@ document.getElementById("download-metrics-template")?.addEventListener("click", 
   }
 });
 
-document.getElementById("import-metrics-csv")?.addEventListener("click", async () => {
+async function uploadMetricsCsv({ dryRun }) {
   const message = document.getElementById("metric-message");
   const fileInput = document.getElementById("metrics-csv-file");
   const rollup = document.getElementById("metrics-import-rollup")?.checked;
@@ -2642,15 +2642,24 @@ document.getElementById("import-metrics-csv")?.addEventListener("click", async (
   const body = new FormData();
   body.append("file", file);
   body.append("rollup", rollup ? "true" : "false");
-  message.textContent = "Importing metrics CSV...";
+  body.append("dry_run", dryRun ? "true" : "false");
+  message.textContent = dryRun ? "Previewing metrics CSV..." : "Importing metrics CSV...";
   try {
     const data = await fetchForm("/metrics/import-csv", body);
-    fileInput.value = "";
+    if (!dryRun) fileInput.value = "";
     message.textContent = data.message || `Imported ${data.imported_count || 0} metric row(s).`;
-    await Promise.all([loadOutcomes(), loadLoopStatus(), loadLearningSummary()]);
+    if (!dryRun) await Promise.all([loadOutcomes(), loadLoopStatus(), loadLearningSummary()]);
   } catch (error) {
-    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not import metrics CSV.";
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : dryRun ? "Could not preview metrics CSV." : "Could not import metrics CSV.";
   }
+}
+
+document.getElementById("preview-metrics-csv")?.addEventListener("click", async () => {
+  await uploadMetricsCsv({ dryRun: true });
+});
+
+document.getElementById("import-metrics-csv")?.addEventListener("click", async () => {
+  await uploadMetricsCsv({ dryRun: false });
 });
 
 document.getElementById("weight-form").addEventListener("submit", async (event) => {
