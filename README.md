@@ -109,6 +109,7 @@ Stage 1 is now a working thin-core workflow:
 - Register approved media URLs or upload files into private Supabase Storage
 - Approve, review, or block draft assets and media before they enter publishing
 - Record raw performance metrics, roll them into scored outcomes, and view the first learning summary
+- Download a learning snapshot CSV with raw metrics, outcomes, and learning weights for weekly analysis or backup
 - Build a copy-ready weekly operating report from briefs, queue, assets, feedback, outcomes, and next-topic recommendations
 - Send learning topic recommendations directly back into Weekly Plan for the next cycle
 - Include workflow readiness and queue-ready asset counts in the weekly operating report

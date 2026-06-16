@@ -19,6 +19,7 @@ const requiredRoutes = [
   "GET /operations/snapshot.csv",
   "GET /operations/creative-pack.md",
   "GET /operations/review-log.md",
+  "GET /operations/learning-snapshot.csv",
   "GET /operations/operator-pack.md",
   "GET /weekly-report.md",
   "GET /meta/readiness",
@@ -175,6 +176,16 @@ const requiredSnippets = [
     text: "## Recent Decisions",
   },
   {
+    name: "learning snapshot export",
+    file: "main",
+    text: "drec-learning-snapshot.csv",
+  },
+  {
+    name: "learning snapshot raw metrics",
+    file: "main",
+    text: "raw_metric",
+  },
+  {
     name: "operator pack export",
     file: "main",
     text: "drec-operator-pack.md",
@@ -303,6 +314,16 @@ const requiredSnippets = [
     name: "web learning topics handoff",
     file: "web",
     text: "use-topics-weekly-plan",
+  },
+  {
+    name: "web learning snapshot action",
+    file: "web",
+    text: "download-learning-snapshot",
+  },
+  {
+    name: "web learning snapshot endpoint",
+    file: "web",
+    text: "/operations/learning-snapshot.csv",
   },
   {
     name: "web learning topics helper",

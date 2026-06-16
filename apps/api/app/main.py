@@ -1072,6 +1072,107 @@ async def operations_review_log(_: None = Depends(require_access_token)):
     )
 
 
+def learning_snapshot_row(record_type, item_id="", dimension="", key="", value="", created_at="", detail=""):
+    return {
+        "record_type": record_type,
+        "id": item_id or "",
+        "dimension": dimension or "",
+        "key": key or "",
+        "value": str(value if value is not None else ""),
+        "created_at": str(created_at or ""),
+        "detail": detail or "",
+    }
+
+
+@app.get("/operations/learning-snapshot.csv")
+async def operations_learning_snapshot(_: None = Depends(require_access_token)):
+    raw_metrics = await snapshot_select(
+        "raw_metrics",
+        """
+        select id, source, external_post_id, captured_at, metrics, created_at
+        from raw_metrics
+        order by captured_at desc
+        limit 500
+        """,
+        {"select": "id,source,external_post_id,captured_at,metrics,created_at", "order": "captured_at.desc", "limit": "500"},
+    )
+    outcomes = await snapshot_select(
+        "outcomes",
+        """
+        select id, post_id, pillar, funnel_stage, hook_archetype, style_key,
+               format, channel, audience_label, published_at, metric_window,
+               score, watch_metric, shares, saves, cpl, vs_plan_note, created_at
+        from outcomes
+        order by created_at desc
+        limit 500
+        """,
+        {"select": "id,post_id,pillar,funnel_stage,hook_archetype,style_key,format,channel,audience_label,published_at,metric_window,score,watch_metric,shares,saves,cpl,vs_plan_note,created_at", "order": "created_at.desc", "limit": "500"},
+    )
+    weights = await snapshot_select(
+        "learning_weights",
+        """
+        select id, dimension, key, value, previous_value, reason, source, is_active, created_at
+        from learning_weights
+        order by created_at desc
+        limit 500
+        """,
+        {"select": "id,dimension,key,value,previous_value,reason,source,is_active,created_at", "order": "created_at.desc", "limit": "500"},
+    )
+    rows = []
+    for item in raw_metrics:
+        metrics = item.get("metrics") or {}
+        metric_bits = []
+        if isinstance(metrics, dict):
+            for key in ["reach", "likes", "comments", "saves", "shares", "leads", "spend", "plays", "total_interactions"]:
+                if key in metrics:
+                    metric_bits.append(f"{key}={metrics.get(key)}")
+        rows.append(
+            learning_snapshot_row(
+                "raw_metric",
+                item.get("id"),
+                item.get("source"),
+                item.get("external_post_id"),
+                item.get("captured_at"),
+                item.get("created_at"),
+                "; ".join(metric_bits) or json.dumps(metrics, ensure_ascii=False)[:500],
+            )
+        )
+    for item in outcomes:
+        rows.append(
+            learning_snapshot_row(
+                "outcome",
+                item.get("id"),
+                item.get("channel"),
+                item.get("post_id"),
+                item.get("score"),
+                item.get("created_at"),
+                f"format={item.get('format') or ''}; window={item.get('metric_window') or ''}; saves={item.get('saves') or 0}; shares={item.get('shares') or 0}; note={item.get('vs_plan_note') or ''}",
+            )
+        )
+    for item in weights:
+        rows.append(
+            learning_snapshot_row(
+                "learning_weight",
+                item.get("id"),
+                item.get("dimension"),
+                item.get("key"),
+                item.get("value"),
+                item.get("created_at"),
+                f"active={item.get('is_active')}; previous={item.get('previous_value') or ''}; source={item.get('source') or ''}; reason={item.get('reason') or ''}",
+            )
+        )
+    output = StringIO()
+    fieldnames = ["record_type", "id", "dimension", "key", "value", "created_at", "detail"]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    writer.writerows(rows)
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-learning-snapshot.csv"'},
+    )
+
+
 @app.get("/operations/operator-pack.md")
 async def operations_operator_pack(_: None = Depends(require_access_token)):
     launch = await launch_readiness_payload()
