@@ -52,6 +52,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added quick scheduling for compliance-clear queue items
 - [x] Added Dashboard next-best-action guidance for moving through the workflow
 - [x] Added API-backed workflow status for shared next-action guidance
+- [x] Tightened review-to-schedule safety so approval and planned publishing time stay separate
 
 ## Next Engineering Tasks
 
@@ -86,6 +87,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add quick queue scheduling
 - [x] Add workflow guidance on the Dashboard
 - [x] Add server-side workflow state for dashboard and future workers
+- [x] Require planned time before handoff or Meta dispatch treats an item as publish-ready
 - [ ] Connect Meta Graph API credentials
 - [ ] Implement real Facebook publish scheduling
 - [ ] Implement Instagram two-step publish worker

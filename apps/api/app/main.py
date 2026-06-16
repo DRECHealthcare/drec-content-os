@@ -1413,10 +1413,15 @@ async def publishing_handoff(_: None = Depends(require_access_token)):
             },
         )
 
-    ready = [item for item in rows if item.get("status") == "scheduled" and item.get("compliance_status") == "clear"]
+    ready = [
+        item for item in rows
+        if item.get("status") == "scheduled"
+        and item.get("compliance_status") == "clear"
+        and item.get("planned_slot")
+    ]
     blocked = [item for item in rows if item not in ready]
     checklist = [
-        "Publish only items marked scheduled and compliance-clear.",
+        "Publish only items marked scheduled, compliance-clear, and carrying a planned time.",
         "Keep the caption unchanged unless it goes back through review.",
         "After posting, record the post ID and first 7-day result in Performance.",
     ]
@@ -1487,6 +1492,7 @@ async def next_facebook_publish_item(item_id: str | None = None):
         where channel = 'facebook'
           and status = 'scheduled'
           and compliance_status = 'clear'
+          and planned_slot is not null
         order by planned_slot nulls last, created_at asc
         limit 1
         """
@@ -1499,6 +1505,7 @@ async def next_facebook_publish_item(item_id: str | None = None):
                 "channel": "eq.facebook",
                 "status": "eq.scheduled",
                 "compliance_status": "eq.clear",
+                "planned_slot": "not.is.null",
                 "order": "planned_slot.asc.nullslast,created_at.asc",
                 "limit": "1",
             },
@@ -1515,6 +1522,8 @@ def facebook_dispatch_blockers(item: dict | None, readiness: dict):
         blockers.append("Only Facebook items are supported by this worker.")
     if item.get("status") != "scheduled":
         blockers.append("Item must be scheduled before Meta dispatch.")
+    if not item.get("planned_slot"):
+        blockers.append("Item needs a planned publish time before Meta dispatch.")
     if item.get("compliance_status") != "clear":
         blockers.append("Item must be compliance-clear before Meta dispatch.")
     if item.get("external_post_id"):
@@ -1563,6 +1572,7 @@ async def next_instagram_publish_item(item_id: str | None = None):
         where channel = 'instagram'
           and status = 'scheduled'
           and compliance_status = 'clear'
+          and planned_slot is not null
         order by planned_slot nulls last, created_at asc
         limit 1
         """
@@ -1575,6 +1585,7 @@ async def next_instagram_publish_item(item_id: str | None = None):
                 "channel": "eq.instagram",
                 "status": "eq.scheduled",
                 "compliance_status": "eq.clear",
+                "planned_slot": "not.is.null",
                 "order": "planned_slot.asc.nullslast,created_at.asc",
                 "limit": "1",
             },
@@ -1591,6 +1602,8 @@ def instagram_dispatch_blockers(item: dict | None, readiness: dict):
         blockers.append("Only Instagram items are supported by this worker.")
     if item.get("status") != "scheduled":
         blockers.append("Item must be scheduled before Instagram dispatch.")
+    if not item.get("planned_slot"):
+        blockers.append("Item needs a planned publish time before Instagram dispatch.")
     if item.get("compliance_status") != "clear":
         blockers.append("Item must be compliance-clear before Instagram dispatch.")
     if item.get("external_post_id"):

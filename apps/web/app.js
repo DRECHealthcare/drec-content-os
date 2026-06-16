@@ -1801,7 +1801,7 @@ document.getElementById("review-items").addEventListener("click", async (event) 
   button.disabled = true;
   button.textContent = "Saving";
   const statusMap = {
-    approve: "scheduled",
+    approve: "draft",
     edit: "draft",
     regen: "draft",
     reject: "cancelled",
