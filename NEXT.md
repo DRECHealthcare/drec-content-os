@@ -59,6 +59,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added workflow readiness to weekly operating report
 - [x] Made brief-to-asset creation idempotent to avoid duplicate draft assets
 - [x] Made asset-to-queue creation idempotent to avoid duplicate active queue items
+- [x] Added non-mutating live smoke check for deploy verification
 
 ## Next Engineering Tasks
 
@@ -100,6 +101,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add queue-ready asset counts and next workflow action to weekly report
 - [x] Reuse existing non-rejected asset when Save Asset is clicked repeatedly for the same brief
 - [x] Reuse existing active queue item when Add To Queue is clicked repeatedly for the same asset
+- [x] Add live smoke check script for API/web/report/Meta readiness
 - [ ] Connect Meta Graph API credentials
 - [ ] Implement real Facebook publish scheduling
 - [ ] Implement Instagram two-step publish worker

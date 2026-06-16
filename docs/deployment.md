@@ -55,6 +55,26 @@ DREC_API_BASE_URL=https://your-fly-app.fly.dev
 
 The current web shell is static. The next pass will wire its buttons to the API.
 
+## Live Smoke Check
+
+After deploying Fly.io or Vercel, run a non-mutating live check:
+
+```bash
+DREC_ACCESS_TOKEN="..." npm run smoke:live
+```
+
+Optional overrides:
+
+```bash
+DREC_API_BASE_URL="https://drec-content-os-api.fly.dev" \
+DREC_WEB_URL="https://drec-content-os.vercel.app" \
+DREC_ACCESS_TOKEN="..." \
+npm run smoke:live
+```
+
+The check verifies API health, workflow status, weekly report readiness, Meta
+readiness, and the production web shell without creating or changing records.
+
 ## GitHub
 
 Recommended repository name:
