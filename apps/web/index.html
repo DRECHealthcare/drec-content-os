@@ -65,6 +65,28 @@
           <p class="status-note">Waiting for API</p>
         </div>
       </div>
+      <div class="card wide test-path-card">
+        <div class="workflow-head">
+          <div>
+            <h2>Test Path</h2>
+            <p class="section-note">Use this once to confirm the full manual workflow is working end to end.</p>
+          </div>
+          <button id="copy-test-path" type="button">Copy Test Path</button>
+        </div>
+        <ol id="test-path-list" class="test-path-list">
+          <li><strong>Save Asset</strong><span>Open Weekly Plan and save one brief as an asset.</span></li>
+          <li><strong>Safety Clear</strong><span>Open Assets, mark the asset Safety Clear, then Approve.</span></li>
+          <li><strong>Add To Queue</strong><span>Add that approved clear asset to the publishing queue.</span></li>
+          <li><strong>Review Approve</strong><span>Open Review Queue and approve the queue item.</span></li>
+          <li><strong>Schedule</strong><span>Open Scheduler, choose a planned time, and save the item.</span></li>
+          <li><strong>Build Handoff</strong><span>Generate the handoff copy and check it lists one ready item.</span></li>
+          <li><strong>Mark Published</strong><span>After manual posting, mark the scheduled item as published.</span></li>
+          <li><strong>Record Performance</strong><span>Add saves, shares, leads, and notes under Performance.</span></li>
+          <li><strong>Build Report</strong><span>Open Learning and build the weekly report.</span></li>
+          <li><strong>Meta Setup</strong><span>Keep Meta in dry-run mode until real credentials and permissions are approved.</span></li>
+        </ol>
+        <div id="test-path-message" class="status-note"></div>
+      </div>
     </section>
 
     <section id="plan" class="screen">

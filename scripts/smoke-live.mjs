@@ -45,7 +45,7 @@ const checks = [
     auth: false,
     validate: async (res) => {
       const text = await res.text();
-      return text.includes("DREC") && text.includes("workflow-next");
+      return text.includes("DREC") && text.includes("workflow-next") && text.includes("copy-test-path");
     },
   },
   {
@@ -54,7 +54,7 @@ const checks = [
     auth: false,
     validate: async (res) => {
       const text = await res.text();
-      return text.includes("/workflow/status") && text.includes("Existing queue item opened");
+      return text.includes("/workflow/status") && text.includes("Existing queue item opened") && text.includes("function testPathText()");
     },
   },
 ];

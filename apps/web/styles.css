@@ -135,6 +135,10 @@ header span { color: var(--muted); font-size: 12px; }
   margin-top: 14px;
 }
 
+.test-path-card {
+  margin-top: 14px;
+}
+
 .workflow-head {
   display: flex;
   align-items: flex-start;
@@ -247,6 +251,52 @@ header span { color: var(--muted); font-size: 12px; }
 .workflow-step small {
   color: var(--muted);
   font-weight: 500;
+}
+
+.test-path-list {
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  counter-reset: test-step;
+  list-style: none;
+}
+
+.test-path-list li {
+  min-height: 86px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-content: start;
+  gap: 4px 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #FBFDFE;
+  counter-increment: test-step;
+}
+
+.test-path-list li::before {
+  content: counter(test-step);
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #EAF7F6;
+  color: #0B655F;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.test-path-list strong {
+  color: var(--navy);
+}
+
+.test-path-list span {
+  grid-column: 2;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .loop {
@@ -790,7 +840,7 @@ button[type="submit"] {
   aside { width: 100%; }
   header { flex-wrap: wrap; height: auto; padding: 14px 18px; }
   .screen { padding: 18px; }
-  .grid, .loop, .split-form, .learning-grid, .handoff-summary, .creative-preview, .weight-row, .scheduler-toolbar, .week-schedule, .workflow-steps { grid-template-columns: 1fr; }
+  .grid, .loop, .split-form, .learning-grid, .handoff-summary, .creative-preview, .weight-row, .scheduler-toolbar, .week-schedule, .workflow-steps, .test-path-list { grid-template-columns: 1fr; }
   .workflow-head, .workflow-primary { align-items: stretch; flex-direction: column; }
   .workflow-primary button { width: 100%; }
   .loop div { border-right: 0; border-bottom: 1px solid var(--line); }

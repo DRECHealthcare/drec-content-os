@@ -72,6 +72,11 @@ const requiredSnippets = [
     file: "web",
     text: "Existing queue item opened.",
   },
+  {
+    name: "web test path helper",
+    file: "web",
+    text: "function testPathText()",
+  },
 ];
 
 const routePattern = /@app\.(get|post|patch|delete)\("([^"]+)"/g;

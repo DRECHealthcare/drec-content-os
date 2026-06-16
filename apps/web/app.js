@@ -357,6 +357,23 @@ function workflowSteps(data) {
   return steps;
 }
 
+function testPathText() {
+  return [
+    "DREC Content OS Test Path",
+    "",
+    "1. Save Asset: Open Weekly Plan and save one brief as an asset.",
+    "2. Safety Clear: Open Assets, mark the asset Safety Clear, then Approve.",
+    "3. Add To Queue: Add that approved clear asset to the publishing queue.",
+    "4. Review Approve: Open Review Queue and approve the queue item.",
+    "5. Schedule: Open Scheduler, choose a planned time, and save the item.",
+    "6. Build Handoff: Generate the handoff copy and check it lists one ready item.",
+    "7. Mark Published: After manual posting, mark the scheduled item as published.",
+    "8. Record Performance: Add saves, shares, leads, and notes under Performance.",
+    "9. Build Report: Open Learning and build the weekly report.",
+    "10. Meta Setup: Keep Meta in dry-run mode until real credentials and permissions are approved.",
+  ].join("\n");
+}
+
 function renderWorkflowNext(data) {
   const container = document.getElementById("workflow-next");
   if (!container) return;
@@ -1205,6 +1222,16 @@ document.getElementById("refresh-workflow").addEventListener("click", async () =
   await loadLoopStatus();
   button.disabled = false;
   button.textContent = "Refresh";
+});
+
+document.getElementById("copy-test-path")?.addEventListener("click", async () => {
+  const message = document.getElementById("test-path-message");
+  try {
+    await navigator.clipboard.writeText(testPathText());
+    message.textContent = "Test path copied.";
+  } catch {
+    message.textContent = "Could not copy automatically. Use the visible checklist.";
+  }
 });
 
 document.getElementById("plan-form").addEventListener("submit", async (event) => {

@@ -19,7 +19,7 @@ This repository starts the Stage 1 build from the unified proposal:
 - **GitHub**: source control and CI/CD
 
 Current Supabase project details are documented in `docs/supabase.md`.
-Manual workflow testing is documented in `docs/operator-test-runbook.md`.
+Manual workflow testing is available on the Dashboard and documented in `docs/operator-test-runbook.md`.
 
 ## Project Shape
 
@@ -60,7 +60,7 @@ uvicorn app.main:app --reload --port 8080
 Stage 1 is now a working thin-core workflow:
 
 - Generate weekly DREC content briefs
-- See the next best workflow action on the Dashboard, backed by the API, so testing and automation can move from brief to approved asset to queue to schedule without guessing
+- See the next best workflow action and copyable Test Path on the Dashboard, backed by the API, so testing and automation can move from brief to approved asset to queue to schedule without guessing
 - Pull learning-informed topic recommendations into the next weekly plan
 - Mark content briefs as drafted or archived so weekly plans stay manageable
 - Save a draft asset directly from a weekly brief for faster review prep
