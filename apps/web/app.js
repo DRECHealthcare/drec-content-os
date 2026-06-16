@@ -259,15 +259,139 @@ function defaultPointsForBrief(brief) {
   ];
 }
 
+function queueTotal(queue) {
+  return Array.isArray(queue) ? queue.reduce((sum, item) => sum + Number(item.count || 0), 0) : 0;
+}
+
+function workflowSteps(data) {
+  const totalQueue = queueTotal(data.queue);
+  const briefCount = Number(data.brief_count || 0);
+  const assetCount = Number(data.asset_count || 0);
+  const mediaCount = Number(data.media_count || 0);
+  const outcomeCount = Number(data.outcome_count || 0);
+  const steps = [];
+
+  if (!briefCount) {
+    steps.push({
+      state: "open",
+      title: "Generate this week's briefs",
+      body: "Start from Weekly Plan so the system has topics, formats, hooks, and safety notes.",
+      screen: "plan",
+      action: "Open Weekly Plan",
+    });
+  } else {
+    steps.push({
+      state: "done",
+      title: "Weekly briefs ready",
+      body: `${briefCount} brief(s) are available for drafting.`,
+      screen: "plan",
+      action: "View Briefs",
+    });
+  }
+
+  if (!assetCount) {
+    steps.push({
+      state: briefCount ? "open" : "locked",
+      title: "Save one brief as an asset",
+      body: "Use Save Asset on a brief to create a reusable caption package with slides or script notes.",
+      screen: "plan",
+      action: "Save Asset",
+    });
+  } else {
+    steps.push({
+      state: "done",
+      title: "Draft assets ready",
+      body: `${assetCount} asset(s) are saved for review and queueing.`,
+      screen: "assets",
+      action: "Review Assets",
+    });
+  }
+
+  if (!totalQueue) {
+    steps.push({
+      state: assetCount ? "open" : "locked",
+      title: "Add an asset to the queue",
+      body: "Move one clear asset into Review Queue before scheduling.",
+      screen: "assets",
+      action: "Open Assets",
+    });
+  } else {
+    steps.push({
+      state: "done",
+      title: "Queue has content",
+      body: `${totalQueue} item(s) are waiting in the publishing workflow.`,
+      screen: "review",
+      action: "Review Queue",
+    });
+  }
+
+  steps.push({
+    state: totalQueue ? "open" : "locked",
+    title: "Review and schedule",
+    body: "Approve safe content, choose a planned publish time, then build the manual handoff.",
+    screen: totalQueue ? "review" : "scheduler",
+    action: totalQueue ? "Open Review" : "Open Scheduler",
+  });
+
+  steps.push({
+    state: outcomeCount ? "done" : "open",
+    title: "Record performance",
+    body: outcomeCount
+      ? `${outcomeCount} result(s) are feeding the learning loop.`
+      : "After a post is published, add results so future topics improve.",
+    screen: "outcomes",
+    action: "Open Performance",
+  });
+
+  if (!mediaCount) {
+    steps.push({
+      state: "open",
+      title: "Optional: add approved media",
+      body: "Register owned or approved images/videos before using media-heavy posts.",
+      screen: "assets",
+      action: "Add Media",
+      optional: true,
+    });
+  }
+
+  return steps;
+}
+
+function renderWorkflowNext(data) {
+  const container = document.getElementById("workflow-next");
+  if (!container) return;
+  const steps = workflowSteps(data);
+  const firstOpen = steps.find((step) => step.state === "open" && !step.optional) || steps.find((step) => step.state === "open") || steps[0];
+  container.innerHTML = `
+    <article class="workflow-primary ${escapeHtml(firstOpen.state)}">
+      <div>
+        <strong>${escapeHtml(firstOpen.title)}</strong>
+        <p>${escapeHtml(firstOpen.body)}</p>
+      </div>
+      <button type="button" data-workflow-screen="${escapeHtml(firstOpen.screen)}">${escapeHtml(firstOpen.action)}</button>
+    </article>
+    <div class="workflow-steps">
+      ${steps.map((step) => `
+        <button type="button" class="workflow-step ${escapeHtml(step.state)}" data-workflow-screen="${escapeHtml(step.screen)}">
+          <span>${escapeHtml(step.state)}</span>
+          <strong>${escapeHtml(step.title)}</strong>
+          <small>${escapeHtml(step.body)}</small>
+        </button>
+      `).join("")}
+    </div>
+  `;
+}
+
 async function loadLoopStatus() {
   try {
     const data = await fetchJson("/loop-status");
-    const scheduled = data.queue?.reduce((sum, item) => sum + item.count, 0) || 0;
+    const scheduled = queueTotal(data.queue);
     document.getElementById("queue-count").textContent = `${scheduled} queue item(s)`;
     document.getElementById("brief-count").textContent = `${data.brief_count || 0} brief(s)`;
     document.getElementById("asset-count").textContent = `${data.asset_count || 0} asset(s)`;
     document.getElementById("media-count").textContent = `${data.media_count || 0} media item(s)`;
     document.getElementById("outcome-count").textContent = `${data.outcome_count || 0} performance record(s)`;
+    renderWorkflowNext(data);
   } catch {
     const message = accessToken() ? "API access failed" : "Set access token";
     document.getElementById("queue-count").textContent = message;
@@ -275,6 +399,8 @@ async function loadLoopStatus() {
     document.getElementById("asset-count").textContent = message;
     document.getElementById("media-count").textContent = message;
     document.getElementById("outcome-count").textContent = message;
+    const workflow = document.getElementById("workflow-next");
+    if (workflow) workflow.innerHTML = `<p class="status-note">${escapeHtml(message)}</p>`;
   }
 }
 
@@ -1047,6 +1173,21 @@ document.getElementById("kb-form").addEventListener("submit", async (event) => {
   await fetchJson("/kb", { method: "POST", body: JSON.stringify(payload) });
   event.currentTarget.reset();
   await Promise.all([loadKb(), loadLoopStatus()]);
+});
+
+document.getElementById("workflow-next").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-workflow-screen]");
+  if (!button) return;
+  showScreen(button.dataset.workflowScreen);
+});
+
+document.getElementById("refresh-workflow").addEventListener("click", async () => {
+  const button = document.getElementById("refresh-workflow");
+  button.disabled = true;
+  button.textContent = "Refreshing";
+  await loadLoopStatus();
+  button.disabled = false;
+  button.textContent = "Refresh";
 });
 
 document.getElementById("plan-form").addEventListener("submit", async (event) => {
