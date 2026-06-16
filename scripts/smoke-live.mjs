@@ -176,7 +176,7 @@ const checks = [
     auth: true,
     validate: async (res) => {
       const text = await res.text();
-      return text.includes("# DREC Content OS Operator Pack") && text.includes("## Can I Use It Now") && text.includes("## Launch Readiness") && text.includes("## Content Risk Audit") && text.includes("## Publishing Handoff") && text.includes("## Weekly Operating Report");
+      return text.includes("# DREC Content OS Operator Pack") && text.includes("## Can I Use It Now") && text.includes("## Meta OAuth Guide") && text.includes("## Launch Readiness") && text.includes("## Content Risk Audit") && text.includes("## Publishing Handoff") && text.includes("## Weekly Operating Report");
     },
   },
   {
@@ -189,12 +189,28 @@ const checks = [
     },
   },
   {
+    name: "Meta OAuth guide",
+    url: `${apiBase}/meta/oauth-guide`,
+    auth: true,
+    validate: async (res) => {
+      const data = await res.json();
+      return Array.isArray(data.required_scopes)
+        && data.required_scopes.includes("pages_manage_posts")
+        && typeof data.oauth_dialog_url_template === "string"
+        && data.oauth_dialog_url_template.includes("dialog/oauth")
+        && Array.isArray(data.meta_app_setup);
+    },
+  },
+  {
     name: "Meta setup checklist",
     url: `${apiBase}/meta/setup-checklist`,
     auth: true,
     validate: async (res) => {
       const data = await res.json();
-      return Array.isArray(data.steps) && Array.isArray(data.setup_commands) && data.required_secrets?.includes("META_PAGE_ACCESS_TOKEN");
+      return Array.isArray(data.steps)
+        && Array.isArray(data.setup_commands)
+        && data.required_secrets?.includes("META_PAGE_ACCESS_TOKEN")
+        && Array.isArray(data.oauth_guide?.required_scopes);
     },
   },
   {

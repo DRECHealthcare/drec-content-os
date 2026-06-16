@@ -73,6 +73,7 @@ Stage 1 is now a working thin-core workflow:
 - Use the GitHub Actions dry-run scheduler template to check publishing, metrics, automation, and risk gates without mutating live records
 - Record GitHub dry-run scheduler heartbeats so the app can show whether the every-6-hour checks are actually running
 - See the GitHub Scheduler Setup steps in Meta Setup and the Operator Pack before turning on recurring dry-run checks
+- Generate a Meta OAuth guide with redirect URI, required scopes, setup steps, and a copyable Login dialog URL/template before real credentials are installed
 - See the Supabase service-role readiness gate before stricter RLS policies are applied
 - Use safer session-only access-token storage by default, with explicit Remember and Clear controls for shared testing devices
 - Pull learning-informed topic recommendations into the next weekly plan

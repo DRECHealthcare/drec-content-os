@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     meta_graph_version: str = "v23.0"
     meta_app_id: Optional[str] = None
     meta_app_secret: Optional[str] = None
+    meta_oauth_redirect_uri: str = "https://drec-content-os.vercel.app/"
     meta_page_id: Optional[str] = None
     meta_ig_user_id: Optional[str] = None
     meta_page_access_token: Optional[str] = None

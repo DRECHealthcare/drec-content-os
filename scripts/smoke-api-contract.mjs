@@ -28,6 +28,7 @@ const requiredRoutes = [
   "GET /operations/operator-pack.md",
   "GET /weekly-report.md",
   "GET /meta/readiness",
+  "GET /meta/oauth-guide",
   "GET /meta/setup-checklist",
   "GET /kb/export.csv",
   "GET /kb/context",
@@ -275,9 +276,24 @@ const requiredSnippets = [
     text: "usability_markdown_lines(launch)",
   },
   {
+    name: "operator pack meta oauth section",
+    file: "main",
+    text: "## Meta OAuth Guide",
+  },
+  {
     name: "meta setup checklist route",
     file: "main",
     text: "meta_setup_checklist",
+  },
+  {
+    name: "meta oauth guide route",
+    file: "main",
+    text: "meta_oauth_guide",
+  },
+  {
+    name: "meta oauth dialog url",
+    file: "main",
+    text: "dialog/oauth",
   },
   {
     name: "knowledge context route",
@@ -608,6 +624,16 @@ const requiredSnippets = [
     name: "web meta setup copy action",
     file: "web",
     text: "copy-meta-setup",
+  },
+  {
+    name: "web meta oauth copy action",
+    file: "web",
+    text: "copy-meta-oauth",
+  },
+  {
+    name: "web visible meta oauth url",
+    file: "web",
+    text: "meta-oauth-url",
   },
   {
     name: "web visible meta setup commands",

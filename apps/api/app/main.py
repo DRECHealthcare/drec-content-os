@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from io import StringIO
 import json
 import re
+from urllib.parse import urlencode
 from uuid import UUID, uuid4
 
 import httpx
@@ -83,6 +84,7 @@ META_ENV_REQUIREMENTS = [
     ("META_IG_USER_ID", "meta_ig_user_id", "Instagram business user ID"),
     ("META_PAGE_ACCESS_TOKEN", "meta_page_access_token", "Page access token"),
 ]
+META_OAUTH_STATE_PLACEHOLDER = "replace-with-random-state"
 
 
 @asynccontextmanager
@@ -216,6 +218,52 @@ async def meta_readiness(_: None = Depends(require_access_token)):
     }
 
 
+def meta_oauth_guide_payload():
+    scopes = META_REQUIRED_PERMISSIONS
+    app_id = settings.meta_app_id or "{META_APP_ID}"
+    params = {
+        "client_id": app_id,
+        "redirect_uri": settings.meta_oauth_redirect_uri,
+        "state": META_OAUTH_STATE_PLACEHOLDER,
+        "scope": ",".join(scopes),
+        "response_type": "code",
+    }
+    oauth_url = f"https://www.facebook.com/{settings.meta_graph_version}/dialog/oauth?{urlencode(params)}"
+    return {
+        "configured": bool(settings.meta_app_id),
+        "graph_version": settings.meta_graph_version,
+        "redirect_uri": settings.meta_oauth_redirect_uri,
+        "required_scopes": scopes,
+        "oauth_dialog_url": oauth_url if settings.meta_app_id else None,
+        "oauth_dialog_url_template": oauth_url,
+        "state_note": "Replace the state value with a random one-time value before using this URL in a production OAuth flow.",
+        "meta_app_setup": [
+            "In Meta for Developers, add Facebook Login for Business or Facebook Login to the app.",
+            "Add the redirect URI shown here to Valid OAuth Redirect URIs.",
+            "Request the listed permissions during login and complete Meta App Review where required.",
+            "Exchange the returned code for a user token on a server-side machine only.",
+            "Use the user token to list managed Pages and obtain a Page access token.",
+            "Install the Page access token on Fly as META_PAGE_ACCESS_TOKEN, then run Meta readiness and dry-run checks.",
+        ],
+        "server_side_exchange": {
+            "warning": "Do not exchange codes or handle META_APP_SECRET in the browser.",
+            "token_exchange_url": f"https://graph.facebook.com/{settings.meta_graph_version}/oauth/access_token",
+            "page_accounts_url": f"https://graph.facebook.com/{settings.meta_graph_version}/me/accounts",
+            "needed_values": ["META_APP_ID", "META_APP_SECRET", "redirect_uri", "code"],
+        },
+        "safety": [
+            "Keep DREC manual handoff active while connecting Meta.",
+            "Do not enable META_ENABLE_PUBLISHING until /meta/readiness is ready and dry-runs pass.",
+            "Use one Facebook test publish before Instagram or metrics automation.",
+        ],
+    }
+
+
+@app.get("/meta/oauth-guide")
+async def meta_oauth_guide(_: None = Depends(require_access_token)):
+    return meta_oauth_guide_payload()
+
+
 def parse_datetime(value):
     if isinstance(value, datetime):
         parsed = value
@@ -286,6 +334,7 @@ async def meta_setup_checklist(_: None = Depends(require_access_token)):
     readiness = await meta_readiness(None)
     security = security_status_payload()
     scheduler_heartbeat = await latest_scheduler_heartbeat()
+    oauth_guide = meta_oauth_guide_payload()
     missing_env = [check for check in readiness.get("env_checks", []) if not check.get("configured")]
     missing_permissions = readiness.get("token_check", {}).get("missing_permissions", [])
     required_secret_names = [
@@ -329,6 +378,7 @@ async def meta_setup_checklist(_: None = Depends(require_access_token)):
         "missing_permissions": missing_permissions,
         "required_secrets": required_secret_names,
         "setup_commands": setup_commands,
+        "oauth_guide": oauth_guide,
         "scheduler_setup": scheduler_setup,
         "steps": [
             {
@@ -1782,6 +1832,7 @@ async def operations_operator_pack(_: None = Depends(require_access_token)):
     security = security_status_payload()
     meta = await meta_readiness(None)
     setup = await meta_setup_checklist(None)
+    oauth = setup.get("oauth_guide", {})
     risk = await content_risk_audit_payload()
     handoff = await publishing_handoff(None)
     weekly = await weekly_report(None)
@@ -1805,6 +1856,8 @@ async def operations_operator_pack(_: None = Depends(require_access_token)):
         f"- Safety: {scheduler.get('safety', 'Dry-run checks only.')}",
     ]
     scheduler_step_lines = [f"- {step}" for step in scheduler.get("steps", [])] or ["- No scheduler setup steps available."]
+    oauth_setup_lines = [f"- {step}" for step in oauth.get("meta_app_setup", [])] or ["- No Meta OAuth setup steps available."]
+    oauth_scope_lines = [f"- {scope}" for scope in oauth.get("required_scopes", [])] or ["- No Meta scopes listed."]
     risk_lines = [
         f"- [{item.get('severity')}] {item.get('kind')} {item.get('id')}: {item.get('title')} — {item.get('action')}"
         for item in risk.get("items", [])[:25]
@@ -1861,6 +1914,21 @@ async def operations_operator_pack(_: None = Depends(require_access_token)):
         "Command template:",
         "",
         *command_lines,
+        "",
+        "## Meta OAuth Guide",
+        "",
+        f"- Configured: {'yes' if oauth.get('configured') else 'no'}",
+        f"- Redirect URI: {oauth.get('redirect_uri', '')}",
+        f"- OAuth URL/template: {oauth.get('oauth_dialog_url') or oauth.get('oauth_dialog_url_template') or 'Unavailable'}",
+        f"- State note: {oauth.get('state_note', '')}",
+        "",
+        "Required scopes:",
+        "",
+        *oauth_scope_lines,
+        "",
+        "Setup steps:",
+        "",
+        *oauth_setup_lines,
         "",
         "## GitHub Scheduler Setup",
         "",

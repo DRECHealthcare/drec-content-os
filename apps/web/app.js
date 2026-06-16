@@ -4,6 +4,7 @@ const rememberTokenKey = "DREC_REMEMBER_ACCESS_TOKEN";
 let currentDraft = null;
 let editingQueueItem = null;
 let latestMetaSetupCommands = [];
+let latestMetaOAuthUrl = "";
 
 const titleMap = {
   dashboard: "Dashboard",
@@ -722,6 +723,8 @@ function renderMetaReadiness(data) {
 function renderMetaSetupChecklist(data) {
   const container = document.getElementById("meta-setup-checklist");
   latestMetaSetupCommands = data.setup_commands || [];
+  const oauth = data.oauth_guide || {};
+  latestMetaOAuthUrl = oauth.oauth_dialog_url || oauth.oauth_dialog_url_template || "";
   const scheduler = data.scheduler_setup || {};
   const githubSecrets = scheduler.required_github_secrets || [];
   const githubVariables = scheduler.optional_github_variables || [];
@@ -740,6 +743,18 @@ function renderMetaSetupChecklist(data) {
     <article class="learning-card wide-learning">
       <h3>Setup Commands</h3>
       <pre id="meta-setup-commands">${escapeHtml(latestMetaSetupCommands.join("\n"))}</pre>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Meta OAuth Guide</h3>
+      <p>${oauth.configured ? "OAuth URL is ready to copy." : "Add META_APP_ID to generate a live OAuth URL. The template below shows the required redirect and scopes."}</p>
+      <small>Redirect URI: ${escapeHtml(oauth.redirect_uri || "")}</small>
+      <ul>
+        <li><strong>Graph</strong> ${escapeHtml(oauth.graph_version || "")}</li>
+        <li><strong>Scopes</strong> ${escapeHtml((oauth.required_scopes || []).join(", "))}</li>
+      </ul>
+      <pre id="meta-oauth-url">${escapeHtml(latestMetaOAuthUrl || "OAuth guide unavailable.")}</pre>
+      <ol>${(oauth.meta_app_setup || []).map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol>
+      <p>${escapeHtml(oauth.server_side_exchange?.warning || "Keep app secrets server-side.")}</p>
     </article>
     <article class="learning-card wide-learning">
       <h3>GitHub Scheduler Setup</h3>
@@ -2368,6 +2383,20 @@ document.getElementById("copy-meta-setup").addEventListener("click", async () =>
     message.textContent = "Setup command template copied.";
   } catch {
     message.textContent = "Could not copy automatically. Use the visible setup command template.";
+  }
+});
+
+document.getElementById("copy-meta-oauth").addEventListener("click", async () => {
+  const message = document.getElementById("meta-message");
+  if (!latestMetaOAuthUrl) {
+    message.textContent = "Load the Meta setup checklist first.";
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(latestMetaOAuthUrl);
+    message.textContent = latestMetaOAuthUrl.includes("{META_APP_ID}") ? "OAuth URL template copied." : "OAuth URL copied.";
+  } catch {
+    message.textContent = "Could not copy automatically. Use the visible OAuth URL.";
   }
 });
 
