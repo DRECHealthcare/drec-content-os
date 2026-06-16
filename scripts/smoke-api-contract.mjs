@@ -26,6 +26,7 @@ const requiredRoutes = [
   "GET /operations/review-log.md",
   "GET /operations/review-queue.csv",
   "GET /operations/learning-snapshot.csv",
+  "GET /operations/metrics-template.csv",
   "GET /operations/publishing-run-sheet.md",
   "GET /operations/operator-pack.md",
   "GET /weekly-report.md",
@@ -266,6 +267,16 @@ const requiredSnippets = [
     name: "learning snapshot raw metrics",
     file: "main",
     text: "raw_metric",
+  },
+  {
+    name: "metrics template export",
+    file: "main",
+    text: "drec-metrics-template.csv",
+  },
+  {
+    name: "metrics template instructions row",
+    file: "main",
+    text: "row_type",
   },
   {
     name: "outcome insights aggregation",
@@ -511,6 +522,16 @@ const requiredSnippets = [
     name: "web learning snapshot endpoint",
     file: "web",
     text: "/operations/learning-snapshot.csv",
+  },
+  {
+    name: "web metrics template action",
+    file: "web",
+    text: "download-metrics-template",
+  },
+  {
+    name: "web metrics template endpoint",
+    file: "web",
+    text: "/operations/metrics-template.csv",
   },
   {
     name: "web learning topics helper",

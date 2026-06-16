@@ -114,6 +114,7 @@ Stage 1 is now a working thin-core workflow:
 - Show why blocked handoff items are not ready yet
 - Record the Meta post ID directly from the handoff after manual posting
 - Mark manually published posts with their Meta post ID so metrics ingestion can learn from them later
+- Download a metrics CSV template with current published candidates, sample manual values, and field instructions for cleaner performance entry
 - Dry-run Facebook and Instagram publishing workers before Meta credentials are connected
 - Dry-run the scheduler-ready Meta publishing job against due scheduled posts before real posting is enabled
 - Check the scheduled Meta publishing job from Meta Setup without using the terminal

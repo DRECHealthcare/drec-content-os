@@ -29,6 +29,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added publishing handoff builder for manual-safe execution before Meta is connected
 - [x] Added asset library workflow and Creative Draft packages with caption variants, carousel slides, and reel scripts
 - [x] Added raw metrics entry and rollup into scored learning outcomes
+- [x] Added metrics CSV template for manual performance capture
 - [x] Added media library records with usage-rights and approval status
 - [x] Enabled Supabase RLS with server API policies
 - [x] Added private Supabase Storage upload path for DREC media
@@ -105,6 +106,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add first closed-loop learning report
 - [x] Add Creative Engine draft packages
 - [x] Add metrics-to-outcomes rollup before Meta is connected
+- [x] Add downloadable metrics template for manual performance capture
 - [x] Add media library records before Meta publishing
 - [x] Add private media file upload through the API
 - [x] Add signed links for private media review

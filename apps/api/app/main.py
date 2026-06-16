@@ -1291,6 +1291,101 @@ async def operations_daily_ops_checklist(_: None = Depends(require_access_token)
     )
 
 
+@app.get("/operations/metrics-template.csv")
+async def operations_metrics_template(_: None = Depends(require_access_token)):
+    source = await published_metric_source(10, None)
+    output = StringIO()
+    fieldnames = [
+        "row_type",
+        "source",
+        "external_post_id",
+        "captured_at",
+        "reach",
+        "likes",
+        "comments",
+        "saves",
+        "shares",
+        "leads",
+        "spend",
+        "format",
+        "channel",
+        "funnel_stage",
+        "metric_window",
+        "notes",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    candidates = source.get("candidates") or []
+    if candidates:
+        for item in candidates[:10]:
+            writer.writerow(
+                {
+                    "row_type": "published_candidate",
+                    "source": item.get("channel") or "manual",
+                    "external_post_id": item.get("external_post_id") or "",
+                    "captured_at": datetime.now(timezone.utc).isoformat(),
+                    "reach": "",
+                    "likes": "",
+                    "comments": "",
+                    "saves": "",
+                    "shares": "",
+                    "leads": "",
+                    "spend": "",
+                    "format": item.get("format") or "",
+                    "channel": item.get("channel") or "",
+                    "funnel_stage": "TOFU",
+                    "metric_window": "7d",
+                    "notes": (item.get("caption") or "")[:160],
+                }
+            )
+    else:
+        writer.writerow(
+            {
+                "row_type": "sample",
+                "source": "manual",
+                "external_post_id": "manual-test-001",
+                "captured_at": datetime.now(timezone.utc).isoformat(),
+                "reach": "1000",
+                "likes": "35",
+                "comments": "5",
+                "saves": "12",
+                "shares": "8",
+                "leads": "1",
+                "spend": "0",
+                "format": "carousel",
+                "channel": "manual",
+                "funnel_stage": "TOFU",
+                "metric_window": "7d",
+                "notes": "Example row for first manual workflow test.",
+            }
+        )
+    writer.writerow(
+        {
+            "row_type": "instructions",
+            "source": "Allowed: facebook, instagram, manual, ads",
+            "external_post_id": "Required. Use Meta post ID or a manual label.",
+            "captured_at": "ISO timestamp. Leave as generated or replace after capture.",
+            "reach": "Number",
+            "likes": "Number",
+            "comments": "Number",
+            "saves": "Number",
+            "shares": "Number",
+            "leads": "Number",
+            "spend": "Number, use 0 for organic/manual",
+            "format": "carousel, single, reel, or story",
+            "channel": "facebook, instagram, or manual",
+            "funnel_stage": "TOFU, MOFU, or BOFU",
+            "metric_window": "7d, 28d, or 90d",
+            "notes": "Paste notes into outcome vs_plan_note if useful.",
+        }
+    )
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-metrics-template.csv"'},
+    )
+
+
 def snapshot_row(record_type, item_id="", status="", channel="", fmt="", title="", created_at="", detail=""):
     return {
         "record_type": record_type,

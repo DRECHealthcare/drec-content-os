@@ -2620,6 +2620,16 @@ document.getElementById("download-learning-snapshot")?.addEventListener("click",
   }
 });
 
+document.getElementById("download-metrics-template")?.addEventListener("click", async () => {
+  const message = document.getElementById("metric-message");
+  try {
+    await downloadProtectedFile("/operations/metrics-template.csv", "drec-metrics-template.csv", "text/csv");
+    message.textContent = "Metrics template downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download metrics template.";
+  }
+});
+
 document.getElementById("weight-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const message = document.getElementById("weight-message");

@@ -177,6 +177,16 @@ const checks = [
     },
   },
   {
+    name: "Metrics template",
+    url: `${apiBase}/operations/metrics-template.csv`,
+    auth: true,
+    validate: async (res) => {
+      const text = await res.text();
+      return text.includes("row_type,source,external_post_id,captured_at,reach,likes,comments,saves,shares,leads,spend,format,channel,funnel_stage,metric_window,notes")
+        && text.includes("instructions");
+    },
+  },
+  {
     name: "Learning summary insights",
     url: `${apiBase}/learning-summary`,
     auth: true,
