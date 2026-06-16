@@ -118,6 +118,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add live smoke check script for API/web/report/Meta readiness
 - [x] Add local contract smoke check for key routes and safety gates
 - [x] Document the manual full-cycle test path from brief to weekly report
+- [x] Update Dashboard Test Path to match handoff publishing and Save & Roll Up
 - [ ] Connect Meta Graph API credentials
 - [ ] Implement real Facebook publish scheduling
 - [ ] Implement Instagram two-step publish worker

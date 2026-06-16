@@ -60,7 +60,7 @@ uvicorn app.main:app --reload --port 8080
 Stage 1 is now a working thin-core workflow:
 
 - Generate weekly DREC content briefs
-- See the next best workflow action and copyable Test Path on the Dashboard, backed by the API, so testing and automation can move from brief to approved asset to queue to schedule without guessing
+- See the next best workflow action and copyable Test Path on the Dashboard, backed by the API, so testing and automation can move from brief to approved asset to queue, handoff, published ID, metrics, and report without guessing
 - Pull learning-informed topic recommendations into the next weekly plan
 - Mark content briefs as drafted or archived so weekly plans stay manageable
 - Save a draft asset directly from a weekly brief for faster review prep

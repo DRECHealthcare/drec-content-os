@@ -367,8 +367,8 @@ function testPathText() {
     "4. Review Approve: Open Review Queue and approve the queue item.",
     "5. Schedule: Open Scheduler, choose a planned time, and save the item.",
     "6. Build Handoff: Generate the handoff copy and check it lists one ready item.",
-    "7. Mark Published: After manual posting, mark the scheduled item as published.",
-    "8. Record Performance: Add saves, shares, leads, and notes under Performance.",
+    "7. Record Published: After manual posting, paste the Meta post ID from the handoff ready item.",
+    "8. Save & Roll Up: Add metrics under Performance, then save and roll them into learning.",
     "9. Build Report: Open Learning and build the weekly report.",
     "10. Meta Setup: Keep Meta in dry-run mode until real credentials and permissions are approved.",
   ].join("\n");

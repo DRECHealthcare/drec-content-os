@@ -110,6 +110,16 @@ const requiredSnippets = [
     text: "function testPathText()",
   },
   {
+    name: "web test path published step",
+    file: "web",
+    text: "Record Published: After manual posting",
+  },
+  {
+    name: "web test path rollup step",
+    file: "web",
+    text: "Save & Roll Up: Add metrics",
+  },
+  {
     name: "web suggested slot action",
     file: "web",
     text: "schedule-next",

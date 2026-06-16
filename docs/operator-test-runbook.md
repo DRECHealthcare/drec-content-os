@@ -99,7 +99,7 @@ Goal: produce the manual handoff while Meta auto-publishing is locked.
 
 Pass condition: only scheduled, safety-clear items with planned time are ready.
 
-### 7. Mark Published
+### 7. Record Published
 
 Goal: connect manual publishing back to learning.
 
