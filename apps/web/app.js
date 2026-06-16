@@ -2223,6 +2223,17 @@ document.getElementById("download-run-sheet")?.addEventListener("click", async (
   }
 });
 
+document.getElementById("download-schedule-csv")?.addEventListener("click", async () => {
+  const message = document.getElementById("queue-message");
+  message.textContent = "Preparing schedule CSV...";
+  try {
+    await downloadProtectedFile("/publish-queue/schedule.csv", "drec-publishing-schedule.csv", "text/csv");
+    message.textContent = "Publishing schedule CSV downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download schedule CSV.";
+  }
+});
+
 document.getElementById("dry-run-facebook").addEventListener("click", async () => {
   const message = document.getElementById("queue-message");
   message.textContent = "Checking Facebook worker...";

@@ -27,6 +27,7 @@ const requiredRoutes = [
   "GET /meta/setup-checklist",
   "GET /kb/context",
   "GET /publish-queue/suggest-slot",
+  "GET /publish-queue/schedule.csv",
   "GET /metrics/published-source",
   "POST /briefs/{brief_id}/draft-asset",
   "POST /briefs/draft-assets",
@@ -115,6 +116,11 @@ const requiredSnippets = [
     name: "schedule suggestion rotation",
     file: "main",
     text: "PUBLISH_SLOT_ROTATION",
+  },
+  {
+    name: "publishing schedule csv export",
+    file: "main",
+    text: "drec-publishing-schedule.csv",
   },
   {
     name: "workflow readiness report",
@@ -435,6 +441,16 @@ const requiredSnippets = [
     name: "web publishing run sheet endpoint",
     file: "web",
     text: "/operations/publishing-run-sheet.md",
+  },
+  {
+    name: "web publishing schedule csv action",
+    file: "web",
+    text: "download-schedule-csv",
+  },
+  {
+    name: "web publishing schedule csv endpoint",
+    file: "web",
+    text: "/publish-queue/schedule.csv",
   },
   {
     name: "web review queue filter",

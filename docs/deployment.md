@@ -103,6 +103,10 @@ The Scheduler `Download Run Sheet` action calls
 ready scheduled items, blocked items, captions, media, and post-publishing
 recording reminders for manual Meta posting.
 
+The Scheduler `Download Schedule CSV` action calls
+`/publish-queue/schedule.csv` and exports the full queue for spreadsheet review,
+including planned slots, blockers, captions, media links, and handoff readiness.
+
 The Dashboard launch readiness summary calls `/operations/launch-readiness` and
 separates what is usable now in manual mode from what remains blocked for real
 Meta automation.

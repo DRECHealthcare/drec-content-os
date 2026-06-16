@@ -3036,6 +3036,67 @@ async def publish_queue_calendar(_: None = Depends(require_access_token)):
     )
 
 
+@app.get("/publish-queue/schedule.csv")
+async def publish_queue_schedule_csv(_: None = Depends(require_access_token)):
+    rows = await snapshot_select(
+        "publish_queue",
+        """
+        select id, asset_id, channel, format, caption, media_urls, planned_slot, status,
+               compliance_status, external_post_id, created_at
+        from publish_queue
+        order by planned_slot nulls last, created_at desc
+        limit 500
+        """,
+        {
+            "select": "id,asset_id,channel,format,caption,media_urls,planned_slot,status,compliance_status,external_post_id,created_at",
+            "order": "planned_slot.asc.nullslast,created_at.desc",
+            "limit": "500",
+        },
+    )
+    output = StringIO()
+    fieldnames = [
+        "queue_id",
+        "asset_id",
+        "status",
+        "channel",
+        "format",
+        "planned_slot",
+        "compliance_status",
+        "external_post_id",
+        "handoff_ready",
+        "blockers",
+        "media_urls",
+        "caption",
+        "created_at",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for item in rows:
+        blockers = queue_item_blockers(item)
+        writer.writerow(
+            {
+                "queue_id": item.get("id") or "",
+                "asset_id": item.get("asset_id") or "",
+                "status": item.get("status") or "",
+                "channel": item.get("channel") or "",
+                "format": item.get("format") or "",
+                "planned_slot": item.get("planned_slot") or "",
+                "compliance_status": item.get("compliance_status") or "",
+                "external_post_id": item.get("external_post_id") or "",
+                "handoff_ready": "yes" if not blockers else "no",
+                "blockers": "; ".join(blockers),
+                "media_urls": "\n".join([url for url in item.get("media_urls") or [] if url]),
+                "caption": item.get("caption") or "",
+                "created_at": item.get("created_at") or "",
+            }
+        )
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-publishing-schedule.csv"'},
+    )
+
+
 @app.post("/compliance/check")
 async def check_compliance(item: ComplianceCheckIn, _: None = Depends(require_access_token)):
     return check_text(item.text)
