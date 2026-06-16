@@ -24,13 +24,13 @@ Goal: turn one brief into one reusable draft asset.
 
 1. Open `Weekly Plan`.
 2. Pick one brief.
-3. Click `Save Asset`.
+3. Click `Save All Assets`, or use `Save Asset` on one brief when testing a single item.
 4. Expected result:
    - You are moved to `Assets`.
-   - A draft asset appears.
+   - Draft assets appear.
    - If the same brief was already saved, the app says `Existing draft asset opened.`
 
-Pass condition: one asset exists for the brief, without duplicate copies.
+Pass condition: assets exist for the selected briefs, without duplicate copies.
 
 ### 2. Asset Safety And Review
 

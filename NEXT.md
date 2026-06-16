@@ -49,6 +49,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added asset and media lifecycle review actions
 - [x] Added copy-ready weekly operating report
 - [x] Added one-click draft asset creation from weekly briefs
+- [x] Added batch draft asset creation from current weekly briefs
 - [x] Added saved asset package preview and copy action
 - [x] Added quick scheduling for compliance-clear queue items
 - [x] Added next-open-slot schedule suggestion for MYT publishing times
@@ -95,6 +96,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add asset and media lifecycle review controls
 - [x] Add weekly operating report
 - [x] Add one-click draft asset creation from briefs
+- [x] Add batch draft asset creation from weekly briefs
 - [x] Add saved asset package preview/copy
 - [x] Add quick queue scheduling
 - [x] Add next-open-slot schedule suggestions

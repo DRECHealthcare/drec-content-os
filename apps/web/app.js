@@ -1289,6 +1289,27 @@ document.getElementById("load-learning-topics").addEventListener("click", async 
   }
 });
 
+document.getElementById("save-all-assets").addEventListener("click", async () => {
+  const button = document.getElementById("save-all-assets");
+  const message = document.getElementById("plan-message");
+  const form = document.getElementById("plan-form");
+  const limit = Number(new FormData(form).get("count")) || 5;
+  button.disabled = true;
+  button.textContent = "Saving";
+  message.textContent = "Saving weekly briefs as draft assets...";
+  try {
+    const data = await fetchJson(`/briefs/draft-assets?limit=${encodeURIComponent(limit)}`, { method: "POST" });
+    message.textContent = `Assets ready: ${data.created || 0} created, ${data.reused || 0} reused, ${data.skipped || 0} skipped.`;
+    await Promise.all([loadBriefs(), loadAssets(), loadLoopStatus(), loadLearningSummary()]);
+    if ((data.created || data.reused || 0) > 0) showScreen("assets");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not save all draft assets.";
+  } finally {
+    button.disabled = false;
+    button.textContent = "Save All Assets";
+  }
+});
+
 async function updateBriefStatus(id, status) {
   await fetchJson(`/briefs/${id}`, {
     method: "PATCH",

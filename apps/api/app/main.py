@@ -1239,6 +1239,64 @@ async def create_asset_from_brief(brief_id: str, _: None = Depends(require_acces
     return {"item": saved.get("item"), "brief": {**brief, "status": "drafted"}, "creative": creative, "reused": False}
 
 
+async def recent_assetable_briefs(limit: int):
+    bounded_limit = max(1, min(int(limit or 5), 20))
+    rows = await fetch_rows(
+        """
+        select id, channel, format, pillar, funnel_stage, awareness_stage, topic,
+               hook_primary, hook_alt1, hook_alt2, structure_beats, style_hint,
+               cta_type, target_signal, language, compliance_notes, status, created_at
+        from content_briefs
+        where status != 'archived'
+        order by created_at desc
+        limit $1
+        """,
+        bounded_limit,
+    )
+    if not rows and supabase_rest.configured():
+        rows = await supabase_rest.select(
+            "content_briefs",
+            {
+                "select": "id,channel,format,pillar,funnel_stage,awareness_stage,topic,hook_primary,hook_alt1,hook_alt2,structure_beats,style_hint,cta_type,target_signal,language,compliance_notes,status,created_at",
+                "status": "neq.archived",
+                "order": "created_at.desc",
+                "limit": str(bounded_limit),
+            },
+        )
+    return rows
+
+
+@app.post("/briefs/draft-assets")
+async def create_assets_from_recent_briefs(limit: int = 5, _: None = Depends(require_access_token)):
+    briefs = await recent_assetable_briefs(limit)
+    results = []
+    for brief in briefs:
+        brief_id = str(brief.get("id"))
+        try:
+            result = await create_asset_from_brief(brief_id)
+            results.append({
+                "brief_id": brief_id,
+                "topic": brief.get("topic"),
+                "asset_id": result.get("item", {}).get("id"),
+                "reused": bool(result.get("reused")),
+                "status": "reused" if result.get("reused") else "created",
+            })
+        except HTTPException as error:
+            results.append({
+                "brief_id": brief_id,
+                "topic": brief.get("topic"),
+                "status": "skipped",
+                "detail": error.detail,
+            })
+    return {
+        "processed": len(results),
+        "created": sum(1 for item in results if item.get("status") == "created"),
+        "reused": sum(1 for item in results if item.get("status") == "reused"),
+        "skipped": sum(1 for item in results if item.get("status") == "skipped"),
+        "items": results,
+    }
+
+
 @app.get("/publish-queue")
 async def list_publish_queue(_: None = Depends(require_access_token)):
     rows = await fetch_rows(

@@ -15,6 +15,7 @@ const requiredRoutes = [
   "GET /publish-queue/suggest-slot",
   "GET /metrics/published-source",
   "POST /briefs/{brief_id}/draft-asset",
+  "POST /briefs/draft-assets",
   "POST /assets/{asset_id}/queue",
   "PATCH /assets/{asset_id}/compliance",
   "POST /publish-queue/{item_id}/schedule-next",
@@ -44,6 +45,11 @@ const requiredSnippets = [
     name: "brief asset idempotency",
     file: "main",
     text: "existing_asset_for_brief",
+  },
+  {
+    name: "bulk brief asset creation",
+    file: "main",
+    text: "create_assets_from_recent_briefs",
   },
   {
     name: "planned time publish gate",
@@ -94,6 +100,11 @@ const requiredSnippets = [
     name: "web published metrics helper",
     file: "web",
     text: "load-published-post",
+  },
+  {
+    name: "web bulk asset action",
+    file: "web",
+    text: "save-all-assets",
   },
 ];
 
