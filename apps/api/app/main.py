@@ -16,6 +16,7 @@ from .models import (
     AssetIn,
     ComplianceCheckIn,
     ContentBriefIn,
+    ContentBriefStatusIn,
     CreativeDraftIn,
     FeedbackIn,
     KnowledgeEntryIn,
@@ -453,6 +454,35 @@ async def list_content_briefs(_: None = Depends(require_access_token)):
 @app.post("/briefs")
 async def create_content_brief(brief: ContentBriefIn, _: None = Depends(require_access_token)):
     return {"item": await insert_brief(brief)}
+
+
+@app.patch("/briefs/{brief_id}")
+async def update_content_brief_status(
+    brief_id: str,
+    update: ContentBriefStatusIn,
+    _: None = Depends(require_access_token),
+):
+    row = await fetch_row(
+        """
+        update content_briefs
+        set status = $2, updated_at = now()
+        where id = $1
+        returning id, channel, format, pillar, funnel_stage, awareness_stage, topic,
+                  hook_primary, hook_alt1, hook_alt2, structure_beats, style_hint,
+                  cta_type, target_signal, language, compliance_notes, status, created_at
+        """,
+        brief_id,
+        update.status,
+    )
+    if row is None and supabase_rest.configured():
+        row = await supabase_rest.update(
+            "content_briefs",
+            {"status": update.status},
+            {"id": f"eq.{brief_id}"},
+        )
+    if row is None:
+        raise HTTPException(status_code=404, detail="Content brief not found.")
+    return {"item": row}
 
 
 @app.get("/weekly-plan/recommendations")

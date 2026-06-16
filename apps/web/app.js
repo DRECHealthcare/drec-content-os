@@ -264,6 +264,10 @@ async function loadKb() {
 }
 
 function briefCard(item) {
+  const status = item.status || "draft";
+  const secondaryAction = status === "archived"
+    ? `<button type="button" data-brief-status="${escapeHtml(item.id)}" data-status="draft">Restore</button>`
+    : `<button type="button" data-brief-status="${escapeHtml(item.id)}" data-status="archived">Archive</button>`;
   return `
     <article class="brief-item">
       <div class="queue-meta">
@@ -276,7 +280,9 @@ function briefCard(item) {
       <p>${escapeHtml(item.hook_primary || "No hook yet.")}</p>
       <small>${escapeHtml(item.compliance_notes || "Education-only brief.")}</small>
       <div class="queue-actions">
-        <button type="button" data-draft-brief="${escapeHtml(item.id)}">Draft</button>
+        <button type="button" data-draft-brief="${escapeHtml(item.id)}" ${status === "archived" ? "disabled" : ""}>Draft</button>
+        ${status !== "drafted" && status !== "archived" ? `<button type="button" data-brief-status="${escapeHtml(item.id)}" data-status="drafted">Mark Drafted</button>` : ""}
+        ${secondaryAction}
       </div>
     </article>
   `;
@@ -942,7 +948,28 @@ document.getElementById("load-learning-topics").addEventListener("click", async 
   }
 });
 
-document.getElementById("brief-items").addEventListener("click", (event) => {
+async function updateBriefStatus(id, status) {
+  await fetchJson(`/briefs/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+}
+
+document.getElementById("brief-items").addEventListener("click", async (event) => {
+  const statusButton = event.target.closest("[data-brief-status]");
+  if (statusButton) {
+    const originalText = statusButton.textContent;
+    statusButton.disabled = true;
+    statusButton.textContent = "Saving";
+    try {
+      await updateBriefStatus(statusButton.dataset.briefStatus, statusButton.dataset.status);
+      await Promise.all([loadBriefs(), loadLoopStatus(), loadLearningSummary()]);
+    } catch {
+      statusButton.disabled = false;
+      statusButton.textContent = originalText;
+    }
+    return;
+  }
   const button = event.target.closest("[data-draft-brief]");
   if (!button) return;
   const items = JSON.parse(document.getElementById("brief-items").dataset.briefs || "[]");
@@ -955,6 +982,12 @@ document.getElementById("brief-items").addEventListener("click", (event) => {
   form.elements.language.value = brief.language || "zh";
   form.elements.topic.value = brief.topic || "";
   form.elements.points.value = defaultPointsForBrief(brief).join("\n");
+  try {
+    await updateBriefStatus(brief.id, "drafted");
+    await loadBriefs();
+  } catch {
+    document.getElementById("plan-message").textContent = "Draft opened, but brief status was not updated.";
+  }
   showScreen("compose");
 });
 

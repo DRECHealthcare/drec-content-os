@@ -29,6 +29,10 @@ class ContentBriefIn(BaseModel):
     compliance_notes: Optional[str] = None
 
 
+class ContentBriefStatusIn(BaseModel):
+    status: Literal["draft", "drafted", "archived"]
+
+
 class AssetIn(BaseModel):
     brief_id: Optional[str] = None
     channel: Literal["facebook", "instagram", "organic"] = "facebook"
