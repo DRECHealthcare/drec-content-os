@@ -82,6 +82,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added protected CSV operations snapshot export for backup and rollout audit
 - [x] Added Meta credential setup checklist and copy-ready Fly secret command template
 - [x] Added protected operator pack export with readiness, setup, handoff, and weekly report sections
+- [x] Added protected content risk audit across automation gates, assets, queue, and media
 
 ## Next Engineering Tasks
 
@@ -145,6 +146,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add protected operations snapshot export before credential/RLS changes
 - [x] Add copy-ready Meta and Supabase credential setup checklist
 - [x] Add one-click operator pack export for weekly handoff and rollout audit
+- [x] Add one-click content risk audit before publishing or automation rollout
 - [ ] Connect Meta Graph API credentials
 - [x] Implement real Facebook publish scheduling behind Meta readiness and enable flags
 - [x] Implement Instagram two-step publish worker behind Meta readiness and enable flags

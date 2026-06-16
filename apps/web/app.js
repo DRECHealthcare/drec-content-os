@@ -652,6 +652,33 @@ function renderMetaMetricsDryRun(data) {
   `;
 }
 
+function renderRiskAudit(data) {
+  const container = document.getElementById("risk-audit-result");
+  if (!container) return;
+  const items = data.items || [];
+  const checked = data.checked || {};
+  container.innerHTML = `
+    <article class="learning-card wide-learning">
+      <h3>Content Risk Audit</h3>
+      <p>${escapeHtml(data.overall_status || "unknown")} · ${Number(data.block_count || 0)} block · ${Number(data.warn_count || 0)} warn</p>
+      <small>Checked ${Number(checked.assets || 0)} assets, ${Number(checked.queue || 0)} queue items, ${Number(checked.media || 0)} media assets, ${Number(checked.automation_gates || 0)} automation gates.</small>
+      <p>${escapeHtml(data.next_step || "")}</p>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Top Risks</h3>
+      <ul>
+        ${items.length ? items.slice(0, 12).map((item) => `
+          <li>
+            <strong>${escapeHtml(item.severity)}</strong>
+            ${escapeHtml(item.kind)} ${escapeHtml(item.channel || item.format || "")} · ${escapeHtml(item.title)}
+            <br><small>${escapeHtml(item.action)}</small>
+          </li>
+        `).join("") : "<li>No content risk items found.</li>"}
+      </ul>
+    </article>
+  `;
+}
+
 async function loadLearningSummary() {
   const container = document.getElementById("learning-summary");
   if (!container) return;
@@ -1439,6 +1466,18 @@ document.getElementById("copy-test-path")?.addEventListener("click", async () =>
     message.textContent = "Test path copied.";
   } catch {
     message.textContent = "Could not copy automatically. Use the visible checklist.";
+  }
+});
+
+document.getElementById("run-risk-audit")?.addEventListener("click", async () => {
+  const message = document.getElementById("test-path-message");
+  message.textContent = "Running content risk audit...";
+  try {
+    const data = await fetchJson("/operations/risk-audit");
+    renderRiskAudit(data);
+    message.textContent = data.overall_status === "clear" ? "Risk audit clear." : "Risk audit found items to review.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not run risk audit.";
   }
 });
 

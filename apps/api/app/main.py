@@ -402,6 +402,126 @@ async def automation_status(_: None = Depends(require_access_token)):
     return await automation_status_payload()
 
 
+def audit_item(kind, item_id, severity, title, detail, action, channel="", fmt=""):
+    return {
+        "kind": kind,
+        "id": str(item_id or ""),
+        "severity": severity,
+        "title": title,
+        "detail": detail,
+        "action": action,
+        "channel": channel or "",
+        "format": fmt or "",
+    }
+
+
+def audit_score(items: list[dict]):
+    if any(item.get("severity") == "block" for item in items):
+        return "blocked"
+    if any(item.get("severity") == "warn" for item in items):
+        return "needs_review"
+    return "clear"
+
+
+async def content_risk_audit_payload():
+    automation = await automation_status_payload()
+    assets = await fetch_asset_list(200)
+    queue = await fetch_publish_queue_items(200)
+    media = await fetch_rows(
+        """
+        select id, title, source_url, media_type, rights_status, approval_status,
+               notes, tags, metadata, created_at
+        from media_assets
+        order by created_at desc
+        limit 200
+        """
+    )
+    if not media and supabase_rest.configured():
+        media = await supabase_rest.select(
+            "media_assets",
+            {
+                "select": "id,title,source_url,media_type,rights_status,approval_status,notes,tags,metadata,created_at",
+                "order": "created_at.desc",
+                "limit": "200",
+            },
+        )
+    items = []
+    for gate in automation.get("gates", []):
+        if gate.get("status") == "blocked":
+            items.append(
+                audit_item(
+                    "automation_gate",
+                    gate.get("key"),
+                    "warn",
+                    f"{gate.get('label')} is blocked",
+                    gate.get("detail") or "Automation gate needs attention.",
+                    "Resolve this gate before enabling hands-off automation.",
+                )
+            )
+    for asset in assets:
+        compliance = asset.get("compliance_status")
+        review = asset.get("review_status")
+        if compliance == "flagged":
+            items.append(audit_item("asset", asset.get("id"), "block", "Asset is safety flagged", "Flagged captions must not enter the queue.", "Rewrite or reject this asset.", asset.get("channel"), asset.get("format")))
+        elif compliance != "clear":
+            items.append(audit_item("asset", asset.get("id"), "warn", "Asset safety is not clear", f"Current safety status: {compliance or 'unknown'}.", "Run safety review before approval or queueing.", asset.get("channel"), asset.get("format")))
+        if review == "rejected":
+            items.append(audit_item("asset", asset.get("id"), "warn", "Asset was rejected", "Rejected assets should not be reused accidentally.", "Archive, rewrite, or leave rejected.", asset.get("channel"), asset.get("format")))
+        elif review != "approved":
+            items.append(audit_item("asset", asset.get("id"), "warn", "Asset needs human approval", f"Current review status: {review or 'unknown'}.", "Approve only after checking caption, media fit, and safety.", asset.get("channel"), asset.get("format")))
+        caption_check = check_text(asset.get("caption") or "")
+        if caption_check.get("status") == "flagged":
+            items.append(audit_item("asset", asset.get("id"), "block", "Asset caption triggers safety rule", caption_check.get("recommendation"), "Rewrite and re-check safety before queueing.", asset.get("channel"), asset.get("format")))
+        elif caption_check.get("status") == "pending" and compliance == "clear":
+            items.append(audit_item("asset", asset.get("id"), "warn", "Asset has cautionary safety findings", caption_check.get("recommendation"), "Review the findings before publishing.", asset.get("channel"), asset.get("format")))
+    for item in queue:
+        status = item.get("status")
+        compliance = item.get("compliance_status")
+        latest_action = (item.get("latest_feedback") or {}).get("action")
+        if compliance == "flagged":
+            items.append(audit_item("queue", item.get("id"), "block", "Queue item is safety flagged", "Flagged queue items must not be scheduled or published.", "Rewrite or cancel this queue item.", item.get("channel"), item.get("format")))
+        elif compliance != "clear":
+            items.append(audit_item("queue", item.get("id"), "warn", "Queue item is not safety clear", f"Current safety status: {compliance or 'unknown'}.", "Run safety check before scheduling.", item.get("channel"), item.get("format")))
+        if status == "scheduled" and not item.get("planned_slot"):
+            items.append(audit_item("queue", item.get("id"), "block", "Scheduled item has no planned time", "Publishing workers and handoff need a real planned time.", "Set a planned publish time.", item.get("channel"), item.get("format")))
+        if status == "draft" and latest_action != "approve":
+            items.append(audit_item("queue", item.get("id"), "warn", "Draft queue item is not review-approved", "Draft items need approval feedback before batch scheduling.", "Review and approve, regenerate, or reject.", item.get("channel"), item.get("format")))
+        if status == "published" and not item.get("external_post_id"):
+            items.append(audit_item("queue", item.get("id"), "warn", "Published item has no Meta post ID", "Metrics ingestion needs an external post ID.", "Record the post ID after manual publishing.", item.get("channel"), item.get("format")))
+        caption_check = check_text(item.get("caption") or "")
+        if caption_check.get("status") == "flagged":
+            items.append(audit_item("queue", item.get("id"), "block", "Queue caption triggers safety rule", caption_check.get("recommendation"), "Rewrite and re-check before scheduling.", item.get("channel"), item.get("format")))
+    for item in media:
+        rights = item.get("rights_status")
+        approval = item.get("approval_status")
+        if rights not in {"owned", "licensed", "approved"}:
+            items.append(audit_item("media", item.get("id"), "warn", "Media rights need confirmation", f"Rights status: {rights or 'unknown'}.", "Confirm rights before using this media.", fmt=item.get("media_type")))
+        if approval == "blocked":
+            items.append(audit_item("media", item.get("id"), "block", "Media is blocked", item.get("title") or "Blocked media asset.", "Do not use this media in publishing.", fmt=item.get("media_type")))
+        elif approval != "approved":
+            items.append(audit_item("media", item.get("id"), "warn", "Media needs approval", item.get("title") or "Media asset needs review.", "Approve or block the media before publishing.", fmt=item.get("media_type")))
+    severity_order = {"block": 0, "warn": 1}
+    items = sorted(items, key=lambda item: (severity_order.get(item.get("severity"), 2), item.get("kind", ""), item.get("title", "")))
+    return {
+        "overall_status": audit_score(items),
+        "block_count": sum(1 for item in items if item.get("severity") == "block"),
+        "warn_count": sum(1 for item in items if item.get("severity") == "warn"),
+        "checked": {
+            "assets": len(assets),
+            "queue": len(queue),
+            "media": len(media),
+            "automation_gates": len(automation.get("gates", [])),
+        },
+        "items": items[:100],
+        "next_step": "Resolve blocked items first." if any(item.get("severity") == "block" for item in items) else "Review warnings before the next publish." if items else "No content risk items found in the current operating set.",
+    }
+
+
+@app.get("/operations/risk-audit")
+async def content_risk_audit(_: None = Depends(require_access_token)):
+    return await content_risk_audit_payload()
+
+
 def snapshot_row(record_type, item_id="", status="", channel="", fmt="", title="", created_at="", detail=""):
     return {
         "record_type": record_type,
@@ -524,6 +644,7 @@ async def operations_operator_pack(_: None = Depends(require_access_token)):
     security = security_status_payload()
     meta = await meta_readiness(None)
     setup = await meta_setup_checklist(None)
+    risk = await content_risk_audit_payload()
     handoff = await publishing_handoff(None)
     weekly = await weekly_report(None)
     weekly_text = weekly.body.decode("utf-8") if getattr(weekly, "body", None) else ""
@@ -536,6 +657,10 @@ async def operations_operator_pack(_: None = Depends(require_access_token)):
         f"- {step.get('label')}: {step.get('status')} — {step.get('detail')}"
         for step in setup.get("steps", [])
     ] or ["- No setup checks available."]
+    risk_lines = [
+        f"- [{item.get('severity')}] {item.get('kind')} {item.get('id')}: {item.get('title')} — {item.get('action')}"
+        for item in risk.get("items", [])[:25]
+    ] or ["- No content risk items found."]
     secret_lines = [f"- {secret}" for secret in setup.get("required_secrets", [])] or ["- No required secrets listed."]
     command_lines = ["```bash", *(setup.get("setup_commands") or ["# No setup commands available."]), "```"]
     lines = [
@@ -549,6 +674,7 @@ async def operations_operator_pack(_: None = Depends(require_access_token)):
         f"- Automation: {automation.get('overall_status')}",
         f"- Security: {security.get('overall_status')}",
         f"- Meta: {meta.get('overall_status')} ({meta.get('mode')})",
+        f"- Content risk: {risk.get('overall_status')} ({risk.get('block_count', 0)} block / {risk.get('warn_count', 0)} warn)",
         f"- Handoff ready: {handoff.get('ready_count', 0)} ready / {handoff.get('blocked_count', 0)} blocked",
         "",
         "## Automation Gates",
@@ -566,6 +692,10 @@ async def operations_operator_pack(_: None = Depends(require_access_token)):
         "Command template:",
         "",
         *command_lines,
+        "",
+        "## Content Risk Audit",
+        "",
+        *risk_lines,
         "",
         "## Publishing Handoff",
         "",

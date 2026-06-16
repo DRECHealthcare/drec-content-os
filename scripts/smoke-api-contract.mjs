@@ -12,6 +12,7 @@ const requiredRoutes = [
   "GET /workflow/status",
   "GET /security/status",
   "GET /automation/status",
+  "GET /operations/risk-audit",
   "GET /operations/snapshot.csv",
   "GET /operations/operator-pack.md",
   "GET /weekly-report.md",
@@ -123,6 +124,11 @@ const requiredSnippets = [
     text: "manual_safe_auto_blocked",
   },
   {
+    name: "content risk audit",
+    file: "main",
+    text: "content_risk_audit_payload",
+  },
+  {
     name: "operations snapshot export",
     file: "main",
     text: "drec-content-os-snapshot.csv",
@@ -176,6 +182,11 @@ const requiredSnippets = [
     name: "web operations snapshot action",
     file: "web",
     text: "download-snapshot",
+  },
+  {
+    name: "web content risk audit action",
+    file: "web",
+    text: "run-risk-audit",
   },
   {
     name: "web operator pack action",

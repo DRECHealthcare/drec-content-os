@@ -62,6 +62,7 @@ Stage 1 is now a working thin-core workflow:
 - Generate weekly DREC content briefs
 - See the next best workflow action, operating counts, and copyable Test Path on the Dashboard, backed by the API, so testing and automation can move from brief to approved asset to queue, handoff, published ID, metrics, and report without guessing
 - See an automation readiness gate that combines manual workflow, handoff, learning, Meta, and security status
+- Run a protected content risk audit across automation gates, assets, queue items, and media before publishing or enabling automation
 - Download a protected CSV operations snapshot for audit or backup before rollout changes
 - Download a protected operator pack with readiness status, setup checklist, publishing handoff, and weekly report in one Markdown file
 - See the Supabase service-role readiness gate before stricter RLS policies are applied
