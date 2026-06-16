@@ -1047,6 +1047,102 @@ async def operations_scheduler_heartbeat(_: None = Depends(require_access_token)
     return {"heartbeat": await latest_scheduler_heartbeat()}
 
 
+@app.get("/operations/scheduler-activation-pack.md")
+async def operations_scheduler_activation_pack(_: None = Depends(require_access_token)):
+    setup = await meta_setup_checklist(None)
+    automation = await automation_status_payload()
+    security = security_status_payload()
+    risk = await content_risk_audit_payload()
+    scheduler = setup.get("scheduler_setup", {})
+    heartbeat = scheduler.get("heartbeat", {})
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    required_secret_lines = [f"- {secret}" for secret in scheduler.get("required_github_secrets", [])] or ["- DREC_ACCESS_TOKEN"]
+    optional_variable_lines = [f"- {variable}" for variable in scheduler.get("optional_github_variables", [])] or ["- DREC_API_BASE_URL"]
+    activation_steps = [
+        "Open GitHub repository Settings > Secrets and variables > Actions.",
+        "Add repository secret DREC_ACCESS_TOKEN with the current DREC app access token.",
+        "Optionally add repository variable DREC_API_BASE_URL when the API URL changes.",
+        "Open Actions > DREC Scheduler Dry Run and choose Run workflow.",
+        "Refresh Meta Setup or Automation Status; heartbeat should become recent after a successful run.",
+    ]
+    setup_step_lines = [f"{idx}. {step}" for idx, step in enumerate(activation_steps, start=1)] or [
+        "1. Open GitHub repository Settings > Secrets and variables > Actions.",
+        "2. Add repository secret DREC_ACCESS_TOKEN with the current DREC app access token.",
+        "3. Run the DREC Scheduler Dry Run workflow manually once.",
+    ]
+    gate_lines = [
+        f"- {gate.get('label')}: {gate.get('status')} — {gate.get('detail')}"
+        for gate in automation.get("gates", [])
+    ] or ["- No automation gates available."]
+    risk_lines = [
+        f"- [{item.get('severity')}] {item.get('kind')} {item.get('id')}: {item.get('title')} — {item.get('action')}"
+        for item in risk.get("items", [])[:12]
+    ] or ["- No content risk items found."]
+    lines = [
+        "# DREC Content OS Scheduler Activation Pack",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "## Current Status",
+        "",
+        f"- Scheduler status: {scheduler.get('status', 'unknown')}",
+        f"- Workflow file: {scheduler.get('workflow_file', '.github/workflows/drec-scheduler-dry-run.yml')}",
+        f"- Default API URL: {scheduler.get('default_api_base_url', 'https://drec-content-os-api.fly.dev')}",
+        f"- Latest heartbeat: {heartbeat.get('status', 'missing')}",
+        f"- Heartbeat detail: {heartbeat.get('detail', 'No scheduler heartbeat has been recorded yet.')}",
+        f"- Automation gate: {automation.get('overall_status', 'unknown')}",
+        f"- Security gate: {security.get('overall_status', 'unknown')}",
+        f"- Content risk: {risk.get('overall_status', 'unknown')}",
+        "",
+        "## Required GitHub Secret",
+        "",
+        *required_secret_lines,
+        "",
+        "## Optional GitHub Variable",
+        "",
+        *optional_variable_lines,
+        "",
+        "## Activation Steps",
+        "",
+        *setup_step_lines,
+        "",
+        "## What The Workflow Runs",
+        "",
+        "- Due Meta publishing dry run every 6 hours.",
+        "- Nightly Meta metrics dry run at 02:30 Malaysia time.",
+        "- Automation and content risk checks.",
+        "- Scheduler heartbeat recording after checks pass.",
+        "",
+        "## Safety Rules",
+        "",
+        "- The workflow uses dry-run endpoints only.",
+        "- It must not publish to Facebook or Instagram.",
+        "- Keep META_ENABLE_PUBLISHING, META_ENABLE_PUBLISHING_JOB, and META_ENABLE_METRICS_JOB disabled until Meta credentials, permissions, service-role security, and live smoke checks are green.",
+        "- If a workflow run fails, leave real Meta workers disabled and inspect the Actions logs before retrying.",
+        "",
+        "## Troubleshooting",
+        "",
+        "- Missing heartbeat: confirm GitHub Actions secret DREC_ACCESS_TOKEN is set and current.",
+        "- API failure: confirm DREC_API_BASE_URL is unset or set to https://drec-content-os-api.fly.dev.",
+        "- Auth failure: rotate the DREC app access token in GitHub Actions secret and rerun manually.",
+        "- Risk failure: clear content risk items before relying on recurring dry runs.",
+        "",
+        "## Automation Gates",
+        "",
+        *gate_lines,
+        "",
+        "## Current Risk Items",
+        "",
+        *risk_lines,
+        "",
+    ]
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-scheduler-activation-pack.md"'},
+    )
+
+
 @app.get("/operations/launch-evidence.md")
 async def operations_launch_evidence(_: None = Depends(require_access_token)):
     generated_at = datetime.now(timezone.utc).isoformat()

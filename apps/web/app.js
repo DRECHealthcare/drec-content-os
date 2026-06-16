@@ -2500,6 +2500,16 @@ document.getElementById("copy-meta-oauth").addEventListener("click", async () =>
   }
 });
 
+document.getElementById("download-scheduler-pack").addEventListener("click", async () => {
+  const message = document.getElementById("meta-message");
+  try {
+    await downloadProtectedFile("/operations/scheduler-activation-pack.md", "drec-scheduler-activation-pack.md", "text/markdown");
+    message.textContent = "Scheduler activation pack downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download scheduler pack.";
+  }
+});
+
 document.getElementById("dry-run-meta-publishing").addEventListener("click", async () => {
   const message = document.getElementById("meta-message");
   message.textContent = "Checking scheduled publishing job...";

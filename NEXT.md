@@ -176,6 +176,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add protected operations snapshot export before credential/RLS changes
 - [x] Add copy-ready Meta and Supabase credential setup checklist
 - [x] Add one-click operator pack export for weekly handoff and rollout audit
+- [x] Add one-click scheduler activation pack for GitHub dry-run setup and heartbeat verification
 - [x] Add one-click content risk audit before publishing or automation rollout
 - [x] Add safe dry-run scheduler workflow before enabling real Meta jobs
 - [x] Add scheduler heartbeat evidence for recurring GitHub dry-run checks

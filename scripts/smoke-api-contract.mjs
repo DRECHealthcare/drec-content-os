@@ -18,6 +18,7 @@ const requiredRoutes = [
   "GET /operations/launch-readiness",
   "GET /operations/test-run-checklist",
   "POST /operations/scheduler-heartbeat",
+  "GET /operations/scheduler-activation-pack.md",
   "GET /operations/launch-evidence.md",
   "GET /operations/first-test-kit.md",
   "GET /operations/test-run-tracker.md",
@@ -218,6 +219,31 @@ const requiredSnippets = [
     name: "scheduler heartbeat route",
     file: "main",
     text: "operations_scheduler_heartbeat",
+  },
+  {
+    name: "scheduler activation pack route",
+    file: "main",
+    text: "operations_scheduler_activation_pack",
+  },
+  {
+    name: "scheduler activation pack export",
+    file: "main",
+    text: "drec-scheduler-activation-pack.md",
+  },
+  {
+    name: "scheduler activation pack safety",
+    file: "main",
+    text: "## Safety Rules",
+  },
+  {
+    name: "scheduler pack UI action",
+    file: "web",
+    text: "download-scheduler-pack",
+  },
+  {
+    name: "scheduler pack UI endpoint",
+    file: "web",
+    text: "/operations/scheduler-activation-pack.md",
   },
   {
     name: "launch readiness status",

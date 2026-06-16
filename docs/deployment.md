@@ -158,8 +158,11 @@ Optional repository variable:
 DREC_API_BASE_URL=https://drec-content-os-api.fly.dev
 ```
 
-The Meta Setup screen now shows the same GitHub Scheduler Setup block, and the
-Operator Pack exports it for non-technical rollout handoff.
+The Meta Setup screen now shows the same GitHub Scheduler Setup block. Use
+`Download Scheduler Pack` or call `/operations/scheduler-activation-pack.md`
+to export the one-page activation guide with the required secret, optional API
+variable, first-run check, heartbeat expectation, and dry-run safety rules. The
+Operator Pack also includes the scheduler setup for rollout handoff.
 
 The workflow checks:
 
