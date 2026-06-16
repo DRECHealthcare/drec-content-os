@@ -3464,6 +3464,88 @@ async def content_briefs_plan_csv(_: None = Depends(require_access_token)):
     )
 
 
+@app.get("/briefs/asset-pack.md")
+async def content_briefs_asset_pack(_: None = Depends(require_access_token)):
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    briefs = await fetch_content_brief_list(50)
+    assets = await fetch_asset_list(200)
+    assets_by_brief = {str(asset.get("brief_id")): asset for asset in assets if asset.get("brief_id")}
+    unsaved = 0
+    review_needed = 0
+    ready_assets = 0
+    brief_sections = []
+    for index, brief in enumerate(briefs[:20], start=1):
+        asset = assets_by_brief.get(str(brief.get("id")))
+        metadata = (asset or {}).get("metadata") or {}
+        if not asset and brief.get("status") != "archived":
+            unsaved += 1
+        if asset and asset_review_blockers(asset):
+            review_needed += 1
+        if asset and asset.get("review_status") == "approved" and asset.get("compliance_status") == "clear":
+            ready_assets += 1
+        action = "Open Weekly Plan and click Save Asset."
+        if asset:
+            blockers = asset_review_blockers(asset)
+            action = "Approve and queue this asset." if not blockers and asset.get("review_status") == "approved" else "Open Assets and complete human safety review."
+        if brief.get("status") == "archived":
+            action = "Archived brief; restore only if this topic should return to production."
+        brief_sections.extend(
+            [
+                f"### {index}. {brief.get('topic') or 'Untitled brief'}",
+                "",
+                f"- Brief ID: {brief.get('id')}",
+                f"- Brief status: {brief.get('status')}",
+                f"- Language: {brief.get('language')}",
+                f"- Channel / format: {brief.get('channel')} / {brief.get('format')}",
+                f"- Funnel / awareness: {brief.get('funnel_stage') or 'n/a'} / {brief.get('awareness_stage') or 'n/a'}",
+                f"- Primary hook: {brief.get('hook_primary') or 'No hook'}",
+                f"- Alternate hooks: {brief.get('hook_alt1') or 'n/a'} | {brief.get('hook_alt2') or 'n/a'}",
+                f"- Target signal: {brief.get('target_signal') or 'n/a'}",
+                f"- Compliance note: {brief.get('compliance_notes') or 'Education-only; human review required.'}",
+                f"- Asset ID: {asset.get('id') if asset else 'not saved yet'}",
+                f"- Asset review / safety: {asset.get('review_status') if asset else 'n/a'} / {asset.get('compliance_status') if asset else 'n/a'}",
+                f"- Asset media count: {len(asset.get('media_urls') or []) if asset else 0}",
+                f"- Creative style: {metadata.get('style_key') or brief.get('style_hint') or 'n/a'}",
+                f"- Next action: {action}",
+                "",
+            ]
+        )
+    if not brief_sections:
+        brief_sections = ["- No briefs found. Generate a weekly plan first.", ""]
+    lines = [
+        "# DREC Content OS Brief-To-Asset Pack",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this pack after weekly planning to turn briefs into reviewable draft assets. It is read-only and does not create or change records.",
+        "",
+        "## Production Summary",
+        "",
+        f"- Briefs scanned: {len(briefs[:20])}",
+        f"- Unsaved active briefs: {unsaved}",
+        f"- Assets needing review: {review_needed}",
+        f"- Approved clear assets: {ready_assets}",
+        "- Next action: Use Save All Assets, then open Assets for human safety review." if unsaved else "- Next action: Open Assets and finish review/queueing.",
+        "",
+        "## Brief Production Sheet",
+        "",
+        *brief_sections,
+        "## Review Rules",
+        "",
+        "- Save assets only from active, non-archived briefs.",
+        "- Treat generated captions, slides, and scripts as draft packages until human review is complete.",
+        "- Mark Safety Clear only when the content is education-only and avoids personal diagnosis or treatment claims.",
+        "- Queue only approved, safety-clear assets.",
+        "- Keep Meta publishing manual or dry-run until Meta Setup and Launch Evidence say automation is ready.",
+        "",
+    ]
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-brief-to-asset-pack.md"'},
+    )
+
+
 @app.post("/briefs")
 async def create_content_brief(brief: ContentBriefIn, _: None = Depends(require_access_token)):
     return {"item": await insert_brief(brief)}

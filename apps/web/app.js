@@ -1886,6 +1886,17 @@ document.getElementById("download-plan-csv")?.addEventListener("click", async ()
   }
 });
 
+document.getElementById("download-brief-asset-pack")?.addEventListener("click", async () => {
+  const message = document.getElementById("plan-message");
+  message.textContent = "Preparing brief-to-asset pack...";
+  try {
+    await downloadProtectedFile("/briefs/asset-pack.md", "drec-brief-to-asset-pack.md", "text/markdown");
+    message.textContent = "Brief-to-asset pack downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download brief-to-asset pack.";
+  }
+});
+
 document.getElementById("save-all-assets").addEventListener("click", async () => {
   const button = document.getElementById("save-all-assets");
   const message = document.getElementById("plan-message");

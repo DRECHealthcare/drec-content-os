@@ -88,6 +88,7 @@ Stage 1 is now a working thin-core workflow:
 - Load active Knowledge Base context into weekly planning and creative drafts so brand, voice, compliance, and medical dictionary entries are visible during review
 - Download the Knowledge Base as CSV so brand, voice, compliance, offer, and medical dictionary entries can be backed up or reviewed outside the app
 - Download the weekly plan as CSV for team review of topics, hooks, formats, stages, status, and compliance notes
+- Download a Brief-To-Asset Pack from Weekly Plan that maps each brief to its saved asset, review state, hooks, target signal, and next production action
 - Mark content briefs as drafted or archived so weekly plans stay manageable
 - Archive drafted briefs in one batch after assets are saved so the weekly plan stays focused
 - Save a draft asset directly from a weekly brief for faster review prep

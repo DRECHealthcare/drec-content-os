@@ -53,6 +53,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added batch scheduling for review-approved queue items
 - [x] Added learning-informed weekly topic recommendations
 - [x] Added Learning-to-Weekly Plan topic handoff
+- [x] Added Brief-To-Asset Pack export for production handoff from weekly briefs
 - [x] Added content brief lifecycle actions for drafted and archived briefs
 - [x] Added batch archive cleanup for drafted briefs
 - [x] Added copy-ready publishing handoff package
@@ -138,6 +139,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add batch schedule action for review-approved queue items
 - [x] Feed learning signals back into weekly plan generation
 - [x] Add Learning page action to send recommended topics into Weekly Plan
+- [x] Add downloadable Brief-To-Asset Pack for weekly brief production handoff
 - [x] Add content brief status management after drafting
 - [x] Add batch archive action for drafted briefs
 - [x] Add copy-ready manual publishing package

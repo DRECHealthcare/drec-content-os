@@ -106,6 +106,10 @@ The Weekly Plan `Download Plan CSV` action calls `/briefs/plan.csv` and exports
 recent briefs for spreadsheet review, including topics, hooks, stages, status,
 and compliance notes.
 
+The Weekly Plan `Download Asset Pack` action calls `/briefs/asset-pack.md` and
+exports a brief-to-asset production handoff with saved asset IDs, review/safety
+state, hooks, target signals, and the next production action for each brief.
+
 The Assets `Download Asset Review CSV` action calls
 `/operations/asset-review.csv` and exports draft assets plus media-library
 records with readiness, blockers, rights, approval, and source URL fields.

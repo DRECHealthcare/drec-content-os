@@ -46,6 +46,7 @@ const requiredRoutes = [
   "GET /publish-queue/calendar.ics",
   "GET /publish-queue/schedule.csv",
   "GET /briefs/plan.csv",
+  "GET /briefs/asset-pack.md",
   "GET /metrics/published-source",
   "POST /metrics/import-csv",
   "POST /briefs/{brief_id}/draft-asset",
@@ -110,6 +111,21 @@ const requiredSnippets = [
     name: "weekly plan csv export",
     file: "main",
     text: "drec-weekly-plan.csv",
+  },
+  {
+    name: "brief to asset pack route",
+    file: "main",
+    text: "content_briefs_asset_pack",
+  },
+  {
+    name: "brief to asset pack export",
+    file: "main",
+    text: "drec-brief-to-asset-pack.md",
+  },
+  {
+    name: "brief to asset pack review rules",
+    file: "main",
+    text: "## Review Rules",
   },
   {
     name: "planned time publish gate",
@@ -685,6 +701,16 @@ const requiredSnippets = [
     name: "web weekly plan csv action",
     file: "web",
     text: "download-plan-csv",
+  },
+  {
+    name: "web brief asset pack action",
+    file: "web",
+    text: "download-brief-asset-pack",
+  },
+  {
+    name: "web brief asset pack endpoint",
+    file: "web",
+    text: "/briefs/asset-pack.md",
   },
   {
     name: "web weekly plan csv endpoint",
