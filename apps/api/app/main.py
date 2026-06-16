@@ -15,6 +15,7 @@ from .compliance import check_text
 from .db import close_db, connect_db, fetch_row, fetch_rows
 from .models import (
     AssetIn,
+    AssetComplianceIn,
     AssetStatusIn,
     ComplianceCheckIn,
     ContentBriefIn,
@@ -677,6 +678,47 @@ async def update_asset_status(
             )
         )
     return {"item": row or {**existing, "review_status": update.review_status}}
+
+
+@app.patch("/assets/{asset_id}/compliance")
+async def update_asset_compliance(
+    asset_id: str,
+    update: AssetComplianceIn,
+    _: None = Depends(require_access_token),
+):
+    existing = await asset_by_id(asset_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Asset not found.")
+    row = await fetch_row(
+        """
+        update assets
+        set compliance_status = $2, updated_at = now()
+        where id = $1
+        returning id, brief_id, channel, format, caption, media_urls, metadata,
+                  compliance_status, review_status, created_at
+        """,
+        asset_id,
+        update.compliance_status,
+    )
+    if row is None and supabase_rest.configured():
+        row = await supabase_rest.update(
+            "assets",
+            {"compliance_status": update.compliance_status},
+            {"id": f"eq.{asset_id}"},
+        )
+    if update.reason:
+        await save_feedback(
+            FeedbackIn(
+                module="asset_compliance",
+                ref_type="asset",
+                ref_id=asset_id,
+                action="approve" if update.compliance_status == "clear" else "reject" if update.compliance_status == "flagged" else "edit",
+                reason=update.reason,
+                before_text=existing.get("caption"),
+                tags=["asset_compliance", update.compliance_status],
+            )
+        )
+    return {"item": row or {**existing, "compliance_status": update.compliance_status}}
 
 
 @app.post("/assets/{asset_id}/queue")

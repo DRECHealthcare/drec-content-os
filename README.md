@@ -66,6 +66,7 @@ Stage 1 is now a working thin-core workflow:
 - Draft conservative educational captions
 - Preview and copy saved asset packages with caption variants, carousel slides, or reel scripts
 - Run pre-publish compliance checks
+- Record human safety review on assets before queueing
 - Add assets to the publishing queue only after asset approval and a clear safety check
 - Queue and review posts with approval, regen, and rejection feedback trails
 - Edit queued captions, media URLs, planned time, and channel/format before publishing

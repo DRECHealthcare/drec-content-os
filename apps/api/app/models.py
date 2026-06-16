@@ -49,6 +49,11 @@ class AssetStatusIn(BaseModel):
     reason: Optional[str] = None
 
 
+class AssetComplianceIn(BaseModel):
+    compliance_status: Literal["pending", "clear", "flagged"]
+    reason: Optional[str] = None
+
+
 class MediaAssetIn(BaseModel):
     title: str
     source_url: str

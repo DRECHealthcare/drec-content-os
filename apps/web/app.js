@@ -729,6 +729,9 @@ function assetCard(item) {
       ${slidePreview(metadata.slides)}
       ${reelPreview(metadata.reel_script)}
       <div class="queue-actions">
+        <button type="button" data-asset-compliance="clear" data-id="${escapeHtml(item.id)}">Safety Clear</button>
+        <button type="button" data-asset-compliance="pending" data-id="${escapeHtml(item.id)}">Safety Pending</button>
+        <button type="button" data-asset-compliance="flagged" data-id="${escapeHtml(item.id)}">Safety Flag</button>
         <button type="button" data-asset-status="approved" data-id="${escapeHtml(item.id)}">Approve</button>
         <button type="button" data-asset-status="review" data-id="${escapeHtml(item.id)}">Needs Work</button>
         <button type="button" data-asset-status="rejected" data-id="${escapeHtml(item.id)}">Reject</button>
@@ -1479,6 +1482,35 @@ document.getElementById("asset-items").addEventListener("click", async (event) =
       message.textContent = "Draft asset package copied.";
     } catch {
       message.textContent = "Could not copy package. Open the asset and copy manually.";
+    }
+    return;
+  }
+  const complianceButton = event.target.closest("[data-asset-compliance]");
+  if (complianceButton) {
+    const status = complianceButton.dataset.assetCompliance;
+    const defaultReason = {
+      clear: "Asset safety reviewed and cleared for queueing.",
+      pending: "Asset needs additional safety review before queueing.",
+      flagged: "Asset blocked by safety review.",
+    }[status] || "Asset safety status updated.";
+    let reason = defaultReason;
+    if (status !== "clear") {
+      const entered = window.prompt("Add the safety review reason.", defaultReason);
+      if (entered === null) return;
+      reason = entered.trim() || defaultReason;
+    }
+    const originalText = complianceButton.textContent;
+    complianceButton.disabled = true;
+    complianceButton.textContent = "Saving";
+    try {
+      await fetchJson(`/assets/${complianceButton.dataset.id}/compliance`, {
+        method: "PATCH",
+        body: JSON.stringify({ compliance_status: status, reason }),
+      });
+      await Promise.all([loadAssets(), loadLoopStatus(), loadLearningSummary()]);
+    } catch {
+      complianceButton.disabled = false;
+      complianceButton.textContent = originalText;
     }
     return;
   }
