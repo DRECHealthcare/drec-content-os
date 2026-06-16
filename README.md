@@ -65,7 +65,7 @@ Stage 1 is now a working thin-core workflow:
 - See launch readiness on the Dashboard, separating manual-use readiness from real Meta automation readiness
 - See a plain "Can I Use It?" Dashboard decision that says what is safe to test now and what is not ready yet
 - See an automation readiness gate that combines manual workflow, handoff, learning, Meta, and security status
-- Run a protected content risk audit across automation gates, assets, queue items, and media before publishing or enabling automation
+- Run a protected content risk audit across automation gates, assets, active queue items, and media before publishing or enabling automation
 - Download a protected Daily Ops Checklist with morning checks, today's priority, ready-to-publish items, blockers, learning prompts, and closeout steps
 - Download a protected launch evidence report with manual test status, readiness, risk, Meta setup, and safe go-live rules
 - Download a protected First Test Kit with current next action, sample topics, manual metric values, acceptance criteria, and safety notes
@@ -104,6 +104,7 @@ Stage 1 is now a working thin-core workflow:
 - Schedule review-approved, compliance-clear queue items in batches into suggested MYT publishing slots
 - Edit queued captions, media URLs, planned time, and channel/format before publishing
 - Cancel draft, scheduled, or failed queue items before publishing while keeping the feedback trail
+- Keep cancelled queue items as history without counting them as active publishing risk
 - Keep review approval separate from scheduling so approved content still needs a real planned time before handoff or Meta workers can use it
 - Suggest the next open MYT publishing slot for compliance-clear queue items and schedule them without guessing
 - Filter the scheduler by status/channel and scan the next 7 days of planned posts

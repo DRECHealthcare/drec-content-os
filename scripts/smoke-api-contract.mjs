@@ -115,6 +115,16 @@ const requiredSnippets = [
     text: "Cancelled items cannot be rescheduled",
   },
   {
+    name: "cancelled item risk audit skip",
+    file: "main",
+    text: 'if status == "cancelled"',
+  },
+  {
+    name: "cancelled item risk audit evidence",
+    file: "main",
+    text: "cancelled_queue",
+  },
+  {
     name: "scheduled publishing job due gate",
     file: "main",
     text: "planned_slot <= $2",

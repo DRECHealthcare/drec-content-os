@@ -621,6 +621,8 @@ async def content_risk_audit_payload():
             items.append(audit_item("asset", asset.get("id"), "warn", "Asset has cautionary safety findings", caption_check.get("recommendation"), "Review the findings before publishing.", asset.get("channel"), asset.get("format")))
     for item in queue:
         status = item.get("status")
+        if status == "cancelled":
+            continue
         compliance = item.get("compliance_status")
         latest_action = (item.get("latest_feedback") or {}).get("action")
         if compliance == "flagged":
@@ -654,6 +656,7 @@ async def content_risk_audit_payload():
         "checked": {
             "assets": len(assets),
             "queue": len(queue),
+            "cancelled_queue": sum(1 for item in queue if item.get("status") == "cancelled"),
             "media": len(media),
             "automation_gates": len(automation.get("gates", [])),
         },

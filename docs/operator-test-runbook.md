@@ -93,7 +93,8 @@ Pass condition: the queue item is scheduled and has a planned time.
 Optional cleanup: if a queued item should not be published, open `Scheduler`,
 click `Cancel Item`, add the reason, and confirm it moves to `cancelled`.
 Cancelled items must not appear in the handoff ready list or be rescheduled by
-`Suggest Slot`.
+`Suggest Slot`. They are kept in history, but they should not count as active
+publishing risk in `Run Risk Audit`.
 
 ### 6. Manual Publishing Handoff
 
