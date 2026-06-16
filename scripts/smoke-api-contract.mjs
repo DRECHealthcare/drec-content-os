@@ -13,6 +13,7 @@ const requiredRoutes = [
   "GET /security/status",
   "GET /automation/status",
   "GET /operations/snapshot.csv",
+  "GET /operations/operator-pack.md",
   "GET /weekly-report.md",
   "GET /meta/readiness",
   "GET /meta/setup-checklist",
@@ -127,6 +128,11 @@ const requiredSnippets = [
     text: "drec-content-os-snapshot.csv",
   },
   {
+    name: "operator pack export",
+    file: "main",
+    text: "drec-operator-pack.md",
+  },
+  {
     name: "meta setup checklist route",
     file: "main",
     text: "meta_setup_checklist",
@@ -170,6 +176,11 @@ const requiredSnippets = [
     name: "web operations snapshot action",
     file: "web",
     text: "download-snapshot",
+  },
+  {
+    name: "web operator pack action",
+    file: "web",
+    text: "download-operator-pack",
   },
   {
     name: "web queue reuse message",

@@ -1452,6 +1452,16 @@ document.getElementById("download-snapshot")?.addEventListener("click", async ()
   }
 });
 
+document.getElementById("download-operator-pack")?.addEventListener("click", async () => {
+  const message = document.getElementById("test-path-message");
+  try {
+    await downloadProtectedFile("/operations/operator-pack.md", "drec-operator-pack.md", "text/markdown");
+    message.textContent = "Operator pack downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download operator pack.";
+  }
+});
+
 document.getElementById("plan-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const message = document.getElementById("plan-message");

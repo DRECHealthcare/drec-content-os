@@ -89,6 +89,11 @@ The check verifies API health, workflow status, weekly report readiness, Meta
 readiness, the scheduler-ready nightly metrics dry run, and the production web
 shell without creating or changing records.
 
+The Dashboard `Download Operator Pack` action calls
+`/operations/operator-pack.md` and produces one Markdown handoff file with
+readiness status, credential setup, publishing handoff copy, and the weekly
+operating report.
+
 ## Nightly Meta Metrics Job
 
 The API has guarded job endpoints for future scheduling:

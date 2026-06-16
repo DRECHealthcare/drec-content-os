@@ -517,6 +517,74 @@ async def operations_snapshot_csv(_: None = Depends(require_access_token)):
     )
 
 
+@app.get("/operations/operator-pack.md")
+async def operations_operator_pack(_: None = Depends(require_access_token)):
+    workflow = await workflow_status(None)
+    automation = await automation_status_payload()
+    security = security_status_payload()
+    meta = await meta_readiness(None)
+    setup = await meta_setup_checklist(None)
+    handoff = await publishing_handoff(None)
+    weekly = await weekly_report(None)
+    weekly_text = weekly.body.decode("utf-8") if getattr(weekly, "body", None) else ""
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    gate_lines = [
+        f"- {gate.get('label')}: {gate.get('status')} — {gate.get('detail')}"
+        for gate in automation.get("gates", [])
+    ] or ["- No automation gates available."]
+    setup_lines = [
+        f"- {step.get('label')}: {step.get('status')} — {step.get('detail')}"
+        for step in setup.get("steps", [])
+    ] or ["- No setup checks available."]
+    secret_lines = [f"- {secret}" for secret in setup.get("required_secrets", [])] or ["- No required secrets listed."]
+    command_lines = ["```bash", *(setup.get("setup_commands") or ["# No setup commands available."]), "```"]
+    lines = [
+        "# DREC Content OS Operator Pack",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "## Current Operating Status",
+        "",
+        f"- Workflow: {workflow.get('workflow', {}).get('next_action', {}).get('title', 'Unknown')}",
+        f"- Automation: {automation.get('overall_status')}",
+        f"- Security: {security.get('overall_status')}",
+        f"- Meta: {meta.get('overall_status')} ({meta.get('mode')})",
+        f"- Handoff ready: {handoff.get('ready_count', 0)} ready / {handoff.get('blocked_count', 0)} blocked",
+        "",
+        "## Automation Gates",
+        "",
+        *gate_lines,
+        "",
+        "## Credential Setup",
+        "",
+        *setup_lines,
+        "",
+        "Required secrets:",
+        "",
+        *secret_lines,
+        "",
+        "Command template:",
+        "",
+        *command_lines,
+        "",
+        "## Publishing Handoff",
+        "",
+        "```text",
+        handoff.get("handoff_text") or "No handoff available.",
+        "```",
+        "",
+        "## Weekly Operating Report",
+        "",
+        weekly_text.strip() or "No weekly report available.",
+        "",
+    ]
+    return Response(
+        "\n".join(lines) + "\n",
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-operator-pack.md"'},
+    )
+
+
 @app.get("/kb")
 async def list_knowledge_entries(_: None = Depends(require_access_token)):
     rows = await fetch_rows(
