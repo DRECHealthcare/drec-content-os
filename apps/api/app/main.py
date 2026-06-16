@@ -820,18 +820,37 @@ async def update_publish_queue_item(
     update: PublishQueueStatusIn,
     _: None = Depends(require_access_token),
 ):
-    if update.status == "scheduled":
-        existing = await fetch_row(
-            "select compliance_status from publish_queue where id = $1",
-            item_id,
+    existing = await fetch_row(
+        """
+        select status, compliance_status
+        from publish_queue
+        where id = $1
+        """,
+        item_id,
+    )
+    if existing is None and supabase_rest.configured():
+        rows = await supabase_rest.select(
+            "publish_queue",
+            {"select": "status,compliance_status", "id": f"eq.{item_id}", "limit": "1"},
         )
-        if existing is None:
-            rows = await supabase_rest.select(
-                "publish_queue",
-                {"select": "compliance_status", "id": f"eq.{item_id}", "limit": "1"},
+        existing = rows[0] if rows else None
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Queue item not found.")
+    compliance_status = update.compliance_status
+    if update.caption is not None:
+        compliance = check_text(update.caption)
+        if compliance["status"] == "flagged":
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "message": "Compliance check blocked this caption.",
+                    "compliance": compliance,
+                },
             )
-            existing = rows[0] if rows else None
-        if (existing or {}).get("compliance_status") != "clear":
+        compliance_status = "pending" if compliance["status"] == "pending" else (compliance_status or "clear")
+    if update.status == "scheduled":
+        final_compliance = compliance_status or (existing or {}).get("compliance_status")
+        if final_compliance != "clear":
             raise HTTPException(
                 status_code=422,
                 detail="Only compliance-clear items can be scheduled.",
@@ -845,8 +864,14 @@ async def update_publish_queue_item(
     row = await fetch_row(
         """
         update publish_queue
-        set status = $2,
+        set status = coalesce($2, status),
             external_post_id = coalesce($3, external_post_id),
+            channel = coalesce($4, channel),
+            format = coalesce($5, format),
+            caption = coalesce($6, caption),
+            media_urls = coalesce($7::text[], media_urls),
+            planned_slot = case when $8 then $9 else planned_slot end,
+            compliance_status = coalesce($10, compliance_status),
             updated_at = now()
         where id = $1
         returning id, asset_id, channel, format, caption, media_urls, planned_slot, status,
@@ -855,17 +880,38 @@ async def update_publish_queue_item(
         item_id,
         update.status,
         external_post_id,
+        update.channel,
+        update.format,
+        update.caption,
+        update.media_urls,
+        update.planned_slot_changed,
+        update.planned_slot,
+        compliance_status,
     )
     if row is None:
-        payload = {"status": update.status}
+        payload = {}
+        if update.status is not None:
+            payload["status"] = update.status
         if external_post_id:
             payload["external_post_id"] = external_post_id
+        if update.channel is not None:
+            payload["channel"] = update.channel
+        if update.format is not None:
+            payload["format"] = update.format
+        if update.caption is not None:
+            payload["caption"] = update.caption
+        if update.media_urls is not None:
+            payload["media_urls"] = update.media_urls
+        if update.planned_slot_changed:
+            payload["planned_slot"] = update.planned_slot.isoformat() if update.planned_slot else None
+        if compliance_status is not None:
+            payload["compliance_status"] = compliance_status
         row = await supabase_rest.update(
             "publish_queue",
             payload,
             {"id": f"eq.{item_id}"},
         )
-    return {"item": row or {"id": item_id, "status": update.status}}
+    return {"item": row or {"id": item_id, **payload}}
 
 
 @app.get("/publishing-handoff")

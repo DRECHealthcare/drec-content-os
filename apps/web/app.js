@@ -1,6 +1,7 @@
 const apiBase = window.DREC_API_BASE_URL || localStorage.getItem("DREC_API_BASE_URL") || "https://drec-content-os-api.fly.dev";
 const tokenKey = "DREC_ACCESS_TOKEN";
 let currentDraft = null;
+let editingQueueItem = null;
 
 const titleMap = {
   dashboard: "Dashboard",
@@ -112,6 +113,14 @@ function formatDate(value) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
+}
+
+function formatDatetimeLocal(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
 }
 
 function splitLines(value) {
@@ -667,18 +676,20 @@ function queueCard(item, mode) {
   const mediaCount = Array.isArray(item.media_urls) ? item.media_urls.length : 0;
   const canApprove = item.compliance_status === "clear";
   const canMarkPublished = mode === "queue" && item.status === "scheduled" && item.compliance_status === "clear";
+  const canEdit = item.status !== "published";
   const postIdLine = item.external_post_id
     ? `<small>Meta ID: ${escapeHtml(item.external_post_id)}</small>`
     : "";
   const actions = mode === "review" ? `
     <div class="queue-actions">
       <button type="button" data-feedback="approve" data-id="${escapeHtml(item.id)}" ${canApprove ? "" : "disabled"}>Approve</button>
-      <button type="button" data-feedback="edit" data-id="${escapeHtml(item.id)}">Edit</button>
+      <button type="button" data-edit-queue="${escapeHtml(item.id)}" ${canEdit ? "" : "disabled"}>Edit Item</button>
       <button type="button" data-feedback="regen" data-id="${escapeHtml(item.id)}">Regen</button>
       <button type="button" data-feedback="reject" data-id="${escapeHtml(item.id)}">Reject</button>
     </div>
   ` : `
     <div class="queue-actions">
+      <button type="button" data-edit-queue="${escapeHtml(item.id)}" ${canEdit ? "" : "disabled"}>Edit Item</button>
       <button type="button" data-mark-published="${escapeHtml(item.id)}" ${canMarkPublished ? "" : "disabled"}>Mark Published</button>
     </div>
   `;
@@ -778,13 +789,44 @@ async function loadPublishQueue() {
     const reviewMarkup = items.length
       ? items.map((item) => queueCard(item, "review")).join("")
       : '<p class="status-note">No content waiting for review.</p>';
+    queueContainer.dataset.items = JSON.stringify(items);
+    reviewContainer.dataset.items = JSON.stringify(items);
     queueContainer.innerHTML = queueMarkup;
     reviewContainer.innerHTML = reviewMarkup;
   } catch {
     const message = '<p class="status-note">Set the access token to load the publish queue.</p>';
+    queueContainer.dataset.items = "[]";
+    reviewContainer.dataset.items = "[]";
     queueContainer.innerHTML = message;
     reviewContainer.innerHTML = message;
   }
+}
+
+function resetQueueEdit() {
+  editingQueueItem = null;
+  const form = document.getElementById("queue-form");
+  form.reset();
+  document.getElementById("queue-submit").textContent = "Add To Queue";
+  document.getElementById("cancel-queue-edit").hidden = true;
+}
+
+function startQueueEdit(id) {
+  const queueItems = JSON.parse(document.getElementById("queue-items").dataset.items || "[]");
+  const reviewItems = JSON.parse(document.getElementById("review-items").dataset.items || "[]");
+  const item = [...queueItems, ...reviewItems].find((entry) => entry.id === id);
+  if (!item) return;
+  editingQueueItem = item;
+  const form = document.getElementById("queue-form");
+  form.elements.channel.value = item.channel || "facebook";
+  form.elements.format.value = item.format || "single";
+  form.elements.planned_slot.value = formatDatetimeLocal(item.planned_slot);
+  form.elements.compliance_status.value = item.compliance_status || "pending";
+  form.elements.caption.value = item.caption || "";
+  form.elements.media_urls.value = (item.media_urls || []).join("\n");
+  document.getElementById("queue-submit").textContent = "Update Item";
+  document.getElementById("cancel-queue-edit").hidden = false;
+  document.getElementById("queue-message").textContent = "Editing queued item. Save will re-check safety.";
+  showScreen("scheduler");
 }
 
 document.getElementById("kb-form").addEventListener("submit", async (event) => {
@@ -1065,17 +1107,41 @@ document.getElementById("queue-form").addEventListener("submit", async (event) =
     if (compliance.status === "pending") {
       payload.compliance_status = "pending";
     }
-    message.textContent = "Adding item...";
-    await fetchJson("/publish-queue", { method: "POST", body: JSON.stringify(payload) });
-    event.currentTarget.reset();
-    message.textContent = "Queue item added.";
+    if (editingQueueItem) {
+      message.textContent = "Updating item...";
+      await fetchJson(`/publish-queue/${editingQueueItem.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          ...payload,
+          status: editingQueueItem.status || "draft",
+          planned_slot_changed: true,
+        }),
+      });
+      resetQueueEdit();
+      message.textContent = "Queue item updated.";
+    } else {
+      message.textContent = "Adding item...";
+      await fetchJson("/publish-queue", { method: "POST", body: JSON.stringify(payload) });
+      event.currentTarget.reset();
+      message.textContent = "Queue item added.";
+    }
     await Promise.all([loadPublishQueue(), loadLoopStatus()]);
   } catch (error) {
-    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not add queue item.";
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not save queue item.";
   }
 });
 
+document.getElementById("cancel-queue-edit").addEventListener("click", () => {
+  resetQueueEdit();
+  document.getElementById("queue-message").textContent = "Edit cancelled.";
+});
+
 document.getElementById("queue-items").addEventListener("click", async (event) => {
+  const editButton = event.target.closest("[data-edit-queue]");
+  if (editButton) {
+    startQueueEdit(editButton.dataset.editQueue);
+    return;
+  }
   const button = event.target.closest("[data-mark-published]");
   if (!button) return;
   const postId = window.prompt("Paste the Meta post ID after you publish this item.");
@@ -1175,6 +1241,11 @@ document.getElementById("dry-run-meta-metrics").addEventListener("click", async 
 });
 
 document.getElementById("review-items").addEventListener("click", async (event) => {
+  const editButton = event.target.closest("[data-edit-queue]");
+  if (editButton) {
+    startQueueEdit(editButton.dataset.editQueue);
+    return;
+  }
   const button = event.target.closest("[data-feedback]");
   if (!button) return;
   const action = button.dataset.feedback;

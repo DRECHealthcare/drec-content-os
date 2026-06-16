@@ -79,8 +79,15 @@ class PublishQueueIn(BaseModel):
 
 
 class PublishQueueStatusIn(BaseModel):
-    status: Literal["draft", "scheduled", "publishing", "published", "failed", "cancelled"]
+    status: Optional[Literal["draft", "scheduled", "publishing", "published", "failed", "cancelled"]] = None
     external_post_id: Optional[str] = None
+    channel: Optional[Literal["facebook", "instagram"]] = None
+    format: Optional[Literal["carousel", "single", "reel", "story"]] = None
+    caption: Optional[str] = None
+    media_urls: Optional[List[str]] = None
+    planned_slot: Optional[datetime] = None
+    planned_slot_changed: bool = False
+    compliance_status: Optional[Literal["pending", "clear", "flagged"]] = None
 
 
 class MetaDispatchIn(BaseModel):
