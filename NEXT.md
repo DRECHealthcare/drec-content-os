@@ -49,6 +49,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added copy-ready weekly operating report
 - [x] Added one-click draft asset creation from weekly briefs
 - [x] Added saved asset package preview and copy action
+- [x] Added quick scheduling for compliance-clear queue items
 
 ## Next Engineering Tasks
 
@@ -80,6 +81,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add weekly operating report
 - [x] Add one-click draft asset creation from briefs
 - [x] Add saved asset package preview/copy
+- [x] Add quick queue scheduling
 - [ ] Connect Meta Graph API credentials
 - [ ] Implement real Facebook publish scheduling
 - [ ] Implement Instagram two-step publish worker

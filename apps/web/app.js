@@ -140,6 +140,12 @@ function formatDate(value) {
   }).format(date);
 }
 
+function nextScheduleInputValue() {
+  const date = new Date();
+  date.setHours(date.getHours() + 1, 0, 0, 0);
+  return formatDatetimeLocal(date.toISOString());
+}
+
 function formatDatetimeLocal(value) {
   if (!value) return "";
   const date = new Date(value);
@@ -829,6 +835,7 @@ function queueCard(item, mode) {
   const mediaCount = Array.isArray(item.media_urls) ? item.media_urls.length : 0;
   const canApprove = item.compliance_status === "clear";
   const canMarkPublished = mode === "queue" && item.status === "scheduled" && item.compliance_status === "clear";
+  const canQuickSchedule = mode === "queue" && item.status !== "published" && item.compliance_status === "clear";
   const canEdit = item.status !== "published";
   const feedback = item.latest_feedback || null;
   const postIdLine = item.external_post_id
@@ -847,6 +854,7 @@ function queueCard(item, mode) {
   ` : `
     <div class="queue-actions">
       <button type="button" data-edit-queue="${escapeHtml(item.id)}" ${canEdit ? "" : "disabled"}>Edit Item</button>
+      <button type="button" data-quick-schedule="${escapeHtml(item.id)}" ${canQuickSchedule ? "" : "disabled"}>Schedule</button>
       <button type="button" data-mark-published="${escapeHtml(item.id)}" ${canMarkPublished ? "" : "disabled"}>Mark Published</button>
     </div>
   `;
@@ -1474,6 +1482,36 @@ document.getElementById("queue-items").addEventListener("click", async (event) =
   const editButton = event.target.closest("[data-edit-queue]");
   if (editButton) {
     startQueueEdit(editButton.dataset.editQueue);
+    return;
+  }
+  const scheduleButton = event.target.closest("[data-quick-schedule]");
+  if (scheduleButton) {
+    const planned = window.prompt("Set publish time. Format: YYYY-MM-DDTHH:mm", nextScheduleInputValue());
+    if (!planned || !planned.trim()) return;
+    const date = new Date(planned.trim());
+    const message = document.getElementById("queue-message");
+    if (Number.isNaN(date.getTime())) {
+      message.textContent = "Use a valid date and time.";
+      return;
+    }
+    scheduleButton.disabled = true;
+    scheduleButton.textContent = "Saving";
+    try {
+      await fetchJson(`/publish-queue/${scheduleButton.dataset.quickSchedule}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          status: "scheduled",
+          planned_slot: date.toISOString(),
+          planned_slot_changed: true,
+        }),
+      });
+      message.textContent = "Item scheduled.";
+      await Promise.all([loadPublishQueue(), loadLoopStatus()]);
+    } catch (error) {
+      message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not schedule item.";
+      scheduleButton.disabled = false;
+      scheduleButton.textContent = "Schedule";
+    }
     return;
   }
   const button = event.target.closest("[data-mark-published]");

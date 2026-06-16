@@ -67,6 +67,7 @@ Stage 1 is now a working thin-core workflow:
 - Run pre-publish compliance checks
 - Queue and review posts with approval, regen, and rejection feedback trails
 - Edit queued captions, media URLs, planned time, and channel/format before publishing
+- Quick-schedule compliance-clear queue items into real publishing slots
 - Filter the scheduler by status/channel and scan the next 7 days of planned posts
 - Download scheduled posts as a calendar file for manual publishing reminders
 - Build a manual publishing handoff while Meta credentials are pending
