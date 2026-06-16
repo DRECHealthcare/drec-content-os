@@ -98,6 +98,30 @@ The Dashboard `Run Risk Audit` action calls `/operations/risk-audit` and scans
 automation gates, assets, queue items, and media for blocked or warning-level
 issues before a publishing run.
 
+## GitHub Dry-Run Scheduler
+
+The repository includes `.github/workflows/drec-scheduler-dry-run.yml`.
+It is safe to leave enabled because it only calls dry-run endpoints and skips
+itself when the GitHub secret is missing.
+
+Set this GitHub Actions secret when you want scheduled dry-run checks:
+
+```text
+DREC_ACCESS_TOKEN
+```
+
+Optional repository variable:
+
+```text
+DREC_API_BASE_URL=https://drec-content-os-api.fly.dev
+```
+
+The workflow checks:
+
+- Due Meta publishing in dry-run mode every 6 hours
+- Nightly Meta metrics in dry-run mode at 02:30 Asia/Kuala_Lumpur
+- Automation status and content risk audit gates
+
 ## Nightly Meta Metrics Job
 
 The API has guarded job endpoints for future scheduling:

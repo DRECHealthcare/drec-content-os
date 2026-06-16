@@ -1,0 +1,52 @@
+name: DREC Scheduler Dry Run
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */6 * * *"
+    - cron: "30 18 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: drec-scheduler-dry-run
+  cancel-in-progress: false
+
+jobs:
+  dry-run-jobs:
+    runs-on: ubuntu-latest
+    env:
+      DREC_API_BASE_URL: ${{ vars.DREC_API_BASE_URL || 'https://drec-content-os-api.fly.dev' }}
+      DREC_ACCESS_TOKEN: ${{ secrets.DREC_ACCESS_TOKEN }}
+    steps:
+      - name: Skip when access token is missing
+        if: ${{ env.DREC_ACCESS_TOKEN == '' }}
+        run: |
+          echo "DREC_ACCESS_TOKEN is not configured. Skipping dry-run scheduler checks."
+
+      - name: Dry run due Meta publishing
+        if: ${{ env.DREC_ACCESS_TOKEN != '' }}
+        run: |
+          curl --fail --silent --show-error \
+            --request POST \
+            --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
+            "${DREC_API_BASE_URL}/jobs/meta-publishing?dry_run=true&channel=all"
+
+      - name: Dry run nightly Meta metrics
+        if: ${{ env.DREC_ACCESS_TOKEN != '' && (github.event_name == 'workflow_dispatch' || github.event.schedule == '30 18 * * *') }}
+        run: |
+          curl --fail --silent --show-error \
+            --request POST \
+            --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
+            "${DREC_API_BASE_URL}/jobs/nightly-meta-metrics?dry_run=true&limit=25&rollup=true"
+
+      - name: Check automation and risk gates
+        if: ${{ env.DREC_ACCESS_TOKEN != '' }}
+        run: |
+          curl --fail --silent --show-error \
+            --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
+            "${DREC_API_BASE_URL}/automation/status"
+          curl --fail --silent --show-error \
+            --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
+            "${DREC_API_BASE_URL}/operations/risk-audit"

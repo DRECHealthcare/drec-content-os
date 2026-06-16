@@ -5,6 +5,7 @@ const files = {
   models: "apps/api/app/models.py",
   schema: "supabase/schema.sql",
   web: "apps/web/app.js",
+  schedulerWorkflow: ".github/workflows/drec-scheduler-dry-run.yml",
 };
 
 const requiredRoutes = [
@@ -302,6 +303,21 @@ const requiredSnippets = [
     name: "web visible meta setup commands",
     file: "web",
     text: "meta-setup-commands",
+  },
+  {
+    name: "github scheduler dry-run workflow",
+    file: "schedulerWorkflow",
+    text: "/jobs/meta-publishing?dry_run=true&channel=all",
+  },
+  {
+    name: "github nightly metrics dry-run workflow",
+    file: "schedulerWorkflow",
+    text: "/jobs/nightly-meta-metrics?dry_run=true&limit=25&rollup=true",
+  },
+  {
+    name: "github scheduler skips missing token",
+    file: "schedulerWorkflow",
+    text: "DREC_ACCESS_TOKEN is not configured. Skipping dry-run scheduler checks.",
   },
 ];
 

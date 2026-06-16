@@ -65,6 +65,7 @@ Stage 1 is now a working thin-core workflow:
 - Run a protected content risk audit across automation gates, assets, queue items, and media before publishing or enabling automation
 - Download a protected CSV operations snapshot for audit or backup before rollout changes
 - Download a protected operator pack with readiness status, setup checklist, publishing handoff, and weekly report in one Markdown file
+- Use the GitHub Actions dry-run scheduler template to check publishing, metrics, automation, and risk gates without mutating live records
 - See the Supabase service-role readiness gate before stricter RLS policies are applied
 - Pull learning-informed topic recommendations into the next weekly plan
 - Mark content briefs as drafted or archived so weekly plans stay manageable

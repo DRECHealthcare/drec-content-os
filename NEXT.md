@@ -83,6 +83,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added Meta credential setup checklist and copy-ready Fly secret command template
 - [x] Added protected operator pack export with readiness, setup, handoff, and weekly report sections
 - [x] Added protected content risk audit across automation gates, assets, queue, and media
+- [x] Added GitHub Actions dry-run scheduler template for publishing, metrics, automation, and risk checks
 
 ## Next Engineering Tasks
 
@@ -147,6 +148,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add copy-ready Meta and Supabase credential setup checklist
 - [x] Add one-click operator pack export for weekly handoff and rollout audit
 - [x] Add one-click content risk audit before publishing or automation rollout
+- [x] Add safe dry-run scheduler workflow before enabling real Meta jobs
 - [ ] Connect Meta Graph API credentials
 - [x] Implement real Facebook publish scheduling behind Meta readiness and enable flags
 - [x] Implement Instagram two-step publish worker behind Meta readiness and enable flags
