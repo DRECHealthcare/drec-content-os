@@ -686,6 +686,34 @@ button[type="submit"] {
   font-size: 13px;
 }
 
+.asset-toolbar {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.asset-toolbar button {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #FFF;
+  color: var(--navy);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.asset-toolbar button:first-child {
+  border-color: transparent;
+  background: var(--teal);
+  color: #FFF;
+}
+
+.asset-toolbar button:disabled {
+  cursor: not-allowed;
+  opacity: .5;
+}
+
 .queue-list {
   margin-top: 18px;
   display: grid;

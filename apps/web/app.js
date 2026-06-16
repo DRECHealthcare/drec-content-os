@@ -854,6 +854,15 @@ document.getElementById("media-items").addEventListener("click", async (event) =
   }
 });
 
+document.getElementById("approve-clear-assets").addEventListener("click", async (event) => {
+  await runAssetBatchAction(event.currentTarget, "/assets/approve-clear?limit=20", "Approve clear assets");
+});
+
+document.getElementById("queue-ready-assets").addEventListener("click", async (event) => {
+  await runAssetBatchAction(event.currentTarget, "/assets/queue-ready?limit=20", "Queue ready assets");
+  showScreen("review");
+});
+
 async function loadAssets() {
   const container = document.getElementById("asset-items");
   if (!container) return;
@@ -866,6 +875,31 @@ async function loadAssets() {
       : '<p class="status-note">No saved assets yet. Save one from Create Post.</p>';
   } catch {
     container.innerHTML = '<p class="status-note">Set the access token to load assets.</p>';
+  }
+}
+
+async function runAssetBatchAction(button, path, label) {
+  const message = document.getElementById("media-message");
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = "Working";
+  message.textContent = `${label}...`;
+  try {
+    const data = await fetchJson(path, { method: "POST" });
+    const summary = [
+      data.approved !== undefined ? `${data.approved} approved` : null,
+      data.queued !== undefined ? `${data.queued} queued` : null,
+      data.reused !== undefined ? `${data.reused} reused` : null,
+      data.already_approved !== undefined ? `${data.already_approved} already approved` : null,
+      `${data.skipped || 0} skipped`,
+    ].filter(Boolean).join(", ");
+    message.textContent = `${label} complete: ${summary}.`;
+    await Promise.all([loadAssets(), loadPublishQueue(), loadLoopStatus(), loadLearningSummary()]);
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : `${label} failed.`;
+  } finally {
+    button.disabled = false;
+    button.textContent = originalText;
   }
 }
 

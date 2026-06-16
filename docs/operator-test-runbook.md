@@ -38,7 +38,7 @@ Goal: make an asset queue-ready.
 
 1. In `Assets`, review the caption package, variants, slides, or reel script.
 2. Click `Safety Clear` if it is safe for DREC educational publishing.
-3. Click `Approve` if the creative package is ready.
+3. Click `Approve` if the creative package is ready, or use `Approve Clear Assets` after reviewing multiple safety-clear assets.
 4. Expected result:
    - The asset shows `clear`.
    - The asset shows `approved`.
@@ -52,6 +52,7 @@ Pass condition: the asset is both safety-clear and approved.
 Goal: move the approved asset into the publishing workflow.
 
 1. Click `Add To Queue`.
+   - For multiple approved clear assets, click `Queue Ready Assets`.
 2. Expected result:
    - You are moved to `Review Queue`.
    - The queued item appears.

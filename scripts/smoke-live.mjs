@@ -63,7 +63,7 @@ const checks = [
     auth: false,
     validate: async (res) => {
       const text = await res.text();
-      return text.includes("DREC") && text.includes("workflow-next") && text.includes("copy-test-path") && text.includes("save-all-assets");
+      return text.includes("DREC") && text.includes("workflow-next") && text.includes("copy-test-path") && text.includes("save-all-assets") && text.includes("approve-clear-assets") && text.includes("queue-ready-assets");
     },
   },
   {
@@ -72,7 +72,7 @@ const checks = [
     auth: false,
     validate: async (res) => {
       const text = await res.text();
-      return text.includes("/workflow/status") && text.includes("Existing queue item opened") && text.includes("function testPathText()") && text.includes("schedule-next") && text.includes("load-published-post") && text.includes("/briefs/draft-assets");
+      return text.includes("/workflow/status") && text.includes("Existing queue item opened") && text.includes("function testPathText()") && text.includes("schedule-next") && text.includes("load-published-post") && text.includes("/briefs/draft-assets") && text.includes("/assets/queue-ready");
     },
   },
 ];

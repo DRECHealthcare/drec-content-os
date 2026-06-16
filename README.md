@@ -70,6 +70,7 @@ Stage 1 is now a working thin-core workflow:
 - Preview and copy saved asset packages with caption variants, carousel slides, or reel scripts
 - Run pre-publish compliance checks
 - Record human safety review on assets before queueing
+- Approve safety-clear assets and queue approved clear assets in batches
 - Add assets to the publishing queue only after asset approval and a clear safety check
 - Reuse an existing active queue item when the same asset is added to queue again
 - Queue and review posts with approval, regen, and rejection feedback trails

@@ -47,6 +47,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added calendar export for scheduled publishing reminders
 - [x] Added visible review feedback notes for queued content decisions
 - [x] Added asset and media lifecycle review actions
+- [x] Added batch approval for safety-clear assets and batch queueing for ready assets
 - [x] Added copy-ready weekly operating report
 - [x] Added one-click draft asset creation from weekly briefs
 - [x] Added batch draft asset creation from current weekly briefs
@@ -94,6 +95,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add downloadable publishing calendar
 - [x] Add visible review feedback notes
 - [x] Add asset and media lifecycle review controls
+- [x] Add batch asset approval and queueing controls
 - [x] Add weekly operating report
 - [x] Add one-click draft asset creation from briefs
 - [x] Add batch draft asset creation from weekly briefs

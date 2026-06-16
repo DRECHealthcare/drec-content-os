@@ -16,6 +16,8 @@ const requiredRoutes = [
   "GET /metrics/published-source",
   "POST /briefs/{brief_id}/draft-asset",
   "POST /briefs/draft-assets",
+  "POST /assets/approve-clear",
+  "POST /assets/queue-ready",
   "POST /assets/{asset_id}/queue",
   "PATCH /assets/{asset_id}/compliance",
   "POST /publish-queue/{item_id}/schedule-next",
@@ -40,6 +42,16 @@ const requiredSnippets = [
     name: "asset queue idempotency",
     file: "main",
     text: "existing_queue_for_asset",
+  },
+  {
+    name: "bulk clear asset approval",
+    file: "main",
+    text: "approve_clear_assets",
+  },
+  {
+    name: "bulk ready asset queue",
+    file: "main",
+    text: "queue_ready_assets",
   },
   {
     name: "brief asset idempotency",
@@ -105,6 +117,16 @@ const requiredSnippets = [
     name: "web bulk asset action",
     file: "web",
     text: "save-all-assets",
+  },
+  {
+    name: "web bulk asset review action",
+    file: "web",
+    text: "approve-clear-assets",
+  },
+  {
+    name: "web bulk asset queue action",
+    file: "web",
+    text: "queue-ready-assets",
   },
 ];
 

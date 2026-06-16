@@ -565,14 +565,20 @@ def asset_payload(asset: AssetIn):
 
 @app.get("/assets")
 async def list_assets(_: None = Depends(require_access_token)):
+    return {"items": await fetch_asset_list()}
+
+
+async def fetch_asset_list(limit: int = 100):
+    bounded_limit = max(1, min(int(limit or 100), 200))
     rows = await fetch_rows(
         """
         select id, brief_id, channel, format, caption, media_urls, metadata,
                compliance_status, review_status, created_at
         from assets
         order by created_at desc
-        limit 100
-        """
+        limit $1
+        """,
+        bounded_limit,
     )
     if not rows:
         rows = await supabase_rest.select(
@@ -580,10 +586,10 @@ async def list_assets(_: None = Depends(require_access_token)):
             {
                 "select": "id,brief_id,channel,format,caption,media_urls,metadata,compliance_status,review_status,created_at",
                 "order": "created_at.desc",
-                "limit": "100",
+                "limit": str(bounded_limit),
             },
         )
-    return {"items": rows}
+    return rows
 
 
 @app.post("/assets")
@@ -820,6 +826,67 @@ async def queue_asset(asset_id: str, _: None = Depends(require_access_token)):
     )
     queued = await create_publish_queue_item(item)
     return {"item": queued.get("item"), "asset": asset, "reused": False}
+
+
+@app.post("/assets/approve-clear")
+async def approve_clear_assets(limit: int = 20, _: None = Depends(require_access_token)):
+    assets = await fetch_asset_list(limit)
+    results = []
+    for asset in assets:
+        status = "skipped"
+        detail = None
+        if asset.get("review_status") == "approved":
+            status = "already_approved"
+        elif asset.get("review_status") == "rejected":
+            detail = "Rejected assets are not batch-approved."
+        elif asset.get("compliance_status") != "clear":
+            detail = "Asset is not compliance-clear."
+        else:
+            updated = await update_asset_status(
+                str(asset.get("id")),
+                AssetStatusIn(review_status="approved", reason="Batch approved after clear safety review."),
+            )
+            asset = updated.get("item") or asset
+            status = "approved"
+        results.append({
+            "asset_id": asset.get("id"),
+            "status": status,
+            "detail": detail,
+        })
+    return {
+        "processed": len(results),
+        "approved": sum(1 for item in results if item.get("status") == "approved"),
+        "already_approved": sum(1 for item in results if item.get("status") == "already_approved"),
+        "skipped": sum(1 for item in results if item.get("status") == "skipped"),
+        "items": results,
+    }
+
+
+@app.post("/assets/queue-ready")
+async def queue_ready_assets(limit: int = 20, _: None = Depends(require_access_token)):
+    assets = await fetch_asset_list(limit)
+    results = []
+    for asset in assets:
+        if asset.get("review_status") != "approved" or asset.get("compliance_status") != "clear":
+            results.append({
+                "asset_id": asset.get("id"),
+                "status": "skipped",
+                "detail": "Asset must be approved and compliance-clear.",
+            })
+            continue
+        result = await queue_asset(str(asset.get("id")))
+        results.append({
+            "asset_id": asset.get("id"),
+            "queue_id": result.get("item", {}).get("id"),
+            "status": "reused" if result.get("reused") else "queued",
+        })
+    return {
+        "processed": len(results),
+        "queued": sum(1 for item in results if item.get("status") == "queued"),
+        "reused": sum(1 for item in results if item.get("status") == "reused"),
+        "skipped": sum(1 for item in results if item.get("status") == "skipped"),
+        "items": results,
+    }
 
 
 def media_asset_payload(media: MediaAssetIn):
