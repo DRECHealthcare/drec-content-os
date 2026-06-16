@@ -37,6 +37,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added guarded Facebook dispatch dry run with real-publish lock
 - [x] Added Meta metrics ingestion dry run for published post IDs
 - [x] Added manual post ID capture after safe handoff publishing
+- [x] Added direct Record Published action inside handoff ready items
 - [x] Added latest published post prefill for manual metric entry
 - [x] Added guarded Instagram dispatch dry run with container/publish planning
 - [x] Added safe editing for queued captions, media URLs, planned time, channel, and format

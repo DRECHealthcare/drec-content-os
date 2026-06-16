@@ -659,6 +659,10 @@ function outcomeCard(item) {
 }
 
 function handoffItem(item) {
+  const canRecordPublished = item.status === "scheduled" && item.compliance_status === "clear";
+  const publishedAction = canRecordPublished
+    ? `<div class="queue-actions"><button type="button" data-handoff-published="${escapeHtml(item.id)}">Record Published</button></div>`
+    : "";
   return `
     <article class="queue-item">
       <div class="queue-meta">
@@ -669,6 +673,7 @@ function handoffItem(item) {
       </div>
       <small>${formatDate(item.planned_slot)}</small>
       <p>${escapeHtml(item.caption)}</p>
+      ${publishedAction}
     </article>
   `;
 }
@@ -900,6 +905,31 @@ async function runAssetBatchAction(button, path, label) {
   } finally {
     button.disabled = false;
     button.textContent = originalText;
+  }
+}
+
+async function recordPublishedItem(itemId, button, options = {}) {
+  const postId = window.prompt("Paste the Meta post ID after you publish this item.");
+  if (!postId || !postId.trim()) return;
+  const message = document.getElementById("queue-message");
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = "Saving";
+  try {
+    await fetchJson(`/publish-queue/${itemId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status: "published", external_post_id: postId.trim() }),
+    });
+    await Promise.all([loadPublishQueue(), loadLoopStatus(), loadMetaReadiness()]);
+    if (options.refreshHandoff) {
+      const data = await fetchJson("/publishing-handoff");
+      renderHandoff(data);
+    }
+    message.textContent = "Published item recorded.";
+  } catch {
+    button.disabled = false;
+    button.textContent = originalText;
+    message.textContent = "Could not record published item.";
   }
 }
 
@@ -1726,6 +1756,11 @@ document.getElementById("cancel-queue-edit").addEventListener("click", () => {
 });
 
 document.getElementById("handoff-result").addEventListener("click", async (event) => {
+  const publishButton = event.target.closest("[data-handoff-published]");
+  if (publishButton) {
+    await recordPublishedItem(publishButton.dataset.handoffPublished, publishButton, { refreshHandoff: true });
+    return;
+  }
   const button = event.target.closest("[data-copy-handoff]");
   if (!button) return;
   const box = document.getElementById("handoff-copy-text");
@@ -1770,20 +1805,7 @@ document.getElementById("queue-items").addEventListener("click", async (event) =
   }
   const button = event.target.closest("[data-mark-published]");
   if (!button) return;
-  const postId = window.prompt("Paste the Meta post ID after you publish this item.");
-  if (!postId || !postId.trim()) return;
-  button.disabled = true;
-  button.textContent = "Saving";
-  try {
-    await fetchJson(`/publish-queue/${button.dataset.markPublished}`, {
-      method: "PATCH",
-      body: JSON.stringify({ status: "published", external_post_id: postId.trim() }),
-    });
-    await Promise.all([loadPublishQueue(), loadLoopStatus(), loadMetaReadiness()]);
-  } catch {
-    button.disabled = false;
-    button.textContent = "Mark Published";
-  }
+  await recordPublishedItem(button.dataset.markPublished, button);
 });
 
 document.getElementById("check-compliance").addEventListener("click", async () => {

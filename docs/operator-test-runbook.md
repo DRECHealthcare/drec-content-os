@@ -104,11 +104,12 @@ Pass condition: only scheduled, safety-clear items with planned time are ready.
 Goal: connect manual publishing back to learning.
 
 1. After manually publishing on Meta, copy the Meta post ID.
-2. In `Scheduler`, click `Mark Published`.
+2. In the handoff ready item, click `Record Published`.
 3. Paste the post ID.
 4. Expected result:
    - The item becomes `published`.
    - The Meta post ID is visible on the queue item.
+   - The handoff ready list refreshes so the completed item is removed.
 
 Pass condition: the post ID is stored against the queue item.
 

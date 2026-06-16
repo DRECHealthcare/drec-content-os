@@ -83,6 +83,7 @@ Stage 1 is now a working thin-core workflow:
 - Download scheduled posts as a calendar file for manual publishing reminders
 - Build a manual publishing handoff while Meta credentials are pending
 - Copy a ready-to-send publishing handoff package for manual posting
+- Record the Meta post ID directly from the handoff after manual posting
 - Mark manually published posts with their Meta post ID so metrics ingestion can learn from them later
 - Dry-run Facebook and Instagram publishing workers before Meta credentials are connected
 - Load the latest published post into Performance so raw metrics and outcomes do not require retyping the Meta ID and context

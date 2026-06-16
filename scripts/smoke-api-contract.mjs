@@ -139,6 +139,11 @@ const requiredSnippets = [
     file: "web",
     text: "schedule-approved-items",
   },
+  {
+    name: "web handoff published action",
+    file: "web",
+    text: "data-handoff-published",
+  },
 ];
 
 const routePattern = /@app\.(get|post|patch|delete)\("([^"]+)"/g;
