@@ -2558,6 +2558,13 @@ async def build_loop_status():
     queue = await fetch_rows(
         "select status, count(*)::int as count from publish_queue group by status"
     )
+    asset_status = await fetch_rows(
+        """
+        select review_status, compliance_status, count(*)::int as count
+        from assets
+        group by review_status, compliance_status
+        """
+    )
     feedback_count = await fetch_row("select count(*)::int as count from feedback")
     kb_count = await fetch_row("select count(*)::int as count from kb_entries")
     metric_count = await fetch_row("select count(*)::int as count from raw_metrics")
@@ -2585,10 +2592,23 @@ async def build_loop_status():
         outcome_count = {"count": await supabase_rest.count("outcomes")}
         active_weights = await supabase_rest.select("learning_weights", {"select": "id", "is_active": "eq.true", "limit": "1000"})
         weight_count = {"count": len(active_weights)}
+        asset_rows = await supabase_rest.select(
+            "assets",
+            {"select": "review_status,compliance_status", "limit": "1000"},
+        )
+        asset_counts = {}
+        for row in asset_rows:
+            key = (row.get("review_status", "unknown"), row.get("compliance_status", "unknown"))
+            asset_counts[key] = asset_counts.get(key, 0) + 1
+        asset_status = [
+            {"review_status": review, "compliance_status": compliance, "count": count}
+            for (review, compliance), count in asset_counts.items()
+        ]
     return {
         "stage": "stage_1_thin_core",
         "beats": ["sense", "decide", "create", "review", "publish", "measure", "learn"],
         "queue": queue,
+        "asset_status": asset_status,
         "feedback_count": (feedback_count or {}).get("count", 0),
         "kb_count": (kb_count or {}).get("count", 0),
         "metric_count": (metric_count or {}).get("count", 0),
@@ -2602,6 +2622,14 @@ async def build_loop_status():
 
 def total_queue_count(queue):
     return sum(int(item.get("count") or 0) for item in queue or [])
+
+
+def queue_ready_asset_count(asset_status):
+    return sum(
+        int(item.get("count") or 0)
+        for item in asset_status or []
+        if item.get("review_status") == "approved" and item.get("compliance_status") == "clear"
+    )
 
 
 def workflow_step(state, title, body, screen, action, optional=False):
@@ -2619,6 +2647,7 @@ def build_workflow_guidance(loop):
     total_queue = total_queue_count(loop.get("queue"))
     brief_count = int(loop.get("brief_count") or 0)
     asset_count = int(loop.get("asset_count") or 0)
+    ready_asset_count = queue_ready_asset_count(loop.get("asset_status"))
     media_count = int(loop.get("media_count") or 0)
     outcome_count = int(loop.get("outcome_count") or 0)
     steps = []
@@ -2654,12 +2683,22 @@ def build_workflow_guidance(loop):
                 "Save Asset",
             )
         )
+    elif not ready_asset_count:
+        steps.append(
+            workflow_step(
+                "open",
+                "Approve a clear asset",
+                f"{asset_count} asset(s) exist, but none are approved and compliance-clear yet.",
+                "assets",
+                "Open Assets",
+            )
+        )
     else:
         steps.append(
             workflow_step(
                 "done",
                 "Draft assets ready",
-                f"{asset_count} asset(s) are saved for review and queueing.",
+                f"{ready_asset_count} approved clear asset(s) can enter the queue.",
                 "assets",
                 "Review Assets",
             )
@@ -2668,9 +2707,9 @@ def build_workflow_guidance(loop):
     if not total_queue:
         steps.append(
             workflow_step(
-                "open" if asset_count else "locked",
+                "open" if ready_asset_count else "locked",
                 "Add an asset to the queue",
-                "Move one clear asset into Review Queue before scheduling.",
+                "Move one approved, compliance-clear asset into Review Queue before scheduling.",
                 "assets",
                 "Open Assets",
             )
@@ -2731,6 +2770,7 @@ def build_workflow_guidance(loop):
             "queue_total": total_queue,
             "brief_count": brief_count,
             "asset_count": asset_count,
+            "queue_ready_asset_count": ready_asset_count,
             "media_count": media_count,
             "outcome_count": outcome_count,
         },
