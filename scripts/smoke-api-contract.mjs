@@ -21,6 +21,7 @@ const requiredRoutes = [
   "GET /weekly-report.md",
   "GET /meta/readiness",
   "GET /meta/setup-checklist",
+  "GET /kb/context",
   "GET /publish-queue/suggest-slot",
   "GET /metrics/published-source",
   "POST /briefs/{brief_id}/draft-asset",
@@ -160,6 +161,21 @@ const requiredSnippets = [
     name: "meta setup checklist route",
     file: "main",
     text: "meta_setup_checklist",
+  },
+  {
+    name: "knowledge context route",
+    file: "main",
+    text: "active_knowledge_context",
+  },
+  {
+    name: "weekly plan uses knowledge context",
+    file: "main",
+    text: '"knowledge_context": knowledge',
+  },
+  {
+    name: "creative draft stores knowledge context",
+    file: "main",
+    text: '"knowledge_context": knowledge',
   },
   {
     name: "nightly metrics job lock",
@@ -350,6 +366,16 @@ const requiredSnippets = [
     name: "web visible meta setup commands",
     file: "web",
     text: "meta-setup-commands",
+  },
+  {
+    name: "web knowledge context display",
+    file: "web",
+    text: "Active Knowledge Context",
+  },
+  {
+    name: "web knowledge context endpoint",
+    file: "web",
+    text: "/kb/context",
   },
   {
     name: "web github scheduler setup",

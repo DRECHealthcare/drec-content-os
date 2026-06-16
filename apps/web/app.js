@@ -557,8 +557,27 @@ async function loadLaunchReadiness() {
 
 async function loadKb() {
   const container = document.getElementById("kb-items");
+  const contextContainer = document.getElementById("kb-context");
   try {
-    const data = await fetchJson("/kb");
+    const [data, context] = await Promise.all([fetchJson("/kb"), fetchJson("/kb/context")]);
+    if (contextContainer) {
+      const categories = context.categories || {};
+      contextContainer.innerHTML = `
+        <article class="learning-card wide-learning">
+          <h3>Active Knowledge Context</h3>
+          <p>${Number(context.entry_count || 0)} entries loaded into planning and drafting.</p>
+          <small>${Object.entries(categories).map(([key, count]) => `${escapeHtml(key)} ${Number(count)}`).join(" · ")}</small>
+        </article>
+        <article class="learning-card wide-learning">
+          <h3>Style Rules</h3>
+          <ul>${(context.style_rules || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("") || "<li>DREC educational, calm, evidence-led, Mandarin-first.</li>"}</ul>
+        </article>
+        <article class="learning-card wide-learning">
+          <h3>Safety Rules</h3>
+          <ul>${(context.safety_rules || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("") || "<li>Education only. Avoid guaranteed outcomes, diagnosis, or personal medical claims.</li>"}</ul>
+        </article>
+      `;
+    }
     container.innerHTML = data.items.map((item) => `
       <div class="kb-item">
         <strong>${item.title}</strong><br>
@@ -567,6 +586,7 @@ async function loadKb() {
       </div>
     `).join("");
   } catch {
+    if (contextContainer) contextContainer.innerHTML = "";
     container.innerHTML = '<p class="status-note">Set the access token to load knowledge entries.</p>';
   }
 }

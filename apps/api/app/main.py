@@ -1006,13 +1006,19 @@ async def operations_operator_pack(_: None = Depends(require_access_token)):
 
 @app.get("/kb")
 async def list_knowledge_entries(_: None = Depends(require_access_token)):
+    return {"items": await fetch_knowledge_entries()}
+
+
+async def fetch_knowledge_entries(limit: int = 100):
+    bounded_limit = max(1, min(int(limit or 100), 200))
     rows = await fetch_rows(
         """
         select id, category, title, body, tags, created_at
         from kb_entries
         order by created_at desc
-        limit 100
-        """
+        limit $1
+        """,
+        bounded_limit,
     )
     if not rows:
         rows = await supabase_rest.select(
@@ -1020,10 +1026,67 @@ async def list_knowledge_entries(_: None = Depends(require_access_token)):
             {
                 "select": "id,category,title,body,tags,created_at",
                 "order": "created_at.desc",
-                "limit": "100",
+                "limit": str(bounded_limit),
             },
         )
-    return {"items": rows}
+    return rows
+
+
+def summarize_knowledge_item(item: dict, max_body: int = 220):
+    body = re.sub(r"\s+", " ", str(item.get("body") or "")).strip()
+    if len(body) > max_body:
+        body = body[: max_body - 1].rstrip() + "…"
+    title = str(item.get("title") or "Untitled").strip()
+    return f"{title}: {body}" if body else title
+
+
+def build_knowledge_context(entries: list[dict]):
+    categories = {}
+    for item in entries:
+        category = str(item.get("category") or "general").strip() or "general"
+        categories.setdefault(category, []).append(item)
+    category_summaries = {
+        category: [summarize_knowledge_item(item) for item in items[:4]]
+        for category, items in categories.items()
+    }
+    voice = category_summaries.get("voice", [])
+    brand = category_summaries.get("brand", [])
+    compliance = category_summaries.get("compliance", [])
+    medical = category_summaries.get("medical_dictionary", [])
+    offers = category_summaries.get("offer", [])
+    style_rules = []
+    if voice:
+        style_rules.extend(voice[:2])
+    if brand:
+        style_rules.extend(brand[:2])
+    safety_rules = compliance[:3] or ["Education only. Avoid guaranteed outcomes, diagnosis, or personal medical claims."]
+    medical_terms = medical[:4]
+    offer_notes = offers[:3]
+    return {
+        "entry_count": len(entries),
+        "categories": {category: len(items) for category, items in categories.items()},
+        "category_summaries": category_summaries,
+        "style_rules": style_rules,
+        "safety_rules": safety_rules,
+        "medical_terms": medical_terms,
+        "offer_notes": offer_notes,
+        "brief_style_hint": " | ".join(style_rules[:3]) if style_rules else "DREC educational, calm, evidence-led, Mandarin-first",
+        "brief_compliance_notes": " | ".join(safety_rules[:3]),
+        "planning_notes": [
+            "Apply voice and brand entries to hooks and structure.",
+            "Use compliance entries as non-negotiable safety constraints.",
+            "Use medical dictionary entries to keep terminology consistent.",
+        ],
+    }
+
+
+async def active_knowledge_context(limit: int = 80):
+    return build_knowledge_context(await fetch_knowledge_entries(limit))
+
+
+@app.get("/kb/context")
+async def knowledge_context(_: None = Depends(require_access_token)):
+    return await active_knowledge_context()
 
 
 @app.post("/kb")
@@ -1106,10 +1169,17 @@ async def insert_brief(brief: ContentBriefIn):
     return row or payload
 
 
-def make_generated_brief(topic: str, index: int, language: str) -> ContentBriefIn:
+def make_generated_brief(topic: str, index: int, language: str, knowledge_context: dict | None = None) -> ContentBriefIn:
     stage = STAGE_ROTATION[index % len(STAGE_ROTATION)]
     fmt = FORMAT_ROTATION[index % len(FORMAT_ROTATION)]
     hook = f"很多人忽略了：{topic}" if language != "en" else f"One thing people often miss: {topic}"
+    kb = knowledge_context or {}
+    style_hint = kb.get("brief_style_hint") or "DREC educational, calm, evidence-led, Mandarin-first"
+    compliance_notes = kb.get("brief_compliance_notes") or "Education only. Avoid guaranteed outcomes, diagnosis, or personal medical claims."
+    medical_terms = kb.get("medical_terms") or []
+    body_beats = ["Explain the mechanism simply.", "Give one safe practical observation.", "Invite professional review."]
+    if medical_terms:
+        body_beats.append(f"Use DREC medical dictionary consistently: {'; '.join(medical_terms[:2])}")
     return ContentBriefIn(
         channel="organic",
         format=fmt,
@@ -1122,14 +1192,20 @@ def make_generated_brief(topic: str, index: int, language: str) -> ContentBriefI
         hook_alt2=f"用一个简单框架看：{topic}" if language != "en" else f"A simple framework for: {topic}",
         structure_beats={
             "opening": "Start with a common misconception.",
-            "body": ["Explain the mechanism simply.", "Give one safe practical observation.", "Invite professional review."],
+            "body": body_beats,
             "close": "Save and discuss with a clinician.",
+            "knowledge_context": {
+                "entry_count": kb.get("entry_count", 0),
+                "style_rules": (kb.get("style_rules") or [])[:3],
+                "safety_rules": (kb.get("safety_rules") or [])[:3],
+                "medical_terms": medical_terms[:3],
+            },
         },
-        style_hint="DREC educational, calm, evidence-led, Mandarin-first",
+        style_hint=style_hint,
         cta_type="save_or_consult",
         target_signal="saves, comments, qualified consult interest",
         language=language,
-        compliance_notes="Education only. Avoid guaranteed outcomes, diagnosis, or personal medical claims.",
+        compliance_notes=compliance_notes,
     )
 
 
@@ -1356,6 +1432,7 @@ async def weekly_plan_recommendations(
 async def generate_weekly_plan(plan: WeeklyPlanIn, _: None = Depends(require_access_token)):
     count = max(1, min(plan.count, 10))
     requested_topics = [topic.strip() for topic in plan.topics if topic.strip()]
+    knowledge = await active_knowledge_context()
     if requested_topics:
         topics = requested_topics
         source = "manual"
@@ -1365,8 +1442,8 @@ async def generate_weekly_plan(plan: WeeklyPlanIn, _: None = Depends(require_acc
         source = "learning"
     generated = []
     for index, topic in enumerate(topics[:count]):
-        generated.append(await insert_brief(make_generated_brief(topic, index, plan.language)))
-    return {"items": generated, "source": source}
+        generated.append(await insert_brief(make_generated_brief(topic, index, plan.language, knowledge)))
+    return {"items": generated, "source": source, "knowledge_context": knowledge}
 
 
 def asset_payload(asset: AssetIn):
@@ -2030,6 +2107,7 @@ def reel_script(draft: CreativeDraftIn):
 
 @app.post("/creative/draft")
 async def create_creative_draft(draft: CreativeDraftIn, _: None = Depends(require_access_token)):
+    knowledge = await active_knowledge_context()
     variants = caption_variants(draft)
     primary_caption = variants[0]
     compliance = check_text(primary_caption)
@@ -2050,6 +2128,12 @@ async def create_creative_draft(draft: CreativeDraftIn, _: None = Depends(requir
             "points": draft.points,
             "creative_engine": "deterministic_v1",
             "notes": "Human review is required before publishing.",
+            "knowledge_context": knowledge,
+            "review_guidance": [
+                "Check caption against active DREC voice, compliance, and medical dictionary entries.",
+                "If a KB entry conflicts with generated copy, edit or reject before scheduling.",
+                "Keep Meta publishing in dry-run/manual mode until credential gates are green.",
+            ],
         },
     }
     return {"item": package}
