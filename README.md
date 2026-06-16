@@ -100,6 +100,7 @@ Stage 1 is now a working thin-core workflow:
 - Download a creative production pack with active assets, captions, slides, scripts, media notes, and KB review context
 - Download an asset review CSV that combines draft asset readiness, media rights, approval status, blockers, and source URLs
 - Download an Asset Review Decision CSV with captions, detector findings, and blank reviewer decision fields for human sign-off
+- Preview and import completed Asset Review Decision CSV files so reviewed safety and approval decisions can be applied in batches without queueing or publishing
 - Download an Asset Safety Review Pack with each asset caption, detector findings, reviewer checklist, and approval rules
 - Copy an individual Asset Safety Review Note from each draft asset for reviewer handoff or audit notes
 - Run pre-publish compliance checks

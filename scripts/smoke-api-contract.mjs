@@ -31,6 +31,7 @@ const requiredRoutes = [
   "GET /operations/asset-review-worklist.md",
   "GET /operations/asset-safety-review.md",
   "GET /operations/asset-review-decisions.csv",
+  "POST /operations/import-asset-review-decisions",
   "GET /operations/review-log.md",
   "GET /operations/review-queue.csv",
   "GET /operations/learning-snapshot.csv",
@@ -378,6 +379,21 @@ const requiredSnippets = [
     name: "asset review decisions human fields",
     file: "main",
     text: "reviewer_safety_decision",
+  },
+  {
+    name: "asset review decisions import route",
+    file: "main",
+    text: "import_asset_review_decisions",
+  },
+  {
+    name: "asset review decisions import dry run",
+    file: "main",
+    text: "Previewed {len(planned)} asset review decision(s)",
+  },
+  {
+    name: "asset review decisions safety approval guard",
+    file: "main",
+    text: "Approval requires reviewer_safety_decision=clear",
   },
   {
     name: "asset safety review checklist",
@@ -853,6 +869,21 @@ const requiredSnippets = [
     name: "web asset review decisions action",
     file: "web",
     text: "download-asset-review-decisions",
+  },
+  {
+    name: "web asset review decisions preview action",
+    file: "web",
+    text: "preview-asset-review-decisions",
+  },
+  {
+    name: "web asset review decisions import action",
+    file: "web",
+    text: "import-asset-review-decisions",
+  },
+  {
+    name: "web asset review decisions import endpoint",
+    file: "web",
+    text: "/operations/import-asset-review-decisions",
   },
   {
     name: "web asset review note action",

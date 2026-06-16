@@ -2552,6 +2552,139 @@ async def operations_asset_review_decisions_csv(_: None = Depends(require_access
     )
 
 
+def normalize_review_safety_decision(value: str | None):
+    text = (value or "").strip().lower().replace("_", " ").replace("-", " ")
+    if not text:
+        return None
+    if text in {"clear", "safety clear", "safe", "approved clear", "yes", "y"}:
+        return "clear"
+    if text in {"pending", "keep pending", "rewrite", "needs work", "needs rewrite", "review"}:
+        return "pending"
+    if text in {"flag", "flagged", "unsafe", "block", "blocked", "no", "n"}:
+        return "flagged"
+    return "invalid"
+
+
+def normalize_asset_review_decision(value: str | None):
+    text = (value or "").strip().lower().replace("_", " ").replace("-", " ")
+    if not text:
+        return None
+    if text in {"approve", "approved", "yes", "y"}:
+        return "approved"
+    if text in {"review", "needs work", "rewrite", "pending", "keep pending"}:
+        return "review"
+    if text in {"reject", "rejected", "no", "n"}:
+        return "rejected"
+    return "invalid"
+
+
+async def decode_asset_review_decisions_csv(file: UploadFile):
+    raw = await file.read()
+    if len(raw) > 512_000:
+        raise HTTPException(status_code=413, detail="Asset review decision CSV is too large. Keep imports below 512 KB.")
+    try:
+        return raw.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise HTTPException(status_code=400, detail="Asset review decision CSV must be UTF-8 text.") from exc
+
+
+@app.post("/operations/import-asset-review-decisions")
+async def import_asset_review_decisions(
+    file: UploadFile = File(...),
+    dry_run: bool = Form(True),
+    _: None = Depends(require_access_token),
+):
+    csv_text = await decode_asset_review_decisions_csv(file)
+    reader = csv.DictReader(StringIO(csv_text))
+    required = {"asset_id", "reviewer_safety_decision", "reviewer_review_decision"}
+    headers = set(reader.fieldnames or [])
+    if not required.issubset(headers):
+        missing = sorted(required - headers)
+        raise HTTPException(status_code=400, detail={"message": "Asset review decision CSV is missing required columns.", "missing": missing})
+
+    planned = []
+    imported = []
+    skipped = []
+    for index, row in enumerate(reader, start=2):
+        asset_id = (row.get("asset_id") or "").strip()
+        if not asset_id:
+            skipped.append({"row": index, "reason": "Missing asset_id."})
+            continue
+        safety_decision = normalize_review_safety_decision(row.get("reviewer_safety_decision"))
+        review_decision = normalize_asset_review_decision(row.get("reviewer_review_decision"))
+        reviewer_name = (row.get("reviewer_name") or "").strip()
+        notes = (row.get("review_notes") or "").strip()
+        if safety_decision == "invalid" or review_decision == "invalid":
+            skipped.append({"row": index, "asset_id": asset_id, "reason": "Decision must use safety clear/pending/flagged and review approved/review/rejected."})
+            continue
+        if safety_decision is None and review_decision is None and not notes:
+            skipped.append({"row": index, "asset_id": asset_id, "reason": "No reviewer decision provided."})
+            continue
+        existing = await asset_by_id(asset_id)
+        if existing is None:
+            skipped.append({"row": index, "asset_id": asset_id, "reason": "Asset not found."})
+            continue
+        target_safety = safety_decision or existing.get("compliance_status")
+        if review_decision == "approved" and target_safety != "clear":
+            skipped.append({"row": index, "asset_id": asset_id, "reason": "Approval requires reviewer_safety_decision=clear or an already clear asset."})
+            continue
+        reason_parts = ["CSV reviewer decision import."]
+        if reviewer_name:
+            reason_parts.append(f"Reviewer: {reviewer_name}.")
+        if notes:
+            reason_parts.append(f"Notes: {notes}")
+        reason = " ".join(reason_parts)
+        plan = {
+            "row": index,
+            "asset_id": asset_id,
+            "topic": row.get("topic") or (existing.get("metadata") or {}).get("topic") or "",
+            "current_safety": existing.get("compliance_status") or "",
+            "current_review": existing.get("review_status") or "",
+            "target_safety": safety_decision or "",
+            "target_review": review_decision or "",
+            "reviewer_name": reviewer_name,
+            "review_notes": notes,
+        }
+        if dry_run:
+            planned.append(plan)
+            continue
+        applied = []
+        if safety_decision is not None and safety_decision != existing.get("compliance_status"):
+            await update_asset_compliance(asset_id, AssetComplianceIn(compliance_status=safety_decision, reason=reason))
+            applied.append(f"safety:{safety_decision}")
+        if review_decision is not None and review_decision != existing.get("review_status"):
+            await update_asset_status(asset_id, AssetStatusIn(review_status=review_decision, reason=reason))
+            applied.append(f"review:{review_decision}")
+        if notes and not applied:
+            await save_feedback(
+                FeedbackIn(
+                    module="asset_review_import",
+                    ref_type="asset",
+                    ref_id=asset_id,
+                    action="edit",
+                    reason=reason,
+                    before_text=existing.get("caption"),
+                    tags=["asset_review_import", "note_only"],
+                )
+            )
+            applied.append("note")
+        imported.append({**plan, "applied": applied or ["no_change"]})
+    return {
+        "dry_run": dry_run,
+        "planned_count": len(planned),
+        "imported_count": len(imported),
+        "skipped_count": len(skipped),
+        "planned": planned,
+        "imported": imported,
+        "skipped": skipped,
+        "message": (
+            f"Previewed {len(planned)} asset review decision(s), {len(skipped)} skipped."
+            if dry_run
+            else f"Imported {len(imported)} asset review decision(s), {len(skipped)} skipped."
+        ),
+    }
+
+
 async def fetch_feedback_log(limit: int = 200):
     bounded_limit = max(1, min(int(limit or 200), 500))
     rows = await fetch_rows(

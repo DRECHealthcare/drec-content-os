@@ -118,6 +118,10 @@ The Assets `Download Review Decisions` action calls
 `/operations/asset-review-decisions.csv` and exports active draft assets with
 caption text, detector findings, and blank reviewer decision fields for
 spreadsheet-style human sign-off. It is read-only and does not approve assets.
+After the reviewer fills the CSV, `Preview Decisions` and `Import Decisions`
+call `/operations/import-asset-review-decisions`. Preview is read-only. Import
+updates asset safety/review status only, records feedback notes, and never queues
+or publishes content.
 
 The Assets `Download Safety Review` action calls
 `/operations/asset-safety-review.md` and exports draft captions, detector

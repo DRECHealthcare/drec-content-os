@@ -1887,6 +1887,63 @@ document.getElementById("download-asset-safety-review")?.addEventListener("click
   }
 });
 
+function renderAssetReviewDecisionPreview(data) {
+  const container = document.getElementById("asset-review-decision-preview");
+  if (!container) return;
+  const rows = data.planned || data.imported || [];
+  const skipped = data.skipped || [];
+  container.innerHTML = `
+    <article class="insight-card">
+      <strong>${data.dry_run ? "Review Decision Preview" : "Review Decision Import"}</strong>
+      <small>${rows.length} row(s) ready · ${skipped.length} skipped</small>
+      ${rows.length ? `
+        <ul>${rows.slice(0, 10).map((row) => `
+          <li>
+            <strong>${escapeHtml(row.topic || row.asset_id || "")}</strong>
+            ${escapeHtml(row.target_safety || "no safety change")} / ${escapeHtml(row.target_review || "no review change")}
+            ${Array.isArray(row.applied) && row.applied.length ? ` · ${escapeHtml(row.applied.join(", "))}` : ""}
+          </li>
+        `).join("")}</ul>
+      ` : ""}
+      ${skipped.length ? `
+        <h4>Skipped Rows</h4>
+        <ul>${skipped.slice(0, 10).map((row) => `<li><strong>Row ${escapeHtml(row.row || "")}</strong> ${escapeHtml(row.asset_id || "")}${row.asset_id ? " · " : ""}${escapeHtml(row.reason || "")}</li>`).join("")}</ul>
+      ` : ""}
+    </article>
+  `;
+}
+
+async function uploadAssetReviewDecisions({ dryRun }) {
+  const message = document.getElementById("media-message");
+  const fileInput = document.getElementById("asset-review-decisions-file");
+  const file = fileInput?.files?.[0];
+  if (!file) {
+    message.textContent = "Choose a review decision CSV first.";
+    return;
+  }
+  const body = new FormData();
+  body.append("file", file);
+  body.append("dry_run", dryRun ? "true" : "false");
+  message.textContent = dryRun ? "Previewing review decisions..." : "Importing review decisions...";
+  try {
+    const data = await fetchForm("/operations/import-asset-review-decisions", body);
+    if (!dryRun) fileInput.value = "";
+    message.textContent = data.message || (dryRun ? "Review decisions previewed." : "Review decisions imported.");
+    renderAssetReviewDecisionPreview(data);
+    if (!dryRun) await Promise.all([loadAssets(), loadLoopStatus(), loadLearningSummary()]);
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : dryRun ? "Could not preview review decisions." : "Could not import review decisions.";
+  }
+}
+
+document.getElementById("preview-asset-review-decisions")?.addEventListener("click", async () => {
+  await uploadAssetReviewDecisions({ dryRun: true });
+});
+
+document.getElementById("import-asset-review-decisions")?.addEventListener("click", async () => {
+  await uploadAssetReviewDecisions({ dryRun: false });
+});
+
 document.getElementById("plan-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const message = document.getElementById("plan-message");
