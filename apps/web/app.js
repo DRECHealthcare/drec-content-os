@@ -975,8 +975,13 @@ function queueCard(item, mode) {
   const canQuickSchedule = mode === "queue" && item.status !== "published" && item.compliance_status === "clear";
   const canEdit = item.status !== "published";
   const feedback = item.latest_feedback || null;
+  const reviewApproved = feedback?.action === "approve" && item.status === "draft";
+  const displayStatus = reviewApproved ? "approved" : item.status || "draft";
   const postIdLine = item.external_post_id
     ? `<small>Meta ID: ${escapeHtml(item.external_post_id)}</small>`
+    : "";
+  const reviewReadyLine = reviewApproved
+    ? '<small class="feedback-note">Ready to schedule. Choose a planned time before handoff or Meta dispatch.</small>'
     : "";
   const feedbackLine = feedback
     ? `<small class="feedback-note">Latest review: ${escapeHtml(feedback.action || "note")}${feedback.reason ? ` · ${escapeHtml(feedback.reason)}` : ""}</small>`
@@ -1000,12 +1005,13 @@ function queueCard(item, mode) {
       <div class="queue-meta">
         <span>${escapeHtml(item.channel)}</span>
         <span>${escapeHtml(item.format)}</span>
-        <span>${escapeHtml(item.status || "draft")}</span>
+        <span>${escapeHtml(displayStatus)}</span>
         <span>${escapeHtml(item.compliance_status || "pending")}</span>
       </div>
       <p>${escapeHtml(item.caption)}</p>
       <small>${formatDate(item.planned_slot)} · ${mediaCount} media URL(s)</small>
       ${postIdLine}
+      ${reviewReadyLine}
       ${feedbackLine}
       ${actions}
     </article>
@@ -1817,7 +1823,7 @@ document.getElementById("review-items").addEventListener("click", async (event) 
   const items = JSON.parse(document.getElementById("review-items").dataset.items || "[]");
   const item = items.find((entry) => entry.id === id) || {};
   const defaultReason = {
-    approve: "Approved for scheduled manual publishing.",
+    approve: "Approved for scheduling after a planned time is selected.",
     regen: "Needs a stronger draft before publishing.",
     reject: "Rejected during content review.",
   }[action] || `Review action: ${action}`;
