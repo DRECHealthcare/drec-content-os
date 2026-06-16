@@ -839,6 +839,16 @@ const requiredSnippets = [
     text: "download-asset-safety-review",
   },
   {
+    name: "web asset review note action",
+    file: "web",
+    text: "data-copy-asset-review",
+  },
+  {
+    name: "web asset review note text",
+    file: "web",
+    text: "DREC Asset Safety Review Note",
+  },
+  {
     name: "web asset review csv endpoint",
     file: "web",
     text: "/operations/asset-review.csv",

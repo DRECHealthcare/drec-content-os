@@ -1029,6 +1029,37 @@ function assetPackageText(asset) {
   return lines.join("\n");
 }
 
+function assetReviewNoteText(asset) {
+  const metadata = asset.metadata || {};
+  const media = Array.isArray(asset.media_urls) ? asset.media_urls.filter(Boolean) : [];
+  return [
+    "DREC Asset Safety Review Note",
+    "",
+    `Asset ID: ${asset.id || ""}`,
+    `Brief ID: ${asset.brief_id || ""}`,
+    `Topic: ${metadata.topic || ""}`,
+    `Channel / Format: ${asset.channel || "facebook"} / ${asset.format || "post"}`,
+    `Current Safety / Review: ${asset.compliance_status || "pending"} / ${asset.review_status || "draft"}`,
+    `Media Count: ${media.length}`,
+    "",
+    "Reviewer checklist:",
+    "- General education only; no diagnosis or personal treatment instruction.",
+    "- No guarantee of reversal, cure, weight loss, lab improvement, or outcome.",
+    "- Does not imply the viewer has a condition.",
+    "- Media rights are owned, licensed, or explicitly approved.",
+    "- If unsure, keep Safety Pending or Safety Flag and rewrite before queueing.",
+    "",
+    "Caption under review:",
+    asset.caption || "",
+    "",
+    "Decision:",
+    "[ ] Safety Clear",
+    "[ ] Approve",
+    "[ ] Keep Pending / Rewrite",
+    "[ ] Flag",
+  ].join("\n");
+}
+
 function assetCard(item) {
   const mediaCount = Array.isArray(item.media_urls) ? item.media_urls.length : 0;
   const canQueue = item.review_status === "approved" && item.compliance_status === "clear";
@@ -1061,6 +1092,7 @@ function assetCard(item) {
         <button type="button" data-asset-status="approved" data-id="${escapeHtml(item.id)}">Approve</button>
         <button type="button" data-asset-status="review" data-id="${escapeHtml(item.id)}">Needs Work</button>
         <button type="button" data-asset-status="rejected" data-id="${escapeHtml(item.id)}">Reject</button>
+        <button type="button" data-copy-asset-review="${escapeHtml(item.id)}">Copy Review Note</button>
         <button type="button" data-copy-asset="${escapeHtml(item.id)}">Copy Package</button>
         <button type="button" data-queue-asset="${escapeHtml(item.id)}" ${canQueue ? "" : "disabled"}>Add To Queue</button>
       </div>
@@ -2181,6 +2213,20 @@ document.getElementById("queue-draft").addEventListener("click", async () => {
 });
 
 document.getElementById("asset-items").addEventListener("click", async (event) => {
+  const reviewNoteButton = event.target.closest("[data-copy-asset-review]");
+  if (reviewNoteButton) {
+    const message = document.getElementById("media-message");
+    const items = JSON.parse(document.getElementById("asset-items").dataset.assets || "[]");
+    const asset = items.find((item) => item.id === reviewNoteButton.dataset.copyAssetReview);
+    if (!asset) return;
+    try {
+      await navigator.clipboard.writeText(assetReviewNoteText(asset));
+      message.textContent = "Asset review note copied.";
+    } catch {
+      message.textContent = "Could not copy review note. Use Download Safety Review instead.";
+    }
+    return;
+  }
   const copyButton = event.target.closest("[data-copy-asset]");
   if (copyButton) {
     const message = document.getElementById("media-message");
