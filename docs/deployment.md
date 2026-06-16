@@ -114,6 +114,11 @@ The Assets `Download Asset Review CSV` action calls
 `/operations/asset-review.csv` and exports draft assets plus media-library
 records with readiness, blockers, rights, approval, and source URL fields.
 
+The Assets `Download Review Decisions` action calls
+`/operations/asset-review-decisions.csv` and exports active draft assets with
+caption text, detector findings, and blank reviewer decision fields for
+spreadsheet-style human sign-off. It is read-only and does not approve assets.
+
 The Assets `Download Safety Review` action calls
 `/operations/asset-safety-review.md` and exports draft captions, detector
 findings, human review checklist, and approval rules before queueing.

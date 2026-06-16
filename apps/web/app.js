@@ -1857,6 +1857,16 @@ document.getElementById("download-asset-review")?.addEventListener("click", asyn
   }
 });
 
+document.getElementById("download-asset-review-decisions")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/asset-review-decisions.csv", "drec-asset-review-decisions.csv", "text/csv");
+    message.textContent = "Asset review decision CSV downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download asset review decisions.";
+  }
+});
+
 document.getElementById("download-asset-worklist")?.addEventListener("click", async () => {
   const message = document.getElementById("media-message");
   try {

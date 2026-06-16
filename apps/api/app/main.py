@@ -2483,6 +2483,75 @@ async def operations_asset_safety_review(_: None = Depends(require_access_token)
     )
 
 
+@app.get("/operations/asset-review-decisions.csv")
+async def operations_asset_review_decisions_csv(_: None = Depends(require_access_token)):
+    assets = await fetch_asset_list(200)
+    active_assets = [asset for asset in assets if asset.get("review_status") != "rejected"]
+    active_assets.sort(
+        key=lambda asset: (
+            asset.get("review_status") == "approved" and asset.get("compliance_status") == "clear",
+            asset.get("created_at") or "",
+        )
+    )
+    output = StringIO()
+    fieldnames = [
+        "asset_id",
+        "brief_id",
+        "topic",
+        "channel",
+        "format",
+        "current_safety",
+        "current_review",
+        "detector_status",
+        "detector_findings",
+        "media_count",
+        "target_signal",
+        "caption",
+        "recommended_action",
+        "reviewer_safety_decision",
+        "reviewer_review_decision",
+        "reviewer_name",
+        "review_notes",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for asset in active_assets:
+        metadata = asset.get("metadata") or {}
+        caption = asset.get("caption") or ""
+        detector = check_text(caption)
+        finding_text = []
+        for finding in detector.get("findings", []):
+            matches = "|".join(finding.get("matches") or [])
+            finding_text.append(f"{finding.get('severity')}:{finding.get('rule_id')}({matches})")
+        is_ready = asset.get("review_status") == "approved" and asset.get("compliance_status") == "clear"
+        writer.writerow(
+            {
+                "asset_id": asset.get("id") or "",
+                "brief_id": asset.get("brief_id") or "",
+                "topic": metadata.get("topic") or "",
+                "channel": asset.get("channel") or "",
+                "format": asset.get("format") or "",
+                "current_safety": asset.get("compliance_status") or "",
+                "current_review": asset.get("review_status") or "",
+                "detector_status": detector.get("status") or "",
+                "detector_findings": "; ".join(finding_text) or "none",
+                "media_count": len([url for url in asset.get("media_urls") or [] if url]),
+                "target_signal": metadata.get("target_signal") or "",
+                "caption": caption,
+                "recommended_action": "Ready to queue" if is_ready else "Human review: mark Safety Clear + Approve only if reviewer agrees",
+                "reviewer_safety_decision": "",
+                "reviewer_review_decision": "",
+                "reviewer_name": "",
+                "review_notes": "",
+            }
+        )
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-asset-review-decisions.csv"'},
+    )
+
+
 async def fetch_feedback_log(limit: int = 200):
     bounded_limit = max(1, min(int(limit or 200), 500))
     rows = await fetch_rows(

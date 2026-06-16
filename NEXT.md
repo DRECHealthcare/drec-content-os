@@ -66,6 +66,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added Asset Review Worklist for briefs-to-save, review blockers, and queue-ready assets
 - [x] Added Asset Safety Review Pack for human review of generated draft assets
 - [x] Added copyable per-asset safety review notes for human review handoff
+- [x] Added Asset Review Decision CSV for spreadsheet-style human safety sign-off
 - [x] Added copy-ready weekly operating report
 - [x] Added one-click draft asset creation from weekly briefs
 - [x] Added batch draft asset creation from current weekly briefs
@@ -154,6 +155,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add downloadable Asset Review Worklist for first-test asset production and approval
 - [x] Add downloadable Asset Safety Review Pack for captions, detector findings, and reviewer decisions
 - [x] Add copyable per-asset safety review note for audit-friendly review handoff
+- [x] Add downloadable Asset Review Decision CSV with blank reviewer decision fields
 - [x] Add weekly operating report
 - [x] Add one-click draft asset creation from briefs
 - [x] Add batch draft asset creation from weekly briefs
