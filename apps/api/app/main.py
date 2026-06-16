@@ -3229,6 +3229,12 @@ async def operations_operator_pack(_: None = Depends(require_access_token)):
         "",
         *risk_lines,
         "",
+        "## Review-To-Schedule Pack",
+        "",
+        "- Export: `/operations/review-to-schedule-pack.md`",
+        "- Purpose: shows queue-ready assets, review-approved queue items, handoff-ready scheduled items, and blockers in one read-only pack.",
+        "- Rule: use it for operating guidance only; queueing, scheduling, and publishing still require the explicit gated actions.",
+        "",
         *asset_review_decision_import_lines(),
         "## Publishing Handoff",
         "",
@@ -5100,6 +5106,144 @@ async def publish_queue_schedule_csv(_: None = Depends(require_access_token)):
         output.getvalue(),
         media_type="text/csv",
         headers={"Content-Disposition": 'attachment; filename="drec-publishing-schedule.csv"'},
+    )
+
+
+def review_schedule_asset_lines(asset: dict, index: int):
+    metadata = asset.get("metadata") or {}
+    return [
+        f"### {index}. {metadata.get('topic') or asset.get('format') or 'Untitled asset'}",
+        "",
+        f"- Asset ID: {asset.get('id')}",
+        f"- Channel / format: {asset.get('channel')} / {asset.get('format')}",
+        f"- Safety / review: {asset.get('compliance_status')} / {asset.get('review_status')}",
+        f"- Media count: {len([url for url in asset.get('media_urls') or [] if url])}",
+        f"- Action: Add to queue from Assets, or use Queue Ready Assets for the batch.",
+        "",
+    ]
+
+
+def review_schedule_queue_lines(item: dict, index: int, label: str):
+    feedback = item.get("latest_feedback") or {}
+    if label.startswith("Handoff"):
+        blockers = item.get("handoff_blockers") or queue_item_blockers(item)
+    else:
+        blockers = item.get("review_queue_blockers") or review_queue_state(item)[1]
+    return [
+        f"### {index}. {label}: {item.get('channel')} / {item.get('format')}",
+        "",
+        f"- Queue ID: {item.get('id')}",
+        f"- Asset ID: {item.get('asset_id') or 'n/a'}",
+        f"- Status: {item.get('status')}",
+        f"- Safety: {item.get('compliance_status')}",
+        f"- Planned: {item.get('planned_slot') or 'not scheduled'}",
+        f"- Latest review: {feedback.get('action') or 'none'}",
+        f"- Blockers: {', '.join(blockers) or 'none'}",
+        f"- Caption preview: {feedback_excerpt(item.get('caption'), 180)}",
+        "",
+    ]
+
+
+@app.get("/operations/review-to-schedule-pack.md")
+async def operations_review_to_schedule_pack(_: None = Depends(require_access_token)):
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    assets = await fetch_asset_list(200)
+    queue_items = await fetch_publish_queue_items(200)
+    handoff = await publishing_handoff(None)
+    active_queue_asset_ids = {
+        str(item.get("asset_id"))
+        for item in queue_items
+        if item.get("asset_id") and item.get("status") in {"draft", "scheduled", "publishing"}
+    }
+    queue_ready_assets = [
+        asset
+        for asset in assets
+        if asset.get("review_status") == "approved"
+        and asset.get("compliance_status") == "clear"
+        and str(asset.get("id")) not in active_queue_asset_ids
+    ]
+    ready_to_schedule = []
+    queue_needs_review = []
+    for item in queue_items:
+        state, blockers = review_queue_state(item)
+        enriched = {**item, "review_queue_state": state, "review_queue_blockers": blockers}
+        if state == "ready_to_schedule":
+            ready_to_schedule.append(enriched)
+        elif item.get("status") == "draft":
+            queue_needs_review.append(enriched)
+    handoff_ready = handoff.get("ready_items") or []
+    handoff_blocked = handoff.get("blocked_items") or handoff.get("needs_review") or []
+    lines = [
+        "# DREC Content OS Review-to-Schedule Pack",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this pack after asset safety review to move content toward manual publishing handoff. It is read-only and does not queue, schedule, or publish records.",
+        "",
+        "## Safe Sequence",
+        "",
+        "1. Import or apply reviewer decisions only after human safety review.",
+        "2. Queue approved, safety-clear assets.",
+        "3. Review queued draft items and approve only compliance-clear captions.",
+        "4. Schedule approved draft queue items into open MYT publishing slots.",
+        "5. Build the publishing handoff and publish manually until Meta readiness is green.",
+        "6. Record the Meta post ID or manual label after posting, then enter metrics.",
+        "",
+        "## Current Counts",
+        "",
+        f"- Queue-ready assets not yet queued: {len(queue_ready_assets)}",
+        f"- Draft queue items ready to schedule: {len(ready_to_schedule)}",
+        f"- Draft queue items needing review: {len(queue_needs_review)}",
+        f"- Handoff-ready scheduled items: {len(handoff_ready)}",
+        f"- Handoff blocked items: {len(handoff_blocked)}",
+        "",
+        "## Queue-Ready Assets",
+        "",
+    ]
+    if queue_ready_assets:
+        for index, asset in enumerate(queue_ready_assets[:40], start=1):
+            lines.extend(review_schedule_asset_lines(asset, index))
+    else:
+        lines.extend(["- No approved safety-clear assets are waiting to be queued.", ""])
+    lines.extend(["## Ready To Schedule", ""])
+    if ready_to_schedule:
+        for index, item in enumerate(ready_to_schedule[:40], start=1):
+            lines.extend(review_schedule_queue_lines(item, index, "Ready To Schedule"))
+    else:
+        lines.extend(["- No draft queue items are review-approved and ready to schedule.", ""])
+    lines.extend(["## Queue Items Needing Review", ""])
+    if queue_needs_review:
+        for index, item in enumerate(queue_needs_review[:40], start=1):
+            lines.extend(review_schedule_queue_lines(item, index, "Needs Review"))
+    else:
+        lines.extend(["- No draft queue items are waiting for review.", ""])
+    lines.extend(["## Handoff Ready", ""])
+    if handoff_ready:
+        for index, item in enumerate(handoff_ready[:40], start=1):
+            lines.extend(review_schedule_queue_lines(item, index, "Handoff Ready"))
+    else:
+        lines.extend(["- No scheduled compliance-clear items are ready for handoff.", ""])
+    lines.extend(["## Handoff Blocked", ""])
+    if handoff_blocked:
+        for index, item in enumerate(handoff_blocked[:40], start=1):
+            lines.extend(review_schedule_queue_lines(item, index, "Handoff Blocked"))
+    else:
+        lines.extend(["- No handoff-blocked active items found.", ""])
+    lines.extend(
+        [
+            "## Safety Rules",
+            "",
+            "- Do not queue assets unless review is approved and safety is clear.",
+            "- Do not schedule queue items unless they are compliance-clear and human-approved.",
+            "- Do not publish anything not listed as handoff-ready.",
+            "- Keep real Meta automation off until Meta Setup, Launch Evidence, and security gates are green.",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-review-to-schedule-pack.md"'},
     )
 
 

@@ -2703,6 +2703,16 @@ document.getElementById("download-review-log")?.addEventListener("click", async 
   }
 });
 
+document.getElementById("download-review-schedule-pack")?.addEventListener("click", async () => {
+  const message = document.getElementById("queue-message");
+  try {
+    await downloadProtectedFile("/operations/review-to-schedule-pack.md", "drec-review-to-schedule-pack.md", "text/markdown");
+    message.textContent = "Review-to-schedule pack downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download review-to-schedule pack.";
+  }
+});
+
 document.getElementById("download-review-queue")?.addEventListener("click", async () => {
   const message = document.getElementById("queue-message");
   try {

@@ -34,6 +34,7 @@ const requiredRoutes = [
   "POST /operations/import-asset-review-decisions",
   "GET /operations/review-log.md",
   "GET /operations/review-queue.csv",
+  "GET /operations/review-to-schedule-pack.md",
   "GET /operations/learning-snapshot.csv",
   "GET /operations/metrics-template.csv",
   "GET /operations/weekly-cycle-pack.md",
@@ -424,6 +425,21 @@ const requiredSnippets = [
     name: "review queue csv export",
     file: "main",
     text: "drec-review-queue.csv",
+  },
+  {
+    name: "review to schedule pack export",
+    file: "main",
+    text: "drec-review-to-schedule-pack.md",
+  },
+  {
+    name: "review to schedule safe sequence",
+    file: "main",
+    text: "## Safe Sequence",
+  },
+  {
+    name: "review to schedule operator pack section",
+    file: "main",
+    text: "## Review-To-Schedule Pack",
   },
   {
     name: "learning snapshot export",
@@ -929,6 +945,16 @@ const requiredSnippets = [
     name: "web review log action",
     file: "web",
     text: "download-review-log",
+  },
+  {
+    name: "web review to schedule action",
+    file: "web",
+    text: "download-review-schedule-pack",
+  },
+  {
+    name: "web review to schedule endpoint",
+    file: "web",
+    text: "/operations/review-to-schedule-pack.md",
   },
   {
     name: "web review log endpoint",

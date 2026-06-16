@@ -69,6 +69,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added Asset Review Decision CSV for spreadsheet-style human safety sign-off
 - [x] Added safe preview/import for completed Asset Review Decision CSV files
 - [x] Added Asset Review Decision CSV import rules to Safety Review and Operator packs
+- [x] Added Review-to-Schedule Pack for moving approved assets through queue, schedule, and handoff
 - [x] Added copy-ready weekly operating report
 - [x] Added one-click draft asset creation from weekly briefs
 - [x] Added batch draft asset creation from current weekly briefs
@@ -160,6 +161,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add downloadable Asset Review Decision CSV with blank reviewer decision fields
 - [x] Add preview/import flow for completed Asset Review Decision CSV files
 - [x] Add review decision import guidance to backend-visible operator packs
+- [x] Add review-to-schedule operating pack for the post-review handoff
 - [x] Add weekly operating report
 - [x] Add one-click draft asset creation from briefs
 - [x] Add batch draft asset creation from weekly briefs

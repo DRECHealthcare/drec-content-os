@@ -134,6 +134,11 @@ The Review Queue `Download Review Queue CSV` action calls
 `/operations/review-queue.csv` and exports the current unscheduled draft review
 queue with review state, latest feedback, blockers, captions, and media counts.
 
+The Review Queue `Download Review-to-Schedule` action calls
+`/operations/review-to-schedule-pack.md` and exports queue-ready assets,
+review-approved draft queue items, handoff-ready scheduled items, and blockers
+in one read-only operating pack.
+
 The Dashboard `Run Risk Audit` action calls `/operations/risk-audit` and scans
 automation gates, assets, queue items, and media for blocked or warning-level
 issues before a publishing run.
