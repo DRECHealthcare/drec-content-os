@@ -33,6 +33,7 @@ const requiredRoutes = [
   "GET /operations/review-queue.csv",
   "GET /operations/learning-snapshot.csv",
   "GET /operations/metrics-template.csv",
+  "GET /operations/weekly-cycle-pack.md",
   "GET /operations/publishing-run-sheet.md",
   "GET /operations/operator-pack.md",
   "GET /weekly-report.md",
@@ -374,6 +375,36 @@ const requiredSnippets = [
     name: "learning snapshot raw metrics",
     file: "main",
     text: "raw_metric",
+  },
+  {
+    name: "weekly cycle pack route",
+    file: "main",
+    text: "operations_weekly_cycle_pack",
+  },
+  {
+    name: "weekly cycle pack export",
+    file: "main",
+    text: "drec-weekly-cycle-pack.md",
+  },
+  {
+    name: "weekly cycle pack closeout rule",
+    file: "main",
+    text: "## Weekly Closeout Rule",
+  },
+  {
+    name: "daily ops blocked handoff fallback",
+    file: "main",
+    text: 'handoff.get("blocked_items") or handoff.get("needs_review")',
+  },
+  {
+    name: "web weekly cycle pack action",
+    file: "web",
+    text: "download-weekly-cycle-pack",
+  },
+  {
+    name: "web weekly cycle pack endpoint",
+    file: "web",
+    text: "/operations/weekly-cycle-pack.md",
   },
   {
     name: "metrics template export",

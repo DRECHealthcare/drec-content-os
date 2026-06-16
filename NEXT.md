@@ -98,6 +98,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added Dashboard "Can I Use It?" decision showing safe test scope and not-yet-ready scope
 - [x] Added "Can I Use It Now" decision to Launch Evidence and Operator Pack exports
 - [x] Added Daily Ops Checklist export for repeat manual operating days
+- [x] Added Weekly Cycle Pack export for planning, asset review, scheduling, handoff, learning, and closeout
 - [x] Added First Test Kit export for safe first manual workflow testing
 - [x] Added First Test Run Tracker export for live manual test evidence capture
 - [x] Added Manual Cycle QA export for post-test blockers, risk, handoff, and learning review
@@ -184,6 +185,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add plain-language Dashboard test/use decision before full Meta automation
 - [x] Add test/use decision to downloadable launch evidence and operator pack
 - [x] Add downloadable Daily Ops Checklist for morning checks, blockers, and closeout steps
+- [x] Add downloadable Weekly Cycle Pack for one planning-to-learning operating cycle
 - [x] Add downloadable First Test Kit with sample topics, metric values, and acceptance criteria
 - [x] Add downloadable First Test Run Tracker with step status, evidence fields, and pass rules
 - [x] Add downloadable Manual Cycle QA report for current test decision, risk, handoff, and learning gaps

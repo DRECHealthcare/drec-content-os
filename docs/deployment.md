@@ -136,6 +136,11 @@ The Dashboard `Download RLS Plan` action calls
 steps. Apply `supabase/migrations/20260617040906_strict_server_only_rls.sql`
 only after Fly has `SUPABASE_SERVICE_ROLE_KEY` and live smoke passes.
 
+The Learning `Download Cycle Pack` action calls
+`/operations/weekly-cycle-pack.md` and exports a one-cycle operating packet
+covering planning inputs, assets, queue, handoff, learning closeout, risks, and
+weekly closeout rules.
+
 ## GitHub Dry-Run Scheduler
 
 The repository includes `.github/workflows/drec-scheduler-dry-run.yml`.

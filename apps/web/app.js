@@ -2696,6 +2696,16 @@ document.getElementById("download-weekly-report")?.addEventListener("click", asy
   }
 });
 
+document.getElementById("download-weekly-cycle-pack")?.addEventListener("click", async () => {
+  const message = document.getElementById("weight-message");
+  try {
+    await downloadProtectedFile("/operations/weekly-cycle-pack.md", "drec-weekly-cycle-pack.md", "text/markdown");
+    message.textContent = "Weekly cycle pack downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download cycle pack.";
+  }
+});
+
 document.getElementById("use-topics-weekly-plan").addEventListener("click", async () => {
   await loadLearningTopicsIntoPlan(document.getElementById("weight-message"), { openPlan: true });
 });

@@ -1567,7 +1567,7 @@ async def operations_daily_ops_checklist(_: None = Depends(require_access_token)
     summary = checklist.get("summary") or {}
     next_step = checklist.get("next_step") or {}
     ready_items = handoff.get("ready_items") or []
-    blocked_items = handoff.get("blocked_items") or []
+    blocked_items = handoff.get("blocked_items") or handoff.get("needs_review") or []
     insight_payload = learning.get("outcome_insights") or {}
     learning_items = (insight_payload.get("top_signals") or [])[:5]
     risk_checked = risk.get("checked") or {}
@@ -1672,6 +1672,174 @@ async def operations_daily_ops_checklist(_: None = Depends(require_access_token)
         "\n".join(lines),
         media_type="text/markdown",
         headers={"Content-Disposition": 'attachment; filename="drec-daily-ops-checklist.md"'},
+    )
+
+
+@app.get("/operations/weekly-cycle-pack.md")
+async def operations_weekly_cycle_pack(_: None = Depends(require_access_token)):
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    launch = await launch_readiness_payload()
+    checklist = await test_run_checklist_payload()
+    workflow = await workflow_status(None)
+    risk = await content_risk_audit_payload()
+    learning = await learning_summary(None)
+    handoff = await publishing_handoff(None)
+    briefs = await snapshot_select(
+        "content_briefs",
+        """
+        select id, topic, channel, format, status, funnel_stage, awareness_stage, hook_primary, compliance_notes, created_at
+        from content_briefs
+        order by created_at desc
+        limit 12
+        """,
+        {
+            "select": "id,topic,channel,format,status,funnel_stage,awareness_stage,hook_primary,compliance_notes,created_at",
+            "order": "created_at.desc",
+            "limit": "12",
+        },
+    )
+    assets = await snapshot_select(
+        "assets",
+        """
+        select id, channel, format, review_status, compliance_status, media_urls, caption, created_at
+        from assets
+        order by created_at desc
+        limit 12
+        """,
+        {
+            "select": "id,channel,format,review_status,compliance_status,media_urls,caption,created_at",
+            "order": "created_at.desc",
+            "limit": "12",
+        },
+    )
+    queue = await snapshot_select(
+        "publish_queue",
+        """
+        select id, channel, format, status, compliance_status, planned_slot, external_post_id, caption, created_at
+        from publish_queue
+        order by planned_slot nulls last, created_at desc
+        limit 12
+        """,
+        {
+            "select": "id,channel,format,status,compliance_status,planned_slot,external_post_id,caption,created_at",
+            "order": "planned_slot.asc.nullslast,created_at.desc",
+            "limit": "12",
+        },
+    )
+    summary = checklist.get("summary") or {}
+    next_action = (workflow.get("workflow") or {}).get("next_action") or workflow.get("next_action") or {}
+    plan_topics = learning.get("plan_recommendations", {}).get("topics", [])
+    insights = learning.get("outcome_insights") or {}
+    top_signals = insights.get("top_signals") or []
+    risk_items = risk.get("items") or []
+    ready_items = handoff.get("ready_items") or []
+    blocked_items = handoff.get("blocked_items") or handoff.get("needs_review") or []
+    brief_lines = report_lines(
+        briefs,
+        lambda item: f"{item.get('status', 'draft')} · {item.get('channel', 'channel')}/{item.get('format', 'format')} · {item.get('topic')} · hook: {item.get('hook_primary') or 'n/a'}",
+        "No weekly briefs available. Generate a weekly plan first.",
+    )
+    asset_lines = report_lines(
+        assets,
+        lambda item: f"{item.get('review_status', 'review')} / {item.get('compliance_status', 'safety')} · {item.get('channel', 'channel')}/{item.get('format', 'format')} · media {len(item.get('media_urls') or [])} · {(item.get('caption') or '')[:120]}",
+        "No draft assets available. Save briefs as assets first.",
+    )
+    queue_lines = report_lines(
+        queue,
+        lambda item: f"{item.get('status', 'status')} / {item.get('compliance_status', 'safety')} · {item.get('channel', 'channel')}/{item.get('format', 'format')} · planned {item.get('planned_slot') or 'not set'} · external {item.get('external_post_id') or 'not posted'}",
+        "No queue items available. Queue approved assets first.",
+    )
+    ready_lines = report_lines(
+        ready_items,
+        lambda item: f"{item.get('channel', 'channel')}/{item.get('format', 'format')} · planned {item.get('planned_slot') or 'not set'} · queue {item.get('id')}",
+        "No handoff-ready items yet.",
+    )
+    blocked_lines = report_lines(
+        blocked_items,
+        lambda item: f"{item.get('channel', 'channel')}/{item.get('format', 'format')} · {', '.join(item.get('handoff_blockers') or ['Needs review'])}",
+        "No blocked handoff items found.",
+    )
+    topic_lines = [f"- {topic}" for topic in plan_topics] or ["- No learning topics yet. Record outcomes or use the default weekly plan topics."]
+    insight_lines = report_lines(
+        top_signals,
+        lambda item: f"{item.get('label')} · avg score {item.get('avg_score')} · saves {item.get('saves_total')} · {item.get('recommendation')}",
+        "No outcome insights yet.",
+    )
+    risk_lines = [
+        f"- [{item.get('severity')}] {item.get('kind')} {item.get('id')}: {item.get('title')} — {item.get('action')}"
+        for item in risk_items[:12]
+    ] or ["- No current risk items found."]
+    lines = [
+        "# DREC Content OS Weekly Cycle Pack",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this pack to run one planning-to-learning content cycle without switching between exports.",
+        "",
+        *usability_markdown_lines(launch),
+        "## Cycle Status",
+        "",
+        f"- Manual cycle: {checklist.get('overall_status')} ({checklist.get('done_count', 0)}/{checklist.get('total_required', 0)} required steps done)",
+        f"- Next action: {next_action.get('title') or 'Open Dashboard'} — {next_action.get('body') or checklist.get('next_step', {}).get('detail') or 'Follow the first open step.'}",
+        f"- Briefs: {summary.get('brief_count', 0)}",
+        f"- Ready assets: {summary.get('ready_assets', 0)}",
+        f"- Queue total: {summary.get('queue_total', 0)}",
+        f"- Scheduled queue: {summary.get('scheduled_queue', 0)}",
+        f"- Handoff ready: {handoff.get('ready_count', 0)}",
+        f"- Published queue: {summary.get('published_queue', 0)}",
+        f"- Outcomes: {summary.get('outcome_count', 0)}",
+        f"- Risk: {risk.get('overall_status')} ({risk.get('block_count', 0)} block / {risk.get('warn_count', 0)} warn)",
+        "",
+        "## 1. Planning Inputs",
+        "",
+        "Recommended next topics:",
+        "",
+        *topic_lines,
+        "",
+        "Recent briefs:",
+        "",
+        *brief_lines,
+        "",
+        "## 2. Production And Review",
+        "",
+        *asset_lines,
+        "",
+        "## 3. Schedule And Handoff",
+        "",
+        "Queue snapshot:",
+        "",
+        *queue_lines,
+        "",
+        "Ready for manual publishing:",
+        "",
+        *ready_lines,
+        "",
+        "Blocked handoff items:",
+        "",
+        *blocked_lines,
+        "",
+        "## 4. Learning Closeout",
+        "",
+        f"- Learning recommendation: {learning.get('recommendation')}",
+        f"- Outcome summary: {insights.get('summary') or 'No outcome summary yet.'}",
+        "",
+        *insight_lines,
+        "",
+        "## 5. Risk And Safety",
+        "",
+        *risk_lines,
+        "",
+        "## Weekly Closeout Rule",
+        "",
+        "- Do not enable real Meta workers from this pack. Use Meta Setup and Launch Evidence for go-live gates.",
+        "- End the week only after posted items have external post IDs, metrics are entered, and next topics are sent back to Weekly Plan.",
+        "- Archive drafted briefs after assets are saved so the next weekly plan stays focused.",
+        "",
+    ]
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-weekly-cycle-pack.md"'},
     )
 
 
