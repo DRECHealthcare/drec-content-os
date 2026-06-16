@@ -2,6 +2,7 @@ const apiBase = window.DREC_API_BASE_URL || localStorage.getItem("DREC_API_BASE_
 const tokenKey = "DREC_ACCESS_TOKEN";
 let currentDraft = null;
 let editingQueueItem = null;
+let latestMetaSetupCommands = [];
 
 const titleMap = {
   dashboard: "Dashboard",
@@ -27,7 +28,7 @@ document.querySelectorAll("nav button").forEach((button) => {
     if (screen === "outcomes") loadOutcomes();
     if (screen === "learning") loadLearningSummary();
     if (screen === "scheduler" || screen === "review") loadPublishQueue();
-    if (screen === "meta") loadMetaReadiness();
+    if (screen === "meta") Promise.all([loadMetaReadiness(), loadMetaSetupChecklist()]);
   });
 });
 
@@ -70,6 +71,7 @@ function promptForToken() {
   loadLearningSummary();
   loadPublishQueue();
   loadMetaReadiness();
+  loadMetaSetupChecklist();
 }
 
 document.getElementById("token-button").addEventListener("click", promptForToken);
@@ -569,6 +571,30 @@ function renderMetaReadiness(data) {
   `;
 }
 
+function renderMetaSetupChecklist(data) {
+  const container = document.getElementById("meta-setup-checklist");
+  latestMetaSetupCommands = data.setup_commands || [];
+  container.innerHTML = `
+    <article class="learning-card wide-learning">
+      <h3>Credential Setup Checklist</h3>
+      <p>${escapeHtml(data.overall_status || "needs_setup")}</p>
+      <ul>${(data.steps || []).map((step) => `<li><strong>${escapeHtml(step.status)}</strong> ${escapeHtml(step.label)} · ${escapeHtml(step.detail)}</li>`).join("")}</ul>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Required Secrets</h3>
+      <ul>${(data.required_secrets || []).map((secret) => `<li>${escapeHtml(secret)}</li>`).join("")}</ul>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Setup Commands</h3>
+      <pre id="meta-setup-commands">${escapeHtml(latestMetaSetupCommands.join("\n"))}</pre>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Safety Notes</h3>
+      <ul>${(data.notes || []).map((note) => `<li>${escapeHtml(note)}</li>`).join("")}</ul>
+    </article>
+  `;
+}
+
 async function loadMetaReadiness() {
   const container = document.getElementById("meta-readiness");
   if (!container) return;
@@ -579,6 +605,18 @@ async function loadMetaReadiness() {
   } catch (error) {
     container.innerHTML = '<p class="status-note">Set the access token to check Meta readiness.</p>';
     document.getElementById("meta-message").textContent = error.message === "Access token required" ? "Set the access token first." : "Could not check Meta readiness.";
+  }
+}
+
+async function loadMetaSetupChecklist() {
+  const container = document.getElementById("meta-setup-checklist");
+  if (!container) return;
+  try {
+    const data = await fetchJson("/meta/setup-checklist");
+    renderMetaSetupChecklist(data);
+  } catch (error) {
+    latestMetaSetupCommands = [];
+    container.innerHTML = '<p class="status-note">Set the access token to load the setup checklist.</p>';
   }
 }
 
@@ -2010,7 +2048,21 @@ document.getElementById("dry-run-instagram").addEventListener("click", async () 
 document.getElementById("refresh-meta").addEventListener("click", async () => {
   const message = document.getElementById("meta-message");
   message.textContent = "Checking Meta readiness...";
-  await loadMetaReadiness();
+  await Promise.all([loadMetaReadiness(), loadMetaSetupChecklist()]);
+});
+
+document.getElementById("copy-meta-setup").addEventListener("click", async () => {
+  const message = document.getElementById("meta-message");
+  if (!latestMetaSetupCommands.length) {
+    message.textContent = "Load the setup checklist first.";
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(latestMetaSetupCommands.join("\n"));
+    message.textContent = "Setup command template copied.";
+  } catch {
+    message.textContent = "Could not copy automatically. Use the visible setup command template.";
+  }
 });
 
 document.getElementById("dry-run-meta-publishing").addEventListener("click", async () => {
@@ -2357,5 +2409,6 @@ loadMediaAssets();
 loadLearningSummary();
 loadPublishQueue();
 loadMetaReadiness();
+loadMetaSetupChecklist();
 loadOutcomes();
 updateTokenButton();

@@ -80,6 +80,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added Supabase service-role security readiness gate before stricter RLS hardening
 - [x] Added API-backed automation readiness gate across workflow, handoff, learning, Meta, and security
 - [x] Added protected CSV operations snapshot export for backup and rollout audit
+- [x] Added Meta credential setup checklist and copy-ready Fly secret command template
 
 ## Next Engineering Tasks
 
@@ -141,6 +142,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add Supabase service-role readiness check before strict RLS migration
 - [x] Add unified automation readiness status for safe rollout decisions
 - [x] Add protected operations snapshot export before credential/RLS changes
+- [x] Add copy-ready Meta and Supabase credential setup checklist
 - [ ] Connect Meta Graph API credentials
 - [x] Implement real Facebook publish scheduling behind Meta readiness and enable flags
 - [x] Implement Instagram two-step publish worker behind Meta readiness and enable flags

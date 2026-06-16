@@ -603,6 +603,19 @@ button[type="submit"] {
   padding-left: 18px;
 }
 
+.learning-card pre {
+  margin: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #FFF;
+  color: var(--ink);
+  font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  white-space: pre;
+}
+
 .wide-learning {
   grid-column: 1 / -1;
 }

@@ -44,6 +44,7 @@ Current system behavior:
 - `/publish-queue` rejects flagged captions.
 - `/publish-queue/{id}` rejects scheduling unless the item is compliance-clear.
 - `/meta/readiness` checks whether Meta app, Page, IG user, token, and required permissions are ready.
+- `/meta/setup-checklist` returns missing credentials, missing token permissions, setup steps, and copy-ready Fly command templates without storing secret values in the browser.
 - `/publishing/facebook/dispatch` dry-runs the next eligible Facebook item and blocks real publishing unless credentials are ready and `META_ENABLE_PUBLISHING=true`.
 - `/jobs/meta-publishing` wraps Facebook and Instagram dispatch as a scheduler-ready job. It dry-runs by default, only looks at due scheduled posts, and blocks real publishing unless `META_ENABLE_PUBLISHING=true` and `META_ENABLE_PUBLISHING_JOB=true`.
 - `/metrics/meta/ingest` dry-runs published-post metric ingestion and blocks real ingestion until Meta readiness is green.

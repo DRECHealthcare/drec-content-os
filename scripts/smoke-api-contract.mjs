@@ -15,6 +15,7 @@ const requiredRoutes = [
   "GET /operations/snapshot.csv",
   "GET /weekly-report.md",
   "GET /meta/readiness",
+  "GET /meta/setup-checklist",
   "GET /publish-queue/suggest-slot",
   "GET /metrics/published-source",
   "POST /briefs/{brief_id}/draft-asset",
@@ -124,6 +125,11 @@ const requiredSnippets = [
     name: "operations snapshot export",
     file: "main",
     text: "drec-content-os-snapshot.csv",
+  },
+  {
+    name: "meta setup checklist route",
+    file: "main",
+    text: "meta_setup_checklist",
   },
   {
     name: "nightly metrics job lock",
@@ -259,6 +265,21 @@ const requiredSnippets = [
     name: "web scheduled publishing job endpoint",
     file: "web",
     text: "/jobs/meta-publishing?dry_run=true&channel=all",
+  },
+  {
+    name: "web meta setup checklist",
+    file: "web",
+    text: "/meta/setup-checklist",
+  },
+  {
+    name: "web meta setup copy action",
+    file: "web",
+    text: "copy-meta-setup",
+  },
+  {
+    name: "web visible meta setup commands",
+    file: "web",
+    text: "meta-setup-commands",
   },
 ];
 

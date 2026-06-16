@@ -216,6 +216,73 @@ async def meta_readiness(_: None = Depends(require_access_token)):
     }
 
 
+@app.get("/meta/setup-checklist")
+async def meta_setup_checklist(_: None = Depends(require_access_token)):
+    readiness = await meta_readiness(None)
+    security = security_status_payload()
+    missing_env = [check for check in readiness.get("env_checks", []) if not check.get("configured")]
+    missing_permissions = readiness.get("token_check", {}).get("missing_permissions", [])
+    required_secret_names = [
+        "META_APP_ID",
+        "META_APP_SECRET",
+        "META_PAGE_ID",
+        "META_IG_USER_ID",
+        "META_PAGE_ACCESS_TOKEN",
+        "SUPABASE_SERVICE_ROLE_KEY",
+    ]
+    setup_commands = [
+        f'fly secrets set {name}="<paste-{name.lower().replace("_", "-")}>"'
+        for name in required_secret_names
+    ]
+    setup_commands.extend(
+        [
+            "fly deploy",
+            "DREC_ACCESS_TOKEN=\"<paste-drec-access-token>\" npm run smoke:live",
+            "fly secrets set META_ENABLE_PUBLISHING=true META_ENABLE_PUBLISHING_JOB=true",
+            "fly secrets set META_ENABLE_METRICS_JOB=true",
+        ]
+    )
+    return {
+        "overall_status": "ready_to_enable" if readiness.get("overall_status") == "ready_for_worker_testing" and security.get("rls_hardening_ready") else "needs_setup",
+        "missing_credentials": [item["key"] for item in missing_env],
+        "missing_permissions": missing_permissions,
+        "required_secrets": required_secret_names,
+        "setup_commands": setup_commands,
+        "steps": [
+            {
+                "label": "Install Supabase service role key on Fly",
+                "status": "ready" if security.get("rls_hardening_ready") else "needed",
+                "detail": security.get("next_step"),
+            },
+            {
+                "label": "Install Meta app, Page, IG, and Page token secrets",
+                "status": "ready" if not missing_env else "needed",
+                "detail": "Missing: " + ", ".join(item["key"] for item in missing_env) if missing_env else "All required Meta secrets are configured.",
+            },
+            {
+                "label": "Confirm Meta token permissions",
+                "status": "ready" if not missing_permissions and readiness.get("token_check", {}).get("status") == "ready" else "needed",
+                "detail": "Missing: " + ", ".join(missing_permissions) if missing_permissions else readiness.get("token_check", {}).get("message", "Check Page token permissions."),
+            },
+            {
+                "label": "Run dry-run checks before live switches",
+                "status": "ready",
+                "detail": "Use Meta Setup dry-run buttons and live smoke before enabling real publishing or metrics jobs.",
+            },
+            {
+                "label": "Enable live Meta workers only after green dry runs",
+                "status": "locked",
+                "detail": "Enable META_ENABLE_PUBLISHING, META_ENABLE_PUBLISHING_JOB, and META_ENABLE_METRICS_JOB after readiness is green.",
+            },
+        ],
+        "notes": [
+            "Do not paste secret values into GitHub, Vercel, or the browser UI.",
+            "Keep manual handoff active until setup status is ready_to_enable.",
+            "Run one Facebook publish first, then Instagram, then nightly metrics.",
+        ],
+    }
+
+
 def security_status_payload():
     has_service_role = bool(settings.supabase_service_role_key)
     has_supabase_rest = bool(settings.supabase_url and supabase_rest.api_key())

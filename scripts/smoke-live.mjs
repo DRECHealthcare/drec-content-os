@@ -67,6 +67,15 @@ const checks = [
     },
   },
   {
+    name: "Meta setup checklist",
+    url: `${apiBase}/meta/setup-checklist`,
+    auth: true,
+    validate: async (res) => {
+      const data = await res.json();
+      return Array.isArray(data.steps) && Array.isArray(data.setup_commands) && data.required_secrets?.includes("META_PAGE_ACCESS_TOKEN");
+    },
+  },
+  {
     name: "Schedule suggestion",
     url: `${apiBase}/publish-queue/suggest-slot?channel=facebook`,
     auth: true,
@@ -110,7 +119,7 @@ const checks = [
     auth: false,
     validate: async (res) => {
       const text = await res.text();
-      return text.includes("DREC") && text.includes("workflow-next") && text.includes("copy-test-path") && text.includes("download-snapshot") && text.includes("Ready Assets") && text.includes("Learning Loop") && text.includes("Security Gate") && text.includes("Automation Gate") && text.includes("Record Published") && text.includes("Save & Roll Up") && text.includes("Use Topics In Weekly Plan") && text.includes("save-all-assets") && text.includes("archive-drafted-briefs") && text.includes("approve-clear-assets") && text.includes("queue-ready-assets") && text.includes("schedule-approved-items") && text.includes("dry-run-meta-publishing");
+      return text.includes("DREC") && text.includes("workflow-next") && text.includes("copy-test-path") && text.includes("download-snapshot") && text.includes("Ready Assets") && text.includes("Learning Loop") && text.includes("Security Gate") && text.includes("Automation Gate") && text.includes("Record Published") && text.includes("Save & Roll Up") && text.includes("Use Topics In Weekly Plan") && text.includes("save-all-assets") && text.includes("archive-drafted-briefs") && text.includes("approve-clear-assets") && text.includes("queue-ready-assets") && text.includes("schedule-approved-items") && text.includes("copy-meta-setup") && text.includes("dry-run-meta-publishing");
     },
   },
   {
@@ -119,7 +128,7 @@ const checks = [
     auth: false,
     validate: async (res) => {
       const text = await res.text();
-      return text.includes("/workflow/status") && text.includes("/operations/snapshot.csv") && text.includes("Existing queue item opened") && text.includes("function testPathText()") && text.includes("countByStatus") && text.includes("security-count") && text.includes("automation-count") && text.includes("Record Published: After manual posting") && text.includes("Save & Roll Up: Add metrics") && text.includes("Use Topics: Send learning recommendations") && text.includes("loadLearningTopicsIntoPlan") && text.includes("needsReviewQueue") && text.includes("handoff_blockers") && text.includes("schedule-next") && text.includes("load-published-post") && text.includes("save-rollup-metric") && text.includes("/briefs/draft-assets") && text.includes("/briefs/archive-drafted") && text.includes("/assets/queue-ready") && text.includes("/publish-queue/schedule-approved") && text.includes("data-handoff-published") && text.includes("/jobs/meta-publishing?dry_run=true&channel=all");
+      return text.includes("/workflow/status") && text.includes("/operations/snapshot.csv") && text.includes("Existing queue item opened") && text.includes("function testPathText()") && text.includes("countByStatus") && text.includes("security-count") && text.includes("automation-count") && text.includes("Record Published: After manual posting") && text.includes("Save & Roll Up: Add metrics") && text.includes("Use Topics: Send learning recommendations") && text.includes("loadLearningTopicsIntoPlan") && text.includes("needsReviewQueue") && text.includes("handoff_blockers") && text.includes("schedule-next") && text.includes("load-published-post") && text.includes("save-rollup-metric") && text.includes("/briefs/draft-assets") && text.includes("/briefs/archive-drafted") && text.includes("/assets/queue-ready") && text.includes("/publish-queue/schedule-approved") && text.includes("data-handoff-published") && text.includes("/meta/setup-checklist") && text.includes("meta-setup-commands") && text.includes("/jobs/meta-publishing?dry_run=true&channel=all");
     },
   },
 ];
