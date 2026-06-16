@@ -95,8 +95,38 @@ h1 { color: var(--navy); font-size: 18px; }
 h2 { color: var(--navy); font-size: 15px; margin-bottom: 12px; }
 header span { color: var(--muted); font-size: 12px; }
 
-.token-button {
+.token-panel {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.token-panel[hidden] {
+  display: none;
+}
+
+.token-panel input {
+  width: min(260px, 28vw);
+  min-width: 150px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 9px;
+  font: inherit;
+}
+
+.token-panel button {
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 7px 11px;
+  background: var(--teal);
+  color: #FFF;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.token-button {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 7px 11px;
@@ -880,6 +910,9 @@ button[type="submit"] {
   body { display: block; }
   aside { width: 100%; }
   header { flex-wrap: wrap; height: auto; padding: 14px 18px; }
+  .token-panel { width: 100%; margin-left: 0; }
+  .token-panel input { flex: 1; width: auto; }
+  .token-button { margin-left: auto; }
   .screen { padding: 18px; }
   .grid, .loop, .split-form, .learning-grid, .handoff-summary, .creative-preview, .weight-row, .scheduler-toolbar, .week-schedule, .workflow-steps, .test-path-list { grid-template-columns: 1fr; }
   .workflow-head, .workflow-primary { align-items: stretch; flex-direction: column; }

@@ -31,6 +31,10 @@
     <header>
       <h1 id="title">Dashboard</h1>
       <span>Week of Mon 15 Jun 2026 · MYT</span>
+      <div id="token-panel" class="token-panel" hidden>
+        <input id="token-input" type="password" placeholder="Access token">
+        <button id="token-save" type="button">Save</button>
+      </div>
       <button id="token-button" class="token-button" type="button">Access</button>
     </header>
 
@@ -52,6 +56,7 @@
         <article class="card"><h2>Ready Assets</h2><p id="asset-count">Waiting for API</p></article>
         <article class="card"><h2>Media Library</h2><p id="media-count">Waiting for API</p></article>
         <article class="card"><h2>Learning Loop</h2><p id="outcome-count">Waiting for API</p></article>
+        <article class="card"><h2>Launch Readiness</h2><p id="launch-count">Waiting for API</p></article>
         <article class="card"><h2>Security Gate</h2><p id="security-count">Waiting for API</p></article>
         <article class="card"><h2>Automation Gate</h2><p id="automation-count">Waiting for API</p></article>
       </div>
@@ -66,6 +71,7 @@
         <div id="workflow-next" class="workflow-next">
           <p class="status-note">Waiting for API</p>
         </div>
+        <div id="launch-readiness" class="learning-grid"></div>
       </div>
       <div class="card wide test-path-card">
         <div class="workflow-head">

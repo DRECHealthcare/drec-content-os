@@ -57,10 +57,7 @@ function updateTokenButton() {
   button.textContent = accessToken() ? "Access set" : "Set access";
 }
 
-function promptForToken() {
-  const token = window.prompt("Enter DREC Content OS access token", accessToken());
-  if (token === null) return;
-  localStorage.setItem(tokenKey, token.trim());
+function refreshProtectedData() {
   updateTokenButton();
   loadLoopStatus();
   loadKb();
@@ -72,9 +69,32 @@ function promptForToken() {
   loadPublishQueue();
   loadMetaReadiness();
   loadMetaSetupChecklist();
+  loadLaunchReadiness();
 }
 
-document.getElementById("token-button").addEventListener("click", promptForToken);
+function showTokenPanel() {
+  const panel = document.getElementById("token-panel");
+  const input = document.getElementById("token-input");
+  panel.hidden = !panel.hidden;
+  input.value = accessToken();
+  if (!panel.hidden) input.focus();
+}
+
+function saveAccessTokenFromPanel() {
+  const panel = document.getElementById("token-panel");
+  const input = document.getElementById("token-input");
+  const token = input.value;
+  localStorage.setItem(tokenKey, token.trim());
+  panel.hidden = true;
+  refreshProtectedData();
+}
+
+document.getElementById("token-button").addEventListener("click", showTokenPanel);
+document.getElementById("token-save").addEventListener("click", saveAccessTokenFromPanel);
+document.getElementById("token-input").addEventListener("keydown", (event) => {
+  if (event.key === "Enter") saveAccessTokenFromPanel();
+  if (event.key === "Escape") document.getElementById("token-panel").hidden = true;
+});
 
 async function fetchJson(path, options) {
   const token = accessToken();
@@ -454,6 +474,7 @@ async function loadLoopStatus() {
     document.getElementById("security-count").textContent = security.rls_hardening_ready ? "RLS hardening ready" : "Needs service-role key";
     document.getElementById("automation-count").textContent = `${automation.ready_count || 0} ready · ${automation.blocked_count || 0} blocked`;
     renderWorkflowNext(data.workflow || loop);
+    loadLaunchReadiness();
   } catch {
     const message = accessToken() ? "API access failed" : "Set access token";
     document.getElementById("queue-count").textContent = message;
@@ -461,10 +482,45 @@ async function loadLoopStatus() {
     document.getElementById("asset-count").textContent = message;
     document.getElementById("media-count").textContent = message;
     document.getElementById("outcome-count").textContent = message;
+    document.getElementById("launch-count").textContent = message;
     document.getElementById("security-count").textContent = message;
     document.getElementById("automation-count").textContent = message;
     const workflow = document.getElementById("workflow-next");
     if (workflow) workflow.innerHTML = `<p class="status-note">${escapeHtml(message)}</p>`;
+  }
+}
+
+function renderLaunchReadiness(data) {
+  const container = document.getElementById("launch-readiness");
+  if (!container) return;
+  document.getElementById("launch-count").textContent = data.overall_status || "Unknown";
+  const stages = data.stages || [];
+  const blockers = data.external_blockers || [];
+  container.innerHTML = `
+    <article class="learning-card wide-learning">
+      <h3>Launch Readiness</h3>
+      <p>${escapeHtml(data.overall_status || "unknown")}</p>
+      <small>${escapeHtml(data.next_step || "")}</small>
+      ${blockers.length ? `<ul>${blockers.map((blocker) => `<li>${escapeHtml(blocker)}</li>`).join("")}</ul>` : ""}
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Launch Stages</h3>
+      <ul>
+        ${stages.map((stage) => `<li><strong>${escapeHtml(stage.status)}</strong> ${escapeHtml(stage.label)} · ${escapeHtml(stage.detail)}</li>`).join("")}
+      </ul>
+    </article>
+  `;
+}
+
+async function loadLaunchReadiness() {
+  const container = document.getElementById("launch-readiness");
+  if (!container) return;
+  try {
+    const data = await fetchJson("/operations/launch-readiness");
+    renderLaunchReadiness(data);
+  } catch {
+    document.getElementById("launch-count").textContent = accessToken() ? "API access failed" : "Set access token";
+    container.innerHTML = "";
   }
 }
 
@@ -2451,6 +2507,7 @@ document.getElementById("outcome-form").addEventListener("submit", async (event)
 
 storeAccessTokenFromUrl();
 loadLoopStatus();
+loadLaunchReadiness();
 loadKb();
 loadBriefs();
 loadAssets();

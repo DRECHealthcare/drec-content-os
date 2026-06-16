@@ -522,6 +522,92 @@ async def content_risk_audit(_: None = Depends(require_access_token)):
     return await content_risk_audit_payload()
 
 
+async def launch_readiness_payload():
+    loop = await build_loop_status()
+    workflow = build_workflow_guidance(loop)
+    automation = await automation_status_payload()
+    security = security_status_payload()
+    meta = await meta_readiness(None)
+    risk = await content_risk_audit_payload()
+    automation_gates = {gate.get("key"): gate for gate in automation.get("gates", [])}
+    manual_ops_ready = security.get("supabase_rest") == "configured"
+    handoff_ready = automation_gates.get("handoff", {}).get("status") == "ready"
+    risk_blocks = int(risk.get("block_count") or 0)
+    risk_warnings = int(risk.get("warn_count") or 0)
+    manual_publish_status = "ready" if handoff_ready and risk_blocks == 0 else "blocked" if risk_blocks else "waiting"
+    meta_ready = meta.get("overall_status") == "ready_for_worker_testing"
+    rls_ready = bool(security.get("rls_hardening_ready"))
+    automation_ready = meta_ready and rls_ready and risk_blocks == 0
+    stages = [
+        {
+            "key": "manual_ops",
+            "label": "Manual content workflow",
+            "status": "ready" if manual_ops_ready else "blocked",
+            "detail": "Plan, draft, review, schedule, handoff, record metrics, and export reports are available." if manual_ops_ready else "Connect Supabase/API before using the workflow.",
+        },
+        {
+            "key": "manual_publish",
+            "label": "Manual publishing run",
+            "status": manual_publish_status,
+            "detail": "Ready scheduled items can be handed off safely." if manual_publish_status == "ready" else risk.get("next_step") if manual_publish_status == "blocked" else "Schedule a reviewed item, then build the handoff.",
+        },
+        {
+            "key": "scheduler_dry_run",
+            "label": "Scheduler dry run",
+            "status": "ready",
+            "detail": "GitHub Actions dry-run workflow is in the repository; set DREC_ACCESS_TOKEN in GitHub Secrets to activate it.",
+        },
+        {
+            "key": "meta_automation",
+            "label": "Real Meta automation",
+            "status": "ready" if automation_ready else "blocked",
+            "detail": "Meta and security gates are ready for controlled rollout." if automation_ready else "Add Meta credentials/permissions and Supabase service-role key before enabling real jobs.",
+        },
+    ]
+    if automation_ready:
+        overall = "automation_ready"
+    elif manual_ops_ready and risk_blocks == 0:
+        overall = "manual_ops_ready_auto_blocked"
+    elif manual_ops_ready:
+        overall = "manual_ops_ready_needs_review"
+    else:
+        overall = "setup_needed"
+    return {
+        "overall_status": overall,
+        "manual_use_ready": manual_ops_ready,
+        "manual_publish_status": manual_publish_status,
+        "automation_ready": automation_ready,
+        "next_step": next((stage.get("detail") for stage in stages if stage.get("status") != "ready"), "Manual and automation readiness gates are green."),
+        "risk": {
+            "overall_status": risk.get("overall_status"),
+            "block_count": risk_blocks,
+            "warn_count": risk_warnings,
+        },
+        "summary": {
+            "next_action": workflow.get("next_action", {}),
+            "queue_total": total_queue_count(loop.get("queue")),
+            "ready_assets": queue_ready_asset_count(loop.get("asset_status")),
+            "scheduled_queue": automation.get("summary", {}).get("scheduled_queue", 0),
+            "published_queue": automation.get("summary", {}).get("published_queue", 0),
+        },
+        "stages": stages,
+        "external_blockers": [
+            blocker
+            for blocker in [
+                "Meta Graph API credentials and permissions" if not meta_ready else None,
+                "Supabase service-role key on Fly" if not rls_ready else None,
+                "GitHub Actions DREC_ACCESS_TOKEN secret" if not automation_ready else None,
+            ]
+            if blocker
+        ],
+    }
+
+
+@app.get("/operations/launch-readiness")
+async def launch_readiness(_: None = Depends(require_access_token)):
+    return await launch_readiness_payload()
+
+
 def snapshot_row(record_type, item_id="", status="", channel="", fmt="", title="", created_at="", detail=""):
     return {
         "record_type": record_type,
@@ -639,6 +725,7 @@ async def operations_snapshot_csv(_: None = Depends(require_access_token)):
 
 @app.get("/operations/operator-pack.md")
 async def operations_operator_pack(_: None = Depends(require_access_token)):
+    launch = await launch_readiness_payload()
     workflow = await workflow_status(None)
     automation = await automation_status_payload()
     security = security_status_payload()
@@ -663,6 +750,10 @@ async def operations_operator_pack(_: None = Depends(require_access_token)):
     ] or ["- No content risk items found."]
     secret_lines = [f"- {secret}" for secret in setup.get("required_secrets", [])] or ["- No required secrets listed."]
     command_lines = ["```bash", *(setup.get("setup_commands") or ["# No setup commands available."]), "```"]
+    launch_lines = [
+        f"- {stage.get('label')}: {stage.get('status')} — {stage.get('detail')}"
+        for stage in launch.get("stages", [])
+    ] or ["- No launch readiness stages available."]
     lines = [
         "# DREC Content OS Operator Pack",
         "",
@@ -671,11 +762,16 @@ async def operations_operator_pack(_: None = Depends(require_access_token)):
         "## Current Operating Status",
         "",
         f"- Workflow: {workflow.get('workflow', {}).get('next_action', {}).get('title', 'Unknown')}",
+        f"- Launch readiness: {launch.get('overall_status')}",
         f"- Automation: {automation.get('overall_status')}",
         f"- Security: {security.get('overall_status')}",
         f"- Meta: {meta.get('overall_status')} ({meta.get('mode')})",
         f"- Content risk: {risk.get('overall_status')} ({risk.get('block_count', 0)} block / {risk.get('warn_count', 0)} warn)",
         f"- Handoff ready: {handoff.get('ready_count', 0)} ready / {handoff.get('blocked_count', 0)} blocked",
+        "",
+        "## Launch Readiness",
+        "",
+        *launch_lines,
         "",
         "## Automation Gates",
         "",

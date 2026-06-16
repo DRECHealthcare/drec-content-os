@@ -13,6 +13,7 @@ const requiredRoutes = [
   "GET /workflow/status",
   "GET /security/status",
   "GET /automation/status",
+  "GET /operations/launch-readiness",
   "GET /operations/risk-audit",
   "GET /operations/snapshot.csv",
   "GET /operations/operator-pack.md",
@@ -125,6 +126,11 @@ const requiredSnippets = [
     text: "manual_safe_auto_blocked",
   },
   {
+    name: "launch readiness status",
+    file: "main",
+    text: "launch_readiness_payload",
+  },
+  {
     name: "content risk audit",
     file: "main",
     text: "content_risk_audit_payload",
@@ -168,6 +174,26 @@ const requiredSnippets = [
     name: "web dashboard status helper",
     file: "web",
     text: "countByStatus",
+  },
+  {
+    name: "web launch readiness card",
+    file: "web",
+    text: "launch-count",
+  },
+  {
+    name: "web launch readiness endpoint",
+    file: "web",
+    text: "/operations/launch-readiness",
+  },
+  {
+    name: "web inline token input",
+    file: "web",
+    text: "token-input",
+  },
+  {
+    name: "web token panel refresh",
+    file: "web",
+    text: "saveAccessTokenFromPanel",
   },
   {
     name: "web security gate card",
