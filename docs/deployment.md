@@ -53,7 +53,10 @@ Set:
 DREC_API_BASE_URL=https://your-fly-app.fly.dev
 ```
 
-The current web shell is static. The next pass will wire its buttons to the API.
+The live web app is static and talks to the Fly.io API through
+`DREC_API_BASE_URL`.
+
+Manual workflow testing is documented in `docs/operator-test-runbook.md`.
 
 ## Live Smoke Check
 

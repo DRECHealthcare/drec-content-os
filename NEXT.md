@@ -61,6 +61,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Made asset-to-queue creation idempotent to avoid duplicate active queue items
 - [x] Added non-mutating live smoke check for deploy verification
 - [x] Added local API contract smoke check for route and workflow gate verification
+- [x] Added operator test runbook for the full manual workflow
 
 ## Next Engineering Tasks
 
@@ -104,6 +105,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Reuse existing active queue item when Add To Queue is clicked repeatedly for the same asset
 - [x] Add live smoke check script for API/web/report/Meta readiness
 - [x] Add local contract smoke check for key routes and safety gates
+- [x] Document the manual full-cycle test path from brief to weekly report
 - [ ] Connect Meta Graph API credentials
 - [ ] Implement real Facebook publish scheduling
 - [ ] Implement Instagram two-step publish worker

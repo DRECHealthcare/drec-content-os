@@ -19,6 +19,7 @@ This repository starts the Stage 1 build from the unified proposal:
 - **GitHub**: source control and CI/CD
 
 Current Supabase project details are documented in `docs/supabase.md`.
+Manual workflow testing is documented in `docs/operator-test-runbook.md`.
 
 ## Project Shape
 
