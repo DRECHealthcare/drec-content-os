@@ -109,7 +109,7 @@ create table if not exists feedback (
   module text not null,
   ref_type text not null,
   ref_id text not null,
-  action text not null check (action in ('approve', 'edit', 'regen', 'reject')),
+  action text not null check (action in ('approve', 'edit', 'regen', 'reject', 'heartbeat')),
   before_text text,
   after_text text,
   reason text,

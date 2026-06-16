@@ -685,6 +685,7 @@ function renderMetaSetupChecklist(data) {
   const githubSecrets = scheduler.required_github_secrets || [];
   const githubVariables = scheduler.optional_github_variables || [];
   const schedulerSteps = scheduler.steps || [];
+  const schedulerHeartbeat = scheduler.heartbeat || {};
   container.innerHTML = `
     <article class="learning-card wide-learning">
       <h3>Credential Setup Checklist</h3>
@@ -703,6 +704,7 @@ function renderMetaSetupChecklist(data) {
       <h3>GitHub Scheduler Setup</h3>
       <p>${escapeHtml(scheduler.status || "not_checked")}</p>
       <small>${escapeHtml(scheduler.workflow_file || ".github/workflows/drec-scheduler-dry-run.yml")}</small>
+      <p>${escapeHtml(schedulerHeartbeat.detail || "Run the workflow once to record the first scheduler heartbeat.")}</p>
       <ul>
         <li><strong>Required secret</strong> ${escapeHtml(githubSecrets.join(", ") || "None")}</li>
         <li><strong>Optional variable</strong> ${escapeHtml(githubVariables.join(", ") || "None")}</li>

@@ -31,6 +31,7 @@ The API exposes:
 - `GET /health`
 - `GET /loop-status`
 - `GET /operations/launch-evidence.md`
+- `POST /operations/scheduler-heartbeat`
 - `GET/POST /kb`
 - `GET /kb/export.csv`
 - `GET/POST /publish-queue`
@@ -135,6 +136,10 @@ Meta automation.
 The repository includes `.github/workflows/drec-scheduler-dry-run.yml`.
 It is safe to leave enabled because it only calls dry-run endpoints and skips
 itself when the GitHub secret is missing.
+When the workflow runs with a valid token, it calls
+`/operations/scheduler-heartbeat` after the checks pass. The Meta Setup screen
+and automation status use that heartbeat as evidence that the recurring
+six-hour checks are actually active.
 
 Set this GitHub Actions secret when you want scheduled dry-run checks:
 

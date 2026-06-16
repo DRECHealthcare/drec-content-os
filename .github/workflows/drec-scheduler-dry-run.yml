@@ -50,3 +50,11 @@ jobs:
           curl --fail --silent --show-error \
             --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
             "${DREC_API_BASE_URL}/operations/risk-audit"
+
+      - name: Record scheduler heartbeat
+        if: ${{ env.DREC_ACCESS_TOKEN != '' }}
+        run: |
+          curl --fail --silent --show-error \
+            --request POST \
+            --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
+            "${DREC_API_BASE_URL}/operations/scheduler-heartbeat"

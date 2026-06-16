@@ -216,10 +216,76 @@ async def meta_readiness(_: None = Depends(require_access_token)):
     }
 
 
+def parse_datetime(value):
+    if isinstance(value, datetime):
+        parsed = value
+    elif value:
+        try:
+            parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    else:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed
+
+
+async def latest_scheduler_heartbeat():
+    row = await fetch_row(
+        """
+        select id, module, ref_type, ref_id, action, reason, tags, created_at
+        from feedback
+        where module = 'ops'
+          and ref_type = 'scheduler'
+          and action = 'heartbeat'
+        order by created_at desc
+        limit 1
+        """
+    )
+    if row is None and supabase_rest.configured():
+        rows = await supabase_rest.select(
+            "feedback",
+            {
+                "select": "id,module,ref_type,ref_id,action,reason,tags,created_at",
+                "module": "eq.ops",
+                "ref_type": "eq.scheduler",
+                "action": "eq.heartbeat",
+                "order": "created_at.desc",
+                "limit": "1",
+            },
+        )
+        row = rows[0] if rows else None
+    if not row:
+        return {
+            "status": "missing",
+            "last_seen_at": None,
+            "age_minutes": None,
+            "detail": "No GitHub scheduler heartbeat has been recorded yet.",
+        }
+    created_at = parse_datetime(row.get("created_at"))
+    age_minutes = None
+    if created_at:
+        age_minutes = round((datetime.now(timezone.utc) - created_at).total_seconds() / 60, 1)
+    status = "recent" if age_minutes is not None and age_minutes <= 8 * 60 else "stale"
+    return {
+        "status": status,
+        "last_seen_at": row.get("created_at"),
+        "age_minutes": age_minutes,
+        "detail": (
+            f"GitHub scheduler heartbeat recorded {age_minutes} minute(s) ago."
+            if age_minutes is not None
+            else "GitHub scheduler heartbeat exists but its timestamp could not be parsed."
+        ),
+        "item": row,
+    }
+
+
 @app.get("/meta/setup-checklist")
 async def meta_setup_checklist(_: None = Depends(require_access_token)):
     readiness = await meta_readiness(None)
     security = security_status_payload()
+    scheduler_heartbeat = await latest_scheduler_heartbeat()
     missing_env = [check for check in readiness.get("env_checks", []) if not check.get("configured")]
     missing_permissions = readiness.get("token_check", {}).get("missing_permissions", [])
     required_secret_names = [
@@ -243,11 +309,12 @@ async def meta_setup_checklist(_: None = Depends(require_access_token)):
         ]
     )
     scheduler_setup = {
-        "status": "repository_ready",
+        "status": "active" if scheduler_heartbeat.get("status") == "recent" else "needs_first_run" if scheduler_heartbeat.get("status") == "missing" else "stale",
         "workflow_file": ".github/workflows/drec-scheduler-dry-run.yml",
         "required_github_secrets": ["DREC_ACCESS_TOKEN"],
         "optional_github_variables": ["DREC_API_BASE_URL"],
         "default_api_base_url": "https://drec-content-os-api.fly.dev",
+        "heartbeat": scheduler_heartbeat,
         "steps": [
             "Open GitHub repository Settings > Secrets and variables > Actions.",
             "Add repository secret DREC_ACCESS_TOKEN with the current DREC app access token.",
@@ -287,7 +354,7 @@ async def meta_setup_checklist(_: None = Depends(require_access_token)):
             {
                 "label": "Activate GitHub scheduled dry runs",
                 "status": scheduler_setup["status"],
-                "detail": "Add GitHub Actions secret DREC_ACCESS_TOKEN, then run the dry-run workflow once.",
+                "detail": scheduler_heartbeat.get("detail") or "Add GitHub Actions secret DREC_ACCESS_TOKEN, then run the dry-run workflow once.",
             },
             {
                 "label": "Enable live Meta workers only after green dry runs",
@@ -347,6 +414,7 @@ async def automation_status_payload():
     workflow = build_workflow_guidance(loop)
     meta = await meta_readiness(None)
     security = security_status_payload()
+    scheduler_heartbeat = await latest_scheduler_heartbeat()
     total_queue = total_queue_count(loop.get("queue"))
     scheduled_queue = sum(
         int(item.get("count") or 0)
@@ -377,6 +445,12 @@ async def automation_status_payload():
             "label": "Learning loop",
             "status": "ready" if loop.get("outcome_count") else "waiting",
             "detail": f"{loop.get('outcome_count', 0)} outcome(s) recorded." if loop.get("outcome_count") else "Record metrics after publishing.",
+        },
+        {
+            "key": "scheduler",
+            "label": "GitHub dry-run scheduler",
+            "status": "ready" if scheduler_heartbeat.get("status") == "recent" else "waiting",
+            "detail": scheduler_heartbeat.get("detail"),
         },
         {
             "key": "meta",
@@ -411,6 +485,7 @@ async def automation_status_payload():
             "published_queue": published_queue,
             "ready_assets": ready_assets,
             "outcomes": loop.get("outcome_count", 0),
+            "scheduler_heartbeat": scheduler_heartbeat,
             "next_action": workflow.get("next_action", {}),
         },
         "next_step": blocked[0]["detail"] if blocked else waiting[0]["detail"] if waiting else "Automation gates are ready for controlled rollout.",
@@ -769,6 +844,28 @@ async def test_run_checklist_payload():
 @app.get("/operations/test-run-checklist")
 async def operations_test_run_checklist(_: None = Depends(require_access_token)):
     return await test_run_checklist_payload()
+
+
+@app.post("/operations/scheduler-heartbeat")
+async def operations_scheduler_heartbeat(_: None = Depends(require_access_token)):
+    payload = {
+        "recorded_at": datetime.now(timezone.utc).isoformat(),
+        "source": "github-actions",
+        "workflow": "DREC Scheduler Dry Run",
+        "mode": "dry_run",
+    }
+    await save_feedback(
+        FeedbackIn(
+            module="ops",
+            ref_type="scheduler",
+            ref_id="github-actions",
+            action="heartbeat",
+            before_text=json.dumps(payload, ensure_ascii=False),
+            reason="GitHub scheduler dry-run checks completed.",
+            tags=["github-actions", "scheduler", "dry-run"],
+        )
+    )
+    return {"heartbeat": await latest_scheduler_heartbeat()}
 
 
 @app.get("/operations/launch-evidence.md")

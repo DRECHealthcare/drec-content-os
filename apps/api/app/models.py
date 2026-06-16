@@ -189,7 +189,7 @@ class FeedbackIn(BaseModel):
     module: str
     ref_type: str
     ref_id: str
-    action: Literal["approve", "edit", "regen", "reject"]
+    action: Literal["approve", "edit", "regen", "reject", "heartbeat"]
     reason: Optional[str] = None
     before_text: Optional[str] = None
     after_text: Optional[str] = None

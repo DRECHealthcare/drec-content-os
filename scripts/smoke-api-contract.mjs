@@ -15,6 +15,7 @@ const requiredRoutes = [
   "GET /automation/status",
   "GET /operations/launch-readiness",
   "GET /operations/test-run-checklist",
+  "POST /operations/scheduler-heartbeat",
   "GET /operations/launch-evidence.md",
   "GET /operations/risk-audit",
   "GET /operations/snapshot.csv",
@@ -152,6 +153,16 @@ const requiredSnippets = [
     name: "automation readiness status",
     file: "main",
     text: "manual_safe_auto_blocked",
+  },
+  {
+    name: "scheduler heartbeat status",
+    file: "main",
+    text: "latest_scheduler_heartbeat",
+  },
+  {
+    name: "scheduler heartbeat route",
+    file: "main",
+    text: "operations_scheduler_heartbeat",
   },
   {
     name: "launch readiness status",
@@ -609,6 +620,11 @@ const requiredSnippets = [
     text: "required_github_secrets",
   },
   {
+    name: "web scheduler heartbeat detail",
+    file: "web",
+    text: "schedulerHeartbeat.detail",
+  },
+  {
     name: "operator pack scheduler setup",
     file: "main",
     text: "## GitHub Scheduler Setup",
@@ -627,6 +643,11 @@ const requiredSnippets = [
     name: "github scheduler skips missing token",
     file: "schedulerWorkflow",
     text: "DREC_ACCESS_TOKEN is not configured. Skipping dry-run scheduler checks.",
+  },
+  {
+    name: "github scheduler heartbeat",
+    file: "schedulerWorkflow",
+    text: "/operations/scheduler-heartbeat",
   },
 ];
 
