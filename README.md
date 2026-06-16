@@ -64,6 +64,7 @@ Stage 1 is now a working thin-core workflow:
 - Queue and review posts with approval feedback
 - Build a manual publishing handoff while Meta credentials are pending
 - Mark manually published posts with their Meta post ID so metrics ingestion can learn from them later
+- Dry-run Facebook and Instagram publishing workers before Meta credentials are connected
 - Register approved media URLs or upload files into private Supabase Storage
 - Record raw performance metrics, roll them into scored outcomes, and view the first learning summary
 

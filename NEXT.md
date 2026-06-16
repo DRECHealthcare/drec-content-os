@@ -37,6 +37,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added guarded Facebook dispatch dry run with real-publish lock
 - [x] Added Meta metrics ingestion dry run for published post IDs
 - [x] Added manual post ID capture after safe handoff publishing
+- [x] Added guarded Instagram dispatch dry run with container/publish planning
 
 ## Next Engineering Tasks
 
@@ -56,6 +57,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add dry-run Facebook dispatch worker
 - [x] Add dry-run Meta metrics ingestion worker
 - [x] Add manual published-post ID capture for metrics learning
+- [x] Add dry-run Instagram dispatch worker
 - [ ] Connect Meta Graph API credentials
 - [ ] Implement real Facebook publish scheduling
 - [ ] Implement Instagram two-step publish worker

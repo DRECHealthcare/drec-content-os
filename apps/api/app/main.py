@@ -978,6 +978,136 @@ def facebook_dispatch_blockers(item: dict | None, readiness: dict):
     return blockers
 
 
+def is_video_url(url: str):
+    lowered = url.lower().split("?", 1)[0]
+    return lowered.endswith((".mp4", ".mov", ".m4v"))
+
+
+async def next_instagram_publish_item(item_id: str | None = None):
+    if item_id:
+        row = await fetch_row(
+            """
+            select id, asset_id, channel, format, caption, media_urls, planned_slot, status,
+                   compliance_status, external_post_id, created_at
+            from publish_queue
+            where id = $1
+            """,
+            item_id,
+        )
+        if row is None and supabase_rest.configured():
+            rows = await supabase_rest.select(
+                "publish_queue",
+                {
+                    "select": "id,asset_id,channel,format,caption,media_urls,planned_slot,status,compliance_status,external_post_id,created_at",
+                    "id": f"eq.{item_id}",
+                    "limit": "1",
+                },
+            )
+            row = rows[0] if rows else None
+        return row
+    rows = await fetch_rows(
+        """
+        select id, asset_id, channel, format, caption, media_urls, planned_slot, status,
+               compliance_status, external_post_id, created_at
+        from publish_queue
+        where channel = 'instagram'
+          and status = 'scheduled'
+          and compliance_status = 'clear'
+        order by planned_slot nulls last, created_at asc
+        limit 1
+        """
+    )
+    if not rows and supabase_rest.configured():
+        rows = await supabase_rest.select(
+            "publish_queue",
+            {
+                "select": "id,asset_id,channel,format,caption,media_urls,planned_slot,status,compliance_status,external_post_id,created_at",
+                "channel": "eq.instagram",
+                "status": "eq.scheduled",
+                "compliance_status": "eq.clear",
+                "order": "planned_slot.asc.nullslast,created_at.asc",
+                "limit": "1",
+            },
+        )
+    return rows[0] if rows else None
+
+
+def instagram_dispatch_blockers(item: dict | None, readiness: dict):
+    blockers = []
+    if item is None:
+        blockers.append("No Instagram scheduled compliance-clear item is ready.")
+        return blockers
+    if item.get("channel") != "instagram":
+        blockers.append("Only Instagram items are supported by this worker.")
+    if item.get("status") != "scheduled":
+        blockers.append("Item must be scheduled before Instagram dispatch.")
+    if item.get("compliance_status") != "clear":
+        blockers.append("Item must be compliance-clear before Instagram dispatch.")
+    if item.get("external_post_id"):
+        blockers.append("Item already has an external Meta post ID.")
+    if readiness.get("overall_status") != "ready_for_worker_testing":
+        blockers.append("Meta credentials or permissions are not ready.")
+    media_urls = [url for url in item.get("media_urls") or [] if url]
+    if not media_urls:
+        blockers.append("Instagram publishing needs at least one image or video URL.")
+    unsupported_media = [url for url in media_urls if not str(url).startswith("http")]
+    if unsupported_media:
+        blockers.append("Private media needs a public/signed publishing URL before Meta can receive it.")
+    if item.get("format") == "carousel" and not 2 <= len(media_urls) <= 10:
+        blockers.append("Instagram carousel needs 2 to 10 media URLs.")
+    if item.get("format") == "reel" and not any(is_video_url(str(url)) for url in media_urls):
+        blockers.append("Instagram reel needs a public video URL.")
+    return blockers
+
+
+def instagram_container_payload(item: dict, media_url: str | None = None, children: list[str] | None = None):
+    fmt = item.get("format")
+    payload = {"caption": item.get("caption") or ""}
+    if children:
+        payload.update({"media_type": "CAROUSEL", "children": ",".join(children)})
+        return payload
+    url = media_url or (item.get("media_urls") or [""])[0]
+    key = "video_url" if is_video_url(str(url)) else "image_url"
+    payload[key] = url
+    if fmt == "reel":
+        payload["media_type"] = "REELS"
+    elif fmt == "story":
+        payload["media_type"] = "STORIES"
+    return payload
+
+
+def instagram_dispatch_plan(item: dict | None):
+    if not item:
+        return []
+    media_urls = [str(url) for url in item.get("media_urls") or [] if url]
+    base = f"https://graph.facebook.com/{settings.meta_graph_version}/{settings.meta_ig_user_id or '{ig-user-id}'}"
+    if item.get("format") == "carousel":
+        child_steps = [
+            {
+                "step": "create_carousel_child_container",
+                "url": f"{base}/media",
+                "params": {
+                    **instagram_container_payload(item, url),
+                    "is_carousel_item": True,
+                },
+            }
+            for url in media_urls
+        ]
+        return [
+            *child_steps,
+            {
+                "step": "create_carousel_parent_container",
+                "url": f"{base}/media",
+                "params": {"media_type": "CAROUSEL", "children": "{child-container-ids}", "caption": item.get("caption") or ""},
+            },
+            {"step": "publish_container", "url": f"{base}/media_publish", "params": {"creation_id": "{container-id}"}},
+        ]
+    return [
+        {"step": "create_media_container", "url": f"{base}/media", "params": instagram_container_payload(item)},
+        {"step": "publish_container", "url": f"{base}/media_publish", "params": {"creation_id": "{container-id}"}},
+    ]
+
+
 async def publish_facebook_feed_item(item: dict):
     url = f"https://graph.facebook.com/{settings.meta_graph_version}/{settings.meta_page_id}/feed"
     async with httpx.AsyncClient(timeout=30) as client:
@@ -1012,6 +1142,63 @@ async def publish_facebook_feed_item(item: dict):
     return {"post_id": post_id, "meta_response": data}
 
 
+async def create_instagram_container(payload: dict):
+    url = f"https://graph.facebook.com/{settings.meta_graph_version}/{settings.meta_ig_user_id}/media"
+    async with httpx.AsyncClient(timeout=30) as client:
+        res = await client.post(url, data={**payload, "access_token": settings.meta_page_access_token})
+    if res.status_code >= 400:
+        raise HTTPException(status_code=502, detail="Meta rejected the Instagram container request.")
+    return res.json().get("id")
+
+
+async def publish_instagram_container(container_id: str):
+    url = f"https://graph.facebook.com/{settings.meta_graph_version}/{settings.meta_ig_user_id}/media_publish"
+    async with httpx.AsyncClient(timeout=30) as client:
+        res = await client.post(
+            url,
+            data={"creation_id": container_id, "access_token": settings.meta_page_access_token},
+        )
+    if res.status_code >= 400:
+        raise HTTPException(status_code=502, detail="Meta rejected the Instagram publish request.")
+    return res.json()
+
+
+async def publish_instagram_item(item: dict):
+    if item.get("format") == "carousel":
+        child_ids = []
+        for url in item.get("media_urls") or []:
+            child_id = await create_instagram_container(
+                {**instagram_container_payload(item, str(url)), "is_carousel_item": True}
+            )
+            if child_id:
+                child_ids.append(child_id)
+        container_id = await create_instagram_container(instagram_container_payload(item, children=child_ids))
+    else:
+        container_id = await create_instagram_container(instagram_container_payload(item))
+    if not container_id:
+        raise HTTPException(status_code=502, detail="Meta did not return an Instagram container ID.")
+    data = await publish_instagram_container(container_id)
+    post_id = data.get("id")
+    if post_id:
+        row = await fetch_row(
+            """
+            update publish_queue
+            set status = 'published', external_post_id = $2, updated_at = now()
+            where id = $1
+            returning id, status, external_post_id
+            """,
+            item["id"],
+            post_id,
+        )
+        if row is None and supabase_rest.configured():
+            await supabase_rest.update(
+                "publish_queue",
+                {"status": "published", "external_post_id": post_id},
+                {"id": f"eq.{item['id']}"},
+            )
+    return {"post_id": post_id, "container_id": container_id, "meta_response": data}
+
+
 @app.post("/publishing/facebook/dispatch")
 async def dispatch_facebook_item(dispatch: MetaDispatchIn, _: None = Depends(require_access_token)):
     readiness = await meta_readiness()
@@ -1036,6 +1223,33 @@ async def dispatch_facebook_item(dispatch: MetaDispatchIn, _: None = Depends(req
     if blockers:
         raise HTTPException(status_code=422, detail={"message": "Facebook dispatch is blocked.", "blockers": blockers})
     published = await publish_facebook_feed_item(item)
+    return {**payload, "published": published}
+
+
+@app.post("/publishing/instagram/dispatch")
+async def dispatch_instagram_item(dispatch: MetaDispatchIn, _: None = Depends(require_access_token)):
+    readiness = await meta_readiness()
+    item = await next_instagram_publish_item(dispatch.item_id)
+    blockers = instagram_dispatch_blockers(item, readiness)
+    payload = {
+        "mode": "dry_run" if dispatch.dry_run else "publish",
+        "ready": bool(item) and not blockers,
+        "item": item,
+        "planned_requests": instagram_dispatch_plan(item),
+        "blockers": blockers,
+        "safety": [
+            "Only Instagram scheduled and compliance-clear items are eligible.",
+            "Dry run lists the container and publish calls without contacting Meta.",
+            "Real publishing remains locked unless Meta readiness passes and META_ENABLE_PUBLISHING=true.",
+        ],
+    }
+    if dispatch.dry_run:
+        return payload
+    if not settings.meta_enable_publishing:
+        raise HTTPException(status_code=423, detail="Instagram publishing is locked. Enable META_ENABLE_PUBLISHING only after dry-run approval.")
+    if blockers:
+        raise HTTPException(status_code=422, detail={"message": "Instagram publishing is blocked.", "blockers": blockers})
+    published = await publish_instagram_item(item)
     return {**payload, "published": published}
 
 
