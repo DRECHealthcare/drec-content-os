@@ -31,6 +31,7 @@ const requiredRoutes = [
   "GET /kb/export.csv",
   "GET /kb/context",
   "GET /publish-queue/suggest-slot",
+  "GET /publish-queue/calendar.ics",
   "GET /publish-queue/schedule.csv",
   "GET /briefs/plan.csv",
   "GET /metrics/published-source",
@@ -126,6 +127,11 @@ const requiredSnippets = [
     name: "schedule suggestion rotation",
     file: "main",
     text: "PUBLISH_SLOT_ROTATION",
+  },
+  {
+    name: "publishing calendar export",
+    file: "main",
+    text: "drec-publishing-calendar.ics",
   },
   {
     name: "publishing schedule csv export",
@@ -506,6 +512,16 @@ const requiredSnippets = [
     name: "web publishing run sheet endpoint",
     file: "web",
     text: "/operations/publishing-run-sheet.md",
+  },
+  {
+    name: "web publishing calendar action",
+    file: "web",
+    text: "download-calendar",
+  },
+  {
+    name: "web publishing calendar endpoint",
+    file: "web",
+    text: "/publish-queue/calendar.ics",
   },
   {
     name: "web publishing schedule csv action",
