@@ -40,6 +40,15 @@ const checks = [
     },
   },
   {
+    name: "Schedule suggestion",
+    url: `${apiBase}/publish-queue/suggest-slot?channel=facebook`,
+    auth: true,
+    validate: async (res) => {
+      const data = await res.json();
+      return Boolean(data.suggested_slot) && data.timezone === "Asia/Kuala_Lumpur";
+    },
+  },
+  {
     name: "Web shell",
     url: webBase,
     auth: false,
@@ -54,7 +63,7 @@ const checks = [
     auth: false,
     validate: async (res) => {
       const text = await res.text();
-      return text.includes("/workflow/status") && text.includes("Existing queue item opened") && text.includes("function testPathText()");
+      return text.includes("/workflow/status") && text.includes("Existing queue item opened") && text.includes("function testPathText()") && text.includes("schedule-next");
     },
   },
 ];

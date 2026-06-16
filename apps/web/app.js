@@ -1007,13 +1007,14 @@ function queueCard(item, mode) {
     <div class="queue-actions">
       <button type="button" data-feedback="approve" data-id="${escapeHtml(item.id)}" ${canApprove ? "" : "disabled"}>Approve</button>
       <button type="button" data-edit-queue="${escapeHtml(item.id)}" ${canEdit ? "" : "disabled"}>Edit Item</button>
+      <button type="button" data-schedule-next="${escapeHtml(item.id)}" ${reviewApproved && canApprove ? "" : "disabled"}>Suggest Slot</button>
       <button type="button" data-feedback="regen" data-id="${escapeHtml(item.id)}">Regen</button>
       <button type="button" data-feedback="reject" data-id="${escapeHtml(item.id)}">Reject</button>
     </div>
   ` : `
     <div class="queue-actions">
       <button type="button" data-edit-queue="${escapeHtml(item.id)}" ${canEdit ? "" : "disabled"}>Edit Item</button>
-      <button type="button" data-quick-schedule="${escapeHtml(item.id)}" ${canQuickSchedule ? "" : "disabled"}>Schedule</button>
+      <button type="button" data-schedule-next="${escapeHtml(item.id)}" ${canQuickSchedule ? "" : "disabled"}>Suggest Slot</button>
       <button type="button" data-mark-published="${escapeHtml(item.id)}" ${canMarkPublished ? "" : "disabled"}>Mark Published</button>
     </div>
   `;
@@ -1070,6 +1071,24 @@ function renderWeekSchedule(items) {
       `).join("")}
     </section>
   `).join("");
+}
+
+async function scheduleNextQueueSlot(button, messageElement) {
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = "Scheduling";
+  try {
+    const data = await fetchJson(`/publish-queue/${button.dataset.scheduleNext}/schedule-next`, { method: "POST" });
+    const slot = data.suggestion?.suggested_slot || data.item?.planned_slot;
+    messageElement.textContent = slot
+      ? `Scheduled for ${formatDate(slot)}.`
+      : "Item scheduled.";
+    await Promise.all([loadPublishQueue(), loadLoopStatus()]);
+  } catch (error) {
+    messageElement.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not suggest a slot.";
+    button.disabled = false;
+    button.textContent = originalText;
+  }
 }
 
 function renderCompliance(result) {
@@ -1689,34 +1708,9 @@ document.getElementById("queue-items").addEventListener("click", async (event) =
     startQueueEdit(editButton.dataset.editQueue);
     return;
   }
-  const scheduleButton = event.target.closest("[data-quick-schedule]");
+  const scheduleButton = event.target.closest("[data-schedule-next]");
   if (scheduleButton) {
-    const planned = window.prompt("Set publish time. Format: YYYY-MM-DDTHH:mm", nextScheduleInputValue());
-    if (!planned || !planned.trim()) return;
-    const date = new Date(planned.trim());
-    const message = document.getElementById("queue-message");
-    if (Number.isNaN(date.getTime())) {
-      message.textContent = "Use a valid date and time.";
-      return;
-    }
-    scheduleButton.disabled = true;
-    scheduleButton.textContent = "Saving";
-    try {
-      await fetchJson(`/publish-queue/${scheduleButton.dataset.quickSchedule}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          status: "scheduled",
-          planned_slot: date.toISOString(),
-          planned_slot_changed: true,
-        }),
-      });
-      message.textContent = "Item scheduled.";
-      await Promise.all([loadPublishQueue(), loadLoopStatus()]);
-    } catch (error) {
-      message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not schedule item.";
-      scheduleButton.disabled = false;
-      scheduleButton.textContent = "Schedule";
-    }
+    await scheduleNextQueueSlot(scheduleButton, document.getElementById("queue-message"));
     return;
   }
   const button = event.target.closest("[data-mark-published]");
@@ -1841,6 +1835,12 @@ document.getElementById("review-items").addEventListener("click", async (event) 
   const editButton = event.target.closest("[data-edit-queue]");
   if (editButton) {
     startQueueEdit(editButton.dataset.editQueue);
+    return;
+  }
+  const scheduleButton = event.target.closest("[data-schedule-next]");
+  if (scheduleButton) {
+    await scheduleNextQueueSlot(scheduleButton, document.getElementById("queue-message"));
+    showScreen("scheduler");
     return;
   }
   const button = event.target.closest("[data-feedback]");

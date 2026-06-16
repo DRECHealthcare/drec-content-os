@@ -77,10 +77,10 @@ Goal: give the approved item a real planned time.
 
 1. Open `Scheduler`.
 2. Find the approved queue item.
-3. Click `Schedule`.
-4. Enter a future local date/time in the suggested format.
+3. Click `Suggest Slot`.
 5. Expected result:
    - The item status becomes `scheduled`.
+   - The app chooses the next open DREC publishing slot in MYT.
    - It appears in the next-7-days operating view if the date is within seven days.
 
 Pass condition: the queue item is scheduled and has a planned time.

@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import json
 import re
 from uuid import UUID, uuid4
@@ -62,6 +62,11 @@ LEARNING_TOPIC_LIBRARY = {
 
 FORMAT_ROTATION = ["carousel", "single", "reel", "carousel", "story"]
 STAGE_ROTATION = ["TOFU", "TOFU", "MOFU", "MOFU", "BOFU"]
+MYT = timezone(timedelta(hours=8))
+PUBLISH_SLOT_ROTATION = {
+    "facebook": [(9, 30), (20, 30)],
+    "instagram": [(12, 30), (21, 0)],
+}
 META_REQUIRED_PERMISSIONS = [
     "pages_show_list",
     "pages_read_engagement",
@@ -1325,6 +1330,84 @@ def ics_timestamp(value):
     return date.strftime("%Y%m%dT%H%M%SZ")
 
 
+async def planned_queue_slots():
+    rows = await fetch_rows(
+        """
+        select id, channel, planned_slot
+        from publish_queue
+        where planned_slot is not null
+          and status in ('draft', 'scheduled', 'publishing')
+        order by planned_slot asc
+        limit 300
+        """
+    )
+    if not rows and supabase_rest.configured():
+        rows = await supabase_rest.select(
+            "publish_queue",
+            {
+                "select": "id,channel,planned_slot",
+                "planned_slot": "not.is.null",
+                "status": "in.(draft,scheduled,publishing)",
+                "order": "planned_slot.asc",
+                "limit": "300",
+            },
+        )
+    return rows
+
+
+def slot_is_open(candidate: datetime, planned_rows: list[dict], ignore_item_id: str | None = None):
+    for row in planned_rows:
+        if ignore_item_id and str(row.get("id")) == ignore_item_id:
+            continue
+        planned = parse_datetime(row.get("planned_slot"))
+        if not planned:
+            continue
+        planned_local = planned.astimezone(MYT) if planned.tzinfo else planned.replace(tzinfo=MYT)
+        if abs((planned_local - candidate).total_seconds()) < 90 * 60:
+            return False
+    return True
+
+
+async def suggest_publish_slot(channel: str = "facebook", ignore_item_id: str | None = None):
+    now = datetime.now(MYT)
+    planned_rows = await planned_queue_slots()
+    slot_times = PUBLISH_SLOT_ROTATION.get(channel, PUBLISH_SLOT_ROTATION["facebook"])
+    for day_offset in range(0, 21):
+        day = now.date() + timedelta(days=day_offset)
+        if day.weekday() == 6:
+            continue
+        for hour, minute in slot_times:
+            candidate = datetime(day.year, day.month, day.day, hour, minute, tzinfo=MYT)
+            if candidate <= now + timedelta(minutes=30):
+                continue
+            if slot_is_open(candidate, planned_rows, ignore_item_id=ignore_item_id):
+                return {
+                    "channel": channel,
+                    "suggested_slot": candidate.astimezone(timezone.utc).isoformat(),
+                    "local_slot": candidate.isoformat(),
+                    "timezone": "Asia/Kuala_Lumpur",
+                    "reason": "Next open DREC publishing slot, avoiding Sundays and nearby scheduled items.",
+                }
+    fallback = (now + timedelta(days=1)).replace(hour=10, minute=0, second=0, microsecond=0)
+    return {
+        "channel": channel,
+        "suggested_slot": fallback.astimezone(timezone.utc).isoformat(),
+        "local_slot": fallback.isoformat(),
+        "timezone": "Asia/Kuala_Lumpur",
+        "reason": "Fallback slot after the standard 21-day window was full.",
+    }
+
+
+@app.get("/publish-queue/suggest-slot")
+async def publish_queue_suggest_slot(
+    channel: str = "facebook",
+    item_id: str | None = None,
+    _: None = Depends(require_access_token),
+):
+    clean_channel = channel if channel in PUBLISH_SLOT_ROTATION else "facebook"
+    return await suggest_publish_slot(clean_channel, ignore_item_id=item_id)
+
+
 @app.get("/publish-queue/calendar.ics")
 async def publish_queue_calendar(_: None = Depends(require_access_token)):
     rows = await fetch_rows(
@@ -1439,6 +1522,61 @@ async def create_publish_queue_item(item: PublishQueueIn, _: None = Depends(requ
             },
         )
     return {"item": row or item.model_dump()}
+
+
+@app.post("/publish-queue/{item_id}/schedule-next")
+async def schedule_publish_queue_next_slot(item_id: str, _: None = Depends(require_access_token)):
+    existing = await fetch_row(
+        """
+        select id, asset_id, channel, format, caption, media_urls, planned_slot, status,
+               compliance_status, external_post_id, created_at
+        from publish_queue
+        where id = $1
+        """,
+        item_id,
+    )
+    if existing is None and supabase_rest.configured():
+        rows = await supabase_rest.select(
+            "publish_queue",
+            {
+                "select": "id,asset_id,channel,format,caption,media_urls,planned_slot,status,compliance_status,external_post_id,created_at",
+                "id": f"eq.{item_id}",
+                "limit": "1",
+            },
+        )
+        existing = rows[0] if rows else None
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Queue item not found.")
+    if existing.get("status") == "published":
+        raise HTTPException(status_code=422, detail="Published items cannot be rescheduled.")
+    if existing.get("compliance_status") != "clear":
+        raise HTTPException(status_code=422, detail="Only compliance-clear items can be scheduled.")
+
+    suggestion = await suggest_publish_slot(existing.get("channel") or "facebook", ignore_item_id=item_id)
+    planned_slot = parse_datetime(suggestion.get("suggested_slot"))
+    row = await fetch_row(
+        """
+        update publish_queue
+        set status = 'scheduled',
+            planned_slot = $2,
+            updated_at = now()
+        where id = $1
+        returning id, asset_id, channel, format, caption, media_urls, planned_slot, status,
+                  compliance_status, external_post_id, created_at
+        """,
+        item_id,
+        planned_slot,
+    )
+    if row is None:
+        row = await supabase_rest.update(
+            "publish_queue",
+            {
+                "status": "scheduled",
+                "planned_slot": planned_slot.isoformat() if planned_slot else suggestion.get("suggested_slot"),
+            },
+            {"id": f"eq.{item_id}"},
+        )
+    return {"item": row or {**existing, "status": "scheduled", "planned_slot": suggestion.get("suggested_slot")}, "suggestion": suggestion}
 
 
 @app.patch("/publish-queue/{item_id}")

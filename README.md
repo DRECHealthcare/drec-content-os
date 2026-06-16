@@ -75,7 +75,7 @@ Stage 1 is now a working thin-core workflow:
 - Show reviewed queue items as approved-but-unscheduled until a planned publish time is selected
 - Edit queued captions, media URLs, planned time, and channel/format before publishing
 - Keep review approval separate from scheduling so approved content still needs a real planned time before handoff or Meta workers can use it
-- Quick-schedule compliance-clear queue items into real publishing slots
+- Suggest the next open MYT publishing slot for compliance-clear queue items and schedule them without guessing
 - Filter the scheduler by status/channel and scan the next 7 days of planned posts
 - Download scheduled posts as a calendar file for manual publishing reminders
 - Build a manual publishing handoff while Meta credentials are pending
@@ -87,7 +87,7 @@ Stage 1 is now a working thin-core workflow:
 - Record raw performance metrics, roll them into scored outcomes, and view the first learning summary
 - Build a copy-ready weekly operating report from briefs, queue, assets, feedback, outcomes, and next-topic recommendations
 - Include workflow readiness and queue-ready asset counts in the weekly operating report
-- Run a non-mutating live smoke check after deploys to confirm the API, workflow, report, Meta readiness, and web shell are healthy
+- Run a non-mutating live smoke check after deploys to confirm the API, workflow, report, schedule suggestion, Meta readiness, and web shell are healthy
 - Run a local API contract smoke check before deploys to catch missing routes or broken workflow gates
 
 Meta auto-publishing and nightly Meta metrics ingestion are intentionally held until the Facebook Page and Instagram permissions are connected. See `NEXT.md` for the active build path.

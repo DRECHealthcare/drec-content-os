@@ -12,9 +12,11 @@ const requiredRoutes = [
   "GET /workflow/status",
   "GET /weekly-report.md",
   "GET /meta/readiness",
+  "GET /publish-queue/suggest-slot",
   "POST /briefs/{brief_id}/draft-asset",
   "POST /assets/{asset_id}/queue",
   "PATCH /assets/{asset_id}/compliance",
+  "POST /publish-queue/{item_id}/schedule-next",
   "GET /publishing-handoff",
   "POST /publishing/facebook/dispatch",
   "POST /publishing/instagram/dispatch",
@@ -48,6 +50,11 @@ const requiredSnippets = [
     text: "Item needs a planned publish time before Meta dispatch.",
   },
   {
+    name: "schedule suggestion rotation",
+    file: "main",
+    text: "PUBLISH_SLOT_ROTATION",
+  },
+  {
     name: "workflow readiness report",
     file: "main",
     text: "## Workflow Readiness",
@@ -76,6 +83,11 @@ const requiredSnippets = [
     name: "web test path helper",
     file: "web",
     text: "function testPathText()",
+  },
+  {
+    name: "web suggested slot action",
+    file: "web",
+    text: "schedule-next",
   },
 ];
 
