@@ -2630,6 +2630,29 @@ document.getElementById("download-metrics-template")?.addEventListener("click", 
   }
 });
 
+document.getElementById("import-metrics-csv")?.addEventListener("click", async () => {
+  const message = document.getElementById("metric-message");
+  const fileInput = document.getElementById("metrics-csv-file");
+  const rollup = document.getElementById("metrics-import-rollup")?.checked;
+  const file = fileInput?.files?.[0];
+  if (!file) {
+    message.textContent = "Choose a metrics CSV first.";
+    return;
+  }
+  const body = new FormData();
+  body.append("file", file);
+  body.append("rollup", rollup ? "true" : "false");
+  message.textContent = "Importing metrics CSV...";
+  try {
+    const data = await fetchForm("/metrics/import-csv", body);
+    fileInput.value = "";
+    message.textContent = data.message || `Imported ${data.imported_count || 0} metric row(s).`;
+    await Promise.all([loadOutcomes(), loadLoopStatus(), loadLearningSummary()]);
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not import metrics CSV.";
+  }
+});
+
 document.getElementById("weight-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const message = document.getElementById("weight-message");

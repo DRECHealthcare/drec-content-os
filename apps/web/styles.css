@@ -512,6 +512,29 @@ button[type="submit"] {
   cursor: pointer;
 }
 
+.file-action,
+.inline-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #FFF;
+  color: var(--navy);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.file-action input {
+  max-width: 210px;
+  font-weight: 600;
+}
+
+.inline-checkbox input {
+  width: auto;
+}
+
 .compliance-result {
   max-width: 860px;
 }

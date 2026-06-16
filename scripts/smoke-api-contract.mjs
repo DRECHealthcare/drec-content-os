@@ -40,6 +40,7 @@ const requiredRoutes = [
   "GET /publish-queue/schedule.csv",
   "GET /briefs/plan.csv",
   "GET /metrics/published-source",
+  "POST /metrics/import-csv",
   "POST /briefs/{brief_id}/draft-asset",
   "POST /briefs/draft-assets",
   "POST /briefs/archive-drafted",
@@ -277,6 +278,16 @@ const requiredSnippets = [
     name: "metrics template instructions row",
     file: "main",
     text: "row_type",
+  },
+  {
+    name: "metrics csv import route",
+    file: "main",
+    text: "import_metrics_csv",
+  },
+  {
+    name: "metrics csv import rollup",
+    file: "main",
+    text: "Imported {len(imported)} metric row(s)",
   },
   {
     name: "outcome insights aggregation",
@@ -672,6 +683,16 @@ const requiredSnippets = [
     name: "web scheduled publishing job action",
     file: "web",
     text: "dry-run-meta-publishing",
+  },
+  {
+    name: "web metrics csv import action",
+    file: "web",
+    text: "import-metrics-csv",
+  },
+  {
+    name: "web metrics csv import endpoint",
+    file: "web",
+    text: "/metrics/import-csv",
   },
   {
     name: "web scheduled publishing job endpoint",

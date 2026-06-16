@@ -418,6 +418,15 @@
           <div class="form-actions">
             <button id="load-published-post" type="button">Load Published Post</button>
             <button id="download-metrics-template" type="button">Download Metrics Template</button>
+            <label class="file-action">
+              Import CSV
+              <input id="metrics-csv-file" type="file" accept=".csv,text/csv">
+            </label>
+            <label class="inline-checkbox">
+              <input id="metrics-import-rollup" type="checkbox" checked>
+              Roll up imported rows
+            </label>
+            <button id="import-metrics-csv" type="button">Import Metrics CSV</button>
             <button type="submit">Save Raw Metrics</button>
             <button id="save-rollup-metric" type="button">Save & Roll Up</button>
             <button id="rollup-metric" type="button">Roll Up Latest</button>

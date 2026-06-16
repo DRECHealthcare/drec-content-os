@@ -4836,6 +4836,120 @@ async def ingest_metric(metric: MetricIn, _: None = Depends(require_access_token
     return {"item": row or metric.model_dump()}
 
 
+def metric_number(value, default=0):
+    if value is None:
+        return default
+    text = str(value).strip()
+    if text == "":
+        return default
+    try:
+        return float(text)
+    except ValueError:
+        return default
+
+
+def metric_int(value):
+    return int(metric_number(value, 0))
+
+
+async def decode_metrics_csv(file: UploadFile):
+    raw = await file.read()
+    if len(raw) > 512_000:
+        raise HTTPException(status_code=413, detail="Metrics CSV is too large. Keep imports below 512 KB.")
+    try:
+        return raw.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise HTTPException(status_code=400, detail="Metrics CSV must be UTF-8 text.") from exc
+
+
+@app.post("/metrics/import-csv")
+async def import_metrics_csv(
+    file: UploadFile = File(...),
+    rollup: bool = Form(False),
+    _: None = Depends(require_access_token),
+):
+    csv_text = await decode_metrics_csv(file)
+    reader = csv.DictReader(StringIO(csv_text))
+    required = {"source", "external_post_id", "captured_at", "reach", "likes", "comments", "saves", "shares", "leads", "spend"}
+    headers = set(reader.fieldnames or [])
+    if not required.issubset(headers):
+        missing = sorted(required - headers)
+        raise HTTPException(status_code=400, detail={"message": "Metrics CSV is missing required columns.", "missing": missing})
+
+    imported = []
+    skipped = []
+    outcomes = []
+    allowed_sources = {"facebook", "instagram", "manual", "ads"}
+    for index, row in enumerate(reader, start=2):
+        row_type = (row.get("row_type") or "").strip().lower()
+        if row_type in {"instructions", "sample"}:
+            skipped.append({"row": index, "reason": f"Skipped {row_type} row."})
+            continue
+        external_post_id = (row.get("external_post_id") or "").strip()
+        if not external_post_id:
+            skipped.append({"row": index, "reason": "Missing external_post_id."})
+            continue
+        source = (row.get("source") or "manual").strip().lower()
+        if source not in allowed_sources:
+            skipped.append({"row": index, "external_post_id": external_post_id, "reason": "Source must be facebook, instagram, manual, or ads."})
+            continue
+        captured_at = parse_datetime(row.get("captured_at")) or datetime.utcnow()
+        metric = MetricIn(
+            source=source,
+            external_post_id=external_post_id,
+            captured_at=captured_at,
+            metrics={
+                "reach": metric_int(row.get("reach")),
+                "likes": metric_int(row.get("likes")),
+                "comments": metric_int(row.get("comments")),
+                "saves": metric_int(row.get("saves")),
+                "shares": metric_int(row.get("shares")),
+                "leads": metric_int(row.get("leads")),
+                "spend": metric_number(row.get("spend"), 0),
+                "import_notes": (row.get("notes") or "").strip(),
+            },
+        )
+        saved = await ingest_metric(metric)
+        imported.append({"row": index, "external_post_id": external_post_id, "source": source, "item": saved.get("item")})
+        if rollup:
+            channel = (row.get("channel") or source).strip().lower()
+            if channel not in {"facebook", "instagram", "manual"}:
+                channel = "manual"
+            fmt = (row.get("format") or "carousel").strip().lower()
+            if fmt not in {"reel", "carousel", "single", "story"}:
+                fmt = "carousel"
+            funnel_stage = (row.get("funnel_stage") or "TOFU").strip().upper()
+            if funnel_stage not in {"TOFU", "MOFU", "BOFU"}:
+                funnel_stage = "TOFU"
+            metric_window = (row.get("metric_window") or "7d").strip()
+            if metric_window not in {"7d", "28d", "90d"}:
+                metric_window = "7d"
+            try:
+                outcome = await rollup_metric_to_outcome(
+                    MetricRollupIn(
+                        external_post_id=external_post_id,
+                        metric_window=metric_window,
+                        format=fmt,
+                        channel=channel,
+                        funnel_stage=funnel_stage,
+                        pillar="metabolic_education",
+                    )
+                )
+                outcomes.append({"row": index, "external_post_id": external_post_id, "outcome": outcome.get("item")})
+            except HTTPException as exc:
+                skipped.append({"row": index, "external_post_id": external_post_id, "reason": f"Metric saved but rollup failed: {exc.detail}"})
+
+    return {
+        "imported_count": len(imported),
+        "outcome_count": len(outcomes),
+        "skipped_count": len(skipped),
+        "imported": imported,
+        "outcomes": outcomes,
+        "skipped": skipped,
+        "message": f"Imported {len(imported)} metric row(s), created {len(outcomes)} outcome(s), skipped {len(skipped)} row(s).",
+    }
+
+
 @app.get("/metrics/published-source")
 async def published_metric_source(limit: int = 10, _: None = Depends(require_access_token)):
     candidates = await meta_metric_candidates(None, limit)
