@@ -81,6 +81,7 @@ Stage 1 is now a working thin-core workflow:
 - Draft conservative educational captions
 - Preview and copy saved asset packages with caption variants, carousel slides, or reel scripts
 - Download a creative production pack with active assets, captions, slides, scripts, media notes, and KB review context
+- Download an asset review CSV that combines draft asset readiness, media rights, approval status, blockers, and source URLs
 - Run pre-publish compliance checks
 - Record human safety review on assets before queueing
 - Approve safety-clear assets and queue approved clear assets in batches

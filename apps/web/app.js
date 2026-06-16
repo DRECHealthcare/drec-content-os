@@ -1649,6 +1649,16 @@ document.getElementById("download-creative-pack")?.addEventListener("click", asy
   }
 });
 
+document.getElementById("download-asset-review")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/asset-review.csv", "drec-asset-review.csv", "text/csv");
+    message.textContent = "Asset review CSV downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download asset review CSV.";
+  }
+});
+
 document.getElementById("plan-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const message = document.getElementById("plan-message");

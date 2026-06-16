@@ -18,6 +18,7 @@ const requiredRoutes = [
   "GET /operations/risk-audit",
   "GET /operations/snapshot.csv",
   "GET /operations/creative-pack.md",
+  "GET /operations/asset-review.csv",
   "GET /operations/review-log.md",
   "GET /operations/learning-snapshot.csv",
   "GET /operations/publishing-run-sheet.md",
@@ -177,6 +178,11 @@ const requiredSnippets = [
     name: "creative pack production rules",
     file: "main",
     text: "## Production Rules",
+  },
+  {
+    name: "asset review csv export",
+    file: "main",
+    text: "drec-asset-review.csv",
   },
   {
     name: "review log export",
@@ -432,6 +438,16 @@ const requiredSnippets = [
     name: "web creative pack endpoint",
     file: "web",
     text: "/operations/creative-pack.md",
+  },
+  {
+    name: "web asset review csv action",
+    file: "web",
+    text: "download-asset-review",
+  },
+  {
+    name: "web asset review csv endpoint",
+    file: "web",
+    text: "/operations/asset-review.csv",
   },
   {
     name: "web bulk approved scheduling action",

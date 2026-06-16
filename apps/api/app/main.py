@@ -987,6 +987,132 @@ async def operations_creative_pack(_: None = Depends(require_access_token)):
     )
 
 
+async def fetch_media_asset_list(limit: int = 100):
+    bounded_limit = max(1, min(int(limit or 100), 200))
+    rows = await fetch_rows(
+        """
+        select id, title, source_url, media_type, rights_status, approval_status,
+               notes, tags, metadata, created_at
+        from media_assets
+        order by created_at desc
+        limit $1
+        """,
+        bounded_limit,
+    )
+    if not rows and supabase_rest.configured():
+        rows = await supabase_rest.select(
+            "media_assets",
+            {
+                "select": "id,title,source_url,media_type,rights_status,approval_status,notes,tags,metadata,created_at",
+                "order": "created_at.desc",
+                "limit": str(bounded_limit),
+            },
+        )
+    return rows
+
+
+def asset_review_blockers(asset: dict):
+    blockers = []
+    if asset.get("review_status") != "approved":
+        blockers.append("Needs asset approval.")
+    if asset.get("compliance_status") != "clear":
+        blockers.append("Needs compliance clear.")
+    if not (asset.get("caption") or "").strip():
+        blockers.append("Needs caption.")
+    return blockers
+
+
+def media_review_blockers(media: dict):
+    blockers = []
+    if media.get("approval_status") != "approved":
+        blockers.append("Needs media approval.")
+    if media.get("rights_status") not in {"owned", "licensed", "partner"}:
+        blockers.append("Needs usable rights status.")
+    if not media.get("source_url"):
+        blockers.append("Needs source URL or storage reference.")
+    return blockers
+
+
+@app.get("/operations/asset-review.csv")
+async def operations_asset_review_csv(_: None = Depends(require_access_token)):
+    assets = await fetch_asset_list(200)
+    media_assets = await fetch_media_asset_list(200)
+    output = StringIO()
+    fieldnames = [
+        "record_type",
+        "id",
+        "status",
+        "ready",
+        "blockers",
+        "channel",
+        "format",
+        "title_or_topic",
+        "review_status",
+        "compliance_status",
+        "media_type",
+        "rights_status",
+        "approval_status",
+        "media_count",
+        "source_or_media_urls",
+        "notes",
+        "created_at",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for asset in assets:
+        blockers = asset_review_blockers(asset)
+        metadata = asset.get("metadata") or {}
+        writer.writerow(
+            {
+                "record_type": "asset",
+                "id": asset.get("id") or "",
+                "status": f"{asset.get('review_status') or ''}/{asset.get('compliance_status') or ''}",
+                "ready": "yes" if not blockers else "no",
+                "blockers": "; ".join(blockers),
+                "channel": asset.get("channel") or "",
+                "format": asset.get("format") or "",
+                "title_or_topic": metadata.get("topic") or (asset.get("caption") or "")[:80],
+                "review_status": asset.get("review_status") or "",
+                "compliance_status": asset.get("compliance_status") or "",
+                "media_type": "",
+                "rights_status": "",
+                "approval_status": "",
+                "media_count": len([url for url in asset.get("media_urls") or [] if url]),
+                "source_or_media_urls": "\n".join([url for url in asset.get("media_urls") or [] if url]),
+                "notes": metadata.get("target_signal") or "",
+                "created_at": asset.get("created_at") or "",
+            }
+        )
+    for media in media_assets:
+        blockers = media_review_blockers(media)
+        writer.writerow(
+            {
+                "record_type": "media",
+                "id": media.get("id") or "",
+                "status": f"{media.get('approval_status') or ''}/{media.get('rights_status') or ''}",
+                "ready": "yes" if not blockers else "no",
+                "blockers": "; ".join(blockers),
+                "channel": "",
+                "format": "",
+                "title_or_topic": media.get("title") or "",
+                "review_status": "",
+                "compliance_status": "",
+                "media_type": media.get("media_type") or "",
+                "rights_status": media.get("rights_status") or "",
+                "approval_status": media.get("approval_status") or "",
+                "media_count": 1 if media.get("source_url") else 0,
+                "source_or_media_urls": media.get("source_url") or "",
+                "notes": media.get("notes") or "",
+                "created_at": media.get("created_at") or "",
+            }
+        )
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-asset-review.csv"'},
+    )
+
+
 async def fetch_feedback_log(limit: int = 200):
     bounded_limit = max(1, min(int(limit or 200), 500))
     rows = await fetch_rows(
