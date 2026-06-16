@@ -2439,6 +2439,16 @@ document.getElementById("copy-weekly-report").addEventListener("click", async ()
   }
 });
 
+document.getElementById("download-weekly-report")?.addEventListener("click", async () => {
+  const message = document.getElementById("weight-message");
+  try {
+    await downloadProtectedFile("/weekly-report.md", "drec-weekly-report.md", "text/markdown");
+    message.textContent = "Weekly report downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download weekly report.";
+  }
+});
+
 document.getElementById("use-topics-weekly-plan").addEventListener("click", async () => {
   await loadLearningTopicsIntoPlan(document.getElementById("weight-message"), { openPlan: true });
 });

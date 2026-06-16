@@ -112,6 +112,7 @@ Stage 1 is now a working thin-core workflow:
 - Record raw performance metrics, roll them into scored outcomes, and view the first learning summary
 - Compare outcome insights by format, channel, pillar, funnel stage, and audience so the next plan is based on visible performance signals
 - Download a learning snapshot CSV with raw metrics, outcomes, and learning weights for weekly analysis or backup
+- Download the weekly operating report directly from Learning for team review or weekly archive
 - Build a copy-ready weekly operating report from briefs, queue, assets, feedback, outcomes, and next-topic recommendations
 - Send learning topic recommendations directly back into Weekly Plan for the next cycle
 - Include workflow readiness and queue-ready asset counts in the weekly operating report

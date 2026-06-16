@@ -337,6 +337,16 @@ const requiredSnippets = [
     text: "use-topics-weekly-plan",
   },
   {
+    name: "web weekly report download action",
+    file: "web",
+    text: "download-weekly-report",
+  },
+  {
+    name: "web weekly report download endpoint",
+    file: "web",
+    text: "/weekly-report.md",
+  },
+  {
     name: "web learning snapshot action",
     file: "web",
     text: "download-learning-snapshot",
