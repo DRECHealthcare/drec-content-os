@@ -63,6 +63,7 @@ Stage 1 is now a working thin-core workflow:
 - Mark content briefs as drafted or archived so weekly plans stay manageable
 - Save a draft asset directly from a weekly brief for faster review prep
 - Draft conservative educational captions
+- Preview and copy saved asset packages with caption variants, carousel slides, or reel scripts
 - Run pre-publish compliance checks
 - Queue and review posts with approval, regen, and rejection feedback trails
 - Edit queued captions, media URLs, planned time, and channel/format before publishing

@@ -48,6 +48,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added asset and media lifecycle review actions
 - [x] Added copy-ready weekly operating report
 - [x] Added one-click draft asset creation from weekly briefs
+- [x] Added saved asset package preview and copy action
 
 ## Next Engineering Tasks
 
@@ -78,6 +79,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add asset and media lifecycle review controls
 - [x] Add weekly operating report
 - [x] Add one-click draft asset creation from briefs
+- [x] Add saved asset package preview/copy
 - [ ] Connect Meta Graph API credentials
 - [ ] Implement real Facebook publish scheduling
 - [ ] Implement Instagram two-step publish worker

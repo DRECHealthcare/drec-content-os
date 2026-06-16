@@ -523,9 +523,57 @@ function handoffItem(item) {
   `;
 }
 
+function captionVariantPreview(variants) {
+  const items = Array.isArray(variants) ? variants.filter(Boolean) : [];
+  if (!items.length) return "";
+  return `
+    <div class="media-list">
+      <strong>Caption Variants</strong>
+      ${items.map((caption, index) => `<small>Variant ${index + 1}: ${escapeHtml(caption).slice(0, 220)}${caption.length > 220 ? "..." : ""}</small>`).join("")}
+    </div>
+  `;
+}
+
+function assetPackageText(asset) {
+  const metadata = asset.metadata || {};
+  const lines = [
+    "DREC Draft Asset Package",
+    "",
+    `Channel: ${asset.channel || "facebook"}`,
+    `Format: ${asset.format || "post"}`,
+    `Compliance: ${asset.compliance_status || "pending"}`,
+    `Review: ${asset.review_status || "draft"}`,
+    `Topic: ${metadata.topic || ""}`,
+    "",
+    "Caption:",
+    asset.caption || "",
+  ];
+  const variants = Array.isArray(metadata.caption_variants) ? metadata.caption_variants : [];
+  if (variants.length) {
+    lines.push("", "Caption Variants:");
+    variants.forEach((caption, index) => lines.push(`Variant ${index + 1}:`, caption || ""));
+  }
+  const slides = Array.isArray(metadata.slides) ? metadata.slides : [];
+  if (slides.length) {
+    lines.push("", "Slides:");
+    slides.forEach((slide) => lines.push(`${slide.slide || ""}. ${slide.title || ""}`, slide.body || ""));
+  }
+  const script = Array.isArray(metadata.reel_script) ? metadata.reel_script : [];
+  if (script.length) {
+    lines.push("", "Reel Script:");
+    script.forEach((beat) => lines.push(`${beat.time || ""} · ${beat.beat || ""}`, beat.line || ""));
+  }
+  const media = Array.isArray(asset.media_urls) ? asset.media_urls.filter(Boolean) : [];
+  if (media.length) {
+    lines.push("", "Media URLs:", ...media);
+  }
+  return lines.join("\n");
+}
+
 function assetCard(item) {
   const mediaCount = Array.isArray(item.media_urls) ? item.media_urls.length : 0;
   const canQueue = item.review_status !== "rejected" && item.compliance_status !== "flagged";
+  const metadata = item.metadata || {};
   return `
     <article class="queue-item">
       <div class="queue-meta">
@@ -537,10 +585,14 @@ function assetCard(item) {
       <p>${escapeHtml(item.caption || "No caption yet.")}</p>
       <small>${mediaCount} media URL(s)</small>
       ${mediaList(item.media_urls)}
+      ${captionVariantPreview(metadata.caption_variants)}
+      ${slidePreview(metadata.slides)}
+      ${reelPreview(metadata.reel_script)}
       <div class="queue-actions">
         <button type="button" data-asset-status="approved" data-id="${escapeHtml(item.id)}">Approve</button>
         <button type="button" data-asset-status="review" data-id="${escapeHtml(item.id)}">Needs Work</button>
         <button type="button" data-asset-status="rejected" data-id="${escapeHtml(item.id)}">Reject</button>
+        <button type="button" data-copy-asset="${escapeHtml(item.id)}">Copy Package</button>
         <button type="button" data-queue-asset="${escapeHtml(item.id)}" ${canQueue ? "" : "disabled"}>Add To Queue</button>
       </div>
     </article>
@@ -1259,6 +1311,20 @@ document.getElementById("queue-draft").addEventListener("click", async () => {
 });
 
 document.getElementById("asset-items").addEventListener("click", async (event) => {
+  const copyButton = event.target.closest("[data-copy-asset]");
+  if (copyButton) {
+    const message = document.getElementById("media-message");
+    const items = JSON.parse(document.getElementById("asset-items").dataset.assets || "[]");
+    const asset = items.find((item) => item.id === copyButton.dataset.copyAsset);
+    if (!asset) return;
+    try {
+      await navigator.clipboard.writeText(assetPackageText(asset));
+      message.textContent = "Draft asset package copied.";
+    } catch {
+      message.textContent = "Could not copy package. Open the asset and copy manually.";
+    }
+    return;
+  }
   const statusButton = event.target.closest("[data-asset-status]");
   if (statusButton) {
     const status = statusButton.dataset.assetStatus;
