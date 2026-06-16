@@ -2482,6 +2482,7 @@ def report_lines(rows: list[dict], formatter, empty: str):
 async def weekly_report(_: None = Depends(require_access_token)):
     summary = await learning_summary()
     loop = await loop_status()
+    workflow = build_workflow_guidance(loop)
     media_assets = await fetch_rows(
         """
         select title, media_type, rights_status, approval_status, created_at
@@ -2522,6 +2523,13 @@ async def weekly_report(_: None = Depends(require_access_token)):
     recent_outcomes = summary.get("recent_outcomes", [])
     weights = summary.get("weights", [])
     plan_topics = summary.get("plan_recommendations", {}).get("topics", [])
+    next_action = workflow.get("next_action", {})
+    workflow_summary = workflow.get("summary", {})
+    workflow_lines = report_lines(
+        workflow.get("steps", []),
+        lambda step: f"{step.get('state')} · {step.get('title')} · {step.get('body')}",
+        "No workflow guidance available.",
+    )
     generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
     brief_lines = report_lines(
         recent_briefs,
@@ -2557,10 +2565,16 @@ async def weekly_report(_: None = Depends(require_access_token)):
         "## Executive Summary",
         "",
         report_bullet(f"Next best move: {summary.get('recommendation')}"),
+        report_bullet(f"Workflow next action: {next_action.get('title')} — {next_action.get('body')}"),
         report_bullet(f"Loop stage: {loop.get('stage')}"),
         report_bullet(f"Queue total: {queue_total} ({count_label(summary.get('queue', []), 'status')})"),
+        report_bullet(f"Queue-ready assets: {workflow_summary.get('queue_ready_asset_count', 0)} of {workflow_summary.get('asset_count', 0)}"),
         report_bullet(f"Feedback total: {feedback_total} ({count_label(summary.get('feedback', []), 'action')})"),
         report_bullet(f"Briefs: {loop.get('brief_count', 0)} · Assets: {loop.get('asset_count', 0)} · Media: {loop.get('media_count', 0)} · Outcomes: {loop.get('outcome_count', 0)}"),
+        "",
+        "## Workflow Readiness",
+        "",
+        *workflow_lines,
         "",
         "## Recent Briefs",
         "",

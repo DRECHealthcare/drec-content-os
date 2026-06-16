@@ -83,5 +83,6 @@ Stage 1 is now a working thin-core workflow:
 - Approve, review, or block draft assets and media before they enter publishing
 - Record raw performance metrics, roll them into scored outcomes, and view the first learning summary
 - Build a copy-ready weekly operating report from briefs, queue, assets, feedback, outcomes, and next-topic recommendations
+- Include workflow readiness and queue-ready asset counts in the weekly operating report
 
 Meta auto-publishing and nightly Meta metrics ingestion are intentionally held until the Facebook Page and Instagram permissions are connected. See `NEXT.md` for the active build path.

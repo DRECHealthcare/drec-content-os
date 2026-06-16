@@ -56,6 +56,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added server-enforced asset-to-queue readiness gates
 - [x] Added human asset safety review controls before queueing
 - [x] Clarified approved-but-unscheduled queue display
+- [x] Added workflow readiness to weekly operating report
 
 ## Next Engineering Tasks
 
@@ -94,6 +95,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Require asset approval and clear compliance before queueing from Assets
 - [x] Add asset-level compliance review controls
 - [x] Show review-approved queue items as ready to schedule without changing database status
+- [x] Add queue-ready asset counts and next workflow action to weekly report
 - [ ] Connect Meta Graph API credentials
 - [ ] Implement real Facebook publish scheduling
 - [ ] Implement Instagram two-step publish worker
