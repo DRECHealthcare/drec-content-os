@@ -72,6 +72,7 @@ Stage 1 is now a working thin-core workflow:
 - See the Supabase service-role readiness gate before stricter RLS policies are applied
 - Pull learning-informed topic recommendations into the next weekly plan
 - Load active Knowledge Base context into weekly planning and creative drafts so brand, voice, compliance, and medical dictionary entries are visible during review
+- Download the weekly plan as CSV for team review of topics, hooks, formats, stages, status, and compliance notes
 - Mark content briefs as drafted or archived so weekly plans stay manageable
 - Archive drafted briefs in one batch after assets are saved so the weekly plan stays focused
 - Save a draft asset directly from a weekly brief for faster review prep

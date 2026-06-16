@@ -1689,6 +1689,17 @@ document.getElementById("load-learning-topics").addEventListener("click", async 
   await loadLearningTopicsIntoPlan(document.getElementById("plan-message"));
 });
 
+document.getElementById("download-plan-csv")?.addEventListener("click", async () => {
+  const message = document.getElementById("plan-message");
+  message.textContent = "Preparing plan CSV...";
+  try {
+    await downloadProtectedFile("/briefs/plan.csv", "drec-weekly-plan.csv", "text/csv");
+    message.textContent = "Weekly plan CSV downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download plan CSV.";
+  }
+});
+
 document.getElementById("save-all-assets").addEventListener("click", async () => {
   const button = document.getElementById("save-all-assets");
   const message = document.getElementById("plan-message");

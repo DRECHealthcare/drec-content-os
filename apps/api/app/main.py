@@ -1853,6 +1853,78 @@ async def list_content_briefs(_: None = Depends(require_access_token)):
     return {"items": rows}
 
 
+@app.get("/briefs/plan.csv")
+async def content_briefs_plan_csv(_: None = Depends(require_access_token)):
+    rows = await fetch_rows(
+        """
+        select id, channel, format, pillar, funnel_stage, awareness_stage, topic,
+               hook_primary, hook_alt1, hook_alt2, style_hint, cta_type,
+               target_signal, language, compliance_notes, status, created_at
+        from content_briefs
+        order by created_at desc
+        limit 100
+        """
+    )
+    if not rows and supabase_rest.configured():
+        rows = await supabase_rest.select(
+            "content_briefs",
+            {
+                "select": "id,channel,format,pillar,funnel_stage,awareness_stage,topic,hook_primary,hook_alt1,hook_alt2,style_hint,cta_type,target_signal,language,compliance_notes,status,created_at",
+                "order": "created_at.desc",
+                "limit": "100",
+            },
+        )
+    output = StringIO()
+    fieldnames = [
+        "brief_id",
+        "status",
+        "language",
+        "channel",
+        "format",
+        "pillar",
+        "funnel_stage",
+        "awareness_stage",
+        "topic",
+        "hook_primary",
+        "hook_alt1",
+        "hook_alt2",
+        "style_hint",
+        "cta_type",
+        "target_signal",
+        "compliance_notes",
+        "created_at",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for item in rows:
+        writer.writerow(
+            {
+                "brief_id": item.get("id") or "",
+                "status": item.get("status") or "",
+                "language": item.get("language") or "",
+                "channel": item.get("channel") or "",
+                "format": item.get("format") or "",
+                "pillar": item.get("pillar") or "",
+                "funnel_stage": item.get("funnel_stage") or "",
+                "awareness_stage": item.get("awareness_stage") or "",
+                "topic": item.get("topic") or "",
+                "hook_primary": item.get("hook_primary") or "",
+                "hook_alt1": item.get("hook_alt1") or "",
+                "hook_alt2": item.get("hook_alt2") or "",
+                "style_hint": item.get("style_hint") or "",
+                "cta_type": item.get("cta_type") or "",
+                "target_signal": item.get("target_signal") or "",
+                "compliance_notes": item.get("compliance_notes") or "",
+                "created_at": item.get("created_at") or "",
+            }
+        )
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-weekly-plan.csv"'},
+    )
+
+
 @app.post("/briefs")
 async def create_content_brief(brief: ContentBriefIn, _: None = Depends(require_access_token)):
     return {"item": await insert_brief(brief)}

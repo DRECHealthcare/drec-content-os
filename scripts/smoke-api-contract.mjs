@@ -28,6 +28,7 @@ const requiredRoutes = [
   "GET /kb/context",
   "GET /publish-queue/suggest-slot",
   "GET /publish-queue/schedule.csv",
+  "GET /briefs/plan.csv",
   "GET /metrics/published-source",
   "POST /briefs/{brief_id}/draft-asset",
   "POST /briefs/draft-assets",
@@ -86,6 +87,11 @@ const requiredSnippets = [
     name: "bulk drafted brief archive",
     file: "main",
     text: "archive_drafted_content_briefs",
+  },
+  {
+    name: "weekly plan csv export",
+    file: "main",
+    text: "drec-weekly-plan.csv",
   },
   {
     name: "planned time publish gate",
@@ -341,6 +347,16 @@ const requiredSnippets = [
     name: "web learning topics handoff",
     file: "web",
     text: "use-topics-weekly-plan",
+  },
+  {
+    name: "web weekly plan csv action",
+    file: "web",
+    text: "download-plan-csv",
+  },
+  {
+    name: "web weekly plan csv endpoint",
+    file: "web",
+    text: "/briefs/plan.csv",
   },
   {
     name: "web weekly report download action",

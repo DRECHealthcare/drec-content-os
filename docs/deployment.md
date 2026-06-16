@@ -94,6 +94,10 @@ The Dashboard `Download Operator Pack` action calls
 readiness status, credential setup, publishing handoff copy, and the weekly
 operating report.
 
+The Weekly Plan `Download Plan CSV` action calls `/briefs/plan.csv` and exports
+recent briefs for spreadsheet review, including topics, hooks, stages, status,
+and compliance notes.
+
 The Dashboard `Run Risk Audit` action calls `/operations/risk-audit` and scans
 automation gates, assets, queue items, and media for blocked or warning-level
 issues before a publishing run.
