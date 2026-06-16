@@ -47,6 +47,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added learning-informed weekly topic recommendations
 - [x] Added Learning-to-Weekly Plan topic handoff
 - [x] Added content brief lifecycle actions for drafted and archived briefs
+- [x] Added batch archive cleanup for drafted briefs
 - [x] Added copy-ready publishing handoff package
 - [x] Added calendar export for scheduled publishing reminders
 - [x] Added visible review feedback notes for queued content decisions
@@ -97,6 +98,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Feed learning signals back into weekly plan generation
 - [x] Add Learning page action to send recommended topics into Weekly Plan
 - [x] Add content brief status management after drafting
+- [x] Add batch archive action for drafted briefs
 - [x] Add copy-ready manual publishing package
 - [x] Add downloadable publishing calendar
 - [x] Add visible review feedback notes

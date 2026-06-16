@@ -63,6 +63,7 @@ Stage 1 is now a working thin-core workflow:
 - See the next best workflow action and copyable Test Path on the Dashboard, backed by the API, so testing and automation can move from brief to approved asset to queue, handoff, published ID, metrics, and report without guessing
 - Pull learning-informed topic recommendations into the next weekly plan
 - Mark content briefs as drafted or archived so weekly plans stay manageable
+- Archive drafted briefs in one batch after assets are saved so the weekly plan stays focused
 - Save a draft asset directly from a weekly brief for faster review prep
 - Save all current weekly briefs as draft assets in one batch without duplicate copies
 - Reuse an existing brief asset on repeated Save Asset clicks instead of creating duplicates

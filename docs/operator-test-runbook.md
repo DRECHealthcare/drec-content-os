@@ -29,6 +29,7 @@ Goal: turn one brief into one reusable draft asset.
    - You are moved to `Assets`.
    - Draft assets appear.
    - If the same brief was already saved, the app says `Existing draft asset opened.`
+5. Optional cleanup: return to `Weekly Plan` and click `Archive Drafted` after confirming drafted assets exist.
 
 Pass condition: assets exist for the selected briefs, without duplicate copies.
 

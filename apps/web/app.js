@@ -1379,6 +1379,25 @@ document.getElementById("save-all-assets").addEventListener("click", async () =>
   }
 });
 
+document.getElementById("archive-drafted-briefs").addEventListener("click", async () => {
+  const button = document.getElementById("archive-drafted-briefs");
+  const message = document.getElementById("plan-message");
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = "Archiving";
+  message.textContent = "Archiving drafted briefs...";
+  try {
+    const data = await fetchJson("/briefs/archive-drafted", { method: "POST" });
+    message.textContent = `Archived ${data.archived || 0} drafted brief(s).`;
+    await Promise.all([loadBriefs(), loadLoopStatus(), loadLearningSummary()]);
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not archive drafted briefs.";
+  } finally {
+    button.disabled = false;
+    button.textContent = originalText;
+  }
+});
+
 async function updateBriefStatus(id, status) {
   await fetchJson(`/briefs/${id}`, {
     method: "PATCH",

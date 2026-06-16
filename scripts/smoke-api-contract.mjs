@@ -16,6 +16,7 @@ const requiredRoutes = [
   "GET /metrics/published-source",
   "POST /briefs/{brief_id}/draft-asset",
   "POST /briefs/draft-assets",
+  "POST /briefs/archive-drafted",
   "POST /assets/approve-clear",
   "POST /assets/queue-ready",
   "POST /assets/{asset_id}/queue",
@@ -63,6 +64,11 @@ const requiredSnippets = [
     name: "bulk brief asset creation",
     file: "main",
     text: "create_assets_from_recent_briefs",
+  },
+  {
+    name: "bulk drafted brief archive",
+    file: "main",
+    text: "archive_drafted_content_briefs",
   },
   {
     name: "planned time publish gate",
@@ -148,6 +154,11 @@ const requiredSnippets = [
     name: "web bulk asset action",
     file: "web",
     text: "save-all-assets",
+  },
+  {
+    name: "web drafted brief archive action",
+    file: "web",
+    text: "archive-drafted-briefs",
   },
   {
     name: "web bulk asset review action",

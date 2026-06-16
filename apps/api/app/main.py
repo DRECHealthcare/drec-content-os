@@ -522,6 +522,35 @@ async def update_content_brief_status(
     return {"item": row}
 
 
+@app.post("/briefs/archive-drafted")
+async def archive_drafted_content_briefs(_: None = Depends(require_access_token)):
+    rows = await fetch_rows(
+        """
+        update content_briefs
+        set status = 'archived', updated_at = now()
+        where status = 'drafted'
+        returning id, topic, status
+        """
+    )
+    if not rows and supabase_rest.configured():
+        existing = await supabase_rest.select(
+            "content_briefs",
+            {
+                "select": "id,topic,status",
+                "status": "eq.drafted",
+                "limit": "1000",
+            },
+        )
+        if existing:
+            await supabase_rest.update(
+                "content_briefs",
+                {"status": "archived"},
+                {"status": "eq.drafted"},
+            )
+            rows = [{**item, "status": "archived"} for item in existing]
+    return {"archived": len(rows), "items": rows}
+
+
 @app.get("/weekly-plan/recommendations")
 async def weekly_plan_recommendations(
     language: str = "zh",
