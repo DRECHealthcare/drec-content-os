@@ -496,6 +496,22 @@ button[type="submit"] {
   white-space: pre;
 }
 
+.report-actions {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+#weekly-report-text {
+  margin-top: 12px;
+  min-height: 260px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre;
+}
+
 .subsection-heading {
   margin: 18px 0 0;
   color: var(--navy);

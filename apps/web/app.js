@@ -1569,6 +1569,37 @@ document.getElementById("learning-summary").addEventListener("click", async (eve
   }
 });
 
+document.getElementById("build-weekly-report").addEventListener("click", async () => {
+  const message = document.getElementById("weight-message");
+  const reportBox = document.getElementById("weekly-report-text");
+  const copyButton = document.getElementById("copy-weekly-report");
+  message.textContent = "Building weekly report...";
+  try {
+    const report = await fetchText("/weekly-report.md");
+    reportBox.value = report;
+    copyButton.disabled = !report;
+    message.textContent = "Weekly report ready.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not build weekly report.";
+  }
+});
+
+document.getElementById("copy-weekly-report").addEventListener("click", async () => {
+  const message = document.getElementById("weight-message");
+  const reportBox = document.getElementById("weekly-report-text");
+  if (!reportBox.value) {
+    message.textContent = "Build the report first.";
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(reportBox.value);
+    message.textContent = "Weekly report copied.";
+  } catch {
+    reportBox.select();
+    message.textContent = "Select the report text and copy it manually.";
+  }
+});
+
 document.getElementById("weight-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const message = document.getElementById("weight-message");

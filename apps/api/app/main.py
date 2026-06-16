@@ -2290,6 +2290,140 @@ async def learning_summary(_: None = Depends(require_access_token)):
     }
 
 
+def count_label(rows: list[dict], key: str):
+    if not rows:
+        return "none"
+    return ", ".join(f"{row.get(key, 'unknown')}: {row.get('count', 0)}" for row in rows)
+
+
+def report_bullet(value: str):
+    return f"- {value}" if value else "-"
+
+
+def report_lines(rows: list[dict], formatter, empty: str):
+    if not rows:
+        return [f"- {empty}"]
+    return [report_bullet(formatter(row)) for row in rows]
+
+
+@app.get("/weekly-report.md")
+async def weekly_report(_: None = Depends(require_access_token)):
+    summary = await learning_summary()
+    loop = await loop_status()
+    media_assets = await fetch_rows(
+        """
+        select title, media_type, rights_status, approval_status, created_at
+        from media_assets
+        order by created_at desc
+        limit 10
+        """
+    )
+    assets = await fetch_rows(
+        """
+        select channel, format, compliance_status, review_status, created_at
+        from assets
+        order by created_at desc
+        limit 10
+        """
+    )
+    if not media_assets and supabase_rest.configured():
+        media_assets = await supabase_rest.select(
+            "media_assets",
+            {
+                "select": "title,media_type,rights_status,approval_status,created_at",
+                "order": "created_at.desc",
+                "limit": "10",
+            },
+        )
+    if not assets and supabase_rest.configured():
+        assets = await supabase_rest.select(
+            "assets",
+            {
+                "select": "channel,format,compliance_status,review_status,created_at",
+                "order": "created_at.desc",
+                "limit": "10",
+            },
+        )
+    queue_total = sum(item.get("count", 0) for item in summary.get("queue", []))
+    feedback_total = sum(item.get("count", 0) for item in summary.get("feedback", []))
+    recent_briefs = summary.get("recent_briefs", [])
+    recent_outcomes = summary.get("recent_outcomes", [])
+    weights = summary.get("weights", [])
+    plan_topics = summary.get("plan_recommendations", {}).get("topics", [])
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    brief_lines = report_lines(
+        recent_briefs,
+        lambda brief: f"{brief.get('format', 'brief')} · {brief.get('funnel_stage') or 'stage'} · {brief.get('topic')}",
+        "No recent briefs yet.",
+    )
+    asset_lines = report_lines(
+        assets,
+        lambda asset: f"Asset {asset.get('channel')}/{asset.get('format')} · compliance {asset.get('compliance_status')} · review {asset.get('review_status')}",
+        "No draft assets yet.",
+    )
+    media_lines = report_lines(
+        media_assets,
+        lambda media: f"Media {media.get('title')} · {media.get('media_type')} · rights {media.get('rights_status')} · approval {media.get('approval_status')}",
+        "No media assets yet.",
+    )
+    outcome_lines = report_lines(
+        recent_outcomes,
+        lambda outcome: f"{outcome.get('post_id')} · {outcome.get('channel')}/{outcome.get('format')} · score {outcome.get('score', 'n/a')} · saves {outcome.get('saves', 0)} · {outcome.get('vs_plan_note') or 'No note'}",
+        "No performance outcomes yet.",
+    )
+    weight_lines = report_lines(
+        weights,
+        lambda weight: f"{weight.get('dimension')}={weight.get('key')} · {weight.get('previous_value', 'base')} -> {weight.get('value')} · {weight.get('reason') or weight.get('source')}",
+        "No active learning weights yet.",
+    )
+    topic_lines = [report_bullet(topic) for topic in plan_topics] if plan_topics else ["- No recommendations yet."]
+    lines = [
+        "# DREC Content OS Weekly Operating Report",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "## Executive Summary",
+        "",
+        report_bullet(f"Next best move: {summary.get('recommendation')}"),
+        report_bullet(f"Loop stage: {loop.get('stage')}"),
+        report_bullet(f"Queue total: {queue_total} ({count_label(summary.get('queue', []), 'status')})"),
+        report_bullet(f"Feedback total: {feedback_total} ({count_label(summary.get('feedback', []), 'action')})"),
+        report_bullet(f"Briefs: {loop.get('brief_count', 0)} · Assets: {loop.get('asset_count', 0)} · Media: {loop.get('media_count', 0)} · Outcomes: {loop.get('outcome_count', 0)}"),
+        "",
+        "## Recent Briefs",
+        "",
+        *brief_lines,
+        "",
+        "## Asset And Media Review",
+        "",
+        *asset_lines,
+        *media_lines,
+        "",
+        "## Recent Results",
+        "",
+        *outcome_lines,
+        "",
+        "## Active Learning Weights",
+        "",
+        *weight_lines,
+        "",
+        "## Recommended Next Plan Topics",
+        "",
+        *topic_lines,
+        "",
+        "## Manual Operating Notes",
+        "",
+        "- Keep Meta publishing in manual handoff mode until Meta readiness is green.",
+        "- Schedule only compliance-clear items that have passed human review.",
+        "- After manual publishing, paste the Meta post ID into Scheduler and record first 7-day metrics.",
+    ]
+    return Response(
+        "\n".join(lines) + "\n",
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'inline; filename="drec-weekly-report.md"'},
+    )
+
+
 @app.get("/loop-status")
 async def loop_status(_: None = Depends(require_access_token)):
     queue = await fetch_rows(
