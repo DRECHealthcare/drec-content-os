@@ -747,7 +747,7 @@ async def list_publish_queue(_: None = Depends(require_access_token)):
     rows = await fetch_rows(
         """
         select id, asset_id, channel, format, caption, media_urls, planned_slot, status,
-               compliance_status, created_at
+               compliance_status, external_post_id, created_at
         from publish_queue
         order by planned_slot nulls last, created_at desc
         limit 100
@@ -757,7 +757,7 @@ async def list_publish_queue(_: None = Depends(require_access_token)):
         rows = await supabase_rest.select(
             "publish_queue",
             {
-                "select": "id,asset_id,channel,format,caption,media_urls,planned_slot,status,compliance_status,created_at",
+                "select": "id,asset_id,channel,format,caption,media_urls,planned_slot,status,compliance_status,external_post_id,created_at",
                 "order": "planned_slot.asc.nullslast,created_at.desc",
                 "limit": "100",
             },
@@ -836,21 +836,33 @@ async def update_publish_queue_item(
                 status_code=422,
                 detail="Only compliance-clear items can be scheduled.",
             )
+    external_post_id = update.external_post_id.strip() if update.external_post_id else None
+    if update.status == "published" and not external_post_id:
+        raise HTTPException(
+            status_code=422,
+            detail="Published items need a Meta post ID.",
+        )
     row = await fetch_row(
         """
         update publish_queue
-        set status = $2, updated_at = now()
+        set status = $2,
+            external_post_id = coalesce($3, external_post_id),
+            updated_at = now()
         where id = $1
         returning id, asset_id, channel, format, caption, media_urls, planned_slot, status,
-                  compliance_status, created_at
+                  compliance_status, external_post_id, created_at
         """,
         item_id,
         update.status,
+        external_post_id,
     )
     if row is None:
+        payload = {"status": update.status}
+        if external_post_id:
+            payload["external_post_id"] = external_post_id
         row = await supabase_rest.update(
             "publish_queue",
-            {"status": update.status},
+            payload,
             {"id": f"eq.{item_id}"},
         )
     return {"item": row or {"id": item_id, "status": update.status}}
@@ -861,7 +873,7 @@ async def publishing_handoff(_: None = Depends(require_access_token)):
     rows = await fetch_rows(
         """
         select id, asset_id, channel, format, caption, media_urls, planned_slot, status,
-               compliance_status, created_at
+               compliance_status, external_post_id, created_at
         from publish_queue
         where status in ('draft', 'scheduled')
         order by planned_slot nulls last, created_at desc
@@ -872,7 +884,7 @@ async def publishing_handoff(_: None = Depends(require_access_token)):
         rows = await supabase_rest.select(
             "publish_queue",
             {
-                "select": "id,asset_id,channel,format,caption,media_urls,planned_slot,status,compliance_status,created_at",
+                "select": "id,asset_id,channel,format,caption,media_urls,planned_slot,status,compliance_status,external_post_id,created_at",
                 "status": "in.(draft,scheduled)",
                 "order": "planned_slot.asc.nullslast,created_at.desc",
                 "limit": "50",

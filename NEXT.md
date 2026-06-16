@@ -36,6 +36,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added Meta readiness checks for credentials, permissions, and safe rollout sequence
 - [x] Added guarded Facebook dispatch dry run with real-publish lock
 - [x] Added Meta metrics ingestion dry run for published post IDs
+- [x] Added manual post ID capture after safe handoff publishing
 
 ## Next Engineering Tasks
 
@@ -54,6 +55,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add Meta credential and permission health check screen
 - [x] Add dry-run Facebook dispatch worker
 - [x] Add dry-run Meta metrics ingestion worker
+- [x] Add manual published-post ID capture for metrics learning
 - [ ] Connect Meta Graph API credentials
 - [ ] Implement real Facebook publish scheduling
 - [ ] Implement Instagram two-step publish worker

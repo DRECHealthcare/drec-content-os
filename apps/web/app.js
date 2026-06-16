@@ -628,6 +628,10 @@ async function loadOutcomes() {
 function queueCard(item, mode) {
   const mediaCount = Array.isArray(item.media_urls) ? item.media_urls.length : 0;
   const canApprove = item.compliance_status === "clear";
+  const canMarkPublished = mode === "queue" && item.status === "scheduled" && item.compliance_status === "clear";
+  const postIdLine = item.external_post_id
+    ? `<small>Meta ID: ${escapeHtml(item.external_post_id)}</small>`
+    : "";
   const actions = mode === "review" ? `
     <div class="queue-actions">
       <button type="button" data-feedback="approve" data-id="${escapeHtml(item.id)}" ${canApprove ? "" : "disabled"}>Approve</button>
@@ -635,7 +639,11 @@ function queueCard(item, mode) {
       <button type="button" data-feedback="regen" data-id="${escapeHtml(item.id)}">Regen</button>
       <button type="button" data-feedback="reject" data-id="${escapeHtml(item.id)}">Reject</button>
     </div>
-  ` : "";
+  ` : `
+    <div class="queue-actions">
+      <button type="button" data-mark-published="${escapeHtml(item.id)}" ${canMarkPublished ? "" : "disabled"}>Mark Published</button>
+    </div>
+  `;
   return `
     <article class="queue-item">
       <div class="queue-meta">
@@ -646,6 +654,7 @@ function queueCard(item, mode) {
       </div>
       <p>${escapeHtml(item.caption)}</p>
       <small>${formatDate(item.planned_slot)} · ${mediaCount} media URL(s)</small>
+      ${postIdLine}
       ${actions}
     </article>
   `;
@@ -1025,6 +1034,25 @@ document.getElementById("queue-form").addEventListener("submit", async (event) =
     await Promise.all([loadPublishQueue(), loadLoopStatus()]);
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not add queue item.";
+  }
+});
+
+document.getElementById("queue-items").addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-mark-published]");
+  if (!button) return;
+  const postId = window.prompt("Paste the Meta post ID after you publish this item.");
+  if (!postId || !postId.trim()) return;
+  button.disabled = true;
+  button.textContent = "Saving";
+  try {
+    await fetchJson(`/publish-queue/${button.dataset.markPublished}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status: "published", external_post_id: postId.trim() }),
+    });
+    await Promise.all([loadPublishQueue(), loadLoopStatus(), loadMetaReadiness()]);
+  } catch {
+    button.disabled = false;
+    button.textContent = "Mark Published";
   }
 });
 

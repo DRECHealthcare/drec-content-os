@@ -80,6 +80,7 @@ class PublishQueueIn(BaseModel):
 
 class PublishQueueStatusIn(BaseModel):
     status: Literal["draft", "scheduled", "publishing", "published", "failed", "cancelled"]
+    external_post_id: Optional[str] = None
 
 
 class MetaDispatchIn(BaseModel):
