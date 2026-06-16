@@ -61,6 +61,7 @@ Stage 1 is now a working thin-core workflow:
 
 - Generate weekly DREC content briefs
 - See the next best workflow action, operating counts, and copyable Test Path on the Dashboard, backed by the API, so testing and automation can move from brief to approved asset to queue, handoff, published ID, metrics, and report without guessing
+- See the Supabase service-role readiness gate before stricter RLS policies are applied
 - Pull learning-informed topic recommendations into the next weekly plan
 - Mark content briefs as drafted or archived so weekly plans stay manageable
 - Archive drafted briefs in one batch after assets are saved so the weekly plan stays focused

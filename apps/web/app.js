@@ -418,6 +418,7 @@ async function loadLoopStatus() {
     const scheduledQueue = countByStatus(loop.queue, "status", "scheduled");
     const publishedQueue = countByStatus(loop.queue, "status", "published");
     const workflowSummary = data.workflow?.summary || {};
+    const security = data.security || {};
     const readyAssets = Number(workflowSummary.queue_ready_asset_count || 0);
     const totalAssets = Number(workflowSummary.asset_count || loop.asset_count || 0);
     document.getElementById("queue-count").textContent = `${totalQueue} total · ${draftQueue} review · ${scheduledQueue} handoff · ${publishedQueue} published`;
@@ -425,6 +426,7 @@ async function loadLoopStatus() {
     document.getElementById("asset-count").textContent = `${readyAssets} ready of ${totalAssets} asset(s)`;
     document.getElementById("media-count").textContent = `${loop.media_count || 0} media item(s)`;
     document.getElementById("outcome-count").textContent = `${loop.outcome_count || 0} outcome(s) · ${loop.weight_count || 0} active weight(s)`;
+    document.getElementById("security-count").textContent = security.rls_hardening_ready ? "RLS hardening ready" : "Needs service-role key";
     renderWorkflowNext(data.workflow || loop);
   } catch {
     const message = accessToken() ? "API access failed" : "Set access token";
@@ -433,6 +435,7 @@ async function loadLoopStatus() {
     document.getElementById("asset-count").textContent = message;
     document.getElementById("media-count").textContent = message;
     document.getElementById("outcome-count").textContent = message;
+    document.getElementById("security-count").textContent = message;
     const workflow = document.getElementById("workflow-next");
     if (workflow) workflow.innerHTML = `<p class="status-note">${escapeHtml(message)}</p>`;
   }

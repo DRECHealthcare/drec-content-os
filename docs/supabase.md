@@ -29,8 +29,16 @@ The initial Knowledge Base seed rows are:
 ## Security Note
 
 Row Level Security is enabled for the Content OS tables. The current REST
-policies allow the server-side API key role to manage rows while the browser
-continues to talk only to the protected Fly.io API.
+policies are intentionally not tightened further until Fly has
+`SUPABASE_SERVICE_ROLE_KEY` installed. The API currently reports this through
+`GET /security/status` and the Dashboard `Security Gate` card.
+
+The target state is:
+
+- Fly API uses `SUPABASE_SERVICE_ROLE_KEY`.
+- Browser continues to talk only to the protected Fly.io API.
+- Supabase direct browser access remains disabled until proper login and
+  user/session-aware RLS policies are added.
 
 Before any browser client reads or writes Supabase tables directly, replace the
 server-oriented policies with user/session-aware policies.

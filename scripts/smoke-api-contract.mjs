@@ -10,6 +10,7 @@ const files = {
 const requiredRoutes = [
   "GET /health",
   "GET /workflow/status",
+  "GET /security/status",
   "GET /weekly-report.md",
   "GET /meta/readiness",
   "GET /publish-queue/suggest-slot",
@@ -108,6 +109,11 @@ const requiredSnippets = [
     text: "## Workflow Readiness",
   },
   {
+    name: "security service role readiness",
+    file: "main",
+    text: "ready_for_rls_hardening",
+  },
+  {
     name: "nightly metrics job lock",
     file: "main",
     text: "META_ENABLE_METRICS_JOB=true",
@@ -131,6 +137,11 @@ const requiredSnippets = [
     name: "web dashboard status helper",
     file: "web",
     text: "countByStatus",
+  },
+  {
+    name: "web security gate card",
+    file: "web",
+    text: "security-count",
   },
   {
     name: "web queue reuse message",

@@ -214,6 +214,45 @@ async def meta_readiness(_: None = Depends(require_access_token)):
     }
 
 
+def security_status_payload():
+    has_service_role = bool(settings.supabase_service_role_key)
+    has_supabase_rest = bool(settings.supabase_url and supabase_rest.api_key())
+    fallback_key_mode = bool(settings.supabase_api_key and not settings.supabase_service_role_key)
+    rls_ready = has_service_role and has_supabase_rest
+    return {
+        "overall_status": "ready_for_rls_hardening" if rls_ready else "needs_service_role_key",
+        "supabase_rest": "configured" if has_supabase_rest else "missing",
+        "service_role_key": "configured" if has_service_role else "missing",
+        "fallback_key_mode": fallback_key_mode,
+        "direct_browser_supabase": "disabled_by_design",
+        "rls_hardening_ready": rls_ready,
+        "checks": [
+            {
+                "label": "Fly API uses Supabase REST",
+                "status": "ready" if has_supabase_rest else "missing",
+            },
+            {
+                "label": "Service role key installed on Fly",
+                "status": "ready" if has_service_role else "missing",
+            },
+            {
+                "label": "Browser talks only to protected API",
+                "status": "ready",
+            },
+        ],
+        "next_step": (
+            "Apply strict Supabase RLS policies after live smoke passes with SUPABASE_SERVICE_ROLE_KEY."
+            if rls_ready
+            else "Add SUPABASE_SERVICE_ROLE_KEY to Fly before tightening Supabase RLS policies."
+        ),
+    }
+
+
+@app.get("/security/status")
+async def security_status(_: None = Depends(require_access_token)):
+    return security_status_payload()
+
+
 @app.get("/kb")
 async def list_knowledge_entries(_: None = Depends(require_access_token)):
     rows = await fetch_rows(
@@ -3398,6 +3437,7 @@ async def workflow_status(_: None = Depends(require_access_token)):
     return {
         "loop": loop,
         "workflow": build_workflow_guidance(loop),
+        "security": security_status_payload(),
     }
 
 

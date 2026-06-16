@@ -77,6 +77,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added scheduler-ready nightly Meta metrics job wrapper with dry-run default and explicit enable flag
 - [x] Added scheduler-ready Meta publishing job wrapper with due-time gate and explicit enable flag
 - [x] Added Meta Setup UI action for scheduled publishing job dry runs
+- [x] Added Supabase service-role security readiness gate before stricter RLS hardening
 
 ## Next Engineering Tasks
 
@@ -135,6 +136,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add guarded nightly Meta metrics job endpoint for scheduler wiring
 - [x] Add guarded due-only Meta publishing job endpoint for scheduler wiring
 - [x] Add Meta Setup button for scheduled publishing job dry run
+- [x] Add Supabase service-role readiness check before strict RLS migration
 - [ ] Connect Meta Graph API credentials
 - [x] Implement real Facebook publish scheduling behind Meta readiness and enable flags
 - [x] Implement Instagram two-step publish worker behind Meta readiness and enable flags
