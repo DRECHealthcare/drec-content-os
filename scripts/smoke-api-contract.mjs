@@ -20,6 +20,7 @@ const requiredRoutes = [
   "GET /operations/creative-pack.md",
   "GET /operations/review-log.md",
   "GET /operations/learning-snapshot.csv",
+  "GET /operations/publishing-run-sheet.md",
   "GET /operations/operator-pack.md",
   "GET /weekly-report.md",
   "GET /meta/readiness",
@@ -184,6 +185,16 @@ const requiredSnippets = [
     name: "learning snapshot raw metrics",
     file: "main",
     text: "raw_metric",
+  },
+  {
+    name: "publishing run sheet export",
+    file: "main",
+    text: "drec-publishing-run-sheet.md",
+  },
+  {
+    name: "publishing run sheet ready section",
+    file: "main",
+    text: "## Ready To Publish",
   },
   {
     name: "operator pack export",
@@ -389,6 +400,16 @@ const requiredSnippets = [
     name: "web review log endpoint",
     file: "web",
     text: "/operations/review-log.md",
+  },
+  {
+    name: "web publishing run sheet action",
+    file: "web",
+    text: "download-run-sheet",
+  },
+  {
+    name: "web publishing run sheet endpoint",
+    file: "web",
+    text: "/operations/publishing-run-sheet.md",
   },
   {
     name: "web review queue filter",

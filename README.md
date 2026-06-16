@@ -95,6 +95,7 @@ Stage 1 is now a working thin-core workflow:
 - Suggest the next open MYT publishing slot for compliance-clear queue items and schedule them without guessing
 - Filter the scheduler by status/channel and scan the next 7 days of planned posts
 - Download scheduled posts as a calendar file for manual publishing reminders
+- Download a publishing run sheet for the next manual posting shift, including ready items, blockers, captions, media, and record-published reminders
 - Build a manual publishing handoff while Meta credentials are pending
 - Copy a ready-to-send publishing handoff package for manual posting
 - Show why blocked handoff items are not ready yet

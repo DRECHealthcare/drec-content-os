@@ -98,6 +98,11 @@ The Dashboard `Run Risk Audit` action calls `/operations/risk-audit` and scans
 automation gates, assets, queue items, and media for blocked or warning-level
 issues before a publishing run.
 
+The Scheduler `Download Run Sheet` action calls
+`/operations/publishing-run-sheet.md` and creates a read-only shift sheet with
+ready scheduled items, blocked items, captions, media, and post-publishing
+recording reminders for manual Meta posting.
+
 The Dashboard launch readiness summary calls `/operations/launch-readiness` and
 separates what is usable now in manual mode from what remains blocked for real
 Meta automation.

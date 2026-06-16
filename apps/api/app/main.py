@@ -1173,6 +1173,142 @@ async def operations_learning_snapshot(_: None = Depends(require_access_token)):
     )
 
 
+def queue_item_blockers(item: dict):
+    blockers = []
+    if item.get("status") != "scheduled":
+        blockers.append("Needs scheduled status.")
+    if item.get("compliance_status") != "clear":
+        blockers.append("Needs compliance clear.")
+    if not item.get("planned_slot"):
+        blockers.append("Needs a planned publish time.")
+    if not (item.get("caption") or "").strip():
+        blockers.append("Needs final caption.")
+    return blockers
+
+
+def run_sheet_item_lines(item: dict, index: int, heading: str):
+    media_urls = [url for url in item.get("media_urls") or [] if url]
+    blockers = item.get("handoff_blockers") or []
+    caption = item.get("caption") or "No caption available."
+    lines = [
+        f"### {heading} {index}: {item.get('channel') or 'unknown'} / {item.get('format') or 'unknown'}",
+        "",
+        f"- Queue ID: {item.get('id')}",
+        f"- Asset ID: {item.get('asset_id') or 'none'}",
+        f"- Status: {item.get('status')}",
+        f"- Compliance: {item.get('compliance_status')}",
+        f"- Planned time: {item.get('planned_slot') or 'not set'}",
+        f"- External post ID: {item.get('external_post_id') or 'not recorded'}",
+        "",
+        "Caption:",
+        "",
+        caption,
+        "",
+        "Media:",
+        "",
+        *markdown_list(media_urls, "- No media attached."),
+        "",
+    ]
+    if blockers:
+        lines.extend(["Blockers:", "", *markdown_list(blockers), ""])
+    else:
+        lines.extend(
+            [
+                "Operator steps:",
+                "",
+                "- Publish at the planned time using the caption and approved media above.",
+                "- Keep the caption unchanged unless it returns to review.",
+                "- After posting, paste the Meta post ID into Record Published.",
+                "- Add 7-day performance results in Performance.",
+                "",
+            ]
+        )
+    return lines
+
+
+@app.get("/operations/publishing-run-sheet.md")
+async def operations_publishing_run_sheet(_: None = Depends(require_access_token)):
+    rows = await snapshot_select(
+        "publish_queue",
+        """
+        select id, asset_id, channel, format, caption, media_urls, planned_slot, status,
+               compliance_status, external_post_id, created_at
+        from publish_queue
+        order by planned_slot nulls last, created_at desc
+        limit 200
+        """,
+        {
+            "select": "id,asset_id,channel,format,caption,media_urls,planned_slot,status,compliance_status,external_post_id,created_at",
+            "order": "planned_slot.asc.nullslast,created_at.desc",
+            "limit": "200",
+        },
+    )
+    active = []
+    blocked = []
+    completed = []
+    for item in rows:
+        enriched = {**item, "handoff_blockers": queue_item_blockers(item)}
+        status = item.get("status")
+        if status == "published":
+            completed.append(enriched)
+        elif enriched["handoff_blockers"]:
+            blocked.append(enriched)
+        else:
+            active.append(enriched)
+
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    channel_counts = {}
+    for item in rows:
+        channel = item.get("channel") or "unknown"
+        channel_counts[channel] = channel_counts.get(channel, 0) + 1
+    lines = [
+        "# DREC Content OS Publishing Run Sheet",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this sheet for the human posting shift while Meta automation is not enabled. It is read-only and does not change the queue.",
+        "",
+        "## Shift Summary",
+        "",
+        f"- Ready to publish: {len(active)}",
+        f"- Blocked / needs work: {len(blocked)}",
+        f"- Published / recorded: {len(completed)}",
+        f"- Channel mix: {', '.join(f'{key}={value}' for key, value in channel_counts.items()) or 'none'}",
+        "",
+        "## Posting Rules",
+        "",
+        "- Only publish items with scheduled status, compliance clear, a planned time, and a final caption.",
+        "- Do not use rejected, flagged, or unapproved material.",
+        "- Record the Meta post ID immediately after manual posting.",
+        "- Enter first performance metrics after the chosen reporting window.",
+        "",
+        "## Ready To Publish",
+        "",
+    ]
+    if not active:
+        lines.append("No ready scheduled items. Approve and schedule content before the next posting shift.")
+        lines.append("")
+    for index, item in enumerate(active, start=1):
+        lines.extend(run_sheet_item_lines(item, index, "Ready Item"))
+    lines.extend(["## Blocked Items", ""])
+    if not blocked:
+        lines.append("No blocked active items found.")
+        lines.append("")
+    for index, item in enumerate(blocked, start=1):
+        lines.extend(run_sheet_item_lines(item, index, "Blocked Item"))
+    lines.extend(["## Recently Recorded", ""])
+    if not completed:
+        lines.append("No published queue items have been recorded yet.")
+        lines.append("")
+    for index, item in enumerate(completed[:25], start=1):
+        lines.extend(run_sheet_item_lines(item, index, "Recorded Item"))
+    return Response(
+        "\n".join(lines) + "\n",
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-publishing-run-sheet.md"'},
+    )
+
+
 @app.get("/operations/operator-pack.md")
 async def operations_operator_pack(_: None = Depends(require_access_token)):
     launch = await launch_readiness_payload()

@@ -2203,6 +2203,17 @@ document.getElementById("download-calendar").addEventListener("click", async () 
   }
 });
 
+document.getElementById("download-run-sheet")?.addEventListener("click", async () => {
+  const message = document.getElementById("queue-message");
+  message.textContent = "Preparing run sheet...";
+  try {
+    await downloadProtectedFile("/operations/publishing-run-sheet.md", "drec-publishing-run-sheet.md", "text/markdown");
+    message.textContent = "Publishing run sheet downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download run sheet.";
+  }
+});
+
 document.getElementById("dry-run-facebook").addEventListener("click", async () => {
   const message = document.getElementById("queue-message");
   message.textContent = "Checking Facebook worker...";
