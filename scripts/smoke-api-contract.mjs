@@ -18,6 +18,7 @@ const requiredRoutes = [
   "POST /operations/scheduler-heartbeat",
   "GET /operations/launch-evidence.md",
   "GET /operations/first-test-kit.md",
+  "GET /operations/daily-ops-checklist.md",
   "GET /operations/risk-audit",
   "GET /operations/snapshot.csv",
   "GET /operations/creative-pack.md",
@@ -200,6 +201,16 @@ const requiredSnippets = [
     name: "first test kit sample metrics",
     file: "main",
     text: "## Sample Metric Entry After Manual Publishing",
+  },
+  {
+    name: "daily ops checklist export",
+    file: "main",
+    text: "drec-daily-ops-checklist.md",
+  },
+  {
+    name: "daily ops morning checks",
+    file: "main",
+    text: "## Morning Checks",
   },
   {
     name: "operator pack test run checklist",
@@ -415,6 +426,16 @@ const requiredSnippets = [
     name: "web first test kit action",
     file: "web",
     text: "download-first-test-kit",
+  },
+  {
+    name: "web daily ops action",
+    file: "web",
+    text: "download-daily-ops",
+  },
+  {
+    name: "web daily ops endpoint",
+    file: "web",
+    text: "/operations/daily-ops-checklist.md",
   },
   {
     name: "web first test kit endpoint",

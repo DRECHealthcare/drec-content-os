@@ -102,6 +102,18 @@ const checks = [
     },
   },
   {
+    name: "Daily ops checklist",
+    url: `${apiBase}/operations/daily-ops-checklist.md`,
+    auth: true,
+    validate: async (res) => {
+      const text = await res.text();
+      return text.includes("# DREC Content OS Daily Ops Checklist")
+        && text.includes("## Morning Checks")
+        && text.includes("## Ready To Publish Today")
+        && text.includes("## End-Of-Day Closeout");
+    },
+  },
+  {
     name: "Content risk audit",
     url: `${apiBase}/operations/risk-audit`,
     auth: true,

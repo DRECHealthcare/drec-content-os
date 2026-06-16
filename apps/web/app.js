@@ -1720,6 +1720,16 @@ document.getElementById("download-first-test-kit")?.addEventListener("click", as
   }
 });
 
+document.getElementById("download-daily-ops")?.addEventListener("click", async () => {
+  const message = document.getElementById("test-path-message");
+  try {
+    await downloadProtectedFile("/operations/daily-ops-checklist.md", "drec-daily-ops-checklist.md", "text/markdown");
+    message.textContent = "Daily ops checklist downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download daily ops checklist.";
+  }
+});
+
 document.getElementById("download-operator-pack")?.addEventListener("click", async () => {
   const message = document.getElementById("test-path-message");
   try {

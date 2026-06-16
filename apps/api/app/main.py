@@ -1173,6 +1173,124 @@ async def operations_first_test_kit(_: None = Depends(require_access_token)):
     )
 
 
+@app.get("/operations/daily-ops-checklist.md")
+async def operations_daily_ops_checklist(_: None = Depends(require_access_token)):
+    generated_at = datetime.now(timezone.utc).isoformat()
+    launch = await launch_readiness_payload()
+    checklist = await test_run_checklist_payload()
+    automation = await automation_status_payload()
+    risk = await content_risk_audit_payload()
+    handoff = await publishing_handoff(None)
+    learning = await learning_summary(None)
+    summary = checklist.get("summary") or {}
+    next_step = checklist.get("next_step") or {}
+    ready_items = handoff.get("ready_items") or []
+    blocked_items = handoff.get("blocked_items") or []
+    insight_payload = learning.get("outcome_insights") or {}
+    learning_items = (insight_payload.get("top_signals") or [])[:5]
+    lines = [
+        "# DREC Content OS Daily Ops Checklist",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this checklist at the start of each operating day. It is read-only and does not change the queue.",
+        "",
+        *usability_markdown_lines(launch),
+        "## Today's Priority",
+        "",
+        f"- Next action: {next_step.get('action') or next_step.get('label') or 'Open Dashboard'}",
+        f"- Detail: {next_step.get('detail') or 'Follow the first open Dashboard Test Path step.'}",
+        f"- Automation status: {automation.get('overall_status')}",
+        f"- Risk status: {risk.get('overall_status')} ({risk.get('block_count', 0)} block / {risk.get('warn_count', 0)} warn)",
+        "",
+        "## Morning Checks",
+        "",
+        "- Open Dashboard and confirm the access token is set.",
+        "- Download First Test Kit if this is the first manual workflow run.",
+        "- Run Content Risk Audit before any external publishing.",
+        "- Open Weekly Plan and make sure there is at least one usable brief.",
+        "- Open Assets and approve only safety-clear content.",
+        "- Open Review Queue and approve, regenerate, or reject draft queue items.",
+        "- Open Scheduler and make sure approved items have planned times.",
+        "- Build Publishing Handoff before manual posting.",
+        "",
+        "## Current Counts",
+        "",
+        f"- Briefs: {summary.get('brief_count', 0)}",
+        f"- Ready assets: {summary.get('ready_assets', 0)}",
+        f"- Queue total: {summary.get('queue_total', 0)}",
+        f"- Scheduled queue: {summary.get('scheduled_queue', 0)}",
+        f"- Handoff ready: {summary.get('handoff_ready', 0)}",
+        f"- Published queue: {summary.get('published_queue', 0)}",
+        f"- Metrics: {summary.get('metric_count', 0)}",
+        f"- Outcomes: {summary.get('outcome_count', 0)}",
+        "",
+        "## Ready To Publish Today",
+        "",
+    ]
+    if ready_items:
+        for index, item in enumerate(ready_items[:10], start=1):
+            lines.extend(
+                [
+                    f"### {index}. {item.get('channel', 'channel')} / {item.get('format', 'format')}",
+                    "",
+                    f"- Queue ID: {item.get('id')}",
+                    f"- Planned: {item.get('planned_slot') or 'No planned time'}",
+                    f"- Caption preview: {(item.get('caption') or '')[:220]}",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["- No handoff-ready scheduled items yet.", ""])
+    lines.extend(["## Blocked Or Needs Work", ""])
+    if blocked_items:
+        for index, item in enumerate(blocked_items[:10], start=1):
+            blockers = item.get("handoff_blockers") or []
+            lines.extend(
+                [
+                    f"### {index}. {item.get('channel', 'channel')} / {item.get('format', 'format')}",
+                    "",
+                    f"- Queue ID: {item.get('id')}",
+                    f"- Status: {item.get('status')}",
+                    f"- Blockers: {', '.join(blockers) or 'Needs review'}",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["- No blocked handoff items found.", ""])
+    lines.extend(
+        [
+            "## Learning Prompts",
+            "",
+        ]
+    )
+    if learning_items:
+        for item in learning_items:
+            lines.append(
+                f"- {item.get('label') or item.get('key') or 'Insight'}: "
+                f"avg score {item.get('avg_score', 0)}, saves {item.get('saves_total', 0)}, shares {item.get('shares_total', 0)}"
+            )
+    else:
+        lines.append(f"- {insight_payload.get('summary') or 'No learning insights yet. Record metrics and build the weekly report.'}")
+    lines.extend(
+        [
+            "",
+            "## End-Of-Day Closeout",
+            "",
+            "- Record Meta post IDs or manual labels for anything published today.",
+            "- Enter first available performance metrics under Performance.",
+            "- Use Save & Roll Up so the learning loop updates.",
+            "- Download Weekly Report, Launch Evidence, and Operator Pack after meaningful changes.",
+            "- Keep Meta automation off until Meta readiness and Supabase security gates are green.",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-daily-ops-checklist.md"'},
+    )
+
+
 def snapshot_row(record_type, item_id="", status="", channel="", fmt="", title="", created_at="", detail=""):
     return {
         "record_type": record_type,
