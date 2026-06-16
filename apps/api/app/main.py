@@ -15,6 +15,7 @@ from .compliance import check_text
 from .db import close_db, connect_db, fetch_row, fetch_rows
 from .models import (
     AssetIn,
+    AssetStatusIn,
     ComplianceCheckIn,
     ContentBriefIn,
     ContentBriefStatusIn,
@@ -23,6 +24,7 @@ from .models import (
     KnowledgeEntryIn,
     LearningWeightIn,
     MediaAssetIn,
+    MediaAssetStatusIn,
     MetaDispatchIn,
     MetaMetricsIn,
     MetricIn,
@@ -585,6 +587,70 @@ async def create_asset(asset: AssetIn, _: None = Depends(require_access_token)):
     return {"item": row or payload}
 
 
+async def asset_by_id(asset_id: str):
+    row = await fetch_row(
+        """
+        select id, brief_id, channel, format, caption, media_urls, metadata,
+               compliance_status, review_status, created_at
+        from assets
+        where id = $1
+        """,
+        asset_id,
+    )
+    if row is None and supabase_rest.configured():
+        rows = await supabase_rest.select(
+            "assets",
+            {
+                "select": "id,brief_id,channel,format,caption,media_urls,metadata,compliance_status,review_status,created_at",
+                "id": f"eq.{asset_id}",
+                "limit": "1",
+            },
+        )
+        row = rows[0] if rows else None
+    return row
+
+
+@app.patch("/assets/{asset_id}")
+async def update_asset_status(
+    asset_id: str,
+    update: AssetStatusIn,
+    _: None = Depends(require_access_token),
+):
+    existing = await asset_by_id(asset_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Asset not found.")
+    row = await fetch_row(
+        """
+        update assets
+        set review_status = $2, updated_at = now()
+        where id = $1
+        returning id, brief_id, channel, format, caption, media_urls, metadata,
+                  compliance_status, review_status, created_at
+        """,
+        asset_id,
+        update.review_status,
+    )
+    if row is None and supabase_rest.configured():
+        row = await supabase_rest.update(
+            "assets",
+            {"review_status": update.review_status},
+            {"id": f"eq.{asset_id}"},
+        )
+    if update.reason:
+        await save_feedback(
+            FeedbackIn(
+                module="asset_library",
+                ref_type="asset",
+                ref_id=asset_id,
+                action="approve" if update.review_status == "approved" else "reject" if update.review_status == "rejected" else "edit",
+                reason=update.reason,
+                before_text=existing.get("caption"),
+                tags=["asset_review", update.review_status],
+            )
+        )
+    return {"item": row or {**existing, "review_status": update.review_status}}
+
+
 def media_asset_payload(media: MediaAssetIn):
     return {
         "title": media.title,
@@ -644,6 +710,40 @@ async def create_media_asset(media: MediaAssetIn, _: None = Depends(require_acce
     if row is None and supabase_rest.configured():
         row = await supabase_rest.insert("media_assets", payload)
     return {"item": row or payload}
+
+
+@app.patch("/media-assets/{media_id}")
+async def update_media_asset_status(
+    media_id: str,
+    update: MediaAssetStatusIn,
+    _: None = Depends(require_access_token),
+):
+    existing = await media_asset_by_id(media_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Media asset not found.")
+    notes = existing.get("notes")
+    if update.reason:
+        note_line = f"Status note: {update.reason}"
+        notes = f"{notes}\n{note_line}" if notes else note_line
+    row = await fetch_row(
+        """
+        update media_assets
+        set approval_status = $2, notes = $3, updated_at = now()
+        where id = $1
+        returning id, title, source_url, media_type, rights_status, approval_status,
+                  notes, tags, metadata, created_at
+        """,
+        media_id,
+        update.approval_status,
+        notes,
+    )
+    if row is None and supabase_rest.configured():
+        row = await supabase_rest.update(
+            "media_assets",
+            {"approval_status": update.approval_status, "notes": notes},
+            {"id": f"eq.{media_id}"},
+        )
+    return {"item": row or {**existing, "approval_status": update.approval_status, "notes": notes}}
 
 
 def safe_storage_name(filename: str):
@@ -1981,8 +2081,7 @@ async def create_outcome(outcome: OutcomeIn, _: None = Depends(require_access_to
     return {"item": row or payload}
 
 
-@app.post("/feedback")
-async def capture_feedback(feedback: FeedbackIn, _: None = Depends(require_access_token)):
+async def save_feedback(feedback: FeedbackIn):
     row = await fetch_row(
         """
         insert into feedback
@@ -2014,6 +2113,11 @@ async def capture_feedback(feedback: FeedbackIn, _: None = Depends(require_acces
             },
         )
     return {"item": row or feedback.model_dump()}
+
+
+@app.post("/feedback")
+async def capture_feedback(feedback: FeedbackIn, _: None = Depends(require_access_token)):
+    return await save_feedback(feedback)
 
 
 @app.get("/learning-weights")

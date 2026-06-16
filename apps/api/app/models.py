@@ -44,6 +44,11 @@ class AssetIn(BaseModel):
     review_status: Literal["draft", "review", "approved", "rejected"] = "draft"
 
 
+class AssetStatusIn(BaseModel):
+    review_status: Literal["draft", "review", "approved", "rejected"]
+    reason: Optional[str] = None
+
+
 class MediaAssetIn(BaseModel):
     title: str
     source_url: str
@@ -53,6 +58,11 @@ class MediaAssetIn(BaseModel):
     notes: Optional[str] = None
     tags: List[str] = []
     metadata: Dict[str, Any] = {}
+
+
+class MediaAssetStatusIn(BaseModel):
+    approval_status: Literal["approved", "needs_review", "blocked"]
+    reason: Optional[str] = None
 
 
 class CreativeDraftIn(BaseModel):

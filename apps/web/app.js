@@ -513,6 +513,7 @@ function handoffItem(item) {
 
 function assetCard(item) {
   const mediaCount = Array.isArray(item.media_urls) ? item.media_urls.length : 0;
+  const canQueue = item.review_status !== "rejected" && item.compliance_status !== "flagged";
   return `
     <article class="queue-item">
       <div class="queue-meta">
@@ -525,7 +526,10 @@ function assetCard(item) {
       <small>${mediaCount} media URL(s)</small>
       ${mediaList(item.media_urls)}
       <div class="queue-actions">
-        <button type="button" data-queue-asset="${escapeHtml(item.id)}">Add To Queue</button>
+        <button type="button" data-asset-status="approved" data-id="${escapeHtml(item.id)}">Approve</button>
+        <button type="button" data-asset-status="review" data-id="${escapeHtml(item.id)}">Needs Work</button>
+        <button type="button" data-asset-status="rejected" data-id="${escapeHtml(item.id)}">Reject</button>
+        <button type="button" data-queue-asset="${escapeHtml(item.id)}" ${canQueue ? "" : "disabled"}>Add To Queue</button>
       </div>
     </article>
   `;
@@ -548,6 +552,9 @@ function mediaAssetCard(item) {
       ${item.notes ? `<small>${escapeHtml(item.notes)}</small>` : ""}
       ${Array.isArray(item.tags) && item.tags.length ? `<small>${item.tags.map((tag) => `#${escapeHtml(tag)}`).join(" ")}</small>` : ""}
       <div class="queue-actions">
+        <button type="button" data-media-status="approved" data-id="${escapeHtml(item.id)}">Approve</button>
+        <button type="button" data-media-status="needs_review" data-id="${escapeHtml(item.id)}">Review</button>
+        <button type="button" data-media-status="blocked" data-id="${escapeHtml(item.id)}">Block</button>
         <button type="button" data-media-link="${escapeHtml(item.id)}">Get Link</button>
       </div>
     </article>
@@ -570,6 +577,38 @@ async function loadMediaAssets() {
 }
 
 document.getElementById("media-items").addEventListener("click", async (event) => {
+  const statusButton = event.target.closest("[data-media-status]");
+  if (statusButton) {
+    const status = statusButton.dataset.mediaStatus;
+    const defaultReason = {
+      approved: "Media approved for DREC publishing use.",
+      needs_review: "Media needs review before publishing.",
+      blocked: "Media blocked from publishing use.",
+    }[status] || "Media status updated.";
+    let reason = defaultReason;
+    if (status !== "approved") {
+      const entered = window.prompt("Add a media review note.", defaultReason);
+      if (entered === null) return;
+      reason = entered.trim() || defaultReason;
+    }
+    const originalText = statusButton.textContent;
+    const message = document.getElementById("media-message");
+    statusButton.disabled = true;
+    statusButton.textContent = "Saving";
+    try {
+      await fetchJson(`/media-assets/${statusButton.dataset.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ approval_status: status, reason }),
+      });
+      message.textContent = "Media status updated.";
+      await Promise.all([loadMediaAssets(), loadLoopStatus()]);
+    } catch (error) {
+      message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not update media status.";
+      statusButton.disabled = false;
+      statusButton.textContent = originalText;
+    }
+    return;
+  }
   const button = event.target.closest("[data-media-link]");
   if (!button) return;
   const message = document.getElementById("media-message");
@@ -1191,6 +1230,35 @@ document.getElementById("queue-draft").addEventListener("click", async () => {
 });
 
 document.getElementById("asset-items").addEventListener("click", async (event) => {
+  const statusButton = event.target.closest("[data-asset-status]");
+  if (statusButton) {
+    const status = statusButton.dataset.assetStatus;
+    const defaultReason = {
+      approved: "Asset approved for queueing.",
+      review: "Asset needs more work before queueing.",
+      rejected: "Asset rejected during library review.",
+    }[status] || "Asset status updated.";
+    let reason = defaultReason;
+    if (status !== "approved") {
+      const entered = window.prompt("Add an asset review reason.", defaultReason);
+      if (entered === null) return;
+      reason = entered.trim() || defaultReason;
+    }
+    const originalText = statusButton.textContent;
+    statusButton.disabled = true;
+    statusButton.textContent = "Saving";
+    try {
+      await fetchJson(`/assets/${statusButton.dataset.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ review_status: status, reason }),
+      });
+      await Promise.all([loadAssets(), loadLoopStatus(), loadLearningSummary()]);
+    } catch {
+      statusButton.disabled = false;
+      statusButton.textContent = originalText;
+    }
+    return;
+  }
   const button = event.target.closest("[data-queue-asset]");
   if (!button) return;
   const items = JSON.parse(document.getElementById("asset-items").dataset.assets || "[]");

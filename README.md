@@ -72,6 +72,7 @@ Stage 1 is now a working thin-core workflow:
 - Mark manually published posts with their Meta post ID so metrics ingestion can learn from them later
 - Dry-run Facebook and Instagram publishing workers before Meta credentials are connected
 - Register approved media URLs or upload files into private Supabase Storage
+- Approve, review, or block draft assets and media before they enter publishing
 - Record raw performance metrics, roll them into scored outcomes, and view the first learning summary
 
 Meta auto-publishing and nightly Meta metrics ingestion are intentionally held until the Facebook Page and Instagram permissions are connected. See `NEXT.md` for the active build path.
