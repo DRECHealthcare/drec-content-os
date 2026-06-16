@@ -331,6 +331,26 @@ const requiredSnippets = [
     text: "meta-setup-commands",
   },
   {
+    name: "web github scheduler setup",
+    file: "web",
+    text: "GitHub Scheduler Setup",
+  },
+  {
+    name: "api scheduler setup payload",
+    file: "main",
+    text: "scheduler_setup",
+  },
+  {
+    name: "api scheduler github secret",
+    file: "main",
+    text: "required_github_secrets",
+  },
+  {
+    name: "operator pack scheduler setup",
+    file: "main",
+    text: "## GitHub Scheduler Setup",
+  },
+  {
     name: "github scheduler dry-run workflow",
     file: "schedulerWorkflow",
     text: "/jobs/meta-publishing?dry_run=true&channel=all",

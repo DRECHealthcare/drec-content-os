@@ -120,6 +120,9 @@ Optional repository variable:
 DREC_API_BASE_URL=https://drec-content-os-api.fly.dev
 ```
 
+The Meta Setup screen now shows the same GitHub Scheduler Setup block, and the
+Operator Pack exports it for non-technical rollout handoff.
+
 The workflow checks:
 
 - Due Meta publishing in dry-run mode every 6 hours

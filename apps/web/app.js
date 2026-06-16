@@ -630,6 +630,10 @@ function renderMetaReadiness(data) {
 function renderMetaSetupChecklist(data) {
   const container = document.getElementById("meta-setup-checklist");
   latestMetaSetupCommands = data.setup_commands || [];
+  const scheduler = data.scheduler_setup || {};
+  const githubSecrets = scheduler.required_github_secrets || [];
+  const githubVariables = scheduler.optional_github_variables || [];
+  const schedulerSteps = scheduler.steps || [];
   container.innerHTML = `
     <article class="learning-card wide-learning">
       <h3>Credential Setup Checklist</h3>
@@ -643,6 +647,18 @@ function renderMetaSetupChecklist(data) {
     <article class="learning-card wide-learning">
       <h3>Setup Commands</h3>
       <pre id="meta-setup-commands">${escapeHtml(latestMetaSetupCommands.join("\n"))}</pre>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>GitHub Scheduler Setup</h3>
+      <p>${escapeHtml(scheduler.status || "not_checked")}</p>
+      <small>${escapeHtml(scheduler.workflow_file || ".github/workflows/drec-scheduler-dry-run.yml")}</small>
+      <ul>
+        <li><strong>Required secret</strong> ${escapeHtml(githubSecrets.join(", ") || "None")}</li>
+        <li><strong>Optional variable</strong> ${escapeHtml(githubVariables.join(", ") || "None")}</li>
+        <li><strong>API URL</strong> ${escapeHtml(scheduler.default_api_base_url || API_BASE)}</li>
+      </ul>
+      <ol>${schedulerSteps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol>
+      <p>${escapeHtml(scheduler.safety || "")}</p>
     </article>
     <article class="learning-card wide-learning">
       <h3>Safety Notes</h3>

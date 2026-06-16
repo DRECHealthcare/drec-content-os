@@ -242,12 +242,27 @@ async def meta_setup_checklist(_: None = Depends(require_access_token)):
             "fly secrets set META_ENABLE_METRICS_JOB=true",
         ]
     )
+    scheduler_setup = {
+        "status": "repository_ready",
+        "workflow_file": ".github/workflows/drec-scheduler-dry-run.yml",
+        "required_github_secrets": ["DREC_ACCESS_TOKEN"],
+        "optional_github_variables": ["DREC_API_BASE_URL"],
+        "default_api_base_url": "https://drec-content-os-api.fly.dev",
+        "steps": [
+            "Open GitHub repository Settings > Secrets and variables > Actions.",
+            "Add repository secret DREC_ACCESS_TOKEN with the current DREC app access token.",
+            "Optionally add repository variable DREC_API_BASE_URL when the API URL changes.",
+            "Run the DREC Scheduler Dry Run workflow manually once before trusting the recurring schedule.",
+        ],
+        "safety": "The GitHub workflow calls only dry-run endpoints, so it checks publishing and metrics readiness without posting to Meta or mutating live records.",
+    }
     return {
         "overall_status": "ready_to_enable" if readiness.get("overall_status") == "ready_for_worker_testing" and security.get("rls_hardening_ready") else "needs_setup",
         "missing_credentials": [item["key"] for item in missing_env],
         "missing_permissions": missing_permissions,
         "required_secrets": required_secret_names,
         "setup_commands": setup_commands,
+        "scheduler_setup": scheduler_setup,
         "steps": [
             {
                 "label": "Install Supabase service role key on Fly",
@@ -268,6 +283,11 @@ async def meta_setup_checklist(_: None = Depends(require_access_token)):
                 "label": "Run dry-run checks before live switches",
                 "status": "ready",
                 "detail": "Use Meta Setup dry-run buttons and live smoke before enabling real publishing or metrics jobs.",
+            },
+            {
+                "label": "Activate GitHub scheduled dry runs",
+                "status": scheduler_setup["status"],
+                "detail": "Add GitHub Actions secret DREC_ACCESS_TOKEN, then run the dry-run workflow once.",
             },
             {
                 "label": "Enable live Meta workers only after green dry runs",
@@ -744,6 +764,16 @@ async def operations_operator_pack(_: None = Depends(require_access_token)):
         f"- {step.get('label')}: {step.get('status')} — {step.get('detail')}"
         for step in setup.get("steps", [])
     ] or ["- No setup checks available."]
+    scheduler = setup.get("scheduler_setup", {})
+    scheduler_lines = [
+        f"- Status: {scheduler.get('status', 'unknown')}",
+        f"- Workflow: {scheduler.get('workflow_file', 'unknown')}",
+        f"- Required GitHub secrets: {', '.join(scheduler.get('required_github_secrets', [])) or 'None'}",
+        f"- Optional GitHub variables: {', '.join(scheduler.get('optional_github_variables', [])) or 'None'}",
+        f"- Default API URL: {scheduler.get('default_api_base_url', 'unknown')}",
+        f"- Safety: {scheduler.get('safety', 'Dry-run checks only.')}",
+    ]
+    scheduler_step_lines = [f"- {step}" for step in scheduler.get("steps", [])] or ["- No scheduler setup steps available."]
     risk_lines = [
         f"- [{item.get('severity')}] {item.get('kind')} {item.get('id')}: {item.get('title')} — {item.get('action')}"
         for item in risk.get("items", [])[:25]
@@ -788,6 +818,14 @@ async def operations_operator_pack(_: None = Depends(require_access_token)):
         "Command template:",
         "",
         *command_lines,
+        "",
+        "## GitHub Scheduler Setup",
+        "",
+        *scheduler_lines,
+        "",
+        "Steps:",
+        "",
+        *scheduler_step_lines,
         "",
         "## Content Risk Audit",
         "",
