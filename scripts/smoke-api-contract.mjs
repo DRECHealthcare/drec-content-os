@@ -185,6 +185,11 @@ const requiredSnippets = [
     text: "drec-launch-evidence.md",
   },
   {
+    name: "launch evidence usability section",
+    file: "main",
+    text: "## Can I Use It Now",
+  },
+  {
     name: "operator pack test run checklist",
     file: "main",
     text: "## Manual Test Run Checklist",
@@ -263,6 +268,11 @@ const requiredSnippets = [
     name: "operator pack export",
     file: "main",
     text: "drec-operator-pack.md",
+  },
+  {
+    name: "operator pack usability section",
+    file: "main",
+    text: "usability_markdown_lines(launch)",
   },
   {
     name: "meta setup checklist route",

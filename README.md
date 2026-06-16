@@ -69,6 +69,7 @@ Stage 1 is now a working thin-core workflow:
 - Download a protected launch evidence report with manual test status, readiness, risk, Meta setup, and safe go-live rules
 - Download a protected CSV operations snapshot for audit or backup before rollout changes
 - Download a protected operator pack with readiness status, setup checklist, publishing handoff, and weekly report in one Markdown file
+- See the same "Can I Use It Now" decision in Launch Evidence and Operator Pack, including safe test scope and not-yet-ready automation blockers
 - Use the GitHub Actions dry-run scheduler template to check publishing, metrics, automation, and risk gates without mutating live records
 - Record GitHub dry-run scheduler heartbeats so the app can show whether the every-6-hour checks are actually running
 - See the GitHub Scheduler Setup steps in Meta Setup and the Operator Pack before turning on recurring dry-run checks

@@ -752,6 +752,30 @@ def test_run_step(key, label, status, detail, screen, action, evidence=None):
     }
 
 
+def usability_markdown_lines(launch: dict):
+    usability = launch.get("usability") or {}
+    safe_scope = usability.get("safe_test_scope") or []
+    not_ready_scope = usability.get("not_ready_scope") or []
+    return [
+        "## Can I Use It Now",
+        "",
+        f"- Decision: {usability.get('label') or launch.get('overall_status') or 'Unknown'}",
+        f"- Detail: {usability.get('detail') or launch.get('next_step') or 'Check launch readiness.'}",
+        f"- Can test now: {'yes' if launch.get('can_test_now') else 'no'}",
+        f"- Can use for manual ops: {'yes' if launch.get('can_use_for_manual_ops') else 'no'}",
+        f"- Can auto-publish: {'yes' if launch.get('can_auto_publish') else 'no'}",
+        "",
+        "Safe now:",
+        "",
+        *(markdown_list(safe_scope) if safe_scope else ["- No safe test scope is available yet."]),
+        "",
+        "Not ready yet:",
+        "",
+        *(markdown_list(not_ready_scope) if not_ready_scope else ["- No not-ready scope listed."]),
+        "",
+    ]
+
+
 async def test_run_checklist_payload():
     loop = await build_loop_status()
     handoff = await publishing_handoff(None)
@@ -930,6 +954,7 @@ async def operations_launch_evidence(_: None = Depends(require_access_token)):
         f"- Meta setup: {meta.get('overall_status')}",
         f"- Supabase security: {security.get('overall_status')}",
         "",
+        *usability_markdown_lines(launch),
         "## Next Best Action",
         "",
         f"- {next_step.get('action') or next_step.get('label') or 'Continue manual test cycle'}",
@@ -1809,6 +1834,7 @@ async def operations_operator_pack(_: None = Depends(require_access_token)):
         f"- Content risk: {risk.get('overall_status')} ({risk.get('block_count', 0)} block / {risk.get('warn_count', 0)} warn)",
         f"- Handoff ready: {handoff.get('ready_count', 0)} ready / {handoff.get('blocked_count', 0)} blocked",
         "",
+        *usability_markdown_lines(launch),
         "## Launch Readiness",
         "",
         *launch_lines,

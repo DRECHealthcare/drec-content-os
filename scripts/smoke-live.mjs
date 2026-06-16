@@ -63,7 +63,12 @@ const checks = [
     auth: true,
     validate: async (res) => {
       const data = await res.json();
-      return Boolean(data.overall_status) && Array.isArray(data.stages) && Object.prototype.hasOwnProperty.call(data.summary || {}, "ready_assets");
+      return Boolean(data.overall_status)
+        && Array.isArray(data.stages)
+        && Object.prototype.hasOwnProperty.call(data.summary || {}, "ready_assets")
+        && Object.prototype.hasOwnProperty.call(data, "can_use_for_manual_ops")
+        && Array.isArray(data.usability?.safe_test_scope)
+        && Array.isArray(data.usability?.not_ready_scope);
     },
   },
   {
@@ -81,7 +86,7 @@ const checks = [
     auth: true,
     validate: async (res) => {
       const text = await res.text();
-      return text.includes("# DREC Content OS Launch Evidence") && text.includes("## Manual Test Path") && text.includes("## Safe Go-Live Rule");
+      return text.includes("# DREC Content OS Launch Evidence") && text.includes("## Can I Use It Now") && text.includes("## Manual Test Path") && text.includes("## Safe Go-Live Rule");
     },
   },
   {
@@ -171,7 +176,7 @@ const checks = [
     auth: true,
     validate: async (res) => {
       const text = await res.text();
-      return text.includes("# DREC Content OS Operator Pack") && text.includes("## Launch Readiness") && text.includes("## Content Risk Audit") && text.includes("## Publishing Handoff") && text.includes("## Weekly Operating Report");
+      return text.includes("# DREC Content OS Operator Pack") && text.includes("## Can I Use It Now") && text.includes("## Launch Readiness") && text.includes("## Content Risk Audit") && text.includes("## Publishing Handoff") && text.includes("## Weekly Operating Report");
     },
   },
   {
