@@ -86,6 +86,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added scheduler-ready Meta publishing job wrapper with due-time gate and explicit enable flag
 - [x] Added Meta Setup UI action for scheduled publishing job dry runs
 - [x] Added Supabase service-role security readiness gate before stricter RLS hardening
+- [x] Added strict server-only Supabase RLS migration plan and protected rollout export
 - [x] Added API-backed automation readiness gate across workflow, handoff, learning, Meta, and security
 - [x] Added protected CSV operations snapshot export for backup and rollout audit
 - [x] Added Meta credential setup checklist and copy-ready Fly secret command template
@@ -170,6 +171,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add guarded due-only Meta publishing job endpoint for scheduler wiring
 - [x] Add Meta Setup button for scheduled publishing job dry run
 - [x] Add Supabase service-role readiness check before strict RLS migration
+- [x] Add strict Supabase RLS hardening migration package and downloadable rollout plan
 - [x] Add unified automation readiness status for safe rollout decisions
 - [x] Add protected operations snapshot export before credential/RLS changes
 - [x] Add copy-ready Meta and Supabase credential setup checklist

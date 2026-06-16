@@ -6,12 +6,14 @@ const files = {
   schema: "supabase/schema.sql",
   web: "apps/web/app.js",
   schedulerWorkflow: ".github/workflows/drec-scheduler-dry-run.yml",
+  strictRlsMigration: "supabase/migrations/20260617040906_strict_server_only_rls.sql",
 };
 
 const requiredRoutes = [
   "GET /health",
   "GET /workflow/status",
   "GET /security/status",
+  "GET /security/rls-hardening-plan.md",
   "GET /automation/status",
   "GET /operations/launch-readiness",
   "GET /operations/test-run-checklist",
@@ -186,6 +188,21 @@ const requiredSnippets = [
     name: "security service role readiness",
     file: "main",
     text: "ready_for_rls_hardening",
+  },
+  {
+    name: "security rls hardening plan route",
+    file: "main",
+    text: "rls-hardening-plan.md",
+  },
+  {
+    name: "strict rls migration revokes browser access",
+    file: "strictRlsMigration",
+    text: "from anon, authenticated",
+  },
+  {
+    name: "strict rls migration keeps service role",
+    file: "strictRlsMigration",
+    text: "to service_role",
   },
   {
     name: "automation readiness status",
@@ -393,6 +410,11 @@ const requiredSnippets = [
     text: "## Meta OAuth Guide",
   },
   {
+    name: "operator pack rls section",
+    file: "main",
+    text: "## Supabase RLS Hardening",
+  },
+  {
     name: "meta setup checklist route",
     file: "main",
     text: "meta_setup_checklist",
@@ -496,6 +518,16 @@ const requiredSnippets = [
     name: "web security gate card",
     file: "web",
     text: "security-count",
+  },
+  {
+    name: "web rls plan action",
+    file: "web",
+    text: "download-rls-plan",
+  },
+  {
+    name: "web rls plan endpoint",
+    file: "web",
+    text: "/security/rls-hardening-plan.md",
   },
   {
     name: "web automation gate card",

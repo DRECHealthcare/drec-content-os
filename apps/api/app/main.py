@@ -459,6 +459,56 @@ async def security_status(_: None = Depends(require_access_token)):
     return security_status_payload()
 
 
+@app.get("/security/rls-hardening-plan.md")
+async def security_rls_hardening_plan(_: None = Depends(require_access_token)):
+    security = security_status_payload()
+    migration = "supabase/migrations/20260617040906_strict_server_only_rls.sql"
+    lines = [
+        "# DREC Content OS RLS Hardening Plan",
+        "",
+        "Use this only after the Fly API is using the Supabase service-role key. The browser must keep talking to the protected Fly API, not directly to Supabase.",
+        "",
+        "## Current Readiness",
+        "",
+        f"- Status: {security.get('overall_status')}",
+        f"- Supabase REST: {security.get('supabase_rest')}",
+        f"- Service-role key: {security.get('service_role_key')}",
+        f"- Direct browser Supabase: {security.get('direct_browser_supabase')}",
+        f"- Next step: {security.get('next_step')}",
+        "",
+        "## Migration",
+        "",
+        f"- File: `{migration}`",
+        "- Purpose: revoke anon/authenticated direct table access, keep service_role access for the server API, and replace broad REST policies with service-role policies.",
+        "- Storage: replaces broad `drec-media` storage access with service-role-only storage access.",
+        "",
+        "## Apply Gate",
+        "",
+        "- `GET /security/status` must return `ready_for_rls_hardening`.",
+        "- `DREC_ACCESS_TOKEN=\"...\" npm run smoke:live` must pass immediately before applying.",
+        "- Keep the Supabase SQL editor open so the migration can be reverted manually if needed.",
+        "",
+        "## Apply Steps",
+        "",
+        "1. Back up operations data with `Download Snapshot`, `Download Asset Review CSV`, `Download Review Queue CSV`, and `Download Learning Snapshot`.",
+        "2. Confirm Fly secrets include `SUPABASE_SERVICE_ROLE_KEY` and the API was redeployed after setting it.",
+        f"3. Apply `{migration}` in Supabase SQL Editor or with the Supabase CLI.",
+        "4. Run `DREC_ACCESS_TOKEN=\"...\" npm run smoke:live`.",
+        "5. If smoke fails with permission errors, restore the previous permissive policies temporarily and inspect grants/RLS before retrying.",
+        "",
+        "## Expected Result",
+        "",
+        "- Protected Fly API routes continue to work.",
+        "- Direct anon/authenticated Supabase Data API access to Content OS tables is blocked.",
+        "- Meta and browser workflows remain gated by the DREC API token until proper user login is added.",
+    ]
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-rls-hardening-plan.md"'},
+    )
+
+
 async def automation_status_payload():
     loop = await build_loop_status()
     workflow = build_workflow_guidance(loop)
@@ -2559,6 +2609,14 @@ async def operations_operator_pack(_: None = Depends(require_access_token)):
         "## Credential Setup",
         "",
         *setup_lines,
+        "",
+        "## Supabase RLS Hardening",
+        "",
+        f"- Status: {security.get('overall_status')}",
+        f"- Service-role key: {security.get('service_role_key')}",
+        "- Plan export: `/security/rls-hardening-plan.md`",
+        "- Migration: `supabase/migrations/20260617040906_strict_server_only_rls.sql`",
+        "- Rule: apply only after live smoke passes with `SUPABASE_SERVICE_ROLE_KEY` installed on Fly.",
         "",
         "Required secrets:",
         "",

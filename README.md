@@ -80,6 +80,7 @@ Stage 1 is now a working thin-core workflow:
 - See the GitHub Scheduler Setup steps in Meta Setup and the Operator Pack before turning on recurring dry-run checks
 - Generate a Meta OAuth guide with redirect URI, required scopes, setup steps, and a copyable Login dialog URL/template before real credentials are installed
 - See the Supabase service-role readiness gate before stricter RLS policies are applied
+- Download a protected RLS Hardening Plan and review the prepared strict server-only Supabase migration before applying it
 - Use safer session-only access-token storage by default, with explicit Remember and Clear controls for shared testing devices
 - Pull learning-informed topic recommendations into the next weekly plan
 - Load active Knowledge Base context into weekly planning and creative drafts so brand, voice, compliance, and medical dictionary entries are visible during review

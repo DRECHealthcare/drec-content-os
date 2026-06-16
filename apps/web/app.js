@@ -1775,6 +1775,16 @@ document.getElementById("download-manual-cycle-qa")?.addEventListener("click", a
   }
 });
 
+document.getElementById("download-rls-plan")?.addEventListener("click", async () => {
+  const message = document.getElementById("test-path-message");
+  try {
+    await downloadProtectedFile("/security/rls-hardening-plan.md", "drec-rls-hardening-plan.md", "text/markdown");
+    message.textContent = "RLS hardening plan downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download RLS hardening plan.";
+  }
+});
+
 document.getElementById("download-daily-ops")?.addEventListener("click", async () => {
   const message = document.getElementById("test-path-message");
   try {

@@ -131,6 +131,11 @@ The Dashboard launch readiness summary calls `/operations/launch-readiness` and
 separates what is usable now in manual mode from what remains blocked for real
 Meta automation.
 
+The Dashboard `Download RLS Plan` action calls
+`/security/rls-hardening-plan.md` and exports the strict Supabase RLS rollout
+steps. Apply `supabase/migrations/20260617040906_strict_server_only_rls.sql`
+only after Fly has `SUPABASE_SERVICE_ROLE_KEY` and live smoke passes.
+
 ## GitHub Dry-Run Scheduler
 
 The repository includes `.github/workflows/drec-scheduler-dry-run.yml`.
