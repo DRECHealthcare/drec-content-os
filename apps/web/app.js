@@ -120,6 +120,28 @@ async function fetchText(path) {
   return res.text();
 }
 
+async function downloadProtectedFile(path, filename, type) {
+  const token = accessToken();
+  const res = await fetch(`${apiBase}${path}`, {
+    headers: {
+      ...(token ? { "X-DREC-Access-Token": token } : {}),
+    },
+  });
+  if (res.status === 401) {
+    throw new Error("Access token required");
+  }
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(new Blob([blob], { type }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (char) => ({
     "&": "&amp;",
@@ -1379,6 +1401,16 @@ document.getElementById("copy-test-path")?.addEventListener("click", async () =>
     message.textContent = "Test path copied.";
   } catch {
     message.textContent = "Could not copy automatically. Use the visible checklist.";
+  }
+});
+
+document.getElementById("download-snapshot")?.addEventListener("click", async () => {
+  const message = document.getElementById("test-path-message");
+  try {
+    await downloadProtectedFile("/operations/snapshot.csv", "drec-content-os-snapshot.csv", "text/csv");
+    message.textContent = "Operations snapshot downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download snapshot.";
   }
 });
 

@@ -12,6 +12,7 @@ const requiredRoutes = [
   "GET /workflow/status",
   "GET /security/status",
   "GET /automation/status",
+  "GET /operations/snapshot.csv",
   "GET /weekly-report.md",
   "GET /meta/readiness",
   "GET /publish-queue/suggest-slot",
@@ -120,6 +121,11 @@ const requiredSnippets = [
     text: "manual_safe_auto_blocked",
   },
   {
+    name: "operations snapshot export",
+    file: "main",
+    text: "drec-content-os-snapshot.csv",
+  },
+  {
     name: "nightly metrics job lock",
     file: "main",
     text: "META_ENABLE_METRICS_JOB=true",
@@ -153,6 +159,11 @@ const requiredSnippets = [
     name: "web automation gate card",
     file: "web",
     text: "automation-count",
+  },
+  {
+    name: "web operations snapshot action",
+    file: "web",
+    text: "download-snapshot",
   },
   {
     name: "web queue reuse message",

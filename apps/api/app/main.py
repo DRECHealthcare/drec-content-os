@@ -1,5 +1,7 @@
 from contextlib import asynccontextmanager
+import csv
 from datetime import datetime, timedelta, timezone
+from io import StringIO
 import json
 import re
 from uuid import UUID, uuid4
@@ -331,6 +333,121 @@ async def automation_status_payload():
 @app.get("/automation/status")
 async def automation_status(_: None = Depends(require_access_token)):
     return await automation_status_payload()
+
+
+def snapshot_row(record_type, item_id="", status="", channel="", fmt="", title="", created_at="", detail=""):
+    return {
+        "record_type": record_type,
+        "id": item_id or "",
+        "status": status or "",
+        "channel": channel or "",
+        "format": fmt or "",
+        "title": title or "",
+        "created_at": str(created_at or ""),
+        "detail": detail or "",
+    }
+
+
+async def snapshot_select(table: str, sql: str, rest_params: dict):
+    rows = await fetch_rows(sql)
+    if not rows and supabase_rest.configured():
+        rows = await supabase_rest.select(table, rest_params)
+    return rows
+
+
+@app.get("/operations/snapshot.csv")
+async def operations_snapshot_csv(_: None = Depends(require_access_token)):
+    automation = await automation_status_payload()
+    briefs = await snapshot_select(
+        "content_briefs",
+        """
+        select id, topic, channel, format, status, funnel_stage, created_at
+        from content_briefs
+        order by created_at desc
+        limit 200
+        """,
+        {"select": "id,topic,channel,format,status,funnel_stage,created_at", "order": "created_at.desc", "limit": "200"},
+    )
+    assets = await snapshot_select(
+        "assets",
+        """
+        select id, channel, format, compliance_status, review_status, caption, created_at
+        from assets
+        order by created_at desc
+        limit 200
+        """,
+        {"select": "id,channel,format,compliance_status,review_status,caption,created_at", "order": "created_at.desc", "limit": "200"},
+    )
+    queue = await snapshot_select(
+        "publish_queue",
+        """
+        select id, channel, format, status, compliance_status, planned_slot, external_post_id, caption, created_at
+        from publish_queue
+        order by created_at desc
+        limit 200
+        """,
+        {"select": "id,channel,format,status,compliance_status,planned_slot,external_post_id,caption,created_at", "order": "created_at.desc", "limit": "200"},
+    )
+    media = await snapshot_select(
+        "media_assets",
+        """
+        select id, title, media_type, rights_status, approval_status, created_at
+        from media_assets
+        order by created_at desc
+        limit 200
+        """,
+        {"select": "id,title,media_type,rights_status,approval_status,created_at", "order": "created_at.desc", "limit": "200"},
+    )
+    outcomes = await snapshot_select(
+        "outcomes",
+        """
+        select id, post_id, channel, format, metric_window, score, saves, shares, created_at
+        from outcomes
+        order by created_at desc
+        limit 200
+        """,
+        {"select": "id,post_id,channel,format,metric_window,score,saves,shares,created_at", "order": "created_at.desc", "limit": "200"},
+    )
+    rows = [
+        snapshot_row(
+            "automation_gate",
+            item.get("key"),
+            item.get("status"),
+            title=item.get("label"),
+            detail=item.get("detail"),
+        )
+        for item in automation.get("gates", [])
+    ]
+    rows.extend(
+        snapshot_row("brief", item.get("id"), item.get("status"), item.get("channel"), item.get("format"), item.get("topic"), item.get("created_at"), item.get("funnel_stage"))
+        for item in briefs
+    )
+    rows.extend(
+        snapshot_row("asset", item.get("id"), f"{item.get('review_status')}/{item.get('compliance_status')}", item.get("channel"), item.get("format"), (item.get("caption") or "")[:80], item.get("created_at"))
+        for item in assets
+    )
+    rows.extend(
+        snapshot_row("queue", item.get("id"), f"{item.get('status')}/{item.get('compliance_status')}", item.get("channel"), item.get("format"), (item.get("caption") or "")[:80], item.get("created_at"), f"planned={item.get('planned_slot') or ''} external={item.get('external_post_id') or ''}")
+        for item in queue
+    )
+    rows.extend(
+        snapshot_row("media", item.get("id"), item.get("approval_status"), item.get("rights_status"), item.get("media_type"), item.get("title"), item.get("created_at"))
+        for item in media
+    )
+    rows.extend(
+        snapshot_row("outcome", item.get("id"), f"score={item.get('score')}", item.get("channel"), item.get("format"), item.get("post_id"), item.get("created_at"), f"{item.get('metric_window') or ''} saves={item.get('saves') or 0} shares={item.get('shares') or 0}")
+        for item in outcomes
+    )
+    output = StringIO()
+    fieldnames = ["record_type", "id", "status", "channel", "format", "title", "created_at", "detail"]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    writer.writerows(rows)
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-content-os-snapshot.csv"'},
+    )
 
 
 @app.get("/kb")
