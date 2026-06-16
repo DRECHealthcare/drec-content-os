@@ -57,6 +57,16 @@ The current web shell is static. The next pass will wire its buttons to the API.
 
 ## Live Smoke Check
 
+Before deploy, run the local contract check:
+
+```bash
+npm run smoke:contract
+```
+
+This confirms key API routes, workflow safety gates, status schema assumptions,
+and web/API contract strings are still present without importing Python
+dependencies or touching live data.
+
 After deploying Fly.io or Vercel, run a non-mutating live check:
 
 ```bash

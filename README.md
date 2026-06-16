@@ -87,5 +87,6 @@ Stage 1 is now a working thin-core workflow:
 - Build a copy-ready weekly operating report from briefs, queue, assets, feedback, outcomes, and next-topic recommendations
 - Include workflow readiness and queue-ready asset counts in the weekly operating report
 - Run a non-mutating live smoke check after deploys to confirm the API, workflow, report, Meta readiness, and web shell are healthy
+- Run a local API contract smoke check before deploys to catch missing routes or broken workflow gates
 
 Meta auto-publishing and nightly Meta metrics ingestion are intentionally held until the Facebook Page and Instagram permissions are connected. See `NEXT.md` for the active build path.
