@@ -1067,6 +1067,9 @@ const checks = [
       const text = await res.text();
       return text.includes("# DREC Content OS Weekly Cycle Pack")
         && text.includes("## 1. Planning Inputs")
+        && text.includes("## Current-Cycle Handoff Links")
+        && text.includes("Doctor reply inbox")
+        && text.includes("Production reply inbox")
         && text.includes("## 3. Schedule And Handoff")
         && text.includes("## 4. Learning Closeout")
         && text.includes("## Weekly Closeout Rule");

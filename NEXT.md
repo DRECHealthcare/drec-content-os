@@ -112,6 +112,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added "Can I Use It Now" decision to Launch Evidence and Operator Pack exports
 - [x] Added Daily Ops Checklist export for repeat manual operating days
 - [x] Added Weekly Cycle Pack export for planning, asset review, scheduling, handoff, learning, and closeout
+- [x] Added Weekly Cycle Pack handoff links for doctor and production reply inboxes
 - [x] Added First Test Kit export for safe first manual workflow testing
 - [x] Added First Test Run Tracker export for live manual test evidence capture
 - [x] Added Manual Cycle QA export for post-test blockers, risk, handoff, and learning review

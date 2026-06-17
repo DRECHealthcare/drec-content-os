@@ -1203,6 +1203,21 @@ const requiredSnippets = [
     text: "## Weekly Closeout Rule",
   },
   {
+    name: "weekly cycle pack handoff links",
+    file: "main",
+    text: "## Current-Cycle Handoff Links",
+  },
+  {
+    name: "weekly cycle pack doctor reply inbox link",
+    file: "main",
+    text: "- Doctor reply inbox: `/operations/doctor-reply-inbox-pack.md`",
+  },
+  {
+    name: "weekly cycle pack production reply inbox link",
+    file: "main",
+    text: "- Production reply inbox: `/operations/production-reply-inbox-pack.md`",
+  },
+  {
     name: "daily ops blocked handoff fallback",
     file: "main",
     text: 'handoff.get("blocked_items") or handoff.get("needs_review")',
