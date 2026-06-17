@@ -3162,6 +3162,34 @@ async function uploadAssetMediaAttachments({ dryRun }) {
   }
 }
 
+async function importProductionReplies({ dryRun }) {
+  const message = document.getElementById("media-message");
+  const textInput = document.getElementById("production-reply-text");
+  const producerInput = document.getElementById("production-reply-producer");
+  const replyText = textInput?.value?.trim() || "";
+  if (!replyText) {
+    message.textContent = "Paste the production reply text first.";
+    return;
+  }
+  message.textContent = dryRun ? "Previewing production reply..." : "Importing production reply...";
+  try {
+    const data = await fetchJson("/operations/import-production-replies", {
+      method: "POST",
+      body: JSON.stringify({
+        reply_text: replyText,
+        dry_run: dryRun,
+        producer_name: producerInput?.value?.trim() || "",
+      }),
+    });
+    if (!dryRun) textInput.value = "";
+    message.textContent = data.message || (dryRun ? "Production reply previewed." : "Production reply imported.");
+    renderAssetMediaAttachmentPreview(data);
+    if (!dryRun) await Promise.all([loadAssets(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadPreScheduleGate(), loadLoopStatus()]);
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : dryRun ? "Could not preview production reply." : "Could not import production reply.";
+  }
+}
+
 async function uploadProductionDesignWorksheet({ dryRun }) {
   const message = document.getElementById("media-message");
   const fileInput = document.getElementById("production-design-worksheet-file");
@@ -3207,6 +3235,14 @@ document.getElementById("preview-asset-media-attachments")?.addEventListener("cl
 
 document.getElementById("import-asset-media-attachments")?.addEventListener("click", async () => {
   await uploadAssetMediaAttachments({ dryRun: false });
+});
+
+document.getElementById("preview-production-replies")?.addEventListener("click", async () => {
+  await importProductionReplies({ dryRun: true });
+});
+
+document.getElementById("import-production-replies")?.addEventListener("click", async () => {
+  await importProductionReplies({ dryRun: false });
 });
 
 document.getElementById("preview-production-design-worksheet")?.addEventListener("click", async () => {

@@ -34,6 +34,9 @@ const checks = [
         && text.includes("doctor-reply-text")
         && text.includes("preview-doctor-replies")
         && text.includes("import-doctor-replies")
+        && text.includes("production-reply-text")
+        && text.includes("preview-production-replies")
+        && text.includes("import-production-replies")
         && text.includes("download-doctor-decision-worksheet")
         && text.includes("download-asset-media-attachments")
         && text.includes("download-production-design-worksheet")
@@ -56,6 +59,7 @@ const checks = [
       return text.includes("/operations/doctor-decision-worksheet.csv")
         && text.includes("/operations/doctor-approval-request.md")
         && text.includes("/operations/import-doctor-replies")
+        && text.includes("/operations/import-production-replies")
         && text.includes("/operations/import-asset-media-attachments")
         && text.includes("/operations/production-design-worksheet.csv")
         && text.includes("/operations/import-production-design-worksheet")
@@ -663,6 +667,31 @@ const checks = [
     validate: async (res) => {
       const data = await res.json();
       return data.dry_run === true && data.skipped_count === 1 && data.skipped?.[0]?.reason === "Asset not found.";
+    },
+  },
+  {
+    name: "Production reply import dry run",
+    url: `${apiBase}/operations/import-production-replies`,
+    method: "POST",
+    auth: true,
+    headers: { "Content-Type": "application/json" },
+    body: () => JSON.stringify({
+      dry_run: true,
+      producer_name: "Smoke Test",
+      reply_text: [
+        "Asset ID: 00000000-0000-0000-0000-000000000000",
+        "Media URLs: https://example.com/design.png",
+        "Visual QA: passed",
+        "Rights: owned",
+        "Notes: Dry-run only",
+      ].join("\n"),
+    }),
+    validate: async (res) => {
+      const data = await res.json();
+      return data.dry_run === true
+        && data.skipped_count === 1
+        && data.skipped?.[0]?.reason === "Asset not found."
+        && data.safety?.some((item) => item.includes("does not approve"));
     },
   },
   {

@@ -60,6 +60,12 @@ class DoctorReplyImportIn(BaseModel):
     reviewer_name: Optional[str] = None
 
 
+class ProductionReplyImportIn(BaseModel):
+    reply_text: str
+    dry_run: bool = True
+    producer_name: Optional[str] = None
+
+
 class AssetRewriteIn(BaseModel):
     caption: str
     reason: Optional[str] = None

@@ -74,6 +74,7 @@ Stage 1 is now a working thin-core workflow:
 - Use the Post-Approval Production Pack to brief design, media, rights checks, and visual QA after human approval without auto-queueing, scheduling, publishing, or sending Meta requests
 - Download a Production Design Worksheet CSV with canvas specs, safe headlines, image prompts, visual QA, rights notes, and media URL return fields for designer handoff
 - Preview and import completed Production Design Worksheet CSV files so approved media/design URLs can flow back into assets without changing approval, queueing, scheduling, or publishing state
+- Paste production reply text back into Assets to preview/import media/design URLs without converting designer chat replies into CSV
 - Use the Pre-Schedule Gate in Review/Scheduler to check human queue approval, final caption, approved media/design, visual QA, and schedule readiness before choosing publishing slots
 - Attach approved design/media URLs directly to draft assets so production work can move into queue and schedule readiness without changing approval or publishing state
 - Download and import the Asset Media Attachment CSV to attach design/media URLs in batches while preserving human approval, queueing, scheduling, and publishing gates

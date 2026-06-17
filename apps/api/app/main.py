@@ -47,6 +47,7 @@ from .models import (
     MetricIn,
     MetricRollupIn,
     OutcomeIn,
+    ProductionReplyImportIn,
     PublishQueueIn,
     PublishQueueStatusIn,
     WeeklyPlanIn,
@@ -5927,6 +5928,65 @@ def parse_media_url_cell(value: str | None):
     return parts
 
 
+def parse_production_reply_blocks(reply_text: str):
+    blocks = []
+    current = {}
+    note_lines = []
+    url_lines = []
+
+    def flush():
+        if not current and not note_lines and not url_lines:
+            return
+        item = dict(current)
+        if url_lines:
+            item["new_media_urls"] = "\n".join(url_lines).strip()
+        if note_lines:
+            item["production_notes"] = "\n".join(note_lines).strip()
+        blocks.append(item)
+
+    for raw_line in (reply_text or "").splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        match = re.match(r"^(asset\s*id|asset_id|id)\s*[:：]\s*(.+)$", line, flags=re.IGNORECASE)
+        if match:
+            if current:
+                flush()
+                current = {}
+                note_lines = []
+                url_lines = []
+            current["asset_id"] = match.group(2).strip().strip("`")
+            continue
+        match = re.match(r"^(media\s*urls?|urls?|image\s*urls?|design\s*urls?)\s*[:：]\s*(.+)$", line, flags=re.IGNORECASE)
+        if match:
+            url_lines.append(match.group(2).strip())
+            continue
+        match = re.match(r"^(visual\s*qa|qa)\s*[:：]\s*(.+)$", line, flags=re.IGNORECASE)
+        if match:
+            current["visual_qa_status"] = match.group(2).strip()
+            continue
+        match = re.match(r"^(rights?|rights\s*note)\s*[:：]\s*(.+)$", line, flags=re.IGNORECASE)
+        if match:
+            current["rights_note"] = match.group(2).strip()
+            continue
+        match = re.match(r"^(producer|designer)\s*[:：]\s*(.+)$", line, flags=re.IGNORECASE)
+        if match:
+            current["producer_name"] = match.group(2).strip()
+            continue
+        match = re.match(r"^(notes?|production\s*notes?)\s*[:：]\s*(.*)$", line, flags=re.IGNORECASE)
+        if match:
+            note = match.group(2).strip()
+            if note:
+                note_lines.append(note)
+            continue
+        if line.startswith("http"):
+            url_lines.append(line)
+        elif current:
+            note_lines.append(line)
+    flush()
+    return blocks
+
+
 async def decode_asset_media_attachments_csv(file: UploadFile):
     raw = await file.read()
     if len(raw) > 512_000:
@@ -6028,6 +6088,102 @@ async def import_asset_media_attachments(
         "safety": [
             "Importing media/design URLs does not approve assets.",
             "Importing media/design URLs does not queue, schedule, publish, or send Meta requests.",
+            "Human safety approval and pre-schedule checks still apply.",
+        ],
+    }
+
+
+@app.post("/operations/import-production-replies")
+async def import_production_replies(
+    payload: ProductionReplyImportIn,
+    session: dict = Depends(require_review_access),
+):
+    reply_text = (payload.reply_text or "").strip()
+    if not reply_text:
+        raise HTTPException(status_code=400, detail="Production reply text is required.")
+    if len(reply_text.encode("utf-8")) > 128_000:
+        raise HTTPException(status_code=413, detail="Production reply text is too large. Keep imports below 128 KB.")
+    rows = parse_production_reply_blocks(reply_text)
+    planned = []
+    imported = []
+    skipped = []
+    if not rows:
+        skipped.append({"row": 1, "reason": "No production reply blocks found. Use Asset ID, Media URLs, Visual QA, Rights, and Notes lines."})
+    fallback_producer = (payload.producer_name or "").strip()
+    for index, row in enumerate(rows, start=1):
+        asset_id = (row.get("asset_id") or "").strip()
+        if not asset_id:
+            skipped.append({"row": index, "reason": "Missing Asset ID."})
+            continue
+        media_urls = parse_media_url_cell(row.get("new_media_urls"))
+        if not media_urls:
+            skipped.append({"row": index, "asset_id": asset_id, "reason": "No media URLs provided."})
+            continue
+        invalid_urls = [url for url in media_urls if not str(url).startswith("http")]
+        if invalid_urls:
+            skipped.append({"row": index, "asset_id": asset_id, "reason": "Media URLs must start with http or https.", "invalid_urls": invalid_urls})
+            continue
+        visual_qa_status = normalize_visual_qa_status(row.get("visual_qa_status"))
+        if visual_qa_status == "invalid":
+            skipped.append({"row": index, "asset_id": asset_id, "reason": "Visual QA must be pending, passed, or needs_work."})
+            continue
+        existing = await asset_by_id(asset_id)
+        if existing is None:
+            skipped.append({"row": index, "asset_id": asset_id, "reason": "Asset not found."})
+            continue
+        producer_name = (row.get("producer_name") or fallback_producer).strip()
+        rights_note = (row.get("rights_note") or "").strip()
+        notes = (row.get("production_notes") or "").strip()
+        reason_parts = ["Production reply text import."]
+        if producer_name:
+            reason_parts.append(f"Producer: {producer_name}.")
+        if rights_note:
+            reason_parts.append(f"Rights: {rights_note}.")
+        if notes:
+            reason_parts.append(f"Notes: {notes}")
+        reason = " ".join(reason_parts)
+        plan = {
+            "row": index,
+            "asset_id": asset_id,
+            "topic": (existing.get("metadata") or {}).get("topic") or "",
+            "current_media_count": len([url for url in existing.get("media_urls") or [] if url]),
+            "new_media_count": len(media_urls),
+            "visual_qa_status": visual_qa_status,
+            "producer_name": producer_name,
+            "rights_note": rights_note,
+            "production_notes": notes,
+        }
+        if payload.dry_run:
+            planned.append(plan)
+            continue
+        result = await update_asset_media(
+            asset_id,
+            AssetMediaIn(
+                media_urls=media_urls,
+                reason=reason,
+                visual_qa_status=visual_qa_status,
+                rights_note=rights_note or None,
+                sync_draft_queue=True,
+            ),
+            session,
+        )
+        imported.append({**plan, "synced_queue_count": result.get("synced_queue_count", 0)})
+    return {
+        "dry_run": payload.dry_run,
+        "planned_count": len(planned),
+        "imported_count": len(imported),
+        "skipped_count": len(skipped),
+        "planned": planned,
+        "imported": imported,
+        "skipped": skipped,
+        "message": (
+            f"Previewed {len(planned)} production reply media attachment(s), {len(skipped)} skipped."
+            if payload.dry_run
+            else f"Imported {len(imported)} production reply media attachment(s), {len(skipped)} skipped."
+        ),
+        "safety": [
+            "Production reply import attaches media/design URLs only.",
+            "It does not approve assets, queue, schedule, publish, or send Meta requests.",
             "Human safety approval and pre-schedule checks still apply.",
         ],
     }

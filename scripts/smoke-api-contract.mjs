@@ -64,6 +64,7 @@ const requiredRoutes = [
   "GET /operations/today-runbook.md",
   "GET /operations/asset-media-attachments.csv",
   "POST /operations/import-asset-media-attachments",
+  "POST /operations/import-production-replies",
   "POST /operations/import-production-design-worksheet",
   "GET /operations/asset-review-decisions.csv",
   "POST /operations/import-asset-review-decisions",
@@ -827,6 +828,21 @@ const requiredSnippets = [
     name: "asset media attachment import route",
     file: "main",
     text: "import_asset_media_attachments",
+  },
+  {
+    name: "production reply import route",
+    file: "main",
+    text: "import_production_replies",
+  },
+  {
+    name: "production reply parser",
+    file: "main",
+    text: "parse_production_reply_blocks",
+  },
+  {
+    name: "production reply import safety",
+    file: "main",
+    text: "It does not approve assets, queue, schedule, publish, or send Meta requests.",
   },
   {
     name: "production design worksheet import route",
@@ -1932,6 +1948,26 @@ const requiredSnippets = [
     name: "web asset media attachments preview action",
     file: "web",
     text: "preview-asset-media-attachments",
+  },
+  {
+    name: "web production reply text input",
+    file: "web",
+    text: "production-reply-text",
+  },
+  {
+    name: "web production reply preview action",
+    file: "web",
+    text: "preview-production-replies",
+  },
+  {
+    name: "web production reply import action",
+    file: "web",
+    text: "import-production-replies",
+  },
+  {
+    name: "web production reply import endpoint",
+    file: "web",
+    text: "/operations/import-production-replies",
   },
   {
     name: "web asset media attachments import action",
