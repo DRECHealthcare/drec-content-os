@@ -3087,6 +3087,16 @@ document.getElementById("download-doctor-review-polish")?.addEventListener("clic
   }
 });
 
+document.getElementById("download-doctor-reply-inbox")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/doctor-reply-inbox-pack.md", "drec-doctor-reply-inbox-pack.md", "text/markdown");
+    message.textContent = "Doctor reply inbox pack downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download doctor reply inbox pack.";
+  }
+});
+
 document.getElementById("download-doctor-decision-worksheet")?.addEventListener("click", async () => {
   const message = document.getElementById("media-message");
   try {

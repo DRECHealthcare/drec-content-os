@@ -5126,6 +5126,44 @@ async def doctor_review_polish_pack_payload():
     }
 
 
+async def doctor_reply_inbox_pack_payload():
+    polish = await doctor_review_polish_pack_payload()
+    items = polish.get("polish_items") or []
+    reply_templates = [item.get("doctor_reply_template") or "" for item in items if item.get("doctor_reply_template")]
+    return {
+        "phase": "doctor_reply_inbox_pack",
+        "mode": "preview_before_import",
+        "ready_for_review": polish.get("ready_for_review", 0),
+        "reply_block_count": len(reply_templates),
+        "reply_paste_template": "\n\n".join(reply_templates),
+        "reply_items": [
+            {
+                "asset_id": item.get("asset_id"),
+                "topic": item.get("topic"),
+                "channel": item.get("channel"),
+                "format": item.get("format"),
+                "reply_template": item.get("doctor_reply_template") or "",
+                "safe_approval_rule": "Approve only with Decision: approve, Safety: clear, and doctor-confirmed wording.",
+                "polished_copy_rule": "Use polished copy only when the doctor explicitly says Use polished copy: yes.",
+            }
+            for item in items
+        ],
+        "preview_steps": [
+            "Paste the doctor reply blocks into Doctor Reply Text.",
+            "Use Preview Doctor Reply first and confirm planned changes.",
+            "Import only rows that show Safety clear and approved exactly as intended.",
+            "After import, use the production pack for media/design; do not queue or schedule until those gates pass.",
+        ],
+        "safety": [
+            "This pack is read-only and does not approve, edit, queue, schedule, publish, or send Meta requests.",
+            "Preview is required before import.",
+            "Polished copy adoption requires explicit doctor approval, Safety: clear, and Use polished copy: yes.",
+            "Needs edits or blocked replies should stay out of production until rewritten and reviewed again.",
+        ],
+        "next_step": "Send the templates to the doctor or paste returned doctor blocks into Doctor Reply Text, preview, then import only approved clear replies.",
+    }
+
+
 @app.get("/operations/doctor-review-polish-pack")
 async def operations_doctor_review_polish_pack(_: None = Depends(require_access_token)):
     return await doctor_review_polish_pack_payload()
@@ -5199,6 +5237,74 @@ async def operations_doctor_review_polish_pack_markdown(_: None = Depends(requir
         "\n".join(lines),
         media_type="text/markdown",
         headers={"Content-Disposition": 'attachment; filename="drec-doctor-review-polish-pack.md"'},
+    )
+
+
+@app.get("/operations/doctor-reply-inbox-pack")
+async def operations_doctor_reply_inbox_pack(_: None = Depends(require_access_token)):
+    return await doctor_reply_inbox_pack_payload()
+
+
+@app.get("/operations/doctor-reply-inbox-pack.md")
+async def operations_doctor_reply_inbox_pack_markdown(_: None = Depends(require_access_token)):
+    payload = await doctor_reply_inbox_pack_payload()
+    generated_at = datetime.now(timezone.utc).isoformat()
+    lines = [
+        "# DREC Content OS Doctor Reply Inbox Pack",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this pack to collect doctor decisions and paste them back into the Doctor Reply Text preview flow. It is read-only and keeps import, production, scheduling, publishing, and Meta automation separate.",
+        "",
+        "## Summary",
+        "",
+        f"- Ready for review: {payload.get('ready_for_review')}",
+        f"- Reply blocks: {payload.get('reply_block_count')}",
+        f"- Mode: {payload.get('mode')}",
+        "",
+        "## Preview Steps",
+        "",
+        *markdown_list(payload.get("preview_steps"), "- Preview before import."),
+        "",
+        "## Safety Rules",
+        "",
+        *markdown_list(payload.get("safety"), "- Read-only pack."),
+        "",
+        "## Copy/Paste Reply Template",
+        "",
+        "```",
+        payload.get("reply_paste_template") or "No reply blocks are ready yet.",
+        "```",
+        "",
+        "## Reply Items",
+        "",
+    ]
+    items = payload.get("reply_items") or []
+    if not items:
+        lines.extend(["- No doctor reply blocks are ready yet.", ""])
+    for index, item in enumerate(items, start=1):
+        lines.extend(
+            [
+                f"### {index}. {item.get('topic') or 'Untitled asset'}",
+                "",
+                f"- Asset ID: `{item.get('asset_id')}`",
+                f"- Channel / format: {item.get('channel')} / {item.get('format')}",
+                f"- Approval rule: {item.get('safe_approval_rule')}",
+                f"- Polished copy rule: {item.get('polished_copy_rule')}",
+                "",
+                "Reply template:",
+                "",
+                "```",
+                item.get("reply_template") or "",
+                "```",
+                "",
+            ]
+        )
+    lines.extend(["## Next Step", "", f"- {payload.get('next_step')}", ""])
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-doctor-reply-inbox-pack.md"'},
     )
 
 

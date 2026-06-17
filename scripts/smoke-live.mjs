@@ -34,6 +34,7 @@ const checks = [
         && text.includes("download-first-cycle-sprint-tracker")
         && text.includes("first-cycle-sprint")
         && text.includes("download-doctor-review-polish")
+        && text.includes("download-doctor-reply-inbox")
         && text.includes("doctor-review-polish")
         && text.includes("download-doctor-approval-request")
         && text.includes("doctor-reply-text")
@@ -67,6 +68,7 @@ const checks = [
       return text.includes("/operations/doctor-decision-worksheet.csv")
         && text.includes("/operations/doctor-review-polish-pack")
         && text.includes("/operations/doctor-review-polish-pack.md")
+        && text.includes("/operations/doctor-reply-inbox-pack.md")
         && text.includes("renderDoctorReviewPolishPack")
         && text.includes("data-copy-doctor-polish")
         && text.includes("data-copy-doctor-polish-all")
@@ -525,6 +527,31 @@ const checks = [
         && text.includes("## Polished Review Items")
         && text.includes("Suggested polished copy")
         && text.includes("## Safety Rules");
+    },
+  },
+  {
+    name: "Doctor reply inbox pack",
+    url: `${apiBase}/operations/doctor-reply-inbox-pack`,
+    auth: true,
+    validate: async (res) => {
+      const data = await res.json();
+      return data.phase === "doctor_reply_inbox_pack"
+        && data.mode === "preview_before_import"
+        && Array.isArray(data.reply_items)
+        && Array.isArray(data.safety)
+        && data.safety.some((rule) => rule.includes("Preview is required"));
+    },
+  },
+  {
+    name: "Doctor reply inbox markdown",
+    url: `${apiBase}/operations/doctor-reply-inbox-pack.md`,
+    auth: true,
+    validate: async (res) => {
+      const text = await res.text();
+      return text.includes("# DREC Content OS Doctor Reply Inbox Pack")
+        && text.includes("## Copy/Paste Reply Template")
+        && text.includes("Preview Steps")
+        && text.includes("read-only");
     },
   },
   {

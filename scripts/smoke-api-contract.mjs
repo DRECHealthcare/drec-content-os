@@ -53,6 +53,8 @@ const requiredRoutes = [
   "GET /operations/doctor-approval-pack.md",
   "GET /operations/doctor-review-polish-pack",
   "GET /operations/doctor-review-polish-pack.md",
+  "GET /operations/doctor-reply-inbox-pack",
+  "GET /operations/doctor-reply-inbox-pack.md",
   "GET /operations/doctor-decision-worksheet.csv",
   "POST /operations/import-doctor-replies",
   "GET /operations/approval-cockpit",
@@ -887,6 +889,21 @@ const requiredSnippets = [
     name: "doctor review polish pack safety",
     file: "main",
     text: "This pack is read-only and suggested-copy only.",
+  },
+  {
+    name: "doctor reply inbox pack route",
+    file: "main",
+    text: "doctor_reply_inbox_pack_payload",
+  },
+  {
+    name: "doctor reply inbox pack export",
+    file: "main",
+    text: "drec-doctor-reply-inbox-pack.md",
+  },
+  {
+    name: "doctor reply inbox pack safety",
+    file: "main",
+    text: "Preview is required before import.",
   },
   {
     name: "first cycle sprint pack export",
@@ -2047,6 +2064,16 @@ const requiredSnippets = [
     name: "web doctor review polish action",
     file: "web",
     text: "download-doctor-review-polish",
+  },
+  {
+    name: "web doctor reply inbox action",
+    file: "web",
+    text: "download-doctor-reply-inbox",
+  },
+  {
+    name: "web doctor reply inbox endpoint",
+    file: "web",
+    text: "/operations/doctor-reply-inbox-pack.md",
   },
   {
     name: "web doctor review polish board",
