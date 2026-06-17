@@ -1772,6 +1772,21 @@ function doctorPolishText(item) {
   ].join("\n");
 }
 
+function doctorPolishBatchText(items) {
+  return [
+    "DREC Doctor Polish Review Batch",
+    `Items: ${items.length}`,
+    "Please review the polished Mandarin copy below. Approve only if the medical meaning is safe, educational, non-diagnostic, and non-guaranteed.",
+    "If approved, reply with Decision: approve, Safety: clear, and Use polished copy: yes for each Asset ID.",
+    "This copied text does not approve, attach media, queue, schedule, publish, or send Meta requests.",
+    "",
+    ...items.map((item, index) => [
+      `--- ${index + 1} / ${items.length} ---`,
+      doctorPolishText(item),
+    ].join("\n")),
+  ].join("\n\n");
+}
+
 function renderDoctorReviewPolishPack(data) {
   const container = document.getElementById("doctor-review-polish");
   if (!container) return;
@@ -1801,6 +1816,9 @@ function renderDoctorReviewPolishPack(data) {
     <article class="learning-card wide-learning">
       <h3>Review-Ready Mandarin</h3>
       <p>${escapeHtml(data.next_step || "Copy one polished item into the doctor review request.")}</p>
+      <div class="learning-actions sprint-bulk-actions">
+        <button type="button" data-copy-doctor-polish-all>Copy All Polish</button>
+      </div>
       <div class="sprint-board">${itemCards || '<p class="status-note">No polish suggestions are ready yet.</p>'}</div>
     </article>
   `;
@@ -4049,6 +4067,28 @@ document.addEventListener("click", async (event) => {
     } finally {
       productionDesignButton.disabled = false;
       productionDesignButton.textContent = original;
+    }
+    return;
+  }
+
+  const polishAllButton = event.target.closest("[data-copy-doctor-polish-all]");
+  if (polishAllButton) {
+    const message = document.getElementById("media-message") || document.getElementById("asset-message");
+    if (!latestDoctorPolishItems.length) {
+      if (message) message.textContent = "No doctor polish items to copy yet.";
+      return;
+    }
+    const original = polishAllButton.textContent;
+    polishAllButton.disabled = true;
+    polishAllButton.textContent = "Copying";
+    try {
+      await navigator.clipboard.writeText(doctorPolishBatchText(latestDoctorPolishItems));
+      if (message) message.textContent = "All doctor polish review text copied.";
+    } catch {
+      if (message) message.textContent = "Browser blocked clipboard copy. Download the polish pack instead.";
+    } finally {
+      polishAllButton.disabled = false;
+      polishAllButton.textContent = original;
     }
     return;
   }

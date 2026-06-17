@@ -68,6 +68,8 @@ const checks = [
         && text.includes("/operations/doctor-review-polish-pack.md")
         && text.includes("renderDoctorReviewPolishPack")
         && text.includes("data-copy-doctor-polish")
+        && text.includes("data-copy-doctor-polish-all")
+        && text.includes("doctorPolishBatchText")
         && text.includes("caption_update")
         && text.includes("/operations/first-cycle-sprint-pack")
         && text.includes("/operations/first-cycle-sprint-pack.md")

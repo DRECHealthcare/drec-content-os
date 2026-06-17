@@ -2022,6 +2022,21 @@ const requiredSnippets = [
     text: "data-copy-doctor-polish",
   },
   {
+    name: "web doctor review polish batch copy",
+    file: "web",
+    text: "data-copy-doctor-polish-all",
+  },
+  {
+    name: "web doctor review polish batch helper",
+    file: "web",
+    text: "doctorPolishBatchText",
+  },
+  {
+    name: "web doctor review polish batch safety",
+    file: "web",
+    text: "This copied text does not approve, attach media, queue, schedule, publish, or send Meta requests.",
+  },
+  {
     name: "web first cycle sprint tracker action",
     file: "web",
     text: "download-first-cycle-sprint-tracker",
