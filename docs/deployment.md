@@ -191,6 +191,11 @@ The Scheduler `Download Schedule CSV` action calls
 `/publish-queue/schedule.csv` and exports the full queue for spreadsheet review,
 including planned slots, blockers, captions, media links, and handoff readiness.
 
+The Scheduler `Download Schedule Audit` action calls
+`/publish-queue/schedule-audit.md` and exports a read-only conflict report for
+duplicate planned slots, near same-channel timing conflicts, missing planned
+times, and overdue scheduled items before handoff or Meta dry runs.
+
 The Dashboard launch readiness summary calls `/operations/launch-readiness` and
 separates what is usable now in manual mode from what remains blocked for real
 Meta automation.

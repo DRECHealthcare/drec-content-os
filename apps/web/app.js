@@ -2662,6 +2662,17 @@ document.getElementById("download-schedule-csv")?.addEventListener("click", asyn
   }
 });
 
+document.getElementById("download-schedule-audit")?.addEventListener("click", async () => {
+  const message = document.getElementById("queue-message");
+  message.textContent = "Preparing schedule audit...";
+  try {
+    await downloadProtectedFile("/publish-queue/schedule-audit.md", "drec-schedule-audit.md", "text/markdown");
+    message.textContent = "Schedule audit downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download schedule audit.";
+  }
+});
+
 document.getElementById("dry-run-facebook").addEventListener("click", async () => {
   const message = document.getElementById("queue-message");
   message.textContent = "Checking Facebook worker...";

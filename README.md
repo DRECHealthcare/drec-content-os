@@ -131,6 +131,7 @@ Stage 1 is now a working thin-core workflow:
 - Keep review approval separate from scheduling so approved content still needs a real planned time before handoff or Meta workers can use it
 - Suggest the next open MYT publishing slot for compliance-clear queue items and schedule them without guessing
 - Filter the scheduler by status/channel and scan the next 7 days of planned posts
+- Download a Schedule Audit before handoff or Meta dry runs to catch duplicate planned slots, near-channel conflicts, missing times, and overdue scheduled items
 - Download the full publishing schedule as CSV for spreadsheet review, blockers, captions, media links, and handoff readiness
 - Download scheduled posts as a calendar file for manual publishing reminders
 - Download a publishing run sheet for the next manual posting shift, including ready items, blockers, captions, media, and record-published reminders

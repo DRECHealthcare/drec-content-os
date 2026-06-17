@@ -6192,6 +6192,171 @@ async def publish_queue_suggest_slot(
     return await suggest_publish_slot(clean_channel, ignore_item_id=item_id)
 
 
+def schedule_audit_item(severity, title, detail, action, items):
+    return {
+        "severity": severity,
+        "title": title,
+        "detail": detail,
+        "action": action,
+        "item_ids": [str(item.get("id") or "") for item in items],
+        "channels": sorted({str(item.get("channel") or "") for item in items if item.get("channel")}),
+        "planned_slots": [str(item.get("planned_slot") or "") for item in items],
+    }
+
+
+async def schedule_audit_payload():
+    queue = await fetch_publish_queue_items(200)
+    scheduled = [
+        item
+        for item in queue
+        if item.get("status") in {"scheduled", "publishing"} or item.get("planned_slot")
+    ]
+    items = []
+    by_exact_slot = {}
+    parsed_rows = []
+    for item in scheduled:
+        planned = parse_datetime(item.get("planned_slot"))
+        if item.get("status") == "scheduled" and not planned:
+            items.append(
+                schedule_audit_item(
+                    "block",
+                    "Scheduled item has no planned time",
+                    "A scheduled item without a planned time cannot be used by handoff or Meta workers.",
+                    "Set a planned publish time or move it back to draft.",
+                    [item],
+                )
+            )
+            continue
+        if not planned:
+            continue
+        planned_utc = planned.astimezone(timezone.utc) if planned.tzinfo else planned.replace(tzinfo=timezone.utc)
+        parsed_rows.append((item, planned_utc))
+        exact_key = (item.get("channel") or "", planned_utc.replace(second=0, microsecond=0).isoformat())
+        by_exact_slot.setdefault(exact_key, []).append(item)
+        if item.get("status") == "scheduled" and is_overdue_scheduled_item(item):
+            items.append(
+                schedule_audit_item(
+                    "warn",
+                    "Scheduled item is overdue",
+                    f"Planned time was {planned_utc.isoformat()}.",
+                    "Publish and record the post ID, or reschedule/cancel this item.",
+                    [item],
+                )
+            )
+    for (channel, slot), slot_items in by_exact_slot.items():
+        if len(slot_items) > 1:
+            items.append(
+                schedule_audit_item(
+                    "block",
+                    "Duplicate planned slot",
+                    f"{len(slot_items)} {channel or 'channel'} items share {slot}.",
+                    "Move all but one item to a suggested open slot before handoff or Meta dispatch.",
+                    slot_items,
+                )
+            )
+    sorted_rows = sorted(parsed_rows, key=lambda row: row[1])
+    for index, (item, planned) in enumerate(sorted_rows):
+        for other, other_planned in sorted_rows[index + 1 :]:
+            if (other_planned - planned).total_seconds() > 90 * 60:
+                break
+            if item.get("channel") != other.get("channel"):
+                continue
+            if str(item.get("id")) == str(other.get("id")):
+                continue
+            delta = abs((other_planned - planned).total_seconds()) / 60
+            if delta <= 90:
+                items.append(
+                    schedule_audit_item(
+                        "warn",
+                        "Near-slot channel conflict",
+                        f"Two {item.get('channel') or 'channel'} items are {round(delta)} minute(s) apart.",
+                        "Keep at least 90 minutes between same-channel posts unless intentionally testing.",
+                        [item, other],
+                    )
+                )
+    deduped = []
+    seen = set()
+    severity_order = {"block": 0, "warn": 1}
+    for item in sorted(items, key=lambda row: (severity_order.get(row.get("severity"), 2), row.get("title", ""))):
+        key = (item.get("severity"), item.get("title"), tuple(sorted(item.get("item_ids") or [])), tuple(item.get("planned_slots") or []))
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(item)
+    return {
+        "overall_status": "blocked" if any(item.get("severity") == "block" for item in deduped) else "needs_review" if deduped else "clear",
+        "checked": {
+            "queue_items": len(queue),
+            "scheduled_or_planned": len(scheduled),
+        },
+        "block_count": sum(1 for item in deduped if item.get("severity") == "block"),
+        "warn_count": sum(1 for item in deduped if item.get("severity") == "warn"),
+        "items": deduped[:100],
+        "next_step": "Fix blocked schedule conflicts first." if any(item.get("severity") == "block" for item in deduped) else "Review warning-level timing conflicts." if deduped else "No schedule conflicts found.",
+    }
+
+
+@app.get("/publish-queue/schedule-audit")
+async def publish_queue_schedule_audit(_: None = Depends(require_access_token)):
+    return await schedule_audit_payload()
+
+
+@app.get("/publish-queue/schedule-audit.md")
+async def publish_queue_schedule_audit_markdown(_: None = Depends(require_access_token)):
+    audit = await schedule_audit_payload()
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    lines = [
+        "# DREC Content OS Schedule Audit",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this before publishing handoff or Meta dry runs. It is read-only and does not reschedule, publish, or edit queue items.",
+        "",
+        "## Decision",
+        "",
+        f"- Status: {audit.get('overall_status')}",
+        f"- Blocks: {audit.get('block_count', 0)}",
+        f"- Warnings: {audit.get('warn_count', 0)}",
+        f"- Scheduled/planned checked: {audit.get('checked', {}).get('scheduled_or_planned', 0)}",
+        f"- Next step: {audit.get('next_step')}",
+        "",
+        "## Findings",
+        "",
+    ]
+    if audit.get("items"):
+        for item in audit.get("items", [])[:50]:
+            lines.extend(
+                [
+                    f"### {item.get('severity', '').upper()} - {item.get('title')}",
+                    "",
+                    f"- Detail: {item.get('detail')}",
+                    f"- Action: {item.get('action')}",
+                    f"- Queue IDs: {', '.join(item.get('item_ids') or [])}",
+                    f"- Channels: {', '.join(item.get('channels') or [])}",
+                    f"- Planned slots: {', '.join(item.get('planned_slots') or [])}",
+                    "",
+                ]
+            )
+    else:
+        lines.append("- No schedule conflicts found.")
+    lines.extend(
+        [
+            "",
+            "## Safe Scheduling Rules",
+            "",
+            "- Keep planned times separate from review approval.",
+            "- Keep at least 90 minutes between same-channel posts unless intentionally testing.",
+            "- Resolve overdue scheduled items before they distort handoff or learning.",
+            "- Run Schedule Audit before Publishing Handoff and before Meta worker dry runs.",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-schedule-audit.md"'},
+    )
+
+
 @app.get("/publish-queue/calendar.ics")
 async def publish_queue_calendar(_: None = Depends(require_access_token)):
     rows = await fetch_rows(

@@ -61,6 +61,8 @@ const requiredRoutes = [
   "GET /kb/export.csv",
   "GET /kb/context",
   "GET /publish-queue/suggest-slot",
+  "GET /publish-queue/schedule-audit",
+  "GET /publish-queue/schedule-audit.md",
   "GET /publish-queue/calendar.ics",
   "GET /publish-queue/schedule.csv",
   "GET /briefs/plan.csv",
@@ -209,6 +211,21 @@ const requiredSnippets = [
     name: "publishing calendar export",
     file: "main",
     text: "drec-publishing-calendar.ics",
+  },
+  {
+    name: "schedule audit route",
+    file: "main",
+    text: "publish_queue_schedule_audit",
+  },
+  {
+    name: "schedule audit export",
+    file: "main",
+    text: "drec-schedule-audit.md",
+  },
+  {
+    name: "schedule audit conflict rule",
+    file: "main",
+    text: "Duplicate planned slot",
   },
   {
     name: "publishing schedule csv export",
@@ -1234,6 +1251,16 @@ const requiredSnippets = [
     name: "web publishing schedule csv action",
     file: "web",
     text: "download-schedule-csv",
+  },
+  {
+    name: "web schedule audit action",
+    file: "web",
+    text: "download-schedule-audit",
+  },
+  {
+    name: "web schedule audit endpoint",
+    file: "web",
+    text: "/publish-queue/schedule-audit.md",
   },
   {
     name: "web publishing schedule csv endpoint",

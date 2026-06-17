@@ -125,6 +125,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added protected Audit Trail CSV for review, scheduler, and actor evidence
 - [x] Added Meta Credential Wizard worksheet for safe credential collection before live setup
 - [x] Added Access Control Pack for role-token setup, actor naming, and rotation rules
+- [x] Added Schedule Audit for duplicate, near-slot, missing-time, and overdue planned posts
 
 ## Next Engineering Tasks
 
@@ -233,6 +234,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add downloadable audit trail export for launch and role-action evidence
 - [x] Add Meta credential wizard worksheet before entering real secrets
 - [x] Add downloadable access control setup pack before full user login
+- [x] Add schedule conflict audit before publishing handoff and Meta dry runs
 - [ ] Connect Meta Graph API credentials
 - [x] Implement real Facebook publish scheduling behind Meta readiness and enable flags
 - [x] Implement Instagram two-step publish worker behind Meta readiness and enable flags
