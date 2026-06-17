@@ -86,7 +86,7 @@ Stage 1 is now a working thin-core workflow:
 - Use the Pre-Schedule Gate in Review/Scheduler to check human queue approval, final caption, approved media/design, visual QA, and schedule readiness before choosing publishing slots
 - Attach approved design/media URLs directly to draft assets so production work can move into queue and schedule readiness without changing approval or publishing state
 - Download and import the Asset Media Attachment CSV to attach design/media URLs in batches while preserving human approval, queueing, scheduling, and publishing gates
-- Download the Today Runbook to get one operator map that links doctor polish, approval, production, pre-schedule, scheduler recovery, Meta preflight, and Supabase security gates
+- Download the Today Runbook to get one operator map that links doctor polish, doctor reply inbox, approval, production reply inbox, pre-schedule, scheduler recovery, Meta preflight, and Supabase security gates
 - Use Creative Studio to review the DREC style library, brand tokens, KB style rules, safety rules, and style-learning signals before drafting or approving assets
 - Use Template Studio to map static assets to DREC layout templates, render rules, brand tokens, and final QA before artwork handoff
 - Use Video Studio to review reel readiness, approved video media, blockers, manual SOP steps, and the future DREC Cut lock before production handoff

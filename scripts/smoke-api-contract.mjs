@@ -968,6 +968,16 @@ const requiredSnippets = [
     text: "\"doctor_review_polish\": \"/operations/doctor-review-polish-pack.md\"",
   },
   {
+    name: "today runbook doctor reply inbox link",
+    file: "main",
+    text: "\"doctor_reply_inbox\": \"/operations/doctor-reply-inbox-pack.md\"",
+  },
+  {
+    name: "today runbook production reply inbox link",
+    file: "main",
+    text: "\"production_reply_inbox\": \"/operations/production-reply-inbox-pack.md\"",
+  },
+  {
     name: "today runbook scheduler recovery link",
     file: "main",
     text: "\"scheduler_recovery\": \"/operations/scheduler-recovery-pack.md\"",
@@ -976,6 +986,11 @@ const requiredSnippets = [
     name: "today runbook doctor polish sequence",
     file: "main",
     text: "Use the doctor polish pack to send review-ready Mandarin copy to the doctor.",
+  },
+  {
+    name: "today runbook reply inbox sequence",
+    file: "main",
+    text: "Use the doctor reply inbox pack to paste returned doctor decisions through preview before import.",
   },
   {
     name: "asset rewrite apply route",

@@ -6496,8 +6496,10 @@ async def today_runbook_payload():
     waiting_gates = [gate for gate in gates if gate.get("status") in {"waiting", "needs_content", "stale"}]
     links = {
         "doctor_review_polish": "/operations/doctor-review-polish-pack.md",
+        "doctor_reply_inbox": "/operations/doctor-reply-inbox-pack.md",
         "approval_cockpit": "/operations/approval-cockpit.md",
         "post_approval_production": "/operations/post-approval-production.md",
+        "production_reply_inbox": "/operations/production-reply-inbox-pack.md",
         "production_design_worksheet": "/operations/production-design-worksheet.csv",
         "asset_media_attachments": "/operations/asset-media-attachments.csv",
         "pre_schedule_gate": "/operations/pre-schedule-gate.md",
@@ -6530,8 +6532,10 @@ async def today_runbook_payload():
         "gates": gates,
         "operator_sequence": [
             "Use the doctor polish pack to send review-ready Mandarin copy to the doctor.",
+            "Use the doctor reply inbox pack to paste returned doctor decisions through preview before import.",
             "Review the approval cockpit and approve only human-cleared medical copy.",
             "Use the production pack and media attachment CSV for design/media URLs.",
+            "Use the production reply inbox pack to paste returned media/design URLs through preview before import.",
             "Run the pre-schedule gate before scheduling.",
             "Run schedule audit after planned times are assigned.",
             "Use the scheduler recovery pack if the GitHub scheduler heartbeat is stale.",

@@ -157,6 +157,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added First Cycle Sprint Tracker CSV for one-sheet doctor decision and production delivery tracking before preview/import
 - [x] Added full-batch Sprint Board copy actions for doctor review and production handoff messages
 - [x] Added Today Runbook links for doctor polish, scheduler recovery, and the remaining external setup gates
+- [x] Added Today Runbook links for doctor reply inbox and production reply inbox paste-back flows
 
 ## Next Engineering Tasks
 
