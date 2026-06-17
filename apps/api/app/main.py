@@ -5519,6 +5519,11 @@ async def outcome_insights():
             },
         )
     dimensions = ["format", "channel", "pillar", "funnel_stage", "style_key", "audience_label"]
+    return outcome_insights_from_rows(outcomes, dimensions)
+
+
+def outcome_insights_from_rows(outcomes: list[dict], dimensions: list[str] | None = None):
+    dimensions = dimensions or ["format", "channel", "pillar", "funnel_stage", "style_key", "audience_label"]
     by_dimension = {dimension: outcome_group_insights(outcomes, dimension) for dimension in dimensions}
     top_signals = []
     for dimension, items in by_dimension.items():
@@ -7403,13 +7408,19 @@ async def attach_latest_feedback(rows: list[dict]):
 
 def parse_datetime(value):
     if isinstance(value, datetime):
-        return value
+        parsed = value
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed
     if not value:
         return None
     try:
-        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
     except ValueError:
         return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed
 
 
 def ics_escape(value):
@@ -9385,7 +9396,8 @@ async def learning_summary(_: None = Depends(require_access_token)):
     )
     recent_outcomes = await fetch_rows(
         """
-        select post_id, format, channel, metric_window, score, shares, saves, cpl, vs_plan_note, created_at
+        select post_id, pillar, funnel_stage, hook_archetype, style_key, format, channel, audience_label,
+               metric_window, score, shares, saves, cpl, vs_plan_note, created_at
         from outcomes
         order by created_at desc
         limit 5
@@ -9427,7 +9439,7 @@ async def learning_summary(_: None = Depends(require_access_token)):
         recent_outcomes = await supabase_rest.select(
             "outcomes",
             {
-                "select": "post_id,format,channel,metric_window,score,shares,saves,cpl,vs_plan_note,created_at",
+                "select": "post_id,pillar,funnel_stage,hook_archetype,style_key,format,channel,audience_label,metric_window,score,shares,saves,cpl,vs_plan_note,created_at",
                 "order": "created_at.desc",
                 "limit": "5",
             },
@@ -9467,6 +9479,296 @@ async def learning_summary(_: None = Depends(require_access_token)):
         "plan_recommendations": plan_recommendations,
         "outcome_insights": insights,
     }
+
+
+def current_quarter_label(now: datetime | None = None):
+    now = now or datetime.now(timezone.utc)
+    quarter = ((now.month - 1) // 3) + 1
+    return f"{now.year} Q{quarter}"
+
+
+def month_floor(month: int):
+    return max(1, min(12, month))
+
+
+def quarter_start(now: datetime | None = None):
+    now = now or datetime.now(timezone.utc)
+    start_month = ((now.month - 1) // 3) * 3 + 1
+    return datetime(now.year, start_month, 1, tzinfo=timezone.utc)
+
+
+def post_slot_bucket(item: dict):
+    planned = parse_datetime(item.get("planned_slot") or item.get("published_at") or item.get("created_at"))
+    if not planned:
+        return None
+    local = planned.astimezone(MYT) if planned.tzinfo else planned.replace(tzinfo=MYT)
+    hour = local.hour
+    if hour < 11:
+        part = "morning"
+    elif hour < 17:
+        part = "afternoon"
+    elif hour < 22:
+        part = "evening"
+    else:
+        part = "late"
+    return {
+        "day": local.strftime("%a"),
+        "hour": hour,
+        "part": part,
+        "label": f"{local.strftime('%a')} {part}",
+    }
+
+
+def post_time_heatmap(queue_rows: list[dict], outcomes: list[dict]):
+    outcome_by_post = {
+        str(row.get("post_id")): row
+        for row in outcomes
+        if row.get("post_id")
+    }
+    buckets = {}
+    for item in queue_rows:
+        bucket = post_slot_bucket(item)
+        if not bucket:
+            continue
+        key = bucket["label"]
+        summary = buckets.setdefault(
+            key,
+            {
+                "slot": key,
+                "day": bucket["day"],
+                "part": bucket["part"],
+                "hour_min": bucket["hour"],
+                "post_count": 0,
+                "published_count": 0,
+                "score_total": 0.0,
+                "outcome_count": 0,
+                "saves_total": 0,
+                "shares_total": 0,
+            },
+        )
+        summary["post_count"] += 1
+        if item.get("status") == "published" or item.get("external_post_id"):
+            summary["published_count"] += 1
+        outcome = outcome_by_post.get(str(item.get("external_post_id") or item.get("id")))
+        if outcome:
+            summary["outcome_count"] += 1
+            summary["score_total"] += safe_float(outcome.get("score"))
+            summary["saves_total"] += int(safe_float(outcome.get("saves")))
+            summary["shares_total"] += int(safe_float(outcome.get("shares")))
+    heatmap = []
+    for item in buckets.values():
+        outcome_count = max(item["outcome_count"], 1)
+        item["avg_score"] = round(item["score_total"] / outcome_count, 2) if item["outcome_count"] else None
+        item["confidence"] = "measured" if item["outcome_count"] >= 3 else "directional" if item["outcome_count"] else "scheduled_only"
+        heatmap.append(item)
+    return sorted(
+        heatmap,
+        key=lambda item: (
+            item["avg_score"] is None,
+            -(item["avg_score"] or 0),
+            -item["published_count"],
+            item["day"],
+            item["hour_min"],
+        ),
+    )
+
+
+async def quarterly_learning_payload():
+    start = quarter_start()
+    end = datetime.now(timezone.utc)
+    queue_rows = await fetch_rows(
+        """
+        select id, status, channel, format, planned_slot, external_post_id, created_at
+        from publish_queue
+        where coalesce(planned_slot, created_at) >= $1
+        order by coalesce(planned_slot, created_at) desc
+        limit 500
+        """,
+        start,
+    )
+    outcomes = await fetch_rows(
+        """
+        select post_id, format, channel, metric_window, score, shares, saves, cpl, vs_plan_note, created_at
+        from outcomes
+        where created_at >= $1
+        order by created_at desc
+        limit 500
+        """,
+        start,
+    )
+    weights = await fetch_rows(
+        """
+        select id, dimension, key, value, previous_value, reason, source, is_active, created_at
+        from learning_weights
+        where created_at >= $1
+        order by created_at desc
+        limit 100
+        """,
+        start,
+    )
+    feedback = await fetch_rows(
+        """
+        select action, count(*)::int as count
+        from feedback
+        where created_at >= $1
+        group by action
+        """,
+        start,
+    )
+    if supabase_rest.configured() and not queue_rows:
+        queue_rows = await supabase_rest.select(
+            "publish_queue",
+            {
+                "select": "id,status,channel,format,planned_slot,external_post_id,created_at",
+                "order": "created_at.desc",
+                "limit": "500",
+            },
+        )
+        queue_rows = [row for row in queue_rows if (parse_datetime(row.get("planned_slot") or row.get("created_at")) or start) >= start]
+    if supabase_rest.configured() and not outcomes:
+        outcomes = await supabase_rest.select(
+            "outcomes",
+            {
+                "select": "post_id,format,channel,metric_window,score,shares,saves,cpl,vs_plan_note,created_at",
+                "order": "created_at.desc",
+                "limit": "500",
+            },
+        )
+        outcomes = [row for row in outcomes if (parse_datetime(row.get("created_at")) or start) >= start]
+    if supabase_rest.configured() and not weights:
+        weights = await supabase_rest.select(
+            "learning_weights",
+            {
+                "select": "id,dimension,key,value,previous_value,reason,source,is_active,created_at",
+                "order": "created_at.desc",
+                "limit": "100",
+            },
+        )
+        weights = [row for row in weights if (parse_datetime(row.get("created_at")) or start) >= start]
+    if supabase_rest.configured() and not feedback:
+        feedback_rows = await supabase_rest.select("feedback", {"select": "action,created_at", "limit": "1000"})
+        counts = {}
+        for row in feedback_rows:
+            if (parse_datetime(row.get("created_at")) or start) < start:
+                continue
+            action = row.get("action", "unknown")
+            counts[action] = counts.get(action, 0) + 1
+        feedback = [{"action": action, "count": count} for action, count in counts.items()]
+    heatmap = post_time_heatmap(queue_rows, outcomes)
+    insights = outcome_insights_from_rows(outcomes)
+    top_slots = heatmap[:5]
+    active_weights = [row for row in weights if row.get("is_active") is not False]
+    next_actions = []
+    if not queue_rows:
+        next_actions.append("Run one manual publishing cycle so the quarterly memo has schedule evidence.")
+    if not outcomes:
+        next_actions.append("Enter or import metrics for published posts before changing learning weights.")
+    if heatmap and not any(item.get("outcome_count") for item in heatmap):
+        next_actions.append("Keep planned-time suggestions directional until metrics are attached to published posts.")
+    if not active_weights and outcomes:
+        next_actions.append("Convert one strong outcome into a reversible learning weight before the next weekly plan.")
+    if not next_actions:
+        next_actions.append("Use the top slot and top signal as next-quarter defaults, then keep approval mandatory.")
+    return {
+        "period": current_quarter_label(end),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "range": {"start": start.isoformat(), "end": end.isoformat(), "timezone": "Asia/Kuala_Lumpur"},
+        "summary": {
+            "scheduled_or_drafted_posts": len(queue_rows),
+            "published_posts": len([row for row in queue_rows if row.get("status") == "published" or row.get("external_post_id")]),
+            "outcomes": len(outcomes),
+            "learning_weights": len(weights),
+            "active_learning_weights": len(active_weights),
+            "feedback_events": sum(item.get("count", 0) for item in feedback),
+        },
+        "posting_time_heatmap": heatmap,
+        "top_slots": top_slots,
+        "outcome_insights": insights,
+        "learning_weights": weights[:20],
+        "feedback": feedback,
+        "next_actions": next_actions,
+    }
+
+
+@app.get("/learning/quarterly-memo")
+async def learning_quarterly_memo(_: None = Depends(require_access_token)):
+    return await quarterly_learning_payload()
+
+
+@app.get("/learning/quarterly-memo.md")
+async def learning_quarterly_memo_md(_: None = Depends(require_access_token)):
+    payload = await quarterly_learning_payload()
+    summary = payload.get("summary") or {}
+    heatmap = payload.get("posting_time_heatmap") or []
+    top_signals = (payload.get("outcome_insights") or {}).get("top_signals") or []
+    weights = payload.get("learning_weights") or []
+    feedback = payload.get("feedback") or []
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    heatmap_lines = report_lines(
+        heatmap[:12],
+        lambda item: f"{item.get('slot')} · posts {item.get('post_count')} · published {item.get('published_count')} · avg score {item.get('avg_score', 'n/a')} · confidence {item.get('confidence')}",
+        "No planned or published slots yet.",
+    )
+    signal_lines = report_lines(
+        top_signals[:8],
+        lambda item: f"{item.get('label')} · avg score {item.get('avg_score')} · saves {item.get('saves_total')} · shares {item.get('shares_total')} · {item.get('recommendation')}",
+        "No measured outcome signals yet.",
+    )
+    weight_lines = report_lines(
+        weights[:12],
+        lambda item: f"{item.get('dimension')}={item.get('key')} · {item.get('previous_value', 'base')} -> {item.get('value')} · active={item.get('is_active')} · {item.get('reason') or item.get('source')}",
+        "No learning-weight changes this quarter.",
+    )
+    feedback_lines = report_lines(
+        feedback,
+        lambda item: f"{item.get('action')}: {item.get('count')}",
+        "No review feedback events this quarter.",
+    )
+    action_lines = [report_bullet(item) for item in payload.get("next_actions") or []]
+    lines = [
+        "# DREC Content OS Quarterly Learning Memo",
+        "",
+        f"Period: {payload.get('period')}",
+        f"Generated: {generated_at}",
+        "",
+        "## Loop Evidence",
+        "",
+        report_bullet(f"Scheduled or drafted posts: {summary.get('scheduled_or_drafted_posts', 0)}"),
+        report_bullet(f"Published posts with IDs/labels: {summary.get('published_posts', 0)}"),
+        report_bullet(f"Performance outcomes: {summary.get('outcomes', 0)}"),
+        report_bullet(f"Learning-weight changes: {summary.get('learning_weights', 0)}"),
+        report_bullet(f"Feedback events: {summary.get('feedback_events', 0)}"),
+        "",
+        "## Posting-Time Heat",
+        "",
+        *heatmap_lines,
+        "",
+        "## Outcome Signals",
+        "",
+        *signal_lines,
+        "",
+        "## Weight-Change Log",
+        "",
+        *weight_lines,
+        "",
+        "## Review Feedback",
+        "",
+        *feedback_lines,
+        "",
+        "## Next-Quarter Actions",
+        "",
+        *action_lines,
+        "",
+        "## Safety Rule",
+        "",
+        "- Treat quarterly findings as planning guidance, not medical claims.",
+        "- Keep human approval mandatory until enough safe, reviewed cycles prove quality is stable.",
+    ]
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-quarterly-learning-memo.md"'},
+    )
 
 
 def count_label(rows: list[dict], key: str):

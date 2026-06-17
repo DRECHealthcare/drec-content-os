@@ -37,7 +37,10 @@ document.querySelectorAll("nav button").forEach((button) => {
     if (screen === "video") loadVideoStudio();
     if (screen === "assets") Promise.all([loadAssets(), loadMediaAssets()]);
     if (screen === "outcomes") loadOutcomes();
-    if (screen === "learning") loadLearningSummary();
+    if (screen === "learning") {
+      loadLearningSummary();
+      loadQuarterlyMemo();
+    }
     if (screen === "scheduler" || screen === "review") loadPublishQueue();
     if (screen === "meta") Promise.all([loadMetaReadiness(), loadMetaSetupChecklist(), loadNotifyRail()]);
   });
@@ -1341,6 +1344,66 @@ async function loadLearningSummary() {
     `;
   } catch {
     container.innerHTML = '<p class="status-note">Set the access token to load learning signals.</p>';
+  }
+}
+
+function renderQuarterlyMemo(data) {
+  const container = document.getElementById("quarterly-memo");
+  if (!container) return;
+  const summary = data.summary || {};
+  const slots = data.top_slots || data.posting_time_heatmap || [];
+  const signals = data.outcome_insights?.top_signals || [];
+  const actions = data.next_actions || [];
+  const weights = data.learning_weights || [];
+  container.innerHTML = `
+    <article class="learning-card wide-learning">
+      <h3>Quarterly Self-Review</h3>
+      <p>${escapeHtml(data.period || "Current quarter")} · ${escapeHtml(data.range?.timezone || "Asia/Kuala_Lumpur")}</p>
+    </article>
+    <article class="learning-card">
+      <h3>Loop Evidence</h3>
+      <ul>
+        <li>Posts: ${escapeHtml(summary.scheduled_or_drafted_posts ?? 0)}</li>
+        <li>Published IDs: ${escapeHtml(summary.published_posts ?? 0)}</li>
+        <li>Outcomes: ${escapeHtml(summary.outcomes ?? 0)}</li>
+        <li>Weights: ${escapeHtml(summary.active_learning_weights ?? 0)} active</li>
+      </ul>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Posting-Time Heat</h3>
+      <ul>
+        ${slots.length ? slots.slice(0, 6).map((slot) => `<li><strong>${escapeHtml(slot.slot)}</strong> · posts ${escapeHtml(slot.post_count ?? 0)} · published ${escapeHtml(slot.published_count ?? 0)} · avg score ${escapeHtml(slot.avg_score ?? "n/a")}<br><small>${escapeHtml(slot.confidence || "directional")}</small></li>`).join("") : "<li>No planned or published slots yet.</li>"}
+      </ul>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Quarterly Signals</h3>
+      <ul>
+        ${signals.length ? signals.slice(0, 6).map((signal) => `<li><strong>${escapeHtml(signal.label || `${signal.dimension}: ${signal.key}`)}</strong> · avg score ${escapeHtml(signal.avg_score ?? "n/a")} · saves ${escapeHtml(signal.saves_total ?? 0)}<br><small>${escapeHtml(signal.recommendation || "")}</small></li>`).join("") : "<li>No measured outcome signals yet.</li>"}
+      </ul>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Weight-Change Log</h3>
+      <ul>
+        ${weights.length ? weights.slice(0, 6).map((weight) => `<li><strong>${escapeHtml(weight.dimension)}</strong> ${escapeHtml(weight.key)} · ${escapeHtml(weight.previous_value ?? "base")} → ${escapeHtml(weight.value)}<br><small>${escapeHtml(weight.reason || weight.source || "learning signal")}</small></li>`).join("") : "<li>No learning-weight changes this quarter.</li>"}
+      </ul>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Next-Quarter Actions</h3>
+      <ul>
+        ${actions.length ? actions.map((item) => `<li>${escapeHtml(item)}</li>`).join("") : "<li>Keep approval mandatory and run another full manual cycle.</li>"}
+      </ul>
+    </article>
+  `;
+}
+
+async function loadQuarterlyMemo() {
+  const container = document.getElementById("quarterly-memo");
+  if (!container) return;
+  try {
+    const data = await fetchJson("/learning/quarterly-memo");
+    renderQuarterlyMemo(data);
+  } catch (error) {
+    container.innerHTML = '<p class="status-note">Set the access token to load the quarterly memo.</p>';
   }
 }
 
@@ -3462,6 +3525,23 @@ document.getElementById("download-learning-snapshot")?.addEventListener("click",
   }
 });
 
+document.getElementById("refresh-quarterly-memo")?.addEventListener("click", async () => {
+  const message = document.getElementById("weight-message");
+  message.textContent = "Refreshing quarterly memo...";
+  await loadQuarterlyMemo();
+  message.textContent = "Quarterly memo refreshed.";
+});
+
+document.getElementById("download-quarterly-memo")?.addEventListener("click", async () => {
+  const message = document.getElementById("weight-message");
+  try {
+    await downloadProtectedFile("/learning/quarterly-memo.md", "drec-quarterly-learning-memo.md", "text/markdown");
+    message.textContent = "Quarterly memo downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download quarterly memo.";
+  }
+});
+
 document.getElementById("download-metrics-template")?.addEventListener("click", async () => {
   const message = document.getElementById("metric-message");
   try {
@@ -3727,6 +3807,7 @@ loadBriefs();
 loadAssets();
 loadMediaAssets();
 loadLearningSummary();
+loadQuarterlyMemo();
 loadPublishQueue();
 loadMetaReadiness();
 loadMetaSetupChecklist();

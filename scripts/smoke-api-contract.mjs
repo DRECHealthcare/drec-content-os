@@ -45,6 +45,8 @@ const requiredRoutes = [
   "GET /operations/review-queue.csv",
   "GET /operations/review-to-schedule-pack.md",
   "GET /operations/learning-snapshot.csv",
+  "GET /learning/quarterly-memo",
+  "GET /learning/quarterly-memo.md",
   "GET /operations/metrics-template.csv",
   "GET /operations/metrics-closeout-pack.md",
   "GET /operations/weekly-cycle-pack.md",
@@ -634,6 +636,21 @@ const requiredSnippets = [
     name: "learning snapshot raw metrics",
     file: "main",
     text: "raw_metric",
+  },
+  {
+    name: "quarterly memo route",
+    file: "main",
+    text: "learning_quarterly_memo",
+  },
+  {
+    name: "quarterly memo export",
+    file: "main",
+    text: "drec-quarterly-learning-memo.md",
+  },
+  {
+    name: "quarterly memo posting heat",
+    file: "main",
+    text: "## Posting-Time Heat",
   },
   {
     name: "weekly cycle pack route",
@@ -1229,6 +1246,21 @@ const requiredSnippets = [
     name: "web learning snapshot endpoint",
     file: "web",
     text: "/operations/learning-snapshot.csv",
+  },
+  {
+    name: "web quarterly memo action",
+    file: "web",
+    text: "download-quarterly-memo",
+  },
+  {
+    name: "web quarterly memo endpoint",
+    file: "web",
+    text: "/learning/quarterly-memo.md",
+  },
+  {
+    name: "web quarterly memo loader",
+    file: "web",
+    text: "/learning/quarterly-memo",
   },
   {
     name: "web metrics template action",
