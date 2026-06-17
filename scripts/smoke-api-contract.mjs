@@ -2634,6 +2634,16 @@ const requiredSnippets = [
     text: "data-copy-doctor-send",
   },
   {
+    name: "web doctor full message copy",
+    file: "web",
+    text: "data-copy-doctor-full-message",
+  },
+  {
+    name: "web doctor paste-back copy",
+    file: "web",
+    text: "data-copy-doctor-paste-back",
+  },
+  {
     name: "web doctor reply template copy",
     file: "web",
     text: "data-copy-doctor-reply-template",
@@ -2647,6 +2657,16 @@ const requiredSnippets = [
     name: "web doctor send queue batch helper",
     file: "web",
     text: "doctorSendBatchText",
+  },
+  {
+    name: "web doctor bridge full message state",
+    file: "web",
+    text: "latestDoctorFullMessage",
+  },
+  {
+    name: "web doctor bridge paste-back state",
+    file: "web",
+    text: "latestDoctorPasteBackTemplate",
   },
   {
     name: "web doctor review polish loader",

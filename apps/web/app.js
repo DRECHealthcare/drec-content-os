@@ -12,6 +12,8 @@ let latestDoctorReplyItems = [];
 let latestDoctorPolishItems = [];
 let latestProductionItems = [];
 let latestLearningWeightSuggestions = [];
+let latestDoctorFullMessage = "";
+let latestDoctorPasteBackTemplate = "";
 
 const titleMap = {
   dashboard: "Dashboard",
@@ -1870,6 +1872,8 @@ function renderDoctorSendQueue(data) {
   if (!container) return;
   const items = data.bridge_items || [];
   latestDoctorSendItems = items;
+  latestDoctorFullMessage = data.full_doctor_message || "";
+  latestDoctorPasteBackTemplate = data.paste_back_template || "";
   const itemCards = items.map((item, index) => `
     <article class="learning-card sprint-item-card">
       <h4>${index + 1}. ${escapeHtml(item.topic || "Untitled asset")}</h4>
@@ -1896,7 +1900,9 @@ function renderDoctorSendQueue(data) {
       <h3>Copy To Doctor</h3>
       <p>${escapeHtml(data.paste_back_template || "Copy the review text, then paste back the doctor's explicit decision and safety status.")}</p>
       <div class="learning-actions sprint-bulk-actions">
-        <button type="button" data-copy-doctor-send-all>Copy All Doctor</button>
+        <button type="button" data-copy-doctor-full-message>Copy Full Message</button>
+        <button type="button" data-copy-doctor-paste-back>Copy Paste-Back</button>
+        <button type="button" data-copy-doctor-send-all>Copy Item Batch</button>
       </div>
       <div class="sprint-board">${itemCards || '<p class="status-note">No doctor send items are ready yet.</p>'}</div>
     </article>
@@ -4384,6 +4390,31 @@ document.addEventListener("click", async (event) => {
     } finally {
       doctorSendAllButton.disabled = false;
       doctorSendAllButton.textContent = original;
+    }
+    return;
+  }
+
+  const doctorFullMessageButton = event.target.closest("[data-copy-doctor-full-message]");
+  const doctorPasteBackButton = event.target.closest("[data-copy-doctor-paste-back]");
+  const doctorBridgeButton = doctorFullMessageButton || doctorPasteBackButton;
+  if (doctorBridgeButton) {
+    const message = document.getElementById("media-message") || document.getElementById("asset-message");
+    const text = doctorFullMessageButton ? latestDoctorFullMessage : latestDoctorPasteBackTemplate;
+    if (!text) {
+      if (message) message.textContent = doctorFullMessageButton ? "No full doctor message to copy yet." : "No paste-back template to copy yet.";
+      return;
+    }
+    const original = doctorBridgeButton.textContent;
+    doctorBridgeButton.disabled = true;
+    doctorBridgeButton.textContent = "Copying";
+    try {
+      await navigator.clipboard.writeText(text);
+      if (message) message.textContent = doctorFullMessageButton ? "Full doctor message copied." : "Doctor paste-back template copied.";
+    } catch {
+      if (message) message.textContent = "Browser blocked clipboard copy. Download the doctor bridge instead.";
+    } finally {
+      doctorBridgeButton.disabled = false;
+      doctorBridgeButton.textContent = original;
     }
     return;
   }
