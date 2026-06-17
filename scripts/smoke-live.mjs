@@ -38,6 +38,7 @@ const checks = [
         && text.includes("download-doctor-review-polish")
         && text.includes("download-doctor-review-bridge")
         && text.includes("download-doctor-send-queue")
+        && text.includes("download-service-role-pack")
         && text.includes("download-doctor-reply-inbox")
         && text.includes("doctor-review-polish")
         && text.includes("download-doctor-approval-request")
@@ -72,6 +73,7 @@ const checks = [
     validate: async (res) => {
       const text = await res.text();
       return text.includes("/operations/doctor-decision-worksheet.csv")
+        && text.includes("/security/service-role-install-pack.md")
         && text.includes("/operations/cycle-command-center.md")
         && text.includes("/operations/cycle-evidence-ledger.csv")
         && text.includes("/operations/doctor-review-bridge.md")
@@ -172,6 +174,18 @@ const checks = [
       return text.includes("# DREC Content OS RLS Hardening Plan")
         && text.includes("supabase/migrations/20260617040906_strict_server_only_rls.sql")
         && text.includes("## Apply Gate");
+    },
+  },
+  {
+    name: "Service role install pack",
+    url: `${apiBase}/security/service-role-install-pack.md`,
+    auth: true,
+    validate: async (res) => {
+      const text = await res.text();
+      return text.includes("# DREC Content OS Service Role Install Pack")
+        && text.includes("fly secrets set -a drec-content-os-api SUPABASE_SERVICE_ROLE_KEY")
+        && text.includes("ready_for_rls_hardening")
+        && text.includes("Do not paste the service-role key");
     },
   },
   {

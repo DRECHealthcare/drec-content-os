@@ -20,6 +20,7 @@ const requiredRoutes = [
   "GET /security/status",
   "GET /security/access-policy",
   "GET /security/access-control-pack.md",
+  "GET /security/service-role-install-pack.md",
   "GET /security/rls-hardening-plan.md",
   "GET /automation/status",
   "GET /operations/launch-readiness",
@@ -394,6 +395,26 @@ const requiredSnippets = [
     name: "security access control export",
     file: "main",
     text: "drec-access-control-pack.md",
+  },
+  {
+    name: "security service role install pack route",
+    file: "main",
+    text: "security_service_role_install_pack",
+  },
+  {
+    name: "security service role install pack export",
+    file: "main",
+    text: "drec-service-role-install-pack.md",
+  },
+  {
+    name: "security service role install pack command",
+    file: "main",
+    text: "fly secrets set -a drec-content-os-api SUPABASE_SERVICE_ROLE_KEY",
+  },
+  {
+    name: "security service role install pack hard stop",
+    file: "main",
+    text: "Do not paste the service-role key into chat, GitHub Actions logs, Vercel browser variables, screenshots, or Markdown files.",
   },
   {
     name: "role token auth compatibility",
@@ -1881,6 +1902,11 @@ const requiredSnippets = [
     text: "download-rls-plan",
   },
   {
+    name: "web service role pack action",
+    file: "web",
+    text: "download-service-role-pack",
+  },
+  {
     name: "web access pack action",
     file: "web",
     text: "download-access-pack",
@@ -1894,6 +1920,11 @@ const requiredSnippets = [
     name: "web rls plan endpoint",
     file: "web",
     text: "/security/rls-hardening-plan.md",
+  },
+  {
+    name: "web service role pack endpoint",
+    file: "web",
+    text: "/security/service-role-install-pack.md",
   },
   {
     name: "web automation gate card",

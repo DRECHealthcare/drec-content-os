@@ -2947,6 +2947,16 @@ document.getElementById("download-access-pack")?.addEventListener("click", async
   }
 });
 
+document.getElementById("download-service-role-pack")?.addEventListener("click", async () => {
+  const message = document.getElementById("test-path-message");
+  try {
+    await downloadProtectedFile("/security/service-role-install-pack.md", "drec-service-role-install-pack.md", "text/markdown");
+    message.textContent = "Service role install pack downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download service role install pack.";
+  }
+});
+
 document.getElementById("download-rls-plan")?.addEventListener("click", async () => {
   const message = document.getElementById("test-path-message");
   try {

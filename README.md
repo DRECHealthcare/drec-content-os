@@ -128,6 +128,7 @@ Stage 1 is now a working thin-core workflow:
 - Download a Meta Credential Wizard worksheet that explains each required Meta/Supabase value, where to collect it, where to store it, and the hard-stop rules before live setup
 - Download a Meta Preflight Audit that combines credential, content risk, schedule, launch, security, access, and live-switch gates before a Meta dry run or first controlled live test
 - See the Supabase service-role readiness gate before stricter RLS policies are applied
+- Download the protected Service Role Install Pack to install `SUPABASE_SERVICE_ROLE_KEY` on Fly safely before strict RLS hardening
 - See the current Access Role on the Dashboard and optionally configure separate viewer, reviewer, operator, and admin tokens while the legacy access token remains accepted; scoped routes now protect review, scheduling, metrics, and admin-sensitive actions, with optional actor labels for audit trails
 - Download an Access Control Pack with role-token setup, actor naming, handoff policy, and rotation rules before full user login is added
 - Download a protected RLS Hardening Plan and review the prepared strict server-only Supabase migration before applying it
