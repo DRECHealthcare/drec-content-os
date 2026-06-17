@@ -4784,6 +4784,42 @@ def production_template_suggestion(item: dict):
     return "Use the closest DREC static template and run final QA."
 
 
+def production_canvas_spec(item: dict):
+    fmt = item.get("format")
+    channel = item.get("channel") or "facebook"
+    if fmt == "story":
+        return "1080x1920 vertical story, keep key text in center safe zone"
+    if fmt == "reel":
+        return "1080x1920 vertical reel cover or frame sequence, keep subtitles readable"
+    if fmt == "carousel":
+        return "1080x1350 carousel slides, 5-7 slides, one idea per slide"
+    if channel == "instagram":
+        return "1080x1350 portrait static, short headline and clear visual hierarchy"
+    return "1200x1500 or 1080x1350 static, readable on mobile feed"
+
+
+def production_safe_headline(item: dict):
+    topic = (item.get("topic") or "代谢健康提醒").strip()
+    if "血糖" in topic:
+        return f"看懂{topic[:18]}"
+    if "复诊" in topic:
+        return "复诊前，先整理这几件事"
+    return topic[:24]
+
+
+def production_image_prompt(item: dict):
+    topic = item.get("topic") or "metabolic health education"
+    fmt = item.get("format") or "single"
+    return " ".join(
+        [
+            "Clinic-safe Mandarin health education visual for DREC.",
+            f"Topic: {topic}.",
+            f"Format: {fmt}.",
+            "Use calm doctor-education style, navy/teal/orange brand accents, large readable headline area, no scary imagery, no medication or miracle-cure symbolism, no identifiable patient face unless consented.",
+        ]
+    )
+
+
 def production_stage(item: dict):
     if item.get("review_status") == "approved" and item.get("compliance_status") == "clear":
         return "approved_ready_for_design_or_queue"
@@ -4815,6 +4851,7 @@ async def post_approval_production_payload():
                 "format": item.get("format"),
                 "stage": stage,
                 "approval_score": item.get("approval_score"),
+                "caption_preview": item.get("caption_preview"),
                 "media_count": item.get("media_count"),
                 "media_gap": item.get("media_gap") or ("Media already attached; verify rights and crop." if item.get("media_count") else "Needs approved media/design before handoff."),
                 "visual_direction": asset_visual_direction({"format": item.get("format"), "metadata": {"topic": item.get("topic")}}),
@@ -4933,6 +4970,69 @@ async def operations_post_approval_production_markdown(_: None = Depends(require
         "\n".join(lines),
         media_type="text/markdown",
         headers={"Content-Disposition": 'attachment; filename="drec-post-approval-production-pack.md"'},
+    )
+
+
+@app.get("/operations/production-design-worksheet.csv")
+async def operations_production_design_worksheet_csv(_: None = Depends(require_access_token)):
+    payload = await post_approval_production_payload()
+    output = StringIO()
+    fieldnames = [
+        "asset_id",
+        "brief_id",
+        "topic",
+        "channel",
+        "format",
+        "stage",
+        "approval_score",
+        "canvas_spec",
+        "safe_headline",
+        "visual_direction",
+        "media_task",
+        "template_suggestion",
+        "image_prompt",
+        "caption_preview",
+        "rights_check",
+        "visual_qa_checklist",
+        "new_media_urls",
+        "visual_qa_status",
+        "rights_note",
+        "producer_name",
+        "production_notes",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for item in payload.get("production_items") or []:
+        caption = (item.get("caption_preview") or "").replace("\n", " ").strip()
+        writer.writerow(
+            {
+                "asset_id": item.get("asset_id") or "",
+                "brief_id": item.get("brief_id") or "",
+                "topic": item.get("topic") or "",
+                "channel": item.get("channel") or "",
+                "format": item.get("format") or "",
+                "stage": item.get("stage") or "",
+                "approval_score": item.get("approval_score") or "",
+                "canvas_spec": production_canvas_spec(item),
+                "safe_headline": production_safe_headline(item),
+                "visual_direction": item.get("visual_direction") or "",
+                "media_task": item.get("media_task") or "",
+                "template_suggestion": item.get("template_suggestion") or "",
+                "image_prompt": production_image_prompt(item),
+                "caption_preview": caption,
+                "rights_check": item.get("rights_check") or "",
+                "visual_qa_checklist": "Legible on phone; no diagnosis/prescription/guarantee claim; DREC branding present; rights/consent confirmed; matches approved caption.",
+                "new_media_urls": "",
+                "visual_qa_status": "pending",
+                "rights_note": "",
+                "producer_name": "",
+                "production_notes": "",
+            }
+        )
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-production-design-worksheet.csv"'},
     )
 
 
@@ -5388,6 +5488,7 @@ async def today_runbook_payload():
     links = {
         "approval_cockpit": "/operations/approval-cockpit.md",
         "post_approval_production": "/operations/post-approval-production.md",
+        "production_design_worksheet": "/operations/production-design-worksheet.csv",
         "asset_media_attachments": "/operations/asset-media-attachments.csv",
         "pre_schedule_gate": "/operations/pre-schedule-gate.md",
         "review_to_schedule": "/operations/review-to-schedule-pack.md",

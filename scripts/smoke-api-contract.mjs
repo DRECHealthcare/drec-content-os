@@ -50,6 +50,7 @@ const requiredRoutes = [
   "GET /operations/approval-cockpit.md",
   "GET /operations/post-approval-production",
   "GET /operations/post-approval-production.md",
+  "GET /operations/production-design-worksheet.csv",
   "GET /operations/pre-schedule-gate",
   "GET /operations/pre-schedule-gate.md",
   "GET /operations/asset-rewrite-pack",
@@ -675,6 +676,21 @@ const requiredSnippets = [
     name: "post approval production safety",
     file: "main",
     text: "production_prep_only",
+  },
+  {
+    name: "production design worksheet route",
+    file: "main",
+    text: "production-design-worksheet.csv",
+  },
+  {
+    name: "production design worksheet prompt",
+    file: "main",
+    text: "Clinic-safe Mandarin health education visual for DREC.",
+  },
+  {
+    name: "production design worksheet safety",
+    file: "main",
+    text: "no diagnosis/prescription/guarantee claim",
   },
   {
     name: "pre schedule gate route",
@@ -1712,6 +1728,11 @@ const requiredSnippets = [
     text: "download-post-approval-production",
   },
   {
+    name: "web production design worksheet action",
+    file: "web",
+    text: "download-production-design-worksheet",
+  },
+  {
     name: "web post approval production loader",
     file: "web",
     text: "loadPostApprovalProduction",
@@ -1720,6 +1741,11 @@ const requiredSnippets = [
     name: "web post approval production endpoint",
     file: "web",
     text: "/operations/post-approval-production",
+  },
+  {
+    name: "web production design worksheet endpoint",
+    file: "web",
+    text: "/operations/production-design-worksheet.csv",
   },
   {
     name: "web asset rewrite pack action",

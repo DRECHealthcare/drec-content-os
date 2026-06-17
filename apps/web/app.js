@@ -2878,6 +2878,16 @@ document.getElementById("download-post-approval-production")?.addEventListener("
   }
 });
 
+document.getElementById("download-production-design-worksheet")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/production-design-worksheet.csv", "drec-production-design-worksheet.csv", "text/csv");
+    message.textContent = "Production design worksheet downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download design worksheet.";
+  }
+});
+
 document.getElementById("download-pre-schedule-gate")?.addEventListener("click", async () => {
   await downloadPreScheduleGate(document.getElementById("queue-message"));
 });

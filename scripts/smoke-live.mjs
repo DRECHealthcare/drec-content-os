@@ -32,6 +32,7 @@ const checks = [
       return text.includes("DREC")
         && text.includes("download-doctor-decision-worksheet")
         && text.includes("download-asset-media-attachments")
+        && text.includes("download-production-design-worksheet")
         && text.includes("download-review-queue-decisions")
         && text.includes("preview-review-queue-decisions")
         && text.includes("import-review-queue-decisions");
@@ -45,6 +46,7 @@ const checks = [
       const text = await res.text();
       return text.includes("/operations/doctor-decision-worksheet.csv")
         && text.includes("/operations/import-asset-media-attachments")
+        && text.includes("/operations/production-design-worksheet.csv")
         && text.includes("/operations/import-review-queue-decisions")
         && text.includes("renderReviewQueueDecisionPreview");
     },
@@ -440,6 +442,18 @@ const checks = [
       return text.includes("# DREC Content OS Post-Approval Production Pack")
         && text.includes("## Production Items")
         && text.includes("read-only and does not approve");
+    },
+  },
+  {
+    name: "Production design worksheet",
+    url: `${apiBase}/operations/production-design-worksheet.csv`,
+    auth: true,
+    validate: async (res) => {
+      const text = await res.text();
+      return text.includes("asset_id,brief_id,topic,channel,format,stage,approval_score,canvas_spec,safe_headline")
+        && text.includes("image_prompt")
+        && text.includes("visual_qa_checklist")
+        && text.includes("new_media_urls,visual_qa_status,rights_note,producer_name,production_notes");
     },
   },
   {
