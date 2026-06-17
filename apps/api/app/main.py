@@ -6090,6 +6090,171 @@ async def operations_review_queue_csv(_: None = Depends(require_access_token)):
     )
 
 
+@app.get("/operations/review-queue-decisions.csv")
+async def operations_review_queue_decisions_csv(_: None = Depends(require_access_token)):
+    rows = await fetch_publish_queue_items(200)
+    review_items = [item for item in rows if item.get("status") == "draft"]
+    output = StringIO()
+    fieldnames = [
+        "queue_id",
+        "asset_id",
+        "channel",
+        "format",
+        "review_state",
+        "compliance_status",
+        "media_count",
+        "caption",
+        "reviewer_action",
+        "reviewer_name",
+        "review_notes",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for item in review_items:
+        state, _ = review_queue_state(item)
+        writer.writerow(
+            {
+                "queue_id": item.get("id") or "",
+                "asset_id": item.get("asset_id") or "",
+                "channel": item.get("channel") or "",
+                "format": item.get("format") or "",
+                "review_state": state,
+                "compliance_status": item.get("compliance_status") or "",
+                "media_count": len([url for url in item.get("media_urls") or [] if url]),
+                "caption": item.get("caption") or "",
+                "reviewer_action": "",
+                "reviewer_name": "",
+                "review_notes": "",
+            }
+        )
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-review-queue-decisions.csv"'},
+    )
+
+
+def normalize_queue_review_action(value: str | None):
+    text = (value or "").strip().lower().replace("_", " ").replace("-", " ")
+    if not text:
+        return None
+    if text in {"approve", "approved", "yes", "y"}:
+        return "approve"
+    if text in {"edit", "note", "notes", "hold"}:
+        return "edit"
+    if text in {"regen", "regenerate", "rewrite", "needs rewrite", "needs work"}:
+        return "regen"
+    if text in {"reject", "rejected", "no", "n"}:
+        return "reject"
+    return "invalid"
+
+
+async def decode_review_queue_decisions_csv(file: UploadFile):
+    raw = await file.read()
+    if len(raw) > 512_000:
+        raise HTTPException(status_code=413, detail="Review queue decision CSV is too large. Keep imports below 512 KB.")
+    try:
+        return raw.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise HTTPException(status_code=400, detail="Review queue decision CSV must be UTF-8 text.") from exc
+
+
+@app.post("/operations/import-review-queue-decisions")
+async def import_review_queue_decisions(
+    file: UploadFile = File(...),
+    dry_run: bool = Form(True),
+    session: dict = Depends(require_review_access),
+):
+    csv_text = await decode_review_queue_decisions_csv(file)
+    reader = csv.DictReader(StringIO(csv_text))
+    required = {"queue_id", "reviewer_action"}
+    headers = set(reader.fieldnames or [])
+    if not required.issubset(headers):
+        missing = sorted(required - headers)
+        raise HTTPException(status_code=400, detail={"message": "Review queue decision CSV is missing required columns.", "missing": missing})
+
+    queue_items = await fetch_publish_queue_items(500)
+    by_id = {str(item.get("id")): item for item in queue_items if item.get("id")}
+    planned = []
+    imported = []
+    skipped = []
+    for index, row in enumerate(reader, start=2):
+        queue_id = (row.get("queue_id") or "").strip()
+        if not queue_id:
+            skipped.append({"row": index, "reason": "Missing queue_id."})
+            continue
+        action = normalize_queue_review_action(row.get("reviewer_action"))
+        reviewer_name = (row.get("reviewer_name") or "").strip()
+        notes = (row.get("review_notes") or "").strip()
+        if action == "invalid":
+            skipped.append({"row": index, "queue_id": queue_id, "reason": "reviewer_action must be approve, edit, regen, or reject."})
+            continue
+        if action is None and not notes:
+            skipped.append({"row": index, "queue_id": queue_id, "reason": "No reviewer action or notes provided."})
+            continue
+        item = by_id.get(queue_id)
+        if item is None:
+            skipped.append({"row": index, "queue_id": queue_id, "reason": "Queue item not found."})
+            continue
+        if item.get("status") != "draft":
+            skipped.append({"row": index, "queue_id": queue_id, "reason": "Only draft queue items can receive review decisions."})
+            continue
+        if action == "approve" and item.get("compliance_status") != "clear":
+            skipped.append({"row": index, "queue_id": queue_id, "reason": "Approval requires compliance_status=clear."})
+            continue
+        reason_parts = ["CSV queue review decision import."]
+        if reviewer_name:
+            reason_parts.append(f"Reviewer: {reviewer_name}.")
+        if notes:
+            reason_parts.append(f"Notes: {notes}")
+        reason = " ".join(reason_parts)
+        plan = {
+            "row": index,
+            "queue_id": queue_id,
+            "asset_id": item.get("asset_id") or "",
+            "channel": item.get("channel") or "",
+            "format": item.get("format") or "",
+            "current_status": item.get("status") or "",
+            "compliance_status": item.get("compliance_status") or "",
+            "reviewer_action": action or "edit",
+            "reviewer_name": reviewer_name,
+            "review_notes": notes,
+        }
+        if dry_run:
+            planned.append(plan)
+            continue
+        feedback = FeedbackIn(
+            module="review_queue_import",
+            ref_type="publish_queue",
+            ref_id=queue_id,
+            action=action or "edit",
+            reason=reason,
+            before_text=item.get("caption"),
+            tags=["review_queue_import", *audit_tags(session)],
+        )
+        result = await save_feedback(feedback)
+        imported.append({**plan, "feedback_id": (result.get("item") or {}).get("id")})
+    return {
+        "dry_run": dry_run,
+        "planned_count": len(planned),
+        "imported_count": len(imported),
+        "skipped_count": len(skipped),
+        "planned": planned,
+        "imported": imported,
+        "skipped": skipped,
+        "message": (
+            f"Previewed {len(planned)} review queue decision(s), {len(skipped)} skipped."
+            if dry_run
+            else f"Imported {len(imported)} review queue decision(s), {len(skipped)} skipped."
+        ),
+        "safety": [
+            "Importing queue review decisions does not schedule or publish items.",
+            "Approval requires a draft queue item with compliance_status clear.",
+            "Run the pre-schedule gate before using Schedule Approved.",
+        ],
+    }
+
+
 def editorial_qa_flags(item: dict):
     caption = re.sub(r"\s+", " ", str(item.get("caption") or "")).strip()
     lower = caption.lower()

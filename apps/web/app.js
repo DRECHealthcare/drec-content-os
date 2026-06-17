@@ -3979,6 +3979,77 @@ document.getElementById("download-review-queue")?.addEventListener("click", asyn
   }
 });
 
+document.getElementById("download-review-queue-decisions")?.addEventListener("click", async () => {
+  const message = document.getElementById("queue-message");
+  try {
+    await downloadProtectedFile("/operations/review-queue-decisions.csv", "drec-review-queue-decisions.csv", "text/csv");
+    message.textContent = "Review queue decisions CSV downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download review queue decisions.";
+  }
+});
+
+function renderReviewQueueDecisionPreview(data) {
+  const container = document.getElementById("review-queue-decision-preview");
+  if (!container) return;
+  const rows = data.planned || data.imported || [];
+  const skipped = data.skipped || [];
+  container.innerHTML = `
+    <article class="insight-card">
+      <strong>${data.dry_run ? "Queue Decision Preview" : "Queue Decision Import"}</strong>
+      <small>${rows.length} row(s) ready · ${skipped.length} skipped</small>
+      ${rows.length ? `
+        <ul>${rows.slice(0, 10).map((row) => `
+          <li>
+            <strong>${escapeHtml(row.channel || "")} / ${escapeHtml(row.format || "")}</strong>
+            ${escapeHtml(row.reviewer_action || "")}
+            ${row.feedback_id ? ` · feedback ${escapeHtml(row.feedback_id)}` : ""}
+          </li>
+        `).join("")}</ul>
+      ` : ""}
+      ${skipped.length ? `
+        <h4>Skipped Rows</h4>
+        <ul>${skipped.slice(0, 10).map((row) => `<li><strong>Row ${escapeHtml(row.row || "")}</strong> ${escapeHtml(row.queue_id || "")}${row.queue_id ? " · " : ""}${escapeHtml(row.reason || "")}</li>`).join("")}</ul>
+      ` : ""}
+      ${Array.isArray(data.safety) && data.safety.length ? `
+        <h4>Safety</h4>
+        <ul>${data.safety.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+      ` : ""}
+    </article>
+  `;
+}
+
+async function uploadReviewQueueDecisions({ dryRun }) {
+  const message = document.getElementById("queue-message");
+  const fileInput = document.getElementById("review-queue-decisions-file");
+  const file = fileInput?.files?.[0];
+  if (!file) {
+    message.textContent = "Choose a review queue decision CSV first.";
+    return;
+  }
+  const body = new FormData();
+  body.append("file", file);
+  body.append("dry_run", dryRun ? "true" : "false");
+  message.textContent = dryRun ? "Previewing queue decisions..." : "Importing queue decisions...";
+  try {
+    const data = await fetchForm("/operations/import-review-queue-decisions", body);
+    if (!dryRun) fileInput.value = "";
+    message.textContent = data.message || (dryRun ? "Queue decisions previewed." : "Queue decisions imported.");
+    renderReviewQueueDecisionPreview(data);
+    if (!dryRun) await Promise.all([loadPublishQueue(), loadPreScheduleGate(), loadLoopStatus()]);
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : dryRun ? "Could not preview queue decisions." : "Could not import queue decisions.";
+  }
+}
+
+document.getElementById("preview-review-queue-decisions")?.addEventListener("click", async () => {
+  await uploadReviewQueueDecisions({ dryRun: true });
+});
+
+document.getElementById("import-review-queue-decisions")?.addEventListener("click", async () => {
+  await uploadReviewQueueDecisions({ dryRun: false });
+});
+
 document.getElementById("review-items").addEventListener("click", async (event) => {
   const editButton = event.target.closest("[data-edit-queue]");
   if (editButton) {

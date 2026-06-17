@@ -63,6 +63,8 @@ const requiredRoutes = [
   "GET /operations/review-log.md",
   "GET /operations/editorial-qa-pack.md",
   "GET /operations/review-queue.csv",
+  "GET /operations/review-queue-decisions.csv",
+  "POST /operations/import-review-queue-decisions",
   "GET /operations/review-to-schedule-pack.md",
   "GET /operations/learning-snapshot.csv",
   "GET /learning/quarterly-memo",
@@ -826,6 +828,21 @@ const requiredSnippets = [
     name: "review queue csv export",
     file: "main",
     text: "drec-review-queue.csv",
+  },
+  {
+    name: "review queue decisions export",
+    file: "main",
+    text: "drec-review-queue-decisions.csv",
+  },
+  {
+    name: "review queue decisions import route",
+    file: "main",
+    text: "import_review_queue_decisions",
+  },
+  {
+    name: "review queue decisions safety",
+    file: "main",
+    text: "Importing queue review decisions does not schedule or publish items.",
   },
   {
     name: "review to schedule pack export",
@@ -1891,6 +1908,31 @@ const requiredSnippets = [
     name: "web review queue csv action",
     file: "web",
     text: "download-review-queue",
+  },
+  {
+    name: "web review queue decisions action",
+    file: "web",
+    text: "download-review-queue-decisions",
+  },
+  {
+    name: "web review queue decisions preview action",
+    file: "web",
+    text: "preview-review-queue-decisions",
+  },
+  {
+    name: "web review queue decisions import action",
+    file: "web",
+    text: "import-review-queue-decisions",
+  },
+  {
+    name: "web review queue decisions import endpoint",
+    file: "web",
+    text: "/operations/import-review-queue-decisions",
+  },
+  {
+    name: "web review queue decisions preview renderer",
+    file: "web",
+    text: "renderReviewQueueDecisionPreview",
   },
   {
     name: "web review queue csv endpoint",

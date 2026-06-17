@@ -584,6 +584,35 @@ const checks = [
     },
   },
   {
+    name: "Review queue decisions CSV",
+    url: `${apiBase}/operations/review-queue-decisions.csv`,
+    auth: true,
+    validate: async (res) => {
+      const text = await res.text();
+      return text.includes("queue_id,asset_id,channel,format,review_state,compliance_status,media_count,caption,reviewer_action,reviewer_name,review_notes");
+    },
+  },
+  {
+    name: "Review queue decisions import dry run",
+    url: `${apiBase}/operations/import-review-queue-decisions`,
+    method: "POST",
+    auth: true,
+    body: () => {
+      const form = new FormData();
+      const csv = [
+        "queue_id,reviewer_action,reviewer_name,review_notes",
+        "00000000-0000-0000-0000-000000000000,approve,Smoke Test,Dry-run only",
+      ].join("\n");
+      form.append("file", new Blob([csv], { type: "text/csv" }), "review-queue-decisions-smoke.csv");
+      form.append("dry_run", "true");
+      return form;
+    },
+    validate: async (res) => {
+      const data = await res.json();
+      return data.dry_run === true && data.skipped_count === 1 && data.skipped?.[0]?.reason === "Queue item not found.";
+    },
+  },
+  {
     name: "Review-to-schedule pack",
     url: `${apiBase}/operations/review-to-schedule-pack.md`,
     auth: true,

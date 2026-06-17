@@ -407,9 +407,17 @@
           <button id="download-editorial-qa" type="button">Download Editorial QA</button>
           <button id="download-review-schedule-pack" type="button">Download Review-to-Schedule</button>
           <button id="download-review-queue" type="button">Download Review Queue CSV</button>
+          <button id="download-review-queue-decisions" type="button">Download Queue Decisions</button>
           <button id="download-review-log" type="button">Download Review Log</button>
+          <label class="file-action">
+            Queue CSV
+            <input id="review-queue-decisions-file" type="file" accept=".csv,text/csv">
+          </label>
+          <button id="preview-review-queue-decisions" type="button">Preview Queue Decisions</button>
+          <button id="import-review-queue-decisions" type="button">Import Queue Decisions</button>
         </div>
         <div id="pre-schedule-gate" class="learning-grid"></div>
+        <div id="review-queue-decision-preview" class="learning-grid"></div>
         <div id="review-items" class="queue-list"></div>
       </div>
     </section>
