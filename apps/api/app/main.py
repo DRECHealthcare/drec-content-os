@@ -4474,6 +4474,208 @@ async def operations_asset_review_session_markdown(_: None = Depends(require_acc
     )
 
 
+SAFE_REWRITE_REPLACEMENTS = [
+    ("不等于个人诊断或治疗方案", "仅供健康教育参考"),
+    ("个人诊断或治疗方案", "个人医疗建议"),
+    ("诊断", "医疗判断"),
+    ("治疗方案", "医疗建议"),
+    ("处方", "用药建议"),
+    ("diagnosis", "medical assessment"),
+    ("diagnose", "assess"),
+    ("treatment plan", "care discussion"),
+    ("prescribe", "recommend clinically"),
+]
+
+
+def safer_caption_rewrite(caption: str):
+    original = caption or ""
+    rewritten = original
+    replacements = []
+    for old, new in SAFE_REWRITE_REPLACEMENTS:
+        if old in rewritten:
+            rewritten = rewritten.replace(old, new)
+            replacements.append({"from": old, "to": new})
+    rewritten = re.sub(
+        r"\bThis is not diagnosis or a treatment plan\.?",
+        "This is general health education and not personal medical advice.",
+        rewritten,
+        flags=re.IGNORECASE,
+    )
+    if "This is not diagnosis or a treatment plan" in original:
+        replacements.append({"from": "This is not diagnosis or a treatment plan.", "to": "This is general health education and not personal medical advice."})
+    if rewritten == original and check_text(original).get("status") == "pending":
+        rewritten = original.strip()
+        if rewritten and not rewritten.endswith(("。", ".", "!", "！")):
+            rewritten += "。"
+        rewritten += " 本内容只作为一般健康教育参考；个人情况请和医生讨论。"
+    before = check_text(original)
+    after = check_text(rewritten)
+    return {
+        "original_caption": original,
+        "suggested_caption": rewritten,
+        "before_status": before.get("status"),
+        "after_status": after.get("status"),
+        "before_findings": before.get("findings") or [],
+        "after_findings": after.get("findings") or [],
+        "replacements": replacements,
+        "review_note": "Suggested rewrite only. Human reviewer must confirm meaning, safety, and brand fit before applying.",
+    }
+
+
+async def asset_rewrite_pack_payload():
+    assets = await fetch_asset_list(200)
+    active_assets = [asset for asset in assets if asset.get("review_status") != "rejected"]
+    rewrite_items = []
+    for asset in active_assets:
+        caption = asset.get("caption") or ""
+        detector = check_text(caption)
+        if detector.get("status") == "clear" and asset.get("compliance_status") == "clear":
+            continue
+        rewrite = safer_caption_rewrite(caption)
+        metadata = asset.get("metadata") or {}
+        rewrite_items.append(
+            {
+                "asset_id": asset.get("id"),
+                "brief_id": asset.get("brief_id"),
+                "topic": metadata.get("topic") or asset.get("format") or "Untitled asset",
+                "channel": asset.get("channel"),
+                "format": asset.get("format"),
+                "review_status": asset.get("review_status"),
+                "compliance_status": asset.get("compliance_status"),
+                "before_status": rewrite.get("before_status"),
+                "after_status": rewrite.get("after_status"),
+                "before_findings": rewrite.get("before_findings"),
+                "after_findings": rewrite.get("after_findings"),
+                "replacements": rewrite.get("replacements"),
+                "original_caption": rewrite.get("original_caption"),
+                "suggested_caption": rewrite.get("suggested_caption"),
+                "copy_block": "\n".join(
+                    [
+                        "DREC Safe Caption Rewrite",
+                        "",
+                        f"Asset ID: {asset.get('id') or ''}",
+                        f"Topic: {metadata.get('topic') or ''}",
+                        f"Before detector status: {rewrite.get('before_status')}",
+                        f"After detector status: {rewrite.get('after_status')}",
+                        "",
+                        "Suggested caption:",
+                        rewrite.get("suggested_caption") or "",
+                        "",
+                        "Reviewer decision:",
+                        "[ ] Apply rewrite",
+                        "[ ] Edit further",
+                        "[ ] Keep pending",
+                    ]
+                ),
+                "next_step": "Copy the suggested caption into review notes or create an edited asset, then run human safety review.",
+            }
+        )
+    rewrite_items.sort(
+        key=lambda item: (
+            item.get("after_status") != "clear",
+            item.get("before_status") == "flagged",
+            item.get("topic") or "",
+        )
+    )
+    clear_after = [item for item in rewrite_items if item.get("after_status") == "clear"]
+    still_needs_review = [item for item in rewrite_items if item.get("after_status") != "clear"]
+    return {
+        "phase": "asset_safe_rewrite",
+        "mode": "suggested_rewrite_only",
+        "active_asset_count": len(active_assets),
+        "rewrite_count": len(rewrite_items),
+        "clear_after_rewrite_count": len(clear_after),
+        "still_needs_review_count": len(still_needs_review),
+        "rewrite_items": rewrite_items[:40],
+        "rules": [
+            "This pack does not approve, queue, schedule, or publish content.",
+            "Apply rewrites only after human reviewer confirms medical-safety meaning.",
+            "Use rewrites to remove diagnosis, prescription, and treatment-plan language.",
+            "After applying a rewrite, run Safety Review again before approval.",
+        ],
+        "next_step": "Review suggested captions, apply safe edits manually, then mark Safety Clear only after human approval.",
+    }
+
+
+@app.get("/operations/asset-rewrite-pack")
+async def operations_asset_rewrite_pack(_: None = Depends(require_access_token)):
+    return await asset_rewrite_pack_payload()
+
+
+@app.get("/operations/asset-rewrite-pack.md")
+async def operations_asset_rewrite_pack_markdown(_: None = Depends(require_access_token)):
+    generated_at = datetime.now(timezone.utc).isoformat()
+    payload = await asset_rewrite_pack_payload()
+    lines = [
+        "# DREC Content OS Asset Safe Rewrite Pack",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this pack to prepare safer caption edits before human approval. It is read-only and does not change any saved asset.",
+        "",
+        "## Rewrite Summary",
+        "",
+        f"- Active assets: {payload.get('active_asset_count')}",
+        f"- Suggested rewrites: {payload.get('rewrite_count')}",
+        f"- Clear after rewrite: {payload.get('clear_after_rewrite_count')}",
+        f"- Still needs review: {payload.get('still_needs_review_count')}",
+        "",
+        "## Rules",
+        "",
+        *markdown_list(payload.get("rules"), "- Human review required."),
+        "",
+        "## Suggested Rewrites",
+        "",
+    ]
+    items = payload.get("rewrite_items") or []
+    if not items:
+        lines.extend(["- No rewrite candidates found.", ""])
+    for index, item in enumerate(items, start=1):
+        replacement_lines = [
+            f"- `{replacement.get('from')}` -> `{replacement.get('to')}`"
+            for replacement in item.get("replacements") or []
+        ] or ["- No direct phrase replacement; reviewer should edit manually."]
+        after_findings = [
+            f"- [{finding.get('severity')}] {finding.get('rule_id')}: {finding.get('message')} ({', '.join(finding.get('matches') or []) or 'no match text'})"
+            for finding in item.get("after_findings") or []
+        ] or ["- No detector findings after suggested rewrite. Human review is still required."]
+        lines.extend(
+            [
+                f"### {index}. {item.get('topic')}",
+                "",
+                f"- Asset ID: {item.get('asset_id')}",
+                f"- Channel / format: {item.get('channel')} / {item.get('format')}",
+                f"- Detector before / after: {item.get('before_status')} / {item.get('after_status')}",
+                f"- Next step: {item.get('next_step')}",
+                "",
+                "Replacement notes:",
+                "",
+                *replacement_lines,
+                "",
+                "After-rewrite detector findings:",
+                "",
+                *after_findings,
+                "",
+                "Suggested caption:",
+                "",
+                item.get("suggested_caption") or "",
+                "",
+                "Copy block:",
+                "",
+                "```",
+                item.get("copy_block") or "",
+                "```",
+                "",
+            ]
+        )
+    lines.extend(["## Next Step", "", f"- {payload.get('next_step')}", ""])
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-asset-safe-rewrite-pack.md"'},
+    )
+
+
 @app.get("/operations/asset-review-decisions.csv")
 async def operations_asset_review_decisions_csv(_: None = Depends(require_access_token)):
     assets = await fetch_asset_list(200)

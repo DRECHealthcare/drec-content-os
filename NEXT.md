@@ -137,6 +137,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added Backup & Recovery Pack for rebuild evidence, required exports, recovery order, and degraded mode
 - [x] Added manual Ads Planning Pack with candidate tests, CPL targets, budget rules, and media buyer handoff
 - [x] Added Asset Review Session Pack with detector findings, recommended decisions, and next approval steps
+- [x] Added Asset Safe Rewrite Pack with suggested safer captions for pending draft assets
 
 ## Next Engineering Tasks
 
@@ -257,6 +258,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add Backup & Recovery Pack for weekly backup and rebuild readiness
 - [x] Add manual Ads Planning Pack before Marketing API spend automation
 - [x] Add Asset Review Session Pack for the current draft-approval bottleneck
+- [x] Add Asset Safe Rewrite Pack before human approval of pending drafts
 - [ ] Connect Meta Graph API credentials
 - [x] Implement real Facebook publish scheduling behind Meta readiness and enable flags
 - [x] Implement Instagram two-step publish worker behind Meta readiness and enable flags

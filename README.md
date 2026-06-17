@@ -64,6 +64,7 @@ Stage 1 is now a working thin-core workflow:
 - Download an Ads Planning Pack from Insight Inbox with manual candidate tests, CPL targets from Knowledge Base, budget rules, and media buyer handoff
 - Use Create Post for one-off content; it now saves a linked brief and draft asset into the review workflow with style, target signal, media, and compliance evidence attached
 - Use the Assets Review Session summary and Markdown pack to run a focused human approval meeting with detector findings, recommended decisions, and next steps
+- Use the Assets Rewrite Pack to prepare safer suggested captions for pending assets without auto-approving or changing saved content
 - Use Creative Studio to review the DREC style library, brand tokens, KB style rules, safety rules, and style-learning signals before drafting or approving assets
 - Use Template Studio to map static assets to DREC layout templates, render rules, brand tokens, and final QA before artwork handoff
 - Use Video Studio to review reel readiness, approved video media, blockers, manual SOP steps, and the future DREC Cut lock before production handoff

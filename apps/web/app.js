@@ -36,7 +36,7 @@ document.querySelectorAll("nav button").forEach((button) => {
     if (screen === "creative") loadStyleLibrary();
     if (screen === "templates") loadTemplateStudio();
     if (screen === "video") loadVideoStudio();
-    if (screen === "assets") Promise.all([loadAssets(), loadMediaAssets(), loadAssetReviewSession()]);
+    if (screen === "assets") Promise.all([loadAssets(), loadMediaAssets(), loadAssetReviewSession(), loadAssetRewritePack()]);
     if (screen === "outcomes") loadOutcomes();
     if (screen === "learning") {
       loadLearningSummary();
@@ -1800,6 +1800,50 @@ async function loadAssetReviewSession() {
   }
 }
 
+function renderAssetRewritePack(data) {
+  const container = document.getElementById("asset-rewrite-pack");
+  if (!container) return;
+  const items = data.rewrite_items || [];
+  const rules = data.rules || [];
+  container.innerHTML = `
+    <article class="learning-card">
+      <h3>Rewrite Pack</h3>
+      <p>${escapeHtml(data.rewrite_count || 0)} suggestion(s)</p>
+      <small>${escapeHtml(data.mode || "suggested_rewrite_only")}</small>
+    </article>
+    <article class="learning-card">
+      <h3>Cleaner After Rewrite</h3>
+      <p>${escapeHtml(data.clear_after_rewrite_count || 0)}</p>
+      <small>still needs human approval</small>
+    </article>
+    <article class="learning-card">
+      <h3>Still Needs Review</h3>
+      <p>${escapeHtml(data.still_needs_review_count || 0)}</p>
+      <small>rewrite or reviewer attention</small>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Suggested Caption Fixes</h3>
+      <ul>${items.length ? items.slice(0, 5).map((item) => `<li><strong>${escapeHtml(item.topic || "Untitled asset")}</strong> · ${escapeHtml(item.before_status || "")} → ${escapeHtml(item.after_status || "")}<br><small>${escapeHtml(item.next_step || "")}</small></li>`).join("") : "<li>No rewrite candidates found.</li>"}</ul>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Rewrite Rules</h3>
+      <ul>${rules.length ? rules.map((rule) => `<li>${escapeHtml(rule)}</li>`).join("") : "<li>Human review required before applying rewrites.</li>"}</ul>
+      <p>${escapeHtml(data.next_step || "")}</p>
+    </article>
+  `;
+}
+
+async function loadAssetRewritePack() {
+  const container = document.getElementById("asset-rewrite-pack");
+  if (!container) return;
+  try {
+    const data = await fetchJson("/operations/asset-rewrite-pack");
+    renderAssetRewritePack(data);
+  } catch (error) {
+    container.innerHTML = '<p class="status-note">Set the access token to load the rewrite pack.</p>';
+  }
+}
+
 async function runAssetBatchAction(button, path, label) {
   const message = document.getElementById("media-message");
   const originalText = button.textContent;
@@ -1816,7 +1860,7 @@ async function runAssetBatchAction(button, path, label) {
       `${data.skipped || 0} skipped`,
     ].filter(Boolean).join(", ");
     message.textContent = `${label} complete: ${summary}.`;
-    await Promise.all([loadAssets(), loadAssetReviewSession(), loadPublishQueue(), loadLoopStatus(), loadLearningSummary()]);
+    await Promise.all([loadAssets(), loadAssetReviewSession(), loadAssetRewritePack(), loadPublishQueue(), loadLoopStatus(), loadLearningSummary()]);
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : `${label} failed.`;
   } finally {
@@ -2532,6 +2576,16 @@ document.getElementById("download-asset-review-session")?.addEventListener("clic
   }
 });
 
+document.getElementById("download-asset-rewrite-pack")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/asset-rewrite-pack.md", "drec-asset-safe-rewrite-pack.md", "text/markdown");
+    message.textContent = "Asset rewrite pack downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download asset rewrite pack.";
+  }
+});
+
 document.getElementById("refresh-style-library")?.addEventListener("click", async () => {
   const button = document.getElementById("refresh-style-library");
   button.disabled = true;
@@ -2670,7 +2724,7 @@ async function uploadAssetReviewDecisions({ dryRun }) {
     if (!dryRun) fileInput.value = "";
     message.textContent = data.message || (dryRun ? "Review decisions previewed." : "Review decisions imported.");
     renderAssetReviewDecisionPreview(data);
-    if (!dryRun) await Promise.all([loadAssets(), loadAssetReviewSession(), loadLoopStatus(), loadLearningSummary()]);
+    if (!dryRun) await Promise.all([loadAssets(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : dryRun ? "Could not preview review decisions." : "Could not import review decisions.";
   }
@@ -2757,7 +2811,7 @@ document.getElementById("save-all-assets").addEventListener("click", async () =>
   try {
     const data = await fetchJson(`/briefs/draft-assets?limit=${encodeURIComponent(limit)}`, { method: "POST" });
     message.textContent = `Assets ready: ${data.created || 0} created, ${data.reused || 0} reused, ${data.skipped || 0} skipped.`;
-    await Promise.all([loadBriefs(), loadAssets(), loadAssetReviewSession(), loadLoopStatus(), loadLearningSummary()]);
+    await Promise.all([loadBriefs(), loadAssets(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
     if ((data.created || data.reused || 0) > 0) showScreen("assets");
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not save all draft assets.";
@@ -2816,7 +2870,7 @@ document.getElementById("brief-items").addEventListener("click", async (event) =
     try {
       const data = await fetchJson(`/briefs/${assetButton.dataset.draftAssetBrief}/draft-asset`, { method: "POST" });
       document.getElementById("plan-message").textContent = data.reused ? "Existing draft asset opened." : "Draft asset saved.";
-      await Promise.all([loadBriefs(), loadAssets(), loadAssetReviewSession(), loadLoopStatus(), loadLearningSummary()]);
+      await Promise.all([loadBriefs(), loadAssets(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
       showScreen("assets");
     } catch (error) {
       document.getElementById("plan-message").textContent = error.message === "Access token required" ? "Set the access token first." : "Could not save draft asset.";
@@ -2947,7 +3001,7 @@ document.getElementById("compose-form").addEventListener("submit", async (event)
     renderDraft(draft, compliance);
     saveAssetButton.disabled = !draft.assetId;
     queueButton.disabled = !draft.assetId || compliance.status === "flagged";
-    await Promise.all([loadBriefs(), loadAssets(), loadAssetReviewSession(), loadLoopStatus(), loadLearningSummary()]);
+    await Promise.all([loadBriefs(), loadAssets(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
   } catch (error) {
     renderDraft(draft, null);
     document.getElementById("compose-result").insertAdjacentHTML(
@@ -2970,7 +3024,7 @@ document.getElementById("compose-result").addEventListener("click", (event) => {
 
 document.getElementById("save-asset").addEventListener("click", async () => {
   if (!currentDraft) return;
-  await Promise.all([loadAssets(), loadAssetReviewSession(), loadLoopStatus()]);
+  await Promise.all([loadAssets(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus()]);
   showScreen("assets");
 });
 
@@ -3047,7 +3101,7 @@ document.getElementById("asset-items").addEventListener("click", async (event) =
         method: "PATCH",
         body: JSON.stringify({ compliance_status: status, reason }),
       });
-      await Promise.all([loadAssets(), loadAssetReviewSession(), loadLoopStatus(), loadLearningSummary()]);
+      await Promise.all([loadAssets(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
     } catch {
       complianceButton.disabled = false;
       complianceButton.textContent = originalText;
@@ -3076,7 +3130,7 @@ document.getElementById("asset-items").addEventListener("click", async (event) =
         method: "PATCH",
         body: JSON.stringify({ review_status: status, reason }),
       });
-      await Promise.all([loadAssets(), loadAssetReviewSession(), loadLoopStatus(), loadLearningSummary()]);
+      await Promise.all([loadAssets(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
     } catch {
       statusButton.disabled = false;
       statusButton.textContent = originalText;
@@ -3947,6 +4001,7 @@ loadKb();
 loadBriefs();
 loadAssets();
 loadAssetReviewSession();
+loadAssetRewritePack();
 loadMediaAssets();
 loadLearningSummary();
 loadQuarterlyMemo();

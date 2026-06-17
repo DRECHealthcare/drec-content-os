@@ -41,6 +41,8 @@ const requiredRoutes = [
   "GET /operations/asset-safety-review.md",
   "GET /operations/asset-review-session",
   "GET /operations/asset-review-session.md",
+  "GET /operations/asset-rewrite-pack",
+  "GET /operations/asset-rewrite-pack.md",
   "GET /operations/asset-review-decisions.csv",
   "POST /operations/import-asset-review-decisions",
   "GET /operations/review-log.md",
@@ -581,6 +583,21 @@ const requiredSnippets = [
     name: "asset review session export",
     file: "main",
     text: "drec-asset-review-session-pack.md",
+  },
+  {
+    name: "asset rewrite pack route",
+    file: "main",
+    text: "asset_rewrite_pack_payload",
+  },
+  {
+    name: "asset rewrite pack export",
+    file: "main",
+    text: "drec-asset-safe-rewrite-pack.md",
+  },
+  {
+    name: "asset rewrite pack safety",
+    file: "main",
+    text: "suggested_rewrite_only",
   },
   {
     name: "asset review decisions export",
@@ -1458,6 +1475,16 @@ const requiredSnippets = [
     text: "loadAssetReviewSession",
   },
   {
+    name: "web asset rewrite pack action",
+    file: "web",
+    text: "download-asset-rewrite-pack",
+  },
+  {
+    name: "web asset rewrite pack loader",
+    file: "web",
+    text: "loadAssetRewritePack",
+  },
+  {
     name: "web asset review decisions action",
     file: "web",
     text: "download-asset-review-decisions",
@@ -1506,6 +1533,11 @@ const requiredSnippets = [
     name: "web asset review session endpoint",
     file: "web",
     text: "/operations/asset-review-session",
+  },
+  {
+    name: "web asset rewrite pack endpoint",
+    file: "web",
+    text: "/operations/asset-rewrite-pack",
   },
   {
     name: "web asset review decisions endpoint",
