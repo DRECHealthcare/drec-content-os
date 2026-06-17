@@ -71,6 +71,7 @@ Stage 1 is now a working thin-core workflow:
 - Use the Approval Cockpit to prioritize clear draft assets for human review without auto-approving, queueing, scheduling, or publishing
 - Use the Post-Approval Production Pack to brief design, media, rights checks, and visual QA after human approval without auto-queueing, scheduling, publishing, or sending Meta requests
 - Use the Pre-Schedule Gate in Review/Scheduler to check human queue approval, final caption, approved media/design, visual QA, and schedule readiness before choosing publishing slots
+- Attach approved design/media URLs directly to draft assets so production work can move into queue and schedule readiness without changing approval or publishing state
 - Use Creative Studio to review the DREC style library, brand tokens, KB style rules, safety rules, and style-learning signals before drafting or approving assets
 - Use Template Studio to map static assets to DREC layout templates, render rules, brand tokens, and final QA before artwork handoff
 - Use Video Studio to review reel readiness, approved video media, blockers, manual SOP steps, and the future DREC Cut lock before production handoff

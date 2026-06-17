@@ -26,6 +26,7 @@ from .db import close_db, connect_db, fetch_row, fetch_rows
 from .models import (
     AssetIn,
     AssetComplianceIn,
+    AssetMediaIn,
     AssetRewriteIn,
     AssetStatusIn,
     ComposerPostIn,
@@ -7422,6 +7423,96 @@ async def update_asset_caption(
         "item": row or {**existing, "caption": caption, "compliance_status": compliance_status, "metadata": metadata},
         "compliance": compliance,
         "message": "Caption rewrite applied. Human approval is still required before queueing.",
+    }
+
+
+@app.patch("/assets/{asset_id}/media")
+async def update_asset_media(
+    asset_id: str,
+    update: AssetMediaIn,
+    session: dict = Depends(require_review_access),
+):
+    existing = await asset_by_id(asset_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Asset not found.")
+    media_urls = [str(url).strip() for url in update.media_urls if str(url).strip()]
+    if not media_urls:
+        raise HTTPException(status_code=422, detail="Add at least one media or design URL.")
+    metadata = existing.get("metadata") or {}
+    media_history = list(metadata.get("media_history") or [])
+    media_history.append(
+        {
+            "source": "asset_media_attachment",
+            "attached_at": datetime.now(timezone.utc).isoformat(),
+            "actor": session.get("actor") or "unknown",
+            "media_count": len(media_urls),
+            "visual_qa_status": update.visual_qa_status,
+            "rights_note": update.rights_note,
+            "reason": update.reason or "Media/design attached for production review.",
+        }
+    )
+    metadata["media_history"] = media_history[-10:]
+    metadata["latest_visual_qa_status"] = update.visual_qa_status
+    if update.rights_note:
+        metadata["latest_media_rights_note"] = update.rights_note
+    row = await fetch_row(
+        """
+        update assets
+        set media_urls = $2,
+            metadata = $3::jsonb,
+            updated_at = now()
+        where id = $1
+        returning id, brief_id, channel, format, caption, media_urls, metadata,
+                  compliance_status, review_status, created_at
+        """,
+        asset_id,
+        media_urls,
+        json.dumps(metadata),
+    )
+    if row is None and supabase_rest.configured():
+        row = await supabase_rest.update(
+            "assets",
+            {"media_urls": media_urls, "metadata": metadata},
+            {"id": f"eq.{asset_id}"},
+        )
+    synced_queue_items = []
+    if update.sync_draft_queue:
+        synced_rows = await fetch_rows(
+            """
+            update publish_queue
+            set media_urls = $2,
+                updated_at = now()
+            where asset_id = $1
+              and status = 'draft'
+            returning id, asset_id, channel, format, caption, media_urls, planned_slot, status,
+                      compliance_status, external_post_id, created_at
+            """,
+            asset_id,
+            media_urls,
+        )
+        if not synced_rows and supabase_rest.configured():
+            synced_rows = await supabase_rest.update(
+                "publish_queue",
+                {"media_urls": media_urls},
+                {"asset_id": f"eq.{asset_id}", "status": "eq.draft"},
+            )
+        synced_queue_items = synced_rows or []
+    await save_feedback(
+        FeedbackIn(
+            module="asset_media",
+            ref_type="asset",
+            ref_id=asset_id,
+            action="edit",
+            reason=update.reason or "Media/design attached for production review.",
+            before_text="\n".join([url for url in existing.get("media_urls") or [] if url]),
+            after_text="\n".join(media_urls),
+            tags=["asset_media", update.visual_qa_status, *audit_tags(session)],
+        )
+    )
+    return {
+        "item": row or {**existing, "media_urls": media_urls, "metadata": metadata},
+        "synced_queue_count": len(synced_queue_items),
+        "message": "Media/design attached. Human approval, queueing, scheduling, and publishing remain separate gates.",
     }
 
 

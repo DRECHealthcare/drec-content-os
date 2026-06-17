@@ -1624,6 +1624,7 @@ function assetCard(item) {
         <button type="button" data-asset-status="approved" data-id="${escapeHtml(item.id)}">Approve</button>
         <button type="button" data-asset-status="review" data-id="${escapeHtml(item.id)}">Needs Work</button>
         <button type="button" data-asset-status="rejected" data-id="${escapeHtml(item.id)}">Reject</button>
+        <button type="button" data-attach-asset-media="${escapeHtml(item.id)}">Attach Media</button>
         <button type="button" data-copy-asset-review="${escapeHtml(item.id)}">Copy Review Note</button>
         <button type="button" data-copy-asset="${escapeHtml(item.id)}">Copy Package</button>
         <button type="button" data-queue-asset="${escapeHtml(item.id)}" ${canQueue ? "" : "disabled"}>Add To Queue</button>
@@ -3310,6 +3311,44 @@ document.getElementById("queue-draft").addEventListener("click", async () => {
 });
 
 document.getElementById("asset-items").addEventListener("click", async (event) => {
+  const attachMediaButton = event.target.closest("[data-attach-asset-media]");
+  if (attachMediaButton) {
+    const message = document.getElementById("media-message");
+    const items = JSON.parse(document.getElementById("asset-items").dataset.assets || "[]");
+    const asset = items.find((item) => item.id === attachMediaButton.dataset.attachAssetMedia);
+    const currentMedia = Array.isArray(asset?.media_urls) ? asset.media_urls.filter(Boolean).join("\n") : "";
+    const mediaInput = window.prompt("Paste approved design/media URL(s), one per line.", currentMedia);
+    if (mediaInput === null) return;
+    const mediaUrls = splitLines(mediaInput);
+    if (!mediaUrls.length) {
+      message.textContent = "Add at least one media or design URL.";
+      return;
+    }
+    const rightsNote = window.prompt("Add a short rights / visual QA note.", "Approved for DREC use; visual QA pending.");
+    if (rightsNote === null) return;
+    const originalText = attachMediaButton.textContent;
+    attachMediaButton.disabled = true;
+    attachMediaButton.textContent = "Saving";
+    try {
+      const data = await fetchJson(`/assets/${attachMediaButton.dataset.attachAssetMedia}/media`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          media_urls: mediaUrls,
+          rights_note: rightsNote.trim() || "Approved for DREC use; visual QA pending.",
+          visual_qa_status: "pending",
+          reason: "Attached approved media/design URL for production handoff.",
+          sync_draft_queue: true,
+        }),
+      });
+      message.textContent = data.message || "Media/design attached.";
+      await Promise.all([loadAssets(), loadPostApprovalProduction(), loadPreScheduleGate(), loadPublishQueue(), loadLoopStatus()]);
+    } catch (error) {
+      message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not attach media/design.";
+      attachMediaButton.disabled = false;
+      attachMediaButton.textContent = originalText;
+    }
+    return;
+  }
   const reviewNoteButton = event.target.closest("[data-copy-asset-review]");
   if (reviewNoteButton) {
     const message = document.getElementById("media-message");

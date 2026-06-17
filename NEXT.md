@@ -144,6 +144,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added Approval Cockpit for prioritizing clear draft assets before human approval
 - [x] Added Post-Approval Production Pack for design, media, rights, and visual QA handoff after human approval
 - [x] Added Pre-Schedule Gate for queue review, final caption, approved media/design, and visual QA readiness before scheduling
+- [x] Added safe Attach Media action for linking approved design/media URLs back to draft assets without approving, queueing, scheduling, or publishing
 
 ## Next Engineering Tasks
 

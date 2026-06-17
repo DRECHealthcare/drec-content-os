@@ -106,6 +106,7 @@ const requiredRoutes = [
   "POST /assets/queue-ready",
   "POST /assets/{asset_id}/queue",
   "PATCH /assets/{asset_id}/caption",
+  "PATCH /assets/{asset_id}/media",
   "POST /assets/apply-safe-rewrites",
   "PATCH /assets/{asset_id}/compliance",
   "POST /publish-queue/{item_id}/schedule-next",
@@ -673,6 +674,16 @@ const requiredSnippets = [
     name: "asset rewrite apply route",
     file: "main",
     text: "/assets/{asset_id}/caption",
+  },
+  {
+    name: "asset media attach route",
+    file: "main",
+    text: "/assets/{asset_id}/media",
+  },
+  {
+    name: "asset media attach safety",
+    file: "main",
+    text: "Human approval, queueing, scheduling, and publishing remain separate gates.",
   },
   {
     name: "asset rewrite apply audit",
@@ -1658,6 +1669,16 @@ const requiredSnippets = [
     name: "web asset review note action",
     file: "web",
     text: "data-copy-asset-review",
+  },
+  {
+    name: "web asset media attach action",
+    file: "web",
+    text: "data-attach-asset-media",
+  },
+  {
+    name: "web asset media attach endpoint",
+    file: "web",
+    text: "/media",
   },
   {
     name: "web asset review note text",

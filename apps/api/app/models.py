@@ -59,6 +59,14 @@ class AssetRewriteIn(BaseModel):
     reason: Optional[str] = None
 
 
+class AssetMediaIn(BaseModel):
+    media_urls: List[str]
+    reason: Optional[str] = None
+    visual_qa_status: Literal["pending", "passed", "needs_work"] = "pending"
+    rights_note: Optional[str] = None
+    sync_draft_queue: bool = True
+
+
 class MediaAssetIn(BaseModel):
     title: str
     source_url: str
