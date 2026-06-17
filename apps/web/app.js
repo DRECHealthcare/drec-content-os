@@ -2997,6 +2997,16 @@ document.getElementById("download-cycle-evidence-ledger")?.addEventListener("cli
   }
 });
 
+document.getElementById("download-external-setup-board")?.addEventListener("click", async () => {
+  const message = document.getElementById("test-path-message");
+  try {
+    await downloadProtectedFile("/operations/external-setup-board.csv", "drec-external-setup-board.csv", "text/csv");
+    message.textContent = "External setup board downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download external setup board.";
+  }
+});
+
 document.getElementById("download-operator-pack")?.addEventListener("click", async () => {
   const message = document.getElementById("test-path-message");
   try {

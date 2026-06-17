@@ -3082,6 +3082,111 @@ async def operations_cycle_evidence_ledger_csv(_: None = Depends(require_access_
     )
 
 
+@app.get("/operations/external-setup-board.csv")
+async def operations_external_setup_board_csv(_: None = Depends(require_access_token)):
+    launch = await launch_readiness_payload()
+    security = security_status_payload()
+    meta = await meta_readiness(None)
+    scheduler = await scheduler_health_payload()
+    workflow = await workflow_status(None)
+    workflow_next = ((workflow.get("workflow") or {}).get("next_action") or {})
+    meta_missing = meta.get("missing_credentials") or [
+        item.get("key")
+        for item in meta.get("env_checks", [])
+        if item.get("status") == "missing" or not item.get("configured")
+    ]
+    meta_missing_permissions = meta.get("missing_permissions") or []
+    rows = [
+        {
+            "setup_item": "Doctor approval batch",
+            "gate": "manual_content_workflow",
+            "current_status": workflow_next.get("title") or "Approve a clear asset",
+            "blocking": "yes" if (launch.get("summary") or {}).get("ready_assets", 0) == 0 else "no",
+            "source_link": "/operations/doctor-send-queue.csv",
+            "next_action": "Send doctor review copy, then preview/import the doctor reply only when Decision: approve and Safety: clear are explicit.",
+            "evidence_required": "Doctor reviewer, sent time, preview result, import result, approval/safety decision.",
+        },
+        {
+            "setup_item": "Supabase service-role key",
+            "gate": "security",
+            "current_status": security.get("overall_status") or "",
+            "blocking": "no" if security.get("rls_hardening_ready") else "yes",
+            "source_link": "/security/service-role-install-pack.md",
+            "next_action": security.get("next_step") or "Install SUPABASE_SERVICE_ROLE_KEY on Fly.",
+            "evidence_required": "Fly secrets list shows SUPABASE_SERVICE_ROLE_KEY; /security/status returns ready_for_rls_hardening; live smoke passes.",
+        },
+        {
+            "setup_item": "GitHub dry-run scheduler",
+            "gate": "automation",
+            "current_status": (scheduler.get("heartbeat") or {}).get("status") or scheduler.get("status") or "",
+            "blocking": "no" if (scheduler.get("heartbeat") or {}).get("status") == "recent" else "yes",
+            "source_link": "/operations/scheduler-recovery-pack.md",
+            "next_action": "Confirm GitHub Actions secret DREC_ACCESS_TOKEN, run DREC Scheduler Dry Run once, then verify heartbeat is recent.",
+            "evidence_required": "Green GitHub Actions run; Record scheduler heartbeat step passed; /operations/scheduler-health reports recent.",
+        },
+        {
+            "setup_item": "Meta app and Page credentials",
+            "gate": "meta_credentials",
+            "current_status": meta.get("overall_status") or "",
+            "blocking": "no" if not meta_missing else "yes",
+            "source_link": "/meta/credential-intake-pack.md",
+            "next_action": "Install missing Meta app, Page, IG, and Page token secrets on Fly; keep live switches off.",
+            "evidence_required": "Missing credentials resolved: " + (", ".join(meta_missing) if meta_missing else "none"),
+        },
+        {
+            "setup_item": "Meta Page token permissions",
+            "gate": "meta_permissions",
+            "current_status": (meta.get("token_check") or {}).get("status") or "missing",
+            "blocking": "no" if not meta_missing_permissions and (meta.get("token_check") or {}).get("status") == "ready" else "yes",
+            "source_link": "/meta/preflight-audit.md",
+            "next_action": "Verify required Page and Instagram permissions before any live publishing test.",
+            "evidence_required": "Permissions present: pages_show_list, pages_read_engagement, pages_manage_posts, instagram_basic, instagram_content_publish.",
+        },
+        {
+            "setup_item": "Live Meta switches",
+            "gate": "meta_live_switches",
+            "current_status": "off_until_ready",
+            "blocking": "yes" if not launch.get("can_auto_publish") else "no",
+            "source_link": "/meta/activation-checklist.md",
+            "next_action": "Keep META_ENABLE_PUBLISHING, META_ENABLE_PUBLISHING_JOB, and META_ENABLE_METRICS_JOB off until Meta, scheduler, RLS, and live smoke are green.",
+            "evidence_required": "Meta readiness ready; scheduler recent; service-role gate ready; controlled Facebook dry run passes.",
+        },
+    ]
+    output = StringIO()
+    fieldnames = [
+        "setup_item",
+        "gate",
+        "current_status",
+        "blocking",
+        "source_link",
+        "next_action",
+        "owner",
+        "evidence_required",
+        "evidence_value",
+        "checked_at",
+        "notes",
+        "safe_use_note",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for row in rows:
+        writer.writerow(
+            {
+                **row,
+                "owner": "",
+                "evidence_value": "",
+                "checked_at": "",
+                "notes": "",
+                "safe_use_note": "External setup board only. It does not approve content, store secrets, change Fly/GitHub/Supabase/Meta settings, publish, or send Meta requests.",
+            }
+        )
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-external-setup-board.csv"'},
+    )
+
+
 @app.get("/operations/manual-cycle-qa.md")
 async def operations_manual_cycle_qa(_: None = Depends(require_access_token)):
     generated_at = datetime.now(timezone.utc).isoformat()

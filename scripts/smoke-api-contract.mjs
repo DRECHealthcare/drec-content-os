@@ -37,6 +37,7 @@ const requiredRoutes = [
   "GET /operations/cycle-command-center",
   "GET /operations/cycle-command-center.md",
   "GET /operations/cycle-evidence-ledger.csv",
+  "GET /operations/external-setup-board.csv",
   "GET /operations/manual-cycle-qa.md",
   "GET /operations/daily-ops-checklist.md",
   "GET /operations/risk-audit",
@@ -735,6 +736,36 @@ const requiredSnippets = [
     name: "cycle evidence ledger UI endpoint",
     file: "web",
     text: "/operations/cycle-evidence-ledger.csv",
+  },
+  {
+    name: "external setup board route",
+    file: "main",
+    text: "operations_external_setup_board_csv",
+  },
+  {
+    name: "external setup board export",
+    file: "main",
+    text: "drec-external-setup-board.csv",
+  },
+  {
+    name: "external setup board doctor row",
+    file: "main",
+    text: "Doctor approval batch",
+  },
+  {
+    name: "external setup board safety note",
+    file: "main",
+    text: "External setup board only. It does not approve content, store secrets, change Fly/GitHub/Supabase/Meta settings, publish, or send Meta requests.",
+  },
+  {
+    name: "external setup board UI action",
+    file: "web",
+    text: "download-external-setup-board",
+  },
+  {
+    name: "external setup board UI endpoint",
+    file: "web",
+    text: "/operations/external-setup-board.csv",
   },
   {
     name: "manual cycle qa export",

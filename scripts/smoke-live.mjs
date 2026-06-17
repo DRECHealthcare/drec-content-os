@@ -34,6 +34,7 @@ const checks = [
         && text.includes("download-first-cycle-sprint-tracker")
         && text.includes("download-cycle-command-center")
         && text.includes("download-cycle-evidence-ledger")
+        && text.includes("download-external-setup-board")
         && text.includes("first-cycle-sprint")
         && text.includes("download-doctor-review-polish")
         && text.includes("download-doctor-review-bridge")
@@ -76,6 +77,7 @@ const checks = [
         && text.includes("/security/service-role-install-pack.md")
         && text.includes("/operations/cycle-command-center.md")
         && text.includes("/operations/cycle-evidence-ledger.csv")
+        && text.includes("/operations/external-setup-board.csv")
         && text.includes("/operations/doctor-review-bridge.md")
         && text.includes("/operations/doctor-send-queue.csv")
         && text.includes("/operations/doctor-review-polish-pack")
@@ -302,6 +304,19 @@ const checks = [
         && text.includes("Production reply preview result")
         && text.includes("Current next action")
         && text.includes("Ledger only");
+    },
+  },
+  {
+    name: "External setup board",
+    url: `${apiBase}/operations/external-setup-board.csv`,
+    auth: true,
+    validate: async (res) => {
+      const text = await res.text();
+      return text.includes("setup_item,gate,current_status,blocking,source_link,next_action,owner,evidence_required,evidence_value,checked_at,notes,safe_use_note")
+        && text.includes("Doctor approval batch")
+        && text.includes("Supabase service-role key")
+        && text.includes("Meta app and Page credentials")
+        && text.includes("External setup board only");
     },
   },
   {
