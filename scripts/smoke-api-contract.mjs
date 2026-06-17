@@ -31,6 +31,7 @@ const requiredRoutes = [
   "GET /operations/daily-ops-checklist.md",
   "GET /operations/risk-audit",
   "GET /operations/snapshot.csv",
+  "GET /operations/backup-recovery-pack.md",
   "GET /operations/pipeline-board.csv",
   "GET /operations/audit-trail.csv",
   "GET /operations/creative-pack.md",
@@ -491,6 +492,26 @@ const requiredSnippets = [
     name: "operations snapshot export",
     file: "main",
     text: "drec-content-os-snapshot.csv",
+  },
+  {
+    name: "backup recovery pack export",
+    file: "main",
+    text: "drec-backup-recovery-pack.md",
+  },
+  {
+    name: "backup recovery required exports",
+    file: "main",
+    text: "## Required Exports",
+  },
+  {
+    name: "backup recovery order",
+    file: "main",
+    text: "## Recovery Order",
+  },
+  {
+    name: "backup degraded mode",
+    file: "main",
+    text: "## Degraded Mode",
   },
   {
     name: "pipeline board export",
@@ -1016,6 +1037,16 @@ const requiredSnippets = [
     name: "web operations snapshot action",
     file: "web",
     text: "download-snapshot",
+  },
+  {
+    name: "web backup pack action",
+    file: "web",
+    text: "download-backup-pack",
+  },
+  {
+    name: "web backup pack endpoint",
+    file: "web",
+    text: "/operations/backup-recovery-pack.md",
   },
   {
     name: "web pipeline board action",

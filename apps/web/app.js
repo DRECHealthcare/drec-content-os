@@ -2250,6 +2250,16 @@ document.getElementById("download-snapshot")?.addEventListener("click", async ()
   }
 });
 
+document.getElementById("download-backup-pack")?.addEventListener("click", async () => {
+  const message = document.getElementById("test-path-message");
+  try {
+    await downloadProtectedFile("/operations/backup-recovery-pack.md", "drec-backup-recovery-pack.md", "text/markdown");
+    message.textContent = "Backup recovery pack downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download backup pack.";
+  }
+});
+
 document.getElementById("download-pipeline-board")?.addEventListener("click", async () => {
   const message = document.getElementById("test-path-message");
   try {

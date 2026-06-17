@@ -3475,6 +3475,204 @@ async def operations_snapshot_csv(_: None = Depends(require_access_token)):
     )
 
 
+def configured_label(value):
+    return "configured" if value else "missing"
+
+
+def recovery_table_line(name, rows, backup_source, restore_note):
+    return f"| {name} | {len(rows)} | {backup_source} | {restore_note} |"
+
+
+@app.get("/operations/backup-recovery-pack.md")
+async def operations_backup_recovery_pack(_: None = Depends(require_access_token)):
+    automation = await automation_status_payload()
+    launch = await launch_readiness_payload()
+    security = security_status_payload()
+    meta = await meta_readiness(None)
+    briefs = await snapshot_select(
+        "content_briefs",
+        """
+        select id, topic, status, created_at
+        from content_briefs
+        order by created_at desc
+        limit 1000
+        """,
+        {"select": "id,topic,status,created_at", "order": "created_at.desc", "limit": "1000"},
+    )
+    assets = await snapshot_select(
+        "assets",
+        """
+        select id, brief_id, review_status, compliance_status, media_urls, created_at
+        from assets
+        order by created_at desc
+        limit 1000
+        """,
+        {"select": "id,brief_id,review_status,compliance_status,media_urls,created_at", "order": "created_at.desc", "limit": "1000"},
+    )
+    queue = await snapshot_select(
+        "publish_queue",
+        """
+        select id, asset_id, status, external_post_id, planned_slot, created_at
+        from publish_queue
+        order by created_at desc
+        limit 1000
+        """,
+        {"select": "id,asset_id,status,external_post_id,planned_slot,created_at", "order": "created_at.desc", "limit": "1000"},
+    )
+    media = await snapshot_select(
+        "media_assets",
+        """
+        select id, title, source_url, rights_status, approval_status, metadata, created_at
+        from media_assets
+        order by created_at desc
+        limit 1000
+        """,
+        {"select": "id,title,source_url,rights_status,approval_status,metadata,created_at", "order": "created_at.desc", "limit": "1000"},
+    )
+    raw_metrics = await snapshot_select(
+        "raw_metrics",
+        """
+        select id, source, external_post_id, created_at
+        from raw_metrics
+        order by created_at desc
+        limit 1000
+        """,
+        {"select": "id,source,external_post_id,created_at", "order": "created_at.desc", "limit": "1000"},
+    )
+    outcomes = await snapshot_select(
+        "outcomes",
+        """
+        select id, post_id, score, created_at
+        from outcomes
+        order by created_at desc
+        limit 1000
+        """,
+        {"select": "id,post_id,score,created_at", "order": "created_at.desc", "limit": "1000"},
+    )
+    weights = await snapshot_select(
+        "learning_weights",
+        """
+        select id, dimension, key, is_active, created_at
+        from learning_weights
+        order by created_at desc
+        limit 1000
+        """,
+        {"select": "id,dimension,key,is_active,created_at", "order": "created_at.desc", "limit": "1000"},
+    )
+    feedback = await snapshot_select(
+        "feedback",
+        """
+        select id, module, ref_type, action, created_at
+        from feedback
+        order by created_at desc
+        limit 1000
+        """,
+        {"select": "id,module,ref_type,action,created_at", "order": "created_at.desc", "limit": "1000"},
+    )
+    media_private = [
+        item
+        for item in media
+        if str(item.get("source_url") or "").startswith("supabase://")
+        or isinstance(item.get("metadata"), dict)
+        and item.get("metadata", {}).get("storage_path")
+    ]
+    media_public = [
+        item
+        for item in media
+        if str(item.get("source_url") or "").startswith(("http://", "https://"))
+    ]
+    approved_media = [item for item in media if item.get("approval_status") == "approved"]
+    table_lines = [
+        "| Area | Current records scanned | Backup source | Restore note |",
+        "| --- | ---: | --- | --- |",
+        recovery_table_line("Content briefs", briefs, "Supabase table + operations snapshot", "Restore before assets so brief links can reconnect."),
+        recovery_table_line("Assets", assets, "Supabase table + private/public media references", "Restore after briefs; check media URLs before queueing."),
+        recovery_table_line("Publish queue", queue, "Supabase table + publishing calendar/schedule CSV", "Restore after assets; keep Meta automation off until schedule audit passes."),
+        recovery_table_line("Media assets", media, "Supabase Storage now; future Cloudflare R2 mirror", "Restore binary files first, then media asset rows."),
+        recovery_table_line("Raw metrics", raw_metrics, "Supabase table + learning snapshot CSV", "Restore before outcomes if rebuilding learning evidence."),
+        recovery_table_line("Outcomes", outcomes, "Supabase table + learning snapshot CSV", "Restore after raw metrics for traceability."),
+        recovery_table_line("Learning weights", weights, "Supabase table + learning snapshot CSV", "Restore after outcomes; inactive/reverted weights must stay inactive."),
+        recovery_table_line("Feedback/audit trail", feedback, "Supabase table + audit trail CSV", "Restore to preserve review and actor evidence."),
+    ]
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    config_lines = [
+        f"- Supabase URL: {configured_label(settings.supabase_url)}",
+        f"- Supabase service role key on API: {configured_label(settings.supabase_service_role_key)}",
+        f"- Legacy API access token: {configured_label(settings.drec_access_token)}",
+        f"- Role tokens: viewer={configured_label(settings.drec_viewer_token)}, reviewer={configured_label(settings.drec_reviewer_token)}, operator={configured_label(settings.drec_operator_token)}, admin={configured_label(settings.drec_admin_token)}",
+        f"- Meta credentials: {meta.get('overall_status')} ({meta.get('mode')})",
+        f"- Meta live publishing switch: {settings.meta_enable_publishing}",
+        f"- Meta publishing job switch: {settings.meta_enable_publishing_job}",
+        f"- Meta metrics job switch: {settings.meta_enable_metrics_job}",
+    ]
+    evidence_lines = [
+        f"- Launch readiness: {launch.get('overall_status')}",
+        f"- Automation readiness: {automation.get('overall_status')}",
+        f"- Security readiness: {security.get('overall_status')}",
+        f"- Private media records with storage path: {len(media_private)}",
+        f"- Public media records with URL: {len(media_public)}",
+        f"- Approved media records: {len(approved_media)}",
+    ]
+    lines = [
+        "# DREC Content OS Backup & Recovery Pack",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "## Current Backup Evidence",
+        "",
+        *evidence_lines,
+        "",
+        "## Data Coverage",
+        "",
+        *table_lines,
+        "",
+        "## Required Exports",
+        "",
+        "- `/operations/snapshot.csv` for the operating spine.",
+        "- `/operations/pipeline-board.csv` for brief-to-learning next actions.",
+        "- `/operations/audit-trail.csv` for review, actor, and scheduler evidence.",
+        "- `/operations/learning-snapshot.csv` for raw metrics, outcomes, and learning weights.",
+        "- Supabase SQL dump or table export for full-fidelity restore.",
+        "- Supabase Storage download for private media; mirror to Cloudflare R2 when R2 credentials are installed.",
+        "- GitHub repository clone for code, migrations, workflows, and docs.",
+        "- Fly/Vercel environment variable inventory with values stored in the vault, not this file.",
+        "",
+        "## Configuration Checklist",
+        "",
+        *config_lines,
+        "",
+        "## Recovery Order",
+        "",
+        "1. Restore the GitHub repo and check out the latest verified commit.",
+        "2. Recreate Supabase project or database, then apply `supabase/schema.sql` and migrations.",
+        "3. Restore table data: KB, briefs, assets, queue, media records, raw metrics, outcomes, learning weights, feedback.",
+        "4. Restore Supabase Storage files or R2 media mirror, then verify media records point to valid private/public paths.",
+        "5. Reinstall Fly secrets from the vault and deploy the API.",
+        "6. Reinstall Vercel environment variables and deploy the web UI.",
+        "7. Run `npm run smoke:contract`, then live smoke against the API and web shell.",
+        "8. Keep Meta publishing and metrics jobs in dry-run until Meta readiness, launch readiness, schedule audit, and content risk audit are green.",
+        "",
+        "## Degraded Mode",
+        "",
+        "- If media storage is down, keep drafting captions/briefs and mark assets as media-blocked.",
+        "- If Meta is down or disconnected, publish manually from the handoff and record external post IDs later.",
+        "- If metrics ingestion is down, use the Metrics Template and import CSV after recovery.",
+        "- If Vercel is quota-blocked, use the local web build with the live Fly API until the production frontend can deploy.",
+        "",
+        "## Weekly Backup Rule",
+        "",
+        "- Export the four protected packs listed above after each weekly closeout.",
+        "- Keep at least one current Supabase database dump and one media-file backup outside Supabase.",
+        "- Store secrets only in the vault/account settings; never paste token values into backup reports.",
+        "- Confirm recovery readiness by running the smoke checks after any schema, credential, or deployment change.",
+    ]
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-backup-recovery-pack.md"'},
+    )
+
+
 def audit_tag_value(tags, prefix):
     for tag in tags or []:
         if isinstance(tag, str) and tag.startswith(prefix):
