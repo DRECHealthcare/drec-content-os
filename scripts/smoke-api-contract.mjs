@@ -45,6 +45,7 @@ const requiredRoutes = [
   "GET /meta/readiness",
   "GET /meta/oauth-guide",
   "GET /meta/setup-checklist",
+  "GET /meta/credential-intake-pack.md",
   "GET /kb/export.csv",
   "GET /kb/context",
   "GET /publish-queue/suggest-slot",
@@ -573,6 +574,16 @@ const requiredSnippets = [
     text: "dialog/oauth",
   },
   {
+    name: "meta credential intake pack route",
+    file: "main",
+    text: "meta_credential_intake_pack",
+  },
+  {
+    name: "meta credential intake pack safety",
+    file: "main",
+    text: "It is a checklist and evidence sheet only",
+  },
+  {
     name: "knowledge context route",
     file: "main",
     text: "active_knowledge_context",
@@ -1086,6 +1097,16 @@ const requiredSnippets = [
     name: "web meta oauth copy action",
     file: "web",
     text: "copy-meta-oauth",
+  },
+  {
+    name: "web meta credential pack action",
+    file: "web",
+    text: "download-meta-intake",
+  },
+  {
+    name: "web meta credential pack endpoint",
+    file: "web",
+    text: "/meta/credential-intake-pack.md",
   },
   {
     name: "web visible meta oauth url",

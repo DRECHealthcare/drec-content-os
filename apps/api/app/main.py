@@ -420,6 +420,93 @@ async def meta_setup_checklist(_: None = Depends(require_access_token)):
     }
 
 
+@app.get("/meta/credential-intake-pack.md")
+async def meta_credential_intake_pack(_: None = Depends(require_access_token)):
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    setup = await meta_setup_checklist(None)
+    oauth = setup.get("oauth_guide", {})
+    missing_credentials = setup.get("missing_credentials") or []
+    missing_permissions = setup.get("missing_permissions") or []
+    required_secrets = setup.get("required_secrets") or []
+    setup_commands = setup.get("setup_commands") or []
+    scheduler = setup.get("scheduler_setup") or {}
+    command_lines = [f"```bash", *setup_commands, "```"] if setup_commands else ["- No setup commands available."]
+    scope_lines = [f"- {scope}" for scope in oauth.get("required_scopes", [])] or ["- No scopes listed."]
+    secret_lines = [
+        f"| {secret} | pending | Store only in Fly secrets. Do not paste real value into this file. |"
+        for secret in required_secrets
+    ] or ["| No secrets listed | n/a | n/a |"]
+    step_lines = [
+        f"- [{ 'x' if step.get('status') == 'ready' else ' ' }] {step.get('label')} - {step.get('detail')}"
+        for step in setup.get("steps", [])
+    ] or ["- [ ] Load Meta setup checklist first."]
+    lines = [
+        "# DREC Content OS Meta Credential Intake Pack",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this pack when connecting the Facebook Page and Instagram Business account. It is a checklist and evidence sheet only; it does not store secrets, publish content, or enable real Meta jobs.",
+        "",
+        "## Current Gate Status",
+        "",
+        f"- Overall setup status: {setup.get('overall_status')}",
+        f"- Missing credentials: {', '.join(missing_credentials) or 'None'}",
+        f"- Missing permissions: {', '.join(missing_permissions) or 'None'}",
+        f"- OAuth configured: {'yes' if oauth.get('configured') else 'no'}",
+        f"- Scheduler dry-run status: {scheduler.get('status') or 'not_checked'}",
+        "",
+        "## Values To Collect",
+        "",
+        "| Secret | Collection Status | Safe Handling Note |",
+        "| --- | --- | --- |",
+        *secret_lines,
+        "",
+        "## Required Meta Permissions",
+        "",
+        *scope_lines,
+        "",
+        "## OAuth Setup",
+        "",
+        f"- Redirect URI: {oauth.get('redirect_uri', '')}",
+        f"- Graph version: {oauth.get('graph_version', '')}",
+        f"- OAuth URL or template: {oauth.get('oauth_dialog_url') or oauth.get('oauth_dialog_url_template') or 'Unavailable'}",
+        f"- State note: {oauth.get('state_note', '')}",
+        "",
+        "## Safe Setup Command Template",
+        "",
+        *command_lines,
+        "",
+        "## Verification Checklist",
+        "",
+        *step_lines,
+        "",
+        "## Go-Live Rules",
+        "",
+        "- Keep manual handoff as the publishing path until Meta readiness is green.",
+        "- Run Meta Setup dry-run publishing before enabling META_ENABLE_PUBLISHING or META_ENABLE_PUBLISHING_JOB.",
+        "- Run nightly metrics in dry-run mode before enabling META_ENABLE_METRICS_JOB.",
+        "- Do one Facebook-only live test before Instagram publishing or metrics automation.",
+        "- After every credential change, run the live smoke check and save the Launch Evidence export.",
+        "",
+        "## Evidence Fields",
+        "",
+        "- Meta app ID verified by:",
+        "- Facebook Page ID verified by:",
+        "- Instagram Business user ID verified by:",
+        "- Page token permission check date:",
+        "- First dry-run publishing check result:",
+        "- First dry-run metrics check result:",
+        "- First live Facebook test queue ID:",
+        "- First live Facebook test Meta post ID:",
+        "",
+    ]
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-meta-credential-intake-pack.md"'},
+    )
+
+
 def security_status_payload():
     has_service_role = bool(settings.supabase_service_role_key)
     has_supabase_rest = bool(settings.supabase_url and supabase_rest.api_key())

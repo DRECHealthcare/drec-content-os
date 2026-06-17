@@ -2634,6 +2634,16 @@ document.getElementById("copy-meta-oauth").addEventListener("click", async () =>
   }
 });
 
+document.getElementById("download-meta-intake").addEventListener("click", async () => {
+  const message = document.getElementById("meta-message");
+  try {
+    await downloadProtectedFile("/meta/credential-intake-pack.md", "drec-meta-credential-intake-pack.md", "text/markdown");
+    message.textContent = "Meta credential pack downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download Meta credential pack.";
+  }
+});
+
 document.getElementById("download-scheduler-pack").addEventListener("click", async () => {
   const message = document.getElementById("meta-message");
   try {

@@ -113,6 +113,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added Meta OAuth guide endpoint and UI card for future credential connection
 - [x] Replaced browser prompt access-token entry with an inline token panel for app/browser compatibility
 - [x] Added session-only token storage by default, plus explicit Remember and Clear controls
+- [x] Added Meta Credential Intake Pack for safer Page/IG credential collection and go-live evidence
 
 ## Next Engineering Tasks
 
@@ -209,6 +210,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add inline access-token entry so the app works in browsers that block prompt dialogs
 - [x] Add safer token clear/remember controls before full role-based login
 - [x] Add launch evidence export for manual test status, risk gates, Meta setup, and safe go-live rules
+- [x] Add downloadable Meta credential intake pack before installing Page/IG secrets
 - [ ] Connect Meta Graph API credentials
 - [x] Implement real Facebook publish scheduling behind Meta readiness and enable flags
 - [x] Implement Instagram two-step publish worker behind Meta readiness and enable flags

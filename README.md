@@ -136,6 +136,7 @@ Stage 1 is now a working thin-core workflow:
 - Dry-run Facebook and Instagram publishing workers before Meta credentials are connected
 - Dry-run the scheduler-ready Meta publishing job against due scheduled posts before real posting is enabled
 - Check the scheduled Meta publishing job from Meta Setup without using the terminal
+- Download a Meta Credential Intake Pack with required values, OAuth scope checklist, safe command template, verification fields, and go-live rules
 - Dry-run the scheduler-ready nightly Meta metrics job before real ingestion is enabled
 - Load the latest published post into Performance so raw metrics and outcomes do not require retyping the Meta ID and context
 - Save raw metrics and roll them into a learning outcome in one Performance action
