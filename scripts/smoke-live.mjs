@@ -396,6 +396,31 @@ const checks = [
     },
   },
   {
+    name: "Today runbook",
+    url: `${apiBase}/operations/today-runbook`,
+    auth: true,
+    validate: async (res) => {
+      const data = await res.json();
+      return data.phase === "today_runbook"
+        && data.mode === "read_only_operator_sequence"
+        && data.immediate_action
+        && Array.isArray(data.gates)
+        && data.links?.asset_media_attachments === "/operations/asset-media-attachments.csv";
+    },
+  },
+  {
+    name: "Today runbook pack",
+    url: `${apiBase}/operations/today-runbook.md`,
+    auth: true,
+    validate: async (res) => {
+      const text = await res.text();
+      return text.includes("# DREC Content OS Today Runbook")
+        && text.includes("## Do Next")
+        && text.includes("## Download Links")
+        && text.includes("read-only");
+    },
+  },
+  {
     name: "Asset rewrite pack",
     url: `${apiBase}/operations/asset-rewrite-pack`,
     auth: true,

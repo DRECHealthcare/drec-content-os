@@ -2819,6 +2819,16 @@ document.getElementById("download-first-cycle-handoff")?.addEventListener("click
   }
 });
 
+document.getElementById("download-today-runbook")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/today-runbook.md", "drec-today-runbook.md", "text/markdown");
+    message.textContent = "Today runbook downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download today runbook.";
+  }
+});
+
 async function downloadPreScheduleGate(messageElement) {
   try {
     await downloadProtectedFile("/operations/pre-schedule-gate.md", "drec-pre-schedule-gate.md", "text/markdown");

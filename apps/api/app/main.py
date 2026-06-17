@@ -5156,6 +5156,223 @@ async def operations_first_cycle_handoff_markdown(_: None = Depends(require_acce
     )
 
 
+def runbook_status_label(status: str | None):
+    value = (status or "").strip()
+    if value in {"ready", "clear", "ready_to_schedule", "ready_for_worker_testing", "manual_ops_ready_auto_blocked"}:
+        return "ready"
+    if value in {"blocked", "needs_service_role_key", "not_connected"}:
+        return "blocked"
+    if value:
+        return value
+    return "unknown"
+
+
+async def today_runbook_payload():
+    launch = await launch_readiness_payload()
+    first_cycle = await first_cycle_handoff_payload()
+    cockpit = await approval_cockpit_payload()
+    production = await post_approval_production_payload()
+    pre_schedule = await pre_schedule_gate_payload()
+    schedule_audit = await schedule_audit_payload()
+    automation = await automation_status_payload()
+    security = security_status_payload()
+    meta = await meta_readiness(None)
+
+    recommended = first_cycle.get("recommended_step") or {}
+    if pre_schedule.get("ready_to_schedule_count", 0):
+        immediate_action = {
+            "label": "Schedule approved queue items",
+            "screen": "review",
+            "action": "Open Review Queue, confirm the pre-schedule gate, then use Schedule Approved.",
+        }
+    elif production.get("approved_ready_count", 0) and production.get("needs_media_count", 0):
+        immediate_action = {
+            "label": "Attach approved media/design",
+            "screen": "assets",
+            "action": "Use the asset media CSV, attach approved design URLs, and run visual QA before scheduling.",
+        }
+    elif cockpit.get("ready_count", 0):
+        immediate_action = {
+            "label": "Human approval review",
+            "screen": "assets",
+            "action": "Review the recommended asset, mark Safety Clear and Approve only if the human checklist passes.",
+        }
+    else:
+        immediate_action = {
+            "label": recommended.get("label") or "Follow first-cycle handoff",
+            "screen": recommended.get("screen") or "assets",
+            "action": recommended.get("action") or launch.get("next_step") or "Open the first-cycle handoff pack.",
+        }
+
+    gates = [
+        {
+            "key": "human_approval",
+            "label": "Human approval",
+            "status": "ready" if cockpit.get("ready_count", 0) else "waiting",
+            "detail": f"{cockpit.get('ready_count', 0)} asset(s) ready for human review.",
+        },
+        {
+            "key": "media_design",
+            "label": "Media/design",
+            "status": "waiting" if production.get("needs_media_count", 0) else "ready",
+            "detail": f"{production.get('needs_media_count', 0)} production item(s) still need approved media/design.",
+        },
+        {
+            "key": "pre_schedule",
+            "label": "Pre-schedule gate",
+            "status": "ready" if pre_schedule.get("ready_to_schedule_count", 0) else "waiting",
+            "detail": f"{pre_schedule.get('ready_to_schedule_count', 0)} queue item(s) ready to schedule; {pre_schedule.get('blocked_count', 0)} blocked.",
+        },
+        {
+            "key": "schedule_audit",
+            "label": "Schedule audit",
+            "status": runbook_status_label(schedule_audit.get("overall_status")),
+            "detail": schedule_audit.get("next_step"),
+        },
+        {
+            "key": "meta",
+            "label": "Meta connection",
+            "status": runbook_status_label(meta.get("overall_status")),
+            "detail": "Manual handoff remains active." if meta.get("overall_status") != "ready_for_worker_testing" else "Ready for controlled worker testing.",
+        },
+        {
+            "key": "security",
+            "label": "Supabase security",
+            "status": "ready" if security.get("rls_hardening_ready") else "blocked",
+            "detail": security.get("next_step"),
+        },
+        {
+            "key": "scheduler",
+            "label": "GitHub scheduler",
+            "status": runbook_status_label((automation.get("summary") or {}).get("scheduler_heartbeat", {}).get("status")),
+            "detail": (automation.get("summary") or {}).get("scheduler_heartbeat", {}).get("detail"),
+        },
+    ]
+    blocked_gates = [gate for gate in gates if gate.get("status") == "blocked"]
+    waiting_gates = [gate for gate in gates if gate.get("status") in {"waiting", "needs_content", "stale"}]
+    links = {
+        "approval_cockpit": "/operations/approval-cockpit.md",
+        "post_approval_production": "/operations/post-approval-production.md",
+        "asset_media_attachments": "/operations/asset-media-attachments.csv",
+        "pre_schedule_gate": "/operations/pre-schedule-gate.md",
+        "review_to_schedule": "/operations/review-to-schedule-pack.md",
+        "schedule_audit": "/publish-queue/schedule-audit.md",
+        "publishing_handoff": "/publishing-handoff",
+        "meta_preflight": "/meta/preflight-audit.md",
+        "security_rls": "/security/rls-hardening-plan.md",
+    }
+    return {
+        "phase": "today_runbook",
+        "mode": "read_only_operator_sequence",
+        "overall_status": "blocked_external_setup" if blocked_gates else "manual_cycle_in_progress" if waiting_gates else "ready_for_manual_cycle",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "immediate_action": immediate_action,
+        "summary": {
+            "can_test_now": launch.get("can_test_now"),
+            "can_auto_publish": launch.get("can_auto_publish"),
+            "assets_ready_for_human_review": cockpit.get("ready_count", 0),
+            "assets_waiting_approval": production.get("waiting_approval_count", 0),
+            "approved_ready_for_design_or_queue": production.get("approved_ready_count", 0),
+            "production_needs_media": production.get("needs_media_count", 0),
+            "ready_to_schedule": pre_schedule.get("ready_to_schedule_count", 0),
+            "schedule_blocks": schedule_audit.get("block_count", 0),
+            "meta_status": meta.get("overall_status"),
+            "security_status": security.get("overall_status"),
+            "automation_status": automation.get("overall_status"),
+        },
+        "gates": gates,
+        "operator_sequence": [
+            "Review the approval cockpit and approve only human-cleared medical copy.",
+            "Use the production pack and media attachment CSV for design/media URLs.",
+            "Run the pre-schedule gate before scheduling.",
+            "Run schedule audit after planned times are assigned.",
+            "Use manual publishing handoff until Meta and security gates are green.",
+            "Record external post IDs and metrics after manual posting.",
+        ],
+        "safety_rules": [
+            "This runbook is read-only and does not approve, queue, schedule, publish, or send Meta requests.",
+            "Detector clear is not human approval.",
+            "Media/design attachment is not publishing approval.",
+            "Real Meta automation stays off until Meta readiness and Supabase service-role security are ready.",
+        ],
+        "links": links,
+    }
+
+
+@app.get("/operations/today-runbook")
+async def operations_today_runbook(_: None = Depends(require_access_token)):
+    return await today_runbook_payload()
+
+
+@app.get("/operations/today-runbook.md")
+async def operations_today_runbook_markdown(_: None = Depends(require_access_token)):
+    payload = await today_runbook_payload()
+    summary = payload.get("summary") or {}
+    action = payload.get("immediate_action") or {}
+    lines = [
+        "# DREC Content OS Today Runbook",
+        "",
+        f"Generated: {payload.get('generated_at')}",
+        "",
+        "Use this as the single operator map for the next safe cycle. It is read-only and keeps approval, scheduling, publishing, and Meta automation as separate gates.",
+        "",
+        "## Do Next",
+        "",
+        f"- Action: {action.get('label')}",
+        f"- Screen: {action.get('screen')}",
+        f"- How: {action.get('action')}",
+        "",
+        "## Snapshot",
+        "",
+        f"- Can test now: {'yes' if summary.get('can_test_now') else 'no'}",
+        f"- Can auto-publish: {'yes' if summary.get('can_auto_publish') else 'no'}",
+        f"- Assets ready for human review: {summary.get('assets_ready_for_human_review')}",
+        f"- Assets waiting approval: {summary.get('assets_waiting_approval')}",
+        f"- Approved ready for design/queue: {summary.get('approved_ready_for_design_or_queue')}",
+        f"- Production needs media/design: {summary.get('production_needs_media')}",
+        f"- Ready to schedule: {summary.get('ready_to_schedule')}",
+        f"- Schedule blocks: {summary.get('schedule_blocks')}",
+        f"- Meta status: {summary.get('meta_status')}",
+        f"- Security status: {summary.get('security_status')}",
+        f"- Automation status: {summary.get('automation_status')}",
+        "",
+        "## Gates",
+        "",
+    ]
+    for gate in payload.get("gates") or []:
+        lines.extend(
+            [
+                f"### {gate.get('label')}",
+                "",
+                f"- Status: {gate.get('status')}",
+                f"- Detail: {gate.get('detail')}",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## Operator Sequence",
+            "",
+            *markdown_list(payload.get("operator_sequence"), "- Follow the first-cycle handoff."),
+            "",
+            "## Safety Rules",
+            "",
+            *markdown_list(payload.get("safety_rules"), "- Keep human approval separate."),
+            "",
+            "## Download Links",
+            "",
+        ]
+    )
+    for label, path in (payload.get("links") or {}).items():
+        lines.append(f"- {label.replace('_', ' ').title()}: `{path}`")
+    lines.append("")
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-today-runbook.md"'},
+    )
+
+
 @app.get("/operations/asset-review-decisions.csv")
 async def operations_asset_review_decisions_csv(_: None = Depends(require_access_token)):
     assets = await fetch_asset_list(200)

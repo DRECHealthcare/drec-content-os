@@ -51,6 +51,8 @@ const requiredRoutes = [
   "GET /operations/asset-rewrite-pack.md",
   "GET /operations/first-cycle-handoff",
   "GET /operations/first-cycle-handoff.md",
+  "GET /operations/today-runbook",
+  "GET /operations/today-runbook.md",
   "GET /operations/asset-media-attachments.csv",
   "POST /operations/import-asset-media-attachments",
   "GET /operations/asset-review-decisions.csv",
@@ -671,6 +673,21 @@ const requiredSnippets = [
     name: "first cycle handoff safety",
     file: "main",
     text: "manual_safe_sequence",
+  },
+  {
+    name: "today runbook route",
+    file: "main",
+    text: "today_runbook_payload",
+  },
+  {
+    name: "today runbook export",
+    file: "main",
+    text: "drec-today-runbook.md",
+  },
+  {
+    name: "today runbook safety",
+    file: "main",
+    text: "read_only_operator_sequence",
   },
   {
     name: "asset rewrite apply route",
@@ -1646,6 +1663,16 @@ const requiredSnippets = [
     name: "web first cycle handoff endpoint",
     file: "web",
     text: "/operations/first-cycle-handoff",
+  },
+  {
+    name: "web today runbook action",
+    file: "web",
+    text: "download-today-runbook",
+  },
+  {
+    name: "web today runbook endpoint",
+    file: "web",
+    text: "/operations/today-runbook.md",
   },
   {
     name: "web asset rewrite apply action",
