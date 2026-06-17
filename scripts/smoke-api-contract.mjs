@@ -43,6 +43,8 @@ const requiredRoutes = [
   "GET /operations/asset-review-session.md",
   "GET /operations/approval-cockpit",
   "GET /operations/approval-cockpit.md",
+  "GET /operations/post-approval-production",
+  "GET /operations/post-approval-production.md",
   "GET /operations/asset-rewrite-pack",
   "GET /operations/asset-rewrite-pack.md",
   "GET /operations/first-cycle-handoff",
@@ -604,6 +606,21 @@ const requiredSnippets = [
     name: "approval cockpit safety",
     file: "main",
     text: "human_approval_only",
+  },
+  {
+    name: "post approval production route",
+    file: "main",
+    text: "post_approval_production_payload",
+  },
+  {
+    name: "post approval production export",
+    file: "main",
+    text: "drec-post-approval-production-pack.md",
+  },
+  {
+    name: "post approval production safety",
+    file: "main",
+    text: "production_prep_only",
   },
   {
     name: "asset rewrite pack route",
@@ -1539,6 +1556,21 @@ const requiredSnippets = [
     name: "web approval cockpit endpoint",
     file: "web",
     text: "/operations/approval-cockpit",
+  },
+  {
+    name: "web post approval production action",
+    file: "web",
+    text: "download-post-approval-production",
+  },
+  {
+    name: "web post approval production loader",
+    file: "web",
+    text: "loadPostApprovalProduction",
+  },
+  {
+    name: "web post approval production endpoint",
+    file: "web",
+    text: "/operations/post-approval-production",
   },
   {
     name: "web asset rewrite pack action",

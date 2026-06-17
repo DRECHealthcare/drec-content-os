@@ -36,7 +36,7 @@ document.querySelectorAll("nav button").forEach((button) => {
     if (screen === "creative") loadStyleLibrary();
     if (screen === "templates") loadTemplateStudio();
     if (screen === "video") loadVideoStudio();
-    if (screen === "assets") Promise.all([loadAssets(), loadMediaAssets(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadAssetReviewSession(), loadAssetRewritePack()]);
+    if (screen === "assets") Promise.all([loadAssets(), loadMediaAssets(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack()]);
     if (screen === "outcomes") loadOutcomes();
     if (screen === "learning") {
       loadLearningSummary();
@@ -1830,6 +1830,45 @@ async function loadApprovalCockpit() {
   }
 }
 
+function renderPostApprovalProduction(data) {
+  const container = document.getElementById("post-approval-production");
+  if (!container) return;
+  const items = data.production_items || [];
+  const first = items[0] || {};
+  container.innerHTML = `
+    <article class="learning-card">
+      <h3>Production Pack</h3>
+      <p>${escapeHtml(data.needs_media_count || 0)} need media</p>
+      <small>${escapeHtml(data.mode || "production_prep_only")}</small>
+    </article>
+    <article class="learning-card">
+      <h3>After Approval</h3>
+      <p>${escapeHtml(data.approved_ready_count || 0)}</p>
+      <small>approved and ready for design checks</small>
+    </article>
+    <article class="learning-card">
+      <h3>Next Handoff</h3>
+      <p>${escapeHtml(first.format || "none")}</p>
+      <small>${escapeHtml(first.topic || "No production item")}</small>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Design And Media Tasks</h3>
+      <ul>${items.length ? items.slice(0, 5).map((item) => `<li><strong>${escapeHtml(item.topic || "Untitled asset")}</strong> · ${escapeHtml(item.stage || "")}<br><small>${escapeHtml(item.media_task || item.media_gap || "")}</small></li>`).join("") : "<li>Finish human approval first.</li>"}</ul>
+    </article>
+  `;
+}
+
+async function loadPostApprovalProduction() {
+  const container = document.getElementById("post-approval-production");
+  if (!container) return;
+  try {
+    const data = await fetchJson("/operations/post-approval-production");
+    renderPostApprovalProduction(data);
+  } catch (error) {
+    container.innerHTML = '<p class="status-note">Set the access token to load the production pack.</p>';
+  }
+}
+
 function renderAssetReviewSession(data) {
   const container = document.getElementById("asset-review-session");
   if (!container) return;
@@ -1938,7 +1977,7 @@ document.getElementById("asset-rewrite-pack")?.addEventListener("click", async (
     try {
       const data = await fetchJson("/assets/apply-safe-rewrites", { method: "POST" });
       message.textContent = data.message || "Safe rewrites applied. Human approval is still required.";
-      await Promise.all([loadAssets(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
+      await Promise.all([loadAssets(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
     } catch (error) {
       message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not apply safe rewrites.";
       allButton.disabled = false;
@@ -1968,7 +2007,7 @@ document.getElementById("asset-rewrite-pack")?.addEventListener("click", async (
       }),
     });
     message.textContent = data.message || "Rewrite applied. Human approval is still required.";
-    await Promise.all([loadAssets(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
+    await Promise.all([loadAssets(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not apply rewrite.";
     button.disabled = false;
@@ -1992,7 +2031,7 @@ async function runAssetBatchAction(button, path, label) {
       `${data.skipped || 0} skipped`,
     ].filter(Boolean).join(", ");
     message.textContent = `${label} complete: ${summary}.`;
-    await Promise.all([loadAssets(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadAssetReviewSession(), loadAssetRewritePack(), loadPublishQueue(), loadLoopStatus(), loadLearningSummary()]);
+    await Promise.all([loadAssets(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadPublishQueue(), loadLoopStatus(), loadLearningSummary()]);
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : `${label} failed.`;
   } finally {
@@ -2738,6 +2777,16 @@ document.getElementById("download-first-cycle-handoff")?.addEventListener("click
   }
 });
 
+document.getElementById("download-post-approval-production")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/post-approval-production.md", "drec-post-approval-production-pack.md", "text/markdown");
+    message.textContent = "Post-approval production pack downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download production pack.";
+  }
+});
+
 document.getElementById("refresh-style-library")?.addEventListener("click", async () => {
   const button = document.getElementById("refresh-style-library");
   button.disabled = true;
@@ -2876,7 +2925,7 @@ async function uploadAssetReviewDecisions({ dryRun }) {
     if (!dryRun) fileInput.value = "";
     message.textContent = data.message || (dryRun ? "Review decisions previewed." : "Review decisions imported.");
     renderAssetReviewDecisionPreview(data);
-    if (!dryRun) await Promise.all([loadAssets(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
+    if (!dryRun) await Promise.all([loadAssets(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : dryRun ? "Could not preview review decisions." : "Could not import review decisions.";
   }
@@ -2963,7 +3012,7 @@ document.getElementById("save-all-assets").addEventListener("click", async () =>
   try {
     const data = await fetchJson(`/briefs/draft-assets?limit=${encodeURIComponent(limit)}`, { method: "POST" });
     message.textContent = `Assets ready: ${data.created || 0} created, ${data.reused || 0} reused, ${data.skipped || 0} skipped.`;
-    await Promise.all([loadBriefs(), loadAssets(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
+    await Promise.all([loadBriefs(), loadAssets(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
     if ((data.created || data.reused || 0) > 0) showScreen("assets");
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not save all draft assets.";
@@ -3022,7 +3071,7 @@ document.getElementById("brief-items").addEventListener("click", async (event) =
     try {
       const data = await fetchJson(`/briefs/${assetButton.dataset.draftAssetBrief}/draft-asset`, { method: "POST" });
       document.getElementById("plan-message").textContent = data.reused ? "Existing draft asset opened." : "Draft asset saved.";
-      await Promise.all([loadBriefs(), loadAssets(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
+      await Promise.all([loadBriefs(), loadAssets(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
       showScreen("assets");
     } catch (error) {
       document.getElementById("plan-message").textContent = error.message === "Access token required" ? "Set the access token first." : "Could not save draft asset.";
@@ -3153,7 +3202,7 @@ document.getElementById("compose-form").addEventListener("submit", async (event)
     renderDraft(draft, compliance);
     saveAssetButton.disabled = !draft.assetId;
     queueButton.disabled = !draft.assetId || compliance.status === "flagged";
-    await Promise.all([loadBriefs(), loadAssets(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
+    await Promise.all([loadBriefs(), loadAssets(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
   } catch (error) {
     renderDraft(draft, null);
     document.getElementById("compose-result").insertAdjacentHTML(
@@ -3176,7 +3225,7 @@ document.getElementById("compose-result").addEventListener("click", (event) => {
 
 document.getElementById("save-asset").addEventListener("click", async () => {
   if (!currentDraft) return;
-  await Promise.all([loadAssets(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus()]);
+  await Promise.all([loadAssets(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus()]);
   showScreen("assets");
 });
 
@@ -3253,7 +3302,7 @@ document.getElementById("asset-items").addEventListener("click", async (event) =
         method: "PATCH",
         body: JSON.stringify({ compliance_status: status, reason }),
       });
-      await Promise.all([loadAssets(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
+      await Promise.all([loadAssets(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
     } catch {
       complianceButton.disabled = false;
       complianceButton.textContent = originalText;
@@ -3282,7 +3331,7 @@ document.getElementById("asset-items").addEventListener("click", async (event) =
         method: "PATCH",
         body: JSON.stringify({ review_status: status, reason }),
       });
-      await Promise.all([loadAssets(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
+      await Promise.all([loadAssets(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
     } catch {
       statusButton.disabled = false;
       statusButton.textContent = originalText;
@@ -4154,6 +4203,7 @@ loadBriefs();
 loadAssets();
 loadFirstCycleHandoff();
 loadApprovalCockpit();
+loadPostApprovalProduction();
 loadAssetReviewSession();
 loadAssetRewritePack();
 loadMediaAssets();

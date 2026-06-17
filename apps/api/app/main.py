@@ -4622,6 +4622,184 @@ async def operations_approval_cockpit_markdown(_: None = Depends(require_access_
     )
 
 
+def production_media_task(item: dict):
+    fmt = item.get("format")
+    if fmt == "reel":
+        return "Prepare one approved vertical presenter clip, subtitle-safe crop, and optional clinic or metric cutaway."
+    if fmt == "carousel":
+        return "Design a cover, explanation frames, and final save/consult prompt using DREC static templates."
+    if fmt == "story":
+        return "Design vertical story frames with one question or poll-safe frame and minimal text per slide."
+    if fmt == "single":
+        return "Prepare one approved static image with a short headline and clear educational framing."
+    return "Confirm the required visual export before queueing."
+
+
+def production_template_suggestion(item: dict):
+    fmt = item.get("format")
+    if fmt == "reel":
+        return "Video Studio manual reel SOP; 9:16, clear captions, no unapproved patient footage."
+    if fmt == "carousel":
+        return "Template Studio carousel education template; cover, context, explanation, takeaway, CTA."
+    if fmt == "story":
+        return "Template Studio vertical story template; question-first and interaction-safe."
+    if fmt == "single":
+        return "Template Studio single educational static; headline plus one supporting visual."
+    return "Use the closest DREC static template and run final QA."
+
+
+def production_stage(item: dict):
+    if item.get("review_status") == "approved" and item.get("compliance_status") == "clear":
+        return "approved_ready_for_design_or_queue"
+    if item.get("approval_status") == "ready_for_human_review":
+        return "waiting_for_human_approval"
+    return "blocked_before_production"
+
+
+async def post_approval_production_payload():
+    cockpit = await approval_cockpit_payload()
+    media_assets = await fetch_media_asset_list(200)
+    usable_media = [
+        media
+        for media in media_assets
+        if media.get("approval_status") == "approved"
+        and media.get("rights_status") in {"owned", "licensed", "partner", "patient_consented"}
+    ]
+    production_items = []
+    for item in cockpit.get("approval_items") or []:
+        stage = production_stage(item)
+        if stage == "blocked_before_production":
+            continue
+        production_items.append(
+            {
+                "asset_id": item.get("asset_id"),
+                "brief_id": item.get("brief_id"),
+                "topic": item.get("topic"),
+                "channel": item.get("channel"),
+                "format": item.get("format"),
+                "stage": stage,
+                "approval_score": item.get("approval_score"),
+                "media_count": item.get("media_count"),
+                "media_gap": item.get("media_gap") or ("Media already attached; verify rights and crop." if item.get("media_count") else "Needs approved media/design before handoff."),
+                "visual_direction": asset_visual_direction({"format": item.get("format"), "metadata": {"topic": item.get("topic")}}),
+                "media_task": production_media_task(item),
+                "template_suggestion": production_template_suggestion(item),
+                "rights_check": "Use only owned, licensed, partner-approved, stock-cleared, or patient-consented media. Do not use patient-identifiable content without explicit consent.",
+                "designer_handoff": "\n".join(
+                    [
+                        "DREC Post-Approval Production Handoff",
+                        "",
+                        f"Asset ID: {item.get('asset_id') or ''}",
+                        f"Topic: {item.get('topic') or ''}",
+                        f"Channel / format: {item.get('channel') or ''} / {item.get('format') or ''}",
+                        f"Current stage: {stage}",
+                        "",
+                        "Production task:",
+                        production_media_task(item),
+                        "",
+                        "Template:",
+                        production_template_suggestion(item),
+                        "",
+                        "Rights check:",
+                        "Use only approved/licensed/owned/patient-consented media.",
+                    ]
+                ),
+                "next_step": "After human approval, create or attach approved media, run visual QA, then queue only if safety remains clear.",
+            }
+        )
+    production_items.sort(
+        key=lambda item: (
+            item.get("stage") != "approved_ready_for_design_or_queue",
+            -item.get("approval_score", 0),
+            item.get("topic") or "",
+        )
+    )
+    approved_ready = [item for item in production_items if item.get("stage") == "approved_ready_for_design_or_queue"]
+    waiting_approval = [item for item in production_items if item.get("stage") == "waiting_for_human_approval"]
+    needs_media = [item for item in production_items if not item.get("media_count")]
+    return {
+        "phase": "post_approval_production",
+        "mode": "production_prep_only",
+        "approved_ready_count": len(approved_ready),
+        "waiting_approval_count": len(waiting_approval),
+        "needs_media_count": len(needs_media),
+        "usable_media_count": len(usable_media),
+        "production_items": production_items[:40],
+        "rules": [
+            "This pack does not approve, queue, schedule, publish, or send Meta requests.",
+            "Human medical-safety approval is required before design is treated as publishable.",
+            "Design/media work must keep claims educational and avoid diagnosis, prescription, and guaranteed-outcome framing.",
+            "Every visual must pass rights, consent, crop, legibility, and final safety QA before queueing.",
+        ],
+        "next_step": "Approve the safest clear asset manually, then use this pack to brief design/media production before queueing.",
+    }
+
+
+@app.get("/operations/post-approval-production")
+async def operations_post_approval_production(_: None = Depends(require_access_token)):
+    return await post_approval_production_payload()
+
+
+@app.get("/operations/post-approval-production.md")
+async def operations_post_approval_production_markdown(_: None = Depends(require_access_token)):
+    payload = await post_approval_production_payload()
+    generated_at = datetime.now(timezone.utc).isoformat()
+    lines = [
+        "# DREC Content OS Post-Approval Production Pack",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this pack after human copy approval to prepare design, media, rights checks, and visual QA. It is read-only and does not approve, queue, schedule, publish, or send Meta requests.",
+        "",
+        "## Summary",
+        "",
+        f"- Approved and ready for design/queue checks: {payload.get('approved_ready_count')}",
+        f"- Waiting for human approval: {payload.get('waiting_approval_count')}",
+        f"- Needs media/design: {payload.get('needs_media_count')}",
+        f"- Approved usable media in library: {payload.get('usable_media_count')}",
+        "",
+        "## Rules",
+        "",
+        *markdown_list(payload.get("rules"), "- Human approval required."),
+        "",
+        "## Production Items",
+        "",
+    ]
+    items = payload.get("production_items") or []
+    if not items:
+        lines.extend(["- No production items are ready. Finish human approval first.", ""])
+    for index, item in enumerate(items, start=1):
+        lines.extend(
+            [
+                f"### {index}. {item.get('topic')}",
+                "",
+                f"- Asset ID: {item.get('asset_id')}",
+                f"- Stage: {item.get('stage')}",
+                f"- Channel / format: {item.get('channel')} / {item.get('format')}",
+                f"- Media count: {item.get('media_count')}",
+                f"- Media gap: {item.get('media_gap')}",
+                f"- Visual direction: {item.get('visual_direction')}",
+                f"- Media task: {item.get('media_task')}",
+                f"- Template: {item.get('template_suggestion')}",
+                f"- Rights check: {item.get('rights_check')}",
+                f"- Next step: {item.get('next_step')}",
+                "",
+                "Designer handoff:",
+                "",
+                "```",
+                item.get("designer_handoff") or "",
+                "```",
+                "",
+            ]
+        )
+    lines.extend(["## Next Step", "", f"- {payload.get('next_step')}", ""])
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-post-approval-production-pack.md"'},
+    )
+
+
 SAFE_REWRITE_REPLACEMENTS = [
     ("不等于个人诊断或治疗方案", "仅供健康教育参考"),
     ("个人诊断或治疗方案", "个人医疗建议"),

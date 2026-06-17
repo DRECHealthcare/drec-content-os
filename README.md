@@ -69,6 +69,7 @@ Stage 1 is now a working thin-core workflow:
 - Apply all detector-clear safe rewrites in one reviewed batch while still keeping approval, queueing, scheduling, and publishing locked behind human gates
 - Use the First Cycle Handoff Pack to move from safe rewrites through human approval, queueing, scheduling, manual handoff, and metrics without bypassing safety gates
 - Use the Approval Cockpit to prioritize clear draft assets for human review without auto-approving, queueing, scheduling, or publishing
+- Use the Post-Approval Production Pack to brief design, media, rights checks, and visual QA after human approval without auto-queueing, scheduling, publishing, or sending Meta requests
 - Use Creative Studio to review the DREC style library, brand tokens, KB style rules, safety rules, and style-learning signals before drafting or approving assets
 - Use Template Studio to map static assets to DREC layout templates, render rules, brand tokens, and final QA before artwork handoff
 - Use Video Studio to review reel readiness, approved video media, blockers, manual SOP steps, and the future DREC Cut lock before production handoff
