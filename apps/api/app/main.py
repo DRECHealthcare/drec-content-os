@@ -833,6 +833,135 @@ async def meta_credential_intake_pack(_: None = Depends(require_access_token)):
     )
 
 
+async def meta_preflight_audit_payload():
+    setup = await meta_setup_checklist(None)
+    readiness = await meta_readiness(None)
+    launch = await launch_readiness_payload()
+    risk = await content_risk_audit_payload()
+    schedule = await schedule_audit_payload()
+    security = security_status_payload()
+    access_policy = access_policy_payload()
+    gates = [
+        {
+            "key": "meta_credentials",
+            "label": "Meta credentials and permissions",
+            "status": "ready" if readiness.get("overall_status") == "ready_for_worker_testing" else "blocked",
+            "detail": (
+                "Meta credentials and Page token permissions are ready."
+                if readiness.get("overall_status") == "ready_for_worker_testing"
+                else "Missing credentials: "
+                + (", ".join(setup.get("missing_credentials") or []) or "None")
+                + "; missing permissions: "
+                + (", ".join(setup.get("missing_permissions") or []) or "None")
+            ),
+        },
+        {
+            "key": "content_risk",
+            "label": "Content risk audit",
+            "status": "ready" if risk.get("overall_status") == "clear" else "blocked" if risk.get("block_count", 0) else "review",
+            "detail": f"{risk.get('block_count', 0)} block(s), {risk.get('warn_count', 0)} warning(s). {risk.get('next_step')}",
+        },
+        {
+            "key": "schedule_audit",
+            "label": "Schedule audit",
+            "status": "ready" if schedule.get("overall_status") == "clear" else "blocked" if schedule.get("block_count", 0) else "review",
+            "detail": f"{schedule.get('block_count', 0)} block(s), {schedule.get('warn_count', 0)} warning(s). {schedule.get('next_step')}",
+        },
+        {
+            "key": "manual_launch",
+            "label": "Manual workflow readiness",
+            "status": "ready" if launch.get("can_use_for_manual_ops") else "blocked",
+            "detail": (launch.get("usability") or {}).get("detail") or launch.get("next_step"),
+        },
+        {
+            "key": "security",
+            "label": "Server-side security",
+            "status": "ready" if security.get("rls_hardening_ready") else "review",
+            "detail": security.get("next_step"),
+        },
+        {
+            "key": "access_roles",
+            "label": "Access role setup",
+            "status": "ready" if "admin" in (access_policy.get("configured_roles") or []) else "review",
+            "detail": "Configured roles: " + (", ".join(access_policy.get("configured_roles") or []) or "None"),
+        },
+        {
+            "key": "live_switches",
+            "label": "Live worker switches",
+            "status": "armed" if setup.get("live_ready") else "locked",
+            "detail": "Keep live switches off until all preflight gates are ready." if not setup.get("live_ready") else "Ready for the controlled live sequence.",
+        },
+    ]
+    blockers = [gate for gate in gates if gate.get("status") == "blocked"]
+    reviews = [gate for gate in gates if gate.get("status") == "review"]
+    return {
+        "overall_status": "blocked" if blockers else "needs_review" if reviews else "ready_for_controlled_test",
+        "ready_count": sum(1 for gate in gates if gate.get("status") in {"ready", "armed"}),
+        "blocked_count": len(blockers),
+        "review_count": len(reviews),
+        "gates": gates,
+        "first_live_sequence": setup.get("live_sequence") or [],
+        "hard_stop_rules": [
+            "Do not run real Meta publishing while any gate is blocked.",
+            "Resolve schedule blocks before handoff or Meta worker dry runs.",
+            "Run one Facebook-only live test before Instagram live publishing.",
+            "Keep nightly metrics live ingestion off until a dry run sees a published Meta post ID.",
+        ],
+        "next_step": blockers[0].get("detail") if blockers else reviews[0].get("detail") if reviews else "Run the controlled first-live-test sequence.",
+    }
+
+
+@app.get("/meta/preflight-audit")
+async def meta_preflight_audit(_: None = Depends(require_access_token)):
+    return await meta_preflight_audit_payload()
+
+
+@app.get("/meta/preflight-audit.md")
+async def meta_preflight_audit_markdown(_: None = Depends(require_access_token)):
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    audit = await meta_preflight_audit_payload()
+    gate_lines = [
+        f"| {gate.get('label')} | {gate.get('status')} | {gate.get('detail')} |"
+        for gate in audit.get("gates", [])
+    ]
+    sequence_lines = [f"{index}. {step}" for index, step in enumerate(audit.get("first_live_sequence") or [], start=1)]
+    lines = [
+        "# DREC Content OS Meta Preflight Audit",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this immediately before a Meta dry run or the first controlled live Facebook test. It is read-only and does not enable live switches.",
+        "",
+        "## Decision",
+        "",
+        f"- Status: {audit.get('overall_status')}",
+        f"- Ready gates: {audit.get('ready_count', 0)}",
+        f"- Review gates: {audit.get('review_count', 0)}",
+        f"- Blocked gates: {audit.get('blocked_count', 0)}",
+        f"- Next step: {audit.get('next_step')}",
+        "",
+        "## Gates",
+        "",
+        "| Gate | Status | Detail |",
+        "| --- | --- | --- |",
+        *gate_lines,
+        "",
+        "## First Live Sequence",
+        "",
+        *(sequence_lines or ["1. Keep Meta live switches off until preflight is ready."]),
+        "",
+        "## Hard Stop Rules",
+        "",
+        *markdown_list(audit.get("hard_stop_rules")),
+        "",
+    ]
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-meta-preflight-audit.md"'},
+    )
+
+
 def security_status_payload():
     has_service_role = bool(settings.supabase_service_role_key)
     has_supabase_rest = bool(settings.supabase_url and supabase_rest.api_key())

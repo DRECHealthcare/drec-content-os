@@ -58,6 +58,8 @@ const requiredRoutes = [
   "GET /meta/credential-wizard",
   "GET /meta/credential-wizard.md",
   "GET /meta/credential-intake-pack.md",
+  "GET /meta/preflight-audit",
+  "GET /meta/preflight-audit.md",
   "GET /kb/export.csv",
   "GET /kb/context",
   "GET /publish-queue/suggest-slot",
@@ -718,6 +720,21 @@ const requiredSnippets = [
     text: "meta_credential_intake_pack",
   },
   {
+    name: "meta preflight audit route",
+    file: "main",
+    text: "meta_preflight_audit",
+  },
+  {
+    name: "meta preflight audit export",
+    file: "main",
+    text: "drec-meta-preflight-audit.md",
+  },
+  {
+    name: "meta preflight audit read only safety",
+    file: "main",
+    text: "does not enable live switches",
+  },
+  {
     name: "meta credential wizard route",
     file: "main",
     text: "meta_credential_wizard",
@@ -1356,6 +1373,16 @@ const requiredSnippets = [
     name: "web meta activation checklist endpoint",
     file: "web",
     text: "/meta/activation-checklist.md",
+  },
+  {
+    name: "web meta preflight action",
+    file: "web",
+    text: "download-meta-preflight",
+  },
+  {
+    name: "web meta preflight endpoint",
+    file: "web",
+    text: "/meta/preflight-audit.md",
   },
   {
     name: "web meta activation switchboard",

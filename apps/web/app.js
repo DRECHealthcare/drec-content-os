@@ -2767,6 +2767,16 @@ document.getElementById("download-meta-activation").addEventListener("click", as
   }
 });
 
+document.getElementById("download-meta-preflight").addEventListener("click", async () => {
+  const message = document.getElementById("meta-message");
+  try {
+    await downloadProtectedFile("/meta/preflight-audit.md", "drec-meta-preflight-audit.md", "text/markdown");
+    message.textContent = "Meta preflight audit downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download Meta preflight audit.";
+  }
+});
+
 document.getElementById("download-scheduler-pack").addEventListener("click", async () => {
   const message = document.getElementById("meta-message");
   try {

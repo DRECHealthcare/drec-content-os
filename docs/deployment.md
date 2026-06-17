@@ -290,6 +290,9 @@ and first live-test record are tracked in one place.
 Download `/meta/activation-checklist.md` before enabling live Meta switches; it
 shows credential gates, scheduler proof, live worker switch status, and the
 required first Facebook -> Instagram -> nightly metrics activation order.
+Download `/meta/preflight-audit.md` before Meta dry runs or the first controlled
+live test; it combines credential, content risk, schedule, launch, security,
+access-role, and live-switch gates in one read-only decision report.
 Real scheduled publishing needs Meta readiness plus these Fly secrets:
 
 ```bash
