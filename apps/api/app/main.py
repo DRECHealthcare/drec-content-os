@@ -27,6 +27,7 @@ from .models import (
     AssetIn,
     AssetComplianceIn,
     AssetStatusIn,
+    ComposerPostIn,
     ComplianceCheckIn,
     ContentBriefIn,
     ContentBriefStatusIn,
@@ -6016,6 +6017,125 @@ async def create_creative_draft(draft: CreativeDraftIn, _: None = Depends(requir
         },
     }
     return {"item": package}
+
+
+def composer_brief(composer: ComposerPostIn, knowledge: dict):
+    safe_points = [str(point).strip() for point in composer.points if str(point).strip()]
+    hook_primary = safe_points[0] if safe_points else (
+        f"关于「{composer.topic}」，很多人第一步就看错了。"
+        if composer.language != "en"
+        else f"Most people read {composer.topic} the wrong way first."
+    )
+    return ContentBriefIn(
+        channel="organic",
+        format=composer.format,
+        pillar="metabolic_education",
+        funnel_stage=composer.stage,
+        awareness_stage="problem_aware" if composer.stage == "TOFU" else "solution_aware",
+        topic=composer.topic,
+        hook_primary=hook_primary,
+        hook_alt1=safe_points[1] if len(safe_points) > 1 else None,
+        hook_alt2=safe_points[2] if len(safe_points) > 2 else None,
+        structure_beats={
+            "opening": hook_primary,
+            "body": safe_points or ["Explain the mechanism simply.", "Give one safe practical observation.", "Invite professional review."],
+            "close": "Save and discuss with a clinician.",
+            "composer": {
+                "channel": composer.channel,
+                "media_count": len(composer.media_urls),
+                "style_key": composer.style_key,
+                "target_signal": composer.target_signal,
+            },
+            "knowledge_context": {
+                "entry_count": knowledge.get("entry_count", 0),
+                "style_rules": (knowledge.get("style_rules") or [])[:3],
+                "safety_rules": (knowledge.get("safety_rules") or [])[:3],
+                "medical_terms": (knowledge.get("medical_terms") or [])[:3],
+            },
+        },
+        style_hint=composer.style_key,
+        cta_type=composer.cta_type or ("save_or_consult" if composer.stage != "BOFU" else "consult_interest"),
+        target_signal=composer.target_signal or ("saves" if composer.format == "carousel" else "watch_time"),
+        language=composer.language,
+        compliance_notes=knowledge.get("brief_compliance_notes") or "Education only. Avoid guaranteed outcomes, diagnosis, or personal medical claims.",
+    )
+
+
+@app.post("/composer/draft-post")
+async def compose_draft_post(
+    composer: ComposerPostIn,
+    dry_run: bool = False,
+    _: None = Depends(require_review_access),
+):
+    knowledge = await active_knowledge_context()
+    brief = composer_brief(composer, knowledge)
+    creative_draft = CreativeDraftIn(
+        channel=composer.channel,
+        format=composer.format,
+        stage=composer.stage,
+        language=composer.language,
+        topic=composer.topic,
+        points=[str(point).strip() for point in composer.points if str(point).strip()],
+        style_key=composer.style_key,
+        target_signal=composer.target_signal,
+    )
+    creative = (await create_creative_draft(creative_draft)).get("item", {})
+    compliance = creative.get("compliance") or check_text(creative.get("primary_caption") or "")
+    if compliance.get("status") == "flagged":
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "message": "Compliance check blocked this composer draft.",
+                "compliance": compliance,
+            },
+        )
+    if dry_run:
+        return {
+            "mode": "dry_run",
+            "brief": brief.model_dump(),
+            "creative": creative,
+            "item": None,
+            "message": "Dry run only; no brief or asset saved.",
+        }
+    saved_brief = await insert_brief(brief)
+    asset = AssetIn(
+        brief_id=str(saved_brief.get("id")) if saved_brief.get("id") else None,
+        channel=composer.channel,
+        format=composer.format,
+        caption=creative.get("primary_caption"),
+        media_urls=composer.media_urls,
+        metadata={
+            "topic": composer.topic,
+            "stage": composer.stage,
+            "source": "composer_draft_post",
+            "points": creative_draft.points,
+            "style_key": creative.get("style_key") or composer.style_key,
+            "target_signal": creative.get("target_signal") or composer.target_signal,
+            "caption_variants": creative.get("caption_variants") or [],
+            "slides": creative.get("slides") or [],
+            "reel_script": creative.get("reel_script") or [],
+            "creative": creative.get("metadata") or {},
+            "composer": {
+                "channel": composer.channel,
+                "media_urls": composer.media_urls,
+                "cta_type": brief.cta_type,
+            },
+        },
+        compliance_status="clear" if compliance.get("status") == "clear" else "pending",
+        review_status="draft",
+    )
+    saved_asset = await create_asset(asset)
+    if saved_brief.get("id"):
+        await update_content_brief_status(str(saved_brief.get("id")), ContentBriefStatusIn(status="drafted"))
+        saved_brief = {**saved_brief, "status": "drafted"}
+    return {
+        "mode": "saved",
+        "brief": saved_brief,
+        "item": saved_asset.get("item"),
+        "creative": creative,
+        "reused": False,
+        "message": "Composer draft saved as a linked brief and draft asset for review.",
+    }
 
 
 def draft_points_from_brief(brief: dict):

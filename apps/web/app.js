@@ -1660,8 +1660,12 @@ function renderDraft(draft, compliance) {
         <span>${escapeHtml(draft.channel)}</span>
         <span>${escapeHtml(draft.format)}</span>
         <span>${escapeHtml(draft.stage)}</span>
+        ${draft.assetId ? `<span>asset saved</span>` : ""}
         <span>${escapeHtml(compliance?.status || "unchecked")}</span>
       </div>
+      ${draft.briefId || draft.assetId ? `
+        <p class="status-note">${draft.briefId ? `Brief ${escapeHtml(draft.briefId)}` : ""}${draft.briefId && draft.assetId ? " · " : ""}${draft.assetId ? `Asset ${escapeHtml(draft.assetId)}` : ""}</p>
+      ` : ""}
       ${draft.captionVariants?.length > 1 ? `
         <div class="caption-variants">
           <strong>Caption variants</strong>
@@ -2187,6 +2191,8 @@ document.getElementById("brief-items").addEventListener("click", async (event) =
   form.elements.format.value = brief.format || "carousel";
   form.elements.stage.value = brief.funnel_stage || "TOFU";
   form.elements.language.value = brief.language || "zh";
+  form.elements.style_key.value = brief.style_hint || (brief.format === "reel" ? "reel_script_v1" : "edu_carousel_navy");
+  form.elements.target_signal.value = brief.target_signal || "";
   form.elements.topic.value = brief.topic || "";
   form.elements.points.value = defaultPointsForBrief(brief).join("\n");
   try {
@@ -2258,6 +2264,8 @@ document.getElementById("compose-form").addEventListener("submit", async (event)
     topic: form.get("topic"),
     points,
     mediaUrls,
+    styleKey: form.get("style_key") || (form.get("format") === "reel" ? "reel_script_v1" : "edu_carousel_navy"),
+    targetSignal: form.get("target_signal") || null,
   };
   draft.caption = draftCaption(draft);
   currentDraft = draft;
@@ -2266,7 +2274,7 @@ document.getElementById("compose-form").addEventListener("submit", async (event)
   queueButton.disabled = true;
   saveAssetButton.disabled = true;
   try {
-    const creative = await fetchJson("/creative/draft", {
+    const response = await fetchJson("/composer/draft-post", {
       method: "POST",
       body: JSON.stringify({
         channel: draft.channel,
@@ -2275,9 +2283,12 @@ document.getElementById("compose-form").addEventListener("submit", async (event)
         language: draft.language,
         topic: draft.topic,
         points: draft.points,
-        style_key: draft.format === "reel" ? "reel_script_v1" : "edu_carousel_navy",
+        media_urls: draft.mediaUrls,
+        style_key: draft.styleKey,
+        target_signal: draft.targetSignal,
       }),
     });
+    const creative = { item: response.creative || {} };
     const packageItem = creative.item || {};
     draft.caption = packageItem.primary_caption || draft.caption;
     draft.captionVariants = packageItem.caption_variants || [draft.caption];
@@ -2286,12 +2297,19 @@ document.getElementById("compose-form").addEventListener("submit", async (event)
     draft.creativeMetadata = packageItem.metadata || {};
     draft.styleKey = packageItem.style_key || null;
     draft.targetSignal = packageItem.target_signal || null;
+    draft.briefId = response.brief?.id || null;
+    draft.assetId = response.item?.id || null;
     const compliance = packageItem.compliance || await checkCaptionSafety(draft.caption);
     renderDraft(draft, compliance);
-    queueButton.disabled = compliance.status === "flagged";
-    saveAssetButton.disabled = compliance.status === "flagged";
-  } catch {
+    saveAssetButton.disabled = !draft.assetId;
+    queueButton.disabled = !draft.assetId || compliance.status === "flagged";
+    await Promise.all([loadBriefs(), loadAssets(), loadLoopStatus(), loadLearningSummary()]);
+  } catch (error) {
     renderDraft(draft, null);
+    document.getElementById("compose-result").insertAdjacentHTML(
+      "beforeend",
+      `<p class="status-note">${escapeHtml(error.message === "Access token required" ? "Set the access token first." : "Could not save composer draft.")}</p>`
+    );
   }
 });
 
@@ -2308,38 +2326,6 @@ document.getElementById("compose-result").addEventListener("click", (event) => {
 
 document.getElementById("save-asset").addEventListener("click", async () => {
   if (!currentDraft) return;
-  const captionBox = document.getElementById("draft-caption");
-  const caption = captionBox ? captionBox.value : currentDraft.caption;
-  const compliance = await checkCaptionSafety(caption);
-  currentDraft.caption = caption;
-  renderDraft(currentDraft, compliance);
-  if (compliance.status === "flagged") {
-    document.getElementById("save-asset").disabled = true;
-    return;
-  }
-  const data = await fetchJson("/assets", {
-    method: "POST",
-    body: JSON.stringify({
-      channel: currentDraft.channel,
-      format: currentDraft.format,
-      caption,
-      media_urls: currentDraft.mediaUrls || [],
-      metadata: {
-        stage: currentDraft.stage,
-        topic: currentDraft.topic,
-        points: currentDraft.points,
-        style_key: currentDraft.styleKey,
-        target_signal: currentDraft.targetSignal,
-        caption_variants: currentDraft.captionVariants || [],
-        slides: currentDraft.slides || [],
-        reel_script: currentDraft.reelScript || [],
-        creative: currentDraft.creativeMetadata || {},
-      },
-      compliance_status: compliance.status === "clear" ? "clear" : "pending",
-      review_status: "draft",
-    }),
-  });
-  currentDraft.assetId = data.item?.id || null;
   await Promise.all([loadAssets(), loadLoopStatus()]);
   showScreen("assets");
 });
@@ -2355,20 +2341,15 @@ document.getElementById("queue-draft").addEventListener("click", async () => {
     document.getElementById("queue-draft").disabled = true;
     return;
   }
-  await fetchJson("/publish-queue", {
-    method: "POST",
-    body: JSON.stringify({
-      asset_id: currentDraft.assetId || null,
-      channel: currentDraft.channel,
-      format: currentDraft.format,
-      caption,
-      media_urls: currentDraft.mediaUrls || [],
-      planned_slot: null,
-      compliance_status: compliance.status === "clear" ? "clear" : "pending",
-    }),
-  });
-  document.getElementById("queue-draft").disabled = true;
-  await Promise.all([loadPublishQueue(), loadLoopStatus()]);
+  if (!currentDraft.assetId) return;
+  try {
+    await fetchJson(`/assets/${currentDraft.assetId}/queue`, { method: "POST" });
+    document.getElementById("queue-draft").disabled = true;
+    await Promise.all([loadPublishQueue(), loadLoopStatus()]);
+    showScreen("review");
+  } catch (error) {
+    document.getElementById("compose-result").insertAdjacentHTML("beforeend", `<p class="status-note">${escapeHtml(error.message || "Approve the asset and clear compliance before queueing.")}</p>`);
+  }
 });
 
 document.getElementById("asset-items").addEventListener("click", async (event) => {

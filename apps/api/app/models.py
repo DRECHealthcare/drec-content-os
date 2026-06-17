@@ -81,6 +81,19 @@ class CreativeDraftIn(BaseModel):
     target_signal: Optional[str] = None
 
 
+class ComposerPostIn(BaseModel):
+    channel: Literal["facebook", "instagram"] = "facebook"
+    format: Literal["reel", "carousel", "single", "story"] = "carousel"
+    stage: Literal["TOFU", "MOFU", "BOFU"] = "TOFU"
+    language: Literal["zh", "en", "mixed"] = "zh"
+    topic: str
+    points: List[str] = []
+    media_urls: List[str] = []
+    style_key: str = "edu_carousel_navy"
+    target_signal: Optional[str] = None
+    cta_type: Optional[str] = None
+
+
 class WeeklyPlanIn(BaseModel):
     topics: List[str] = []
     language: Literal["zh", "en", "mixed"] = "zh"

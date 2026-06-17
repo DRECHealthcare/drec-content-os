@@ -189,6 +189,20 @@
               <option value="mixed">Mixed</option>
             </select>
           </label>
+          <label>
+            Visual Style
+            <select name="style_key">
+              <option value="edu_carousel_navy">DREC Navy Education</option>
+              <option value="myth_truth_pair">Myth / Truth Pair</option>
+              <option value="story_case">Case Story</option>
+              <option value="quote_authority">Doctor Quote</option>
+              <option value="reel_script_v1">Reel Script</option>
+            </select>
+          </label>
+          <label>
+            Target Signal
+            <input name="target_signal" placeholder="saves, shares, comments, watch time">
+          </label>
           <label class="full">
             Topic
             <input name="topic" placeholder="Example: why fasting glucose can look normal while insulin is high" required>
@@ -203,8 +217,8 @@
           </label>
           <div class="form-actions">
             <button type="submit">Generate Draft</button>
-            <button id="save-asset" type="button" disabled>Save Asset</button>
-            <button id="queue-draft" type="button" disabled>Add Draft To Queue</button>
+            <button id="save-asset" type="button" disabled>Open Asset Review</button>
+            <button id="queue-draft" type="button" disabled>Add Approved Asset To Queue</button>
           </div>
         </form>
         <div id="compose-result" class="draft-panel"></div>
