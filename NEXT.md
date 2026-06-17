@@ -118,6 +118,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added session-only token storage by default, plus explicit Remember and Clear controls
 - [x] Added Meta Credential Intake Pack for safer Page/IG credential collection and go-live evidence
 - [x] Added guarded GitHub Nightly Meta Metrics workflow with dry-run default and double live-ingestion lock
+- [x] Added Meta Activation Checklist and switchboard for safe first-live-test sequencing
 
 ## Next Engineering Tasks
 
@@ -219,6 +220,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add launch evidence export for manual test status, risk gates, Meta setup, and safe go-live rules
 - [x] Add downloadable Meta credential intake pack before installing Page/IG secrets
 - [x] Add guarded nightly Meta metrics scheduler workflow that stays dry-run until credentials and enable switches are approved
+- [x] Add Meta activation checklist for live worker switches, dry-run proof, and first-live-test order
 - [ ] Connect Meta Graph API credentials
 - [x] Implement real Facebook publish scheduling behind Meta readiness and enable flags
 - [x] Implement Instagram two-step publish worker behind Meta readiness and enable flags

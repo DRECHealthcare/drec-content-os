@@ -49,6 +49,7 @@ const requiredRoutes = [
   "GET /meta/readiness",
   "GET /meta/oauth-guide",
   "GET /meta/setup-checklist",
+  "GET /meta/activation-checklist.md",
   "GET /meta/credential-intake-pack.md",
   "GET /kb/export.csv",
   "GET /kb/context",
@@ -1168,6 +1169,21 @@ const requiredSnippets = [
     text: "download-meta-intake",
   },
   {
+    name: "web meta activation checklist action",
+    file: "web",
+    text: "download-meta-activation",
+  },
+  {
+    name: "web meta activation checklist endpoint",
+    file: "web",
+    text: "/meta/activation-checklist.md",
+  },
+  {
+    name: "web meta activation switchboard",
+    file: "web",
+    text: "Meta Activation Switchboard",
+  },
+  {
     name: "web meta credential pack endpoint",
     file: "web",
     text: "/meta/credential-intake-pack.md",
@@ -1216,6 +1232,16 @@ const requiredSnippets = [
     name: "api nightly metrics scheduler payload",
     file: "main",
     text: "nightly_metrics_scheduler",
+  },
+  {
+    name: "api meta activation switchboard payload",
+    file: "main",
+    text: "activation_switchboard",
+  },
+  {
+    name: "api meta activation checklist route",
+    file: "main",
+    text: "drec-meta-activation-checklist.md",
   },
   {
     name: "api scheduler github secret",

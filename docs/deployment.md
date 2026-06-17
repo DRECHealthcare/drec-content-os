@@ -260,6 +260,9 @@ into Fly.io or the provider dashboards, never into GitHub or the browser UI.
 Download `/meta/credential-intake-pack.md` from Meta Setup before installing
 credentials so the Page ID, IG user ID, token permission check, dry-run evidence,
 and first live-test record are tracked in one place.
+Download `/meta/activation-checklist.md` before enabling live Meta switches; it
+shows credential gates, scheduler proof, live worker switch status, and the
+required first Facebook -> Instagram -> nightly metrics activation order.
 Real scheduled publishing needs Meta readiness plus these Fly secrets:
 
 ```bash

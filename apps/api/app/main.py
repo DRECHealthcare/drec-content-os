@@ -389,8 +389,54 @@ async def meta_setup_checklist(_: None = Depends(require_access_token)):
         ],
         "safety": "The workflow defaults to dry-run. Live ingestion requires both the GitHub variable and the Fly META_ENABLE_METRICS_JOB lock to be enabled, and the API still checks Meta readiness.",
     }
+    meta_ready = readiness.get("overall_status") == "ready_for_worker_testing"
+    security_ready = bool(security.get("rls_hardening_ready"))
+    heartbeat_recent = scheduler_heartbeat.get("status") == "recent"
+    activation_switchboard = [
+        {
+            "label": "Supabase service-role security",
+            "status": "ready" if security_ready else "locked",
+            "detail": security.get("next_step") or "Install SUPABASE_SERVICE_ROLE_KEY before strict RLS or live workers.",
+        },
+        {
+            "label": "Meta secrets installed",
+            "status": "ready" if not missing_env else "locked",
+            "detail": "All required Meta secrets are configured." if not missing_env else "Missing: " + ", ".join(item["key"] for item in missing_env),
+        },
+        {
+            "label": "Page token permission check",
+            "status": "ready" if not missing_permissions and readiness.get("token_check", {}).get("status") == "ready" else "locked",
+            "detail": readiness.get("token_check", {}).get("message") or "Confirm Page token permissions before live publishing.",
+        },
+        {
+            "label": "Dry-run scheduler heartbeat",
+            "status": "ready" if heartbeat_recent else scheduler_setup["status"],
+            "detail": scheduler_heartbeat.get("detail") or "Run the GitHub dry-run scheduler once before enabling live jobs.",
+        },
+        {
+            "label": "Live publishing switch",
+            "status": "armed" if settings.meta_enable_publishing else "off",
+            "detail": "Fly secret META_ENABLE_PUBLISHING is enabled." if settings.meta_enable_publishing else "Keep META_ENABLE_PUBLISHING=false until Meta readiness and dry runs are green.",
+        },
+        {
+            "label": "Due-time publishing job switch",
+            "status": "armed" if settings.meta_enable_publishing_job else "off",
+            "detail": "Fly secret META_ENABLE_PUBLISHING_JOB is enabled." if settings.meta_enable_publishing_job else "Keep META_ENABLE_PUBLISHING_JOB=false until the first live Facebook test is approved.",
+        },
+        {
+            "label": "Nightly metrics Fly switch",
+            "status": "armed" if settings.meta_enable_metrics_job else "off",
+            "detail": "Fly secret META_ENABLE_METRICS_JOB is enabled." if settings.meta_enable_metrics_job else "Keep META_ENABLE_METRICS_JOB=false until dry-run metrics ingestion succeeds.",
+        },
+        {
+            "label": "Nightly metrics GitHub switch",
+            "status": "manual_check",
+            "detail": "Set GitHub Actions variable DREC_ENABLE_REAL_META_METRICS=true only after Meta readiness is green and the dry-run workflow passes.",
+        },
+    ]
+    live_ready = meta_ready and security_ready and heartbeat_recent
     return {
-        "overall_status": "ready_to_enable" if readiness.get("overall_status") == "ready_for_worker_testing" and security.get("rls_hardening_ready") else "needs_setup",
+        "overall_status": "ready_to_enable" if meta_ready and security_ready else "needs_setup",
         "missing_credentials": [item["key"] for item in missing_env],
         "missing_permissions": missing_permissions,
         "required_secrets": required_secret_names,
@@ -398,6 +444,17 @@ async def meta_setup_checklist(_: None = Depends(require_access_token)):
         "oauth_guide": oauth_guide,
         "scheduler_setup": scheduler_setup,
         "nightly_metrics_scheduler": nightly_metrics_scheduler,
+        "activation_switchboard": activation_switchboard,
+        "live_ready": live_ready,
+        "live_sequence": [
+            "Run live smoke while all Meta enable flags are still off.",
+            "Enable META_ENABLE_PUBLISHING=true only for a single Facebook test.",
+            "Dispatch one approved scheduled Facebook item and record the Meta post ID.",
+            "Confirm metrics dry run sees that post ID.",
+            "Enable META_ENABLE_PUBLISHING_JOB=true only after due-time publishing dry run passes.",
+            "Enable Instagram publishing after the Facebook test has clean evidence.",
+            "Enable META_ENABLE_METRICS_JOB=true and then GitHub variable DREC_ENABLE_REAL_META_METRICS=true after nightly metrics dry run passes.",
+        ],
         "steps": [
             {
                 "label": "Install Supabase service role key on Fly",
@@ -441,6 +498,68 @@ async def meta_setup_checklist(_: None = Depends(require_access_token)):
             "Run one Facebook publish first, then Instagram, then nightly metrics.",
         ],
     }
+
+
+@app.get("/meta/activation-checklist.md")
+async def meta_activation_checklist(_: None = Depends(require_access_token)):
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    setup = await meta_setup_checklist(None)
+    switchboard = setup.get("activation_switchboard") or []
+    live_sequence = setup.get("live_sequence") or []
+    switch_lines = [
+        f"| {item.get('label')} | {item.get('status')} | {item.get('detail')} |"
+        for item in switchboard
+    ] or ["| No activation switches found | unknown | Refresh Meta Setup first |"]
+    sequence_lines = [f"{idx}. {step}" for idx, step in enumerate(live_sequence, start=1)] or [
+        "1. Keep Meta workers disabled until Meta Setup is green.",
+    ]
+    lines = [
+        "# DREC Content OS Meta Activation Checklist",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this after credentials are collected and before enabling real Meta publishing or real nightly metrics. It is read-only and does not store secrets or change worker switches.",
+        "",
+        "## Current Decision",
+        "",
+        f"- Setup status: {setup.get('overall_status')}",
+        f"- Live ready: {'yes' if setup.get('live_ready') else 'no'}",
+        f"- Missing credentials: {', '.join(setup.get('missing_credentials') or []) or 'None'}",
+        f"- Missing permissions: {', '.join(setup.get('missing_permissions') or []) or 'None'}",
+        "",
+        "## Activation Switchboard",
+        "",
+        "| Gate | Status | Detail |",
+        "| --- | --- | --- |",
+        *switch_lines,
+        "",
+        "## Required Live Sequence",
+        "",
+        *sequence_lines,
+        "",
+        "## Proof To Save Before Live Automation",
+        "",
+        "- Latest live smoke result:",
+        "- Launch Evidence export filename:",
+        "- First Facebook test queue ID:",
+        "- First Facebook Meta post ID:",
+        "- First Instagram dry-run result:",
+        "- First nightly metrics dry-run result:",
+        "- Approval owner/date:",
+        "",
+        "## Hard Stop Rules",
+        "",
+        "- Do not enable real publishing if Page token permissions are missing.",
+        "- Do not enable the due-time publishing job before a single manual live Facebook test is approved.",
+        "- Do not enable live nightly metrics until the dry-run workflow can see a published Meta post ID.",
+        "- If content risk audit is not clear, keep Meta workers off and use manual handoff only.",
+        "",
+    ]
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-meta-activation-checklist.md"'},
+    )
 
 
 @app.get("/meta/credential-intake-pack.md")

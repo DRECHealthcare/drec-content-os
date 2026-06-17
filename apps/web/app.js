@@ -732,6 +732,8 @@ function renderMetaSetupChecklist(data) {
   const schedulerSteps = scheduler.steps || [];
   const schedulerHeartbeat = scheduler.heartbeat || {};
   const nightlySteps = nightlyScheduler.steps || [];
+  const switchboard = data.activation_switchboard || [];
+  const liveSequence = data.live_sequence || [];
   container.innerHTML = `
     <article class="learning-card wide-learning">
       <h3>Credential Setup Checklist</h3>
@@ -783,6 +785,15 @@ function renderMetaSetupChecklist(data) {
       </ul>
       <ol>${nightlySteps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol>
       <p>${escapeHtml(nightlyScheduler.safety || "")}</p>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Meta Activation Switchboard</h3>
+      <p>${data.live_ready ? "Ready for controlled live test sequence." : "Keep live Meta workers locked."}</p>
+      <ul>${switchboard.map((item) => `<li><strong>${escapeHtml(item.status)}</strong> ${escapeHtml(item.label)} · ${escapeHtml(item.detail)}</li>`).join("")}</ul>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>First Live Sequence</h3>
+      <ol>${liveSequence.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol>
     </article>
     <article class="learning-card wide-learning">
       <h3>Safety Notes</h3>
@@ -2676,6 +2687,16 @@ document.getElementById("download-meta-intake").addEventListener("click", async 
     message.textContent = "Meta credential pack downloaded.";
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download Meta credential pack.";
+  }
+});
+
+document.getElementById("download-meta-activation").addEventListener("click", async () => {
+  const message = document.getElementById("meta-message");
+  try {
+    await downloadProtectedFile("/meta/activation-checklist.md", "drec-meta-activation-checklist.md", "text/markdown");
+    message.textContent = "Meta activation checklist downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download Meta activation checklist.";
   }
 });
 

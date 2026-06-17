@@ -83,6 +83,7 @@ Stage 1 is now a working thin-core workflow:
 - Download a Scheduler Activation Pack from Meta Setup with the GitHub secret, optional API variable, first-run check, heartbeat expectation, and dry-run safety rules
 - Use the guarded DREC Nightly Meta Metrics GitHub workflow, defaulting to dry-run and requiring both GitHub and Fly enable switches before live metrics ingestion
 - Generate a Meta OAuth guide with redirect URI, required scopes, setup steps, and a copyable Login dialog URL/template before real credentials are installed
+- Download a Meta Activation Checklist that shows credential gates, live worker switches, first-live-test order, and proof fields before enabling Meta automation
 - See the Supabase service-role readiness gate before stricter RLS policies are applied
 - Download a protected RLS Hardening Plan and review the prepared strict server-only Supabase migration before applying it
 - Use safer session-only access-token storage by default, with explicit Remember and Clear controls for shared testing devices
