@@ -2579,6 +2579,36 @@ const requiredSnippets = [
     text: "/operations/doctor-reply-inbox-pack.md",
   },
   {
+    name: "web doctor reply inbox board",
+    file: "web",
+    text: "doctor-reply-inbox",
+  },
+  {
+    name: "web doctor reply inbox loader",
+    file: "web",
+    text: "loadDoctorReplyInboxPack",
+  },
+  {
+    name: "web doctor reply inbox api endpoint",
+    file: "web",
+    text: "/operations/doctor-reply-inbox-pack",
+  },
+  {
+    name: "web doctor reply inbox copy",
+    file: "web",
+    text: "data-copy-doctor-inbox-reply",
+  },
+  {
+    name: "web doctor reply inbox batch copy",
+    file: "web",
+    text: "data-copy-doctor-inbox-all",
+  },
+  {
+    name: "web doctor reply inbox batch helper",
+    file: "web",
+    text: "doctorInboxBatchText",
+  },
+  {
     name: "web doctor review polish board",
     file: "web",
     text: "doctor-review-polish",
