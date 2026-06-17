@@ -1129,7 +1129,19 @@ const checks = [
     auth: true,
     validate: async (res) => {
       const text = await res.text();
-      return text.includes("# DREC Content OS Operator Pack") && text.includes("## Can I Use It Now") && text.includes("## Meta OAuth Guide") && text.includes("## Launch Readiness") && text.includes("## Content Risk Audit") && text.includes("## Review-To-Schedule Pack") && text.includes("## Review Decision CSV Import") && text.includes("## Publishing Handoff") && text.includes("## Weekly Operating Report");
+      return text.includes("# DREC Content OS Operator Pack")
+        && text.includes("## Current-Cycle Action Links")
+        && text.includes("Doctor reply inbox")
+        && text.includes("Production reply inbox")
+        && text.includes("Scheduler recovery")
+        && text.includes("## Can I Use It Now")
+        && text.includes("## Meta OAuth Guide")
+        && text.includes("## Launch Readiness")
+        && text.includes("## Content Risk Audit")
+        && text.includes("## Review-To-Schedule Pack")
+        && text.includes("## Review Decision CSV Import")
+        && text.includes("## Publishing Handoff")
+        && text.includes("## Weekly Operating Report");
     },
   },
   {

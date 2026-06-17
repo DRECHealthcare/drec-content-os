@@ -107,7 +107,7 @@ Stage 1 is now a working thin-core workflow:
 - Download a protected Pipeline Board CSV that shows each topic's next action from brief through asset, queue, publishing, metrics, and learning
 - Download a protected Audit Trail CSV that shows recent review, scheduler, role, and actor evidence before launch or Meta activation
 - Download a Backup & Recovery Pack with required exports, data coverage, recovery order, degraded-mode rules, and weekly backup checks
-- Download a protected operator pack with readiness status, setup checklist, publishing handoff, and weekly report in one Markdown file
+- Download a protected operator pack with readiness status, current-cycle action links, setup checklist, publishing handoff, and weekly report in one Markdown file
 - Download a Quarterly Learning Memo from Learning with posting-time heat, outcome signals, weight-change history, and next-quarter actions
 - See the same "Can I Use It Now" decision in Launch Evidence and Operator Pack, including safe test scope and not-yet-ready automation blockers
 - Use the GitHub Actions dry-run scheduler template to check publishing, metrics, automation, and risk gates without mutating live records

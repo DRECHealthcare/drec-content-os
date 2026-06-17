@@ -1333,6 +1333,26 @@ const requiredSnippets = [
     text: "usability_markdown_lines(launch)",
   },
   {
+    name: "operator pack action links",
+    file: "main",
+    text: "## Current-Cycle Action Links",
+  },
+  {
+    name: "operator pack doctor reply inbox link",
+    file: "main",
+    text: "- Doctor reply inbox: `/operations/doctor-reply-inbox-pack.md`",
+  },
+  {
+    name: "operator pack production reply inbox link",
+    file: "main",
+    text: "- Production reply inbox: `/operations/production-reply-inbox-pack.md`",
+  },
+  {
+    name: "operator pack scheduler recovery link",
+    file: "main",
+    text: "- Scheduler recovery: `/operations/scheduler-recovery-pack.md`",
+  },
+  {
     name: "operator pack meta oauth section",
     file: "main",
     text: "## Meta OAuth Guide",

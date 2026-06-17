@@ -118,6 +118,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added Manual Cycle QA export for post-test blockers, risk, handoff, and learning review
 - [x] Added Manual Cycle QA action links for doctor and production reply inbox flows
 - [x] Added Daily Ops action links for runbook, QA, doctor, production, pre-schedule, and scheduler recovery flows
+- [x] Added Operator Pack action links for daily runbook, QA, doctor, production, Meta, Supabase, and scheduler recovery flows
 - [x] Added Meta OAuth guide endpoint and UI card for future credential connection
 - [x] Replaced browser prompt access-token entry with an inline token panel for app/browser compatibility
 - [x] Added session-only token storage by default, plus explicit Remember and Clear controls
