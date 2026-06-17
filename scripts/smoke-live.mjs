@@ -1,5 +1,6 @@
 const apiBase = process.env.DREC_API_BASE_URL || "https://drec-content-os-api.fly.dev";
 const webBase = process.env.DREC_WEB_URL || "https://drec-content-os.vercel.app";
+const flyUiBase = process.env.DREC_FLY_UI_URL || `${apiBase}/ui`;
 const accessToken = process.env.DREC_ACCESS_TOKEN || "";
 const actor = process.env.DREC_ACTOR || "codex-smoke";
 
@@ -11,6 +12,41 @@ const checks = [
     validate: async (res) => {
       const data = await res.json();
       return data.ok === true && data.supabase_rest === "configured";
+    },
+  },
+  {
+    name: "Fly UI status",
+    url: `${apiBase}/ui-status`,
+    auth: false,
+    validate: async (res) => {
+      const data = await res.json();
+      return data.mounted === true && data.index === true && data.script === true && data.path === "/ui/";
+    },
+  },
+  {
+    name: "Fly UI shell",
+    url: `${flyUiBase}/`,
+    auth: false,
+    validate: async (res) => {
+      const text = await res.text();
+      return text.includes("DREC")
+        && text.includes("download-doctor-decision-worksheet")
+        && text.includes("download-asset-media-attachments")
+        && text.includes("download-review-queue-decisions")
+        && text.includes("preview-review-queue-decisions")
+        && text.includes("import-review-queue-decisions");
+    },
+  },
+  {
+    name: "Fly UI script",
+    url: `${flyUiBase}/app.js`,
+    auth: false,
+    validate: async (res) => {
+      const text = await res.text();
+      return text.includes("/operations/doctor-decision-worksheet.csv")
+        && text.includes("/operations/import-asset-media-attachments")
+        && text.includes("/operations/import-review-queue-decisions")
+        && text.includes("renderReviewQueueDecisionPreview");
     },
   },
   {

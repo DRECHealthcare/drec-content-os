@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from io import StringIO
 import json
 import re
+from pathlib import Path
 from urllib.parse import urlencode
 from uuid import UUID, uuid4
 
@@ -11,6 +12,7 @@ import httpx
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
+from fastapi.staticfiles import StaticFiles
 
 from .auth import (
     access_policy_payload,
@@ -245,6 +247,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+APP_FILE = Path(__file__).resolve()
+WEB_STATIC_CANDIDATES = [
+    APP_FILE.parent.parent / "web",
+    Path.cwd() / "apps" / "web",
+]
+WEB_STATIC_DIR = next((path for path in WEB_STATIC_CANDIDATES if path.exists()), WEB_STATIC_CANDIDATES[0])
+if WEB_STATIC_DIR.exists():
+    app.mount("/ui", StaticFiles(directory=str(WEB_STATIC_DIR), html=True), name="ui")
+
 
 @app.get("/health")
 async def health():
@@ -255,6 +266,20 @@ async def health():
         "service": "drec-content-os-api",
         "postgres": postgres_status,
         "supabase_rest": supabase_status,
+    }
+
+
+@app.get("/ui-status")
+async def ui_status():
+    index_path = WEB_STATIC_DIR / "index.html"
+    script_path = WEB_STATIC_DIR / "app.js"
+    return {
+        "mounted": WEB_STATIC_DIR.exists(),
+        "path": "/ui/",
+        "index": index_path.exists(),
+        "script": script_path.exists(),
+        "recommended_url": "https://drec-content-os-api.fly.dev/ui/",
+        "fallback_note": "Use this Fly-hosted UI when Vercel deploy quota is unavailable.",
     }
 
 

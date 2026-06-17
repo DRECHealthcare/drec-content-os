@@ -5,6 +5,7 @@ const files = {
   auth: "apps/api/app/auth.py",
   config: "apps/api/app/config.py",
   models: "apps/api/app/models.py",
+  dockerfile: "apps/api/Dockerfile",
   schema: "supabase/schema.sql",
   web: "apps/web/app.js",
   schedulerWorkflow: ".github/workflows/drec-scheduler-dry-run.yml",
@@ -14,6 +15,7 @@ const files = {
 
 const requiredRoutes = [
   "GET /health",
+  "GET /ui-status",
   "GET /workflow/status",
   "GET /security/status",
   "GET /security/access-policy",
@@ -133,6 +135,21 @@ const requiredSnippets = [
     name: "asset queue approval gate",
     file: "main",
     text: 'asset.get("review_status") != "approved"',
+  },
+  {
+    name: "api serves latest web ui",
+    file: "main",
+    text: 'app.mount("/ui", StaticFiles',
+  },
+  {
+    name: "api ui status route",
+    file: "main",
+    text: "recommended_url",
+  },
+  {
+    name: "api docker copies web ui",
+    file: "dockerfile",
+    text: "COPY apps/web ./web",
   },
   {
     name: "asset queue compliance gate",
