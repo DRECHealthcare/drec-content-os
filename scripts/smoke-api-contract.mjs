@@ -247,6 +247,16 @@ const requiredSnippets = [
     text: "enforced_scopes",
   },
   {
+    name: "role token actor header",
+    file: "auth",
+    text: "x_drec_actor",
+  },
+  {
+    name: "feedback audit tags",
+    file: "main",
+    text: "audit_tags",
+  },
+  {
     name: "review-scoped route",
     file: "main",
     text: "Depends(require_review_access)",
@@ -735,6 +745,16 @@ const requiredSnippets = [
     name: "web inline token input",
     file: "web",
     text: "token-input",
+  },
+  {
+    name: "web actor input",
+    file: "web",
+    text: "actor-input",
+  },
+  {
+    name: "web actor auth header",
+    file: "web",
+    text: "X-DREC-Actor",
   },
   {
     name: "web session token storage",

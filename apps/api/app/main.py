@@ -709,7 +709,7 @@ async def security_status(_: None = Depends(require_access_token)):
 
 @app.get("/security/access-policy")
 async def security_access_policy(session: dict = Depends(require_access_token)):
-    return access_policy_payload(session.get("role", "none"))
+    return access_policy_payload(session.get("role", "none"), session.get("actor", ""))
 
 
 @app.get("/security/rls-hardening-plan.md")
@@ -1282,7 +1282,7 @@ async def operations_test_run_checklist(_: None = Depends(require_access_token))
 async def operations_scheduler_heartbeat(
     workflow: str = "DREC Scheduler Dry Run",
     mode: str = "dry_run",
-    _: None = Depends(require_admin_access),
+    session: dict = Depends(require_admin_access),
 ):
     safe_workflow = re.sub(r"[^a-zA-Z0-9_. -]", "", workflow)[:80] or "github-actions"
     safe_mode = re.sub(r"[^a-zA-Z0-9_-]", "", mode)[:40] or "dry_run"
@@ -1300,7 +1300,7 @@ async def operations_scheduler_heartbeat(
             action="heartbeat",
             before_text=json.dumps(payload, ensure_ascii=False),
             reason=f"GitHub scheduler {safe_mode} checks completed.",
-            tags=["github-actions", "scheduler", safe_mode],
+            tags=["github-actions", "scheduler", safe_mode, *audit_tags(session)],
         )
     )
     return {"heartbeat": await latest_scheduler_heartbeat()}
@@ -2400,6 +2400,19 @@ def pipeline_id(value):
     return str(value) if value else ""
 
 
+def audit_tags(session=None):
+    if not isinstance(session, dict):
+        return []
+    tags = []
+    role = session.get("role")
+    actor = session.get("actor")
+    if role:
+        tags.append(f"role:{role}")
+    if actor:
+        tags.append(f"actor:{actor}")
+    return tags
+
+
 def pipeline_latest(items, key):
     latest = {}
     for item in items:
@@ -3358,7 +3371,7 @@ async def decode_asset_review_decisions_csv(file: UploadFile):
 async def import_asset_review_decisions(
     file: UploadFile = File(...),
     dry_run: bool = Form(True),
-    _: None = Depends(require_access_token),
+    session: dict = Depends(require_review_access),
 ):
     csv_text = await decode_asset_review_decisions_csv(file)
     reader = csv.DictReader(StringIO(csv_text))
@@ -3416,10 +3429,10 @@ async def import_asset_review_decisions(
             continue
         applied = []
         if safety_decision is not None and safety_decision != existing.get("compliance_status"):
-            await update_asset_compliance(asset_id, AssetComplianceIn(compliance_status=safety_decision, reason=reason))
+            await update_asset_compliance(asset_id, AssetComplianceIn(compliance_status=safety_decision, reason=reason), session)
             applied.append(f"safety:{safety_decision}")
         if review_decision is not None and review_decision != existing.get("review_status"):
-            await update_asset_status(asset_id, AssetStatusIn(review_status=review_decision, reason=reason))
+            await update_asset_status(asset_id, AssetStatusIn(review_status=review_decision, reason=reason), session)
             applied.append(f"review:{review_decision}")
         if notes and not applied:
             await save_feedback(
@@ -3430,7 +3443,7 @@ async def import_asset_review_decisions(
                     action="edit",
                     reason=reason,
                     before_text=existing.get("caption"),
-                    tags=["asset_review_import", "note_only"],
+                    tags=["asset_review_import", "note_only", *audit_tags(session)],
                 )
             )
             applied.append("note")
@@ -5011,7 +5024,7 @@ async def existing_asset_for_brief(brief_id: str):
 async def update_asset_status(
     asset_id: str,
     update: AssetStatusIn,
-    _: None = Depends(require_review_access),
+    session: dict = Depends(require_review_access),
 ):
     existing = await asset_by_id(asset_id)
     if existing is None:
@@ -5042,7 +5055,7 @@ async def update_asset_status(
                 action="approve" if update.review_status == "approved" else "reject" if update.review_status == "rejected" else "edit",
                 reason=update.reason,
                 before_text=existing.get("caption"),
-                tags=["asset_review", update.review_status],
+                tags=["asset_review", update.review_status, *audit_tags(session)],
             )
         )
     return {"item": row or {**existing, "review_status": update.review_status}}
@@ -5052,7 +5065,7 @@ async def update_asset_status(
 async def update_asset_compliance(
     asset_id: str,
     update: AssetComplianceIn,
-    _: None = Depends(require_review_access),
+    session: dict = Depends(require_review_access),
 ):
     existing = await asset_by_id(asset_id)
     if existing is None:
@@ -5083,7 +5096,7 @@ async def update_asset_compliance(
                 action="approve" if update.compliance_status == "clear" else "reject" if update.compliance_status == "flagged" else "edit",
                 reason=update.reason,
                 before_text=existing.get("caption"),
-                tags=["asset_compliance", update.compliance_status],
+                tags=["asset_compliance", update.compliance_status, *audit_tags(session)],
             )
         )
     return {"item": row or {**existing, "compliance_status": update.compliance_status}}
@@ -7487,7 +7500,8 @@ async def save_feedback(feedback: FeedbackIn):
 
 
 @app.post("/feedback")
-async def capture_feedback(feedback: FeedbackIn, _: None = Depends(require_review_access)):
+async def capture_feedback(feedback: FeedbackIn, session: dict = Depends(require_review_access)):
+    feedback.tags = [*feedback.tags, *audit_tags(session)]
     return await save_feedback(feedback)
 
 

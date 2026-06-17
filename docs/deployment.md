@@ -36,6 +36,8 @@ briefs, creative drafts, assets, media review, and feedback; operator tokens can
 queue, schedule, build handoff, and dry-run publishing; metrics tokens can
 import performance data, roll up outcomes, and run metrics dry runs; admin tokens
 are reserved for security rollout and scheduler heartbeat setup.
+Operators can fill the browser `Actor name` field, or send `X-DREC-Actor`, so
+review and scheduler feedback rows include role/actor audit tags.
 
 The API exposes:
 

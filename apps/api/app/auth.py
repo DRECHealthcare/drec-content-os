@@ -1,3 +1,5 @@
+import re
+
 from fastapi import Depends, Header, HTTPException, status
 
 from .config import settings
@@ -26,13 +28,18 @@ def configured_role_tokens():
     return tokens
 
 
-def access_policy_payload(current_role="none"):
+def clean_actor(value: str = "") -> str:
+    return re.sub(r"[^A-Za-z0-9_.@ -]", "", value or "").strip()[:80]
+
+
+def access_policy_payload(current_role="none", current_actor=""):
     role_tokens = configured_role_tokens()
     configured_roles = sorted(set(role_tokens.values()))
     legacy_enabled = bool(settings.drec_access_token)
     return {
         "mode": "role_tokens" if configured_roles else "open_local" if not legacy_enabled else "legacy_token",
         "current_role": current_role,
+        "current_actor": current_actor,
         "current_scopes": ROLE_SCOPES.get(current_role, []),
         "configured_roles": configured_roles,
         "legacy_access_token_enabled": legacy_enabled,
@@ -59,17 +66,21 @@ def access_policy_payload(current_role="none"):
     }
 
 
-async def require_access_token(x_drec_access_token: str = Header(default="")) -> dict:
+async def require_access_token(
+    x_drec_access_token: str = Header(default=""),
+    x_drec_actor: str = Header(default=""),
+) -> dict:
+    actor = clean_actor(x_drec_actor)
     role_tokens = configured_role_tokens()
     if not role_tokens:
-        return {"role": "admin", "scopes": ROLE_SCOPES["admin"], "mode": "open_local"}
+        return {"role": "admin", "actor": actor, "scopes": ROLE_SCOPES["admin"], "mode": "open_local"}
     role = role_tokens.get(x_drec_access_token)
     if not role:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="A valid DREC access token is required.",
         )
-    return {"role": role, "scopes": ROLE_SCOPES[role], "mode": "role_tokens"}
+    return {"role": role, "actor": actor, "scopes": ROLE_SCOPES[role], "mode": "role_tokens"}
 
 
 def require_scope(scope: str):

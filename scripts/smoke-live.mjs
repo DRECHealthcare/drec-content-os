@@ -1,6 +1,7 @@
 const apiBase = process.env.DREC_API_BASE_URL || "https://drec-content-os-api.fly.dev";
 const webBase = process.env.DREC_WEB_URL || "https://drec-content-os.vercel.app";
 const accessToken = process.env.DREC_ACCESS_TOKEN || "";
+const actor = process.env.DREC_ACTOR || "codex-smoke";
 
 const checks = [
   {
@@ -46,6 +47,7 @@ const checks = [
     validate: async (res) => {
       const data = await res.json();
       return Boolean(data.current_role)
+        && data.current_actor === actor
         && Array.isArray(data.recommended_roles)
         && data.setup_env?.includes("DREC_OPERATOR_TOKEN")
         && data.enforced_scopes?.schedule?.some((item) => item.includes("scheduling"))
@@ -562,7 +564,7 @@ const checks = [
 
 function headersFor(check) {
   if (!check.auth) return {};
-  return accessToken ? { "X-DREC-Access-Token": accessToken } : {};
+  return accessToken ? { "X-DREC-Access-Token": accessToken, "X-DREC-Actor": actor } : {};
 }
 
 async function runCheck(check) {

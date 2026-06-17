@@ -1,5 +1,6 @@
 const apiBase = window.DREC_API_BASE_URL || localStorage.getItem("DREC_API_BASE_URL") || "https://drec-content-os-api.fly.dev";
 const tokenKey = "DREC_ACCESS_TOKEN";
+const actorKey = "DREC_ACTOR";
 const rememberTokenKey = "DREC_REMEMBER_ACCESS_TOKEN";
 let currentDraft = null;
 let editingQueueItem = null;
@@ -43,6 +44,20 @@ function accessToken() {
   return sessionStorage.getItem(tokenKey) || localStorage.getItem(tokenKey) || "";
 }
 
+function accessActor() {
+  return sessionStorage.getItem(actorKey) || localStorage.getItem(actorKey) || "";
+}
+
+function authHeaders(includeJson = false) {
+  const token = accessToken();
+  const actor = accessActor();
+  return {
+    ...(includeJson ? { "Content-Type": "application/json" } : {}),
+    ...(token ? { "X-DREC-Access-Token": token } : {}),
+    ...(actor ? { "X-DREC-Actor": actor } : {}),
+  };
+}
+
 function storeAccessTokenFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const token = params.get("access_token");
@@ -78,9 +93,11 @@ function refreshProtectedData() {
 function showTokenPanel() {
   const panel = document.getElementById("token-panel");
   const input = document.getElementById("token-input");
+  const actor = document.getElementById("actor-input");
   const remember = document.getElementById("token-remember");
   panel.hidden = !panel.hidden;
   input.value = accessToken();
+  actor.value = accessActor();
   remember.checked = localStorage.getItem(rememberTokenKey) === "true" && Boolean(localStorage.getItem(tokenKey));
   if (!panel.hidden) input.focus();
 }
@@ -88,14 +105,19 @@ function showTokenPanel() {
 function saveAccessTokenFromPanel() {
   const panel = document.getElementById("token-panel");
   const input = document.getElementById("token-input");
+  const actor = document.getElementById("actor-input");
   const remember = document.getElementById("token-remember");
   const token = input.value;
+  const actorName = actor.value.trim();
   sessionStorage.setItem(tokenKey, token.trim());
+  sessionStorage.setItem(actorKey, actorName);
   if (remember.checked) {
     localStorage.setItem(tokenKey, token.trim());
+    localStorage.setItem(actorKey, actorName);
     localStorage.setItem(rememberTokenKey, "true");
   } else {
     localStorage.removeItem(tokenKey);
+    localStorage.removeItem(actorKey);
     localStorage.removeItem(rememberTokenKey);
   }
   panel.hidden = true;
@@ -104,9 +126,12 @@ function saveAccessTokenFromPanel() {
 
 function clearAccessToken() {
   sessionStorage.removeItem(tokenKey);
+  sessionStorage.removeItem(actorKey);
   localStorage.removeItem(tokenKey);
+  localStorage.removeItem(actorKey);
   localStorage.removeItem(rememberTokenKey);
   document.getElementById("token-input").value = "";
+  document.getElementById("actor-input").value = "";
   document.getElementById("token-remember").checked = false;
   refreshProtectedData();
 }
@@ -120,12 +145,8 @@ document.getElementById("token-input").addEventListener("keydown", (event) => {
 });
 
 async function fetchJson(path, options) {
-  const token = accessToken();
   const res = await fetch(`${apiBase}${path}`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { "X-DREC-Access-Token": token } : {}),
-    },
+    headers: authHeaders(true),
     ...options,
   });
   if (res.status === 401) {
@@ -136,12 +157,9 @@ async function fetchJson(path, options) {
 }
 
 async function fetchForm(path, formData) {
-  const token = accessToken();
   const res = await fetch(`${apiBase}${path}`, {
     method: "POST",
-    headers: {
-      ...(token ? { "X-DREC-Access-Token": token } : {}),
-    },
+    headers: authHeaders(false),
     body: formData,
   });
   if (res.status === 401) {
@@ -152,11 +170,8 @@ async function fetchForm(path, formData) {
 }
 
 async function fetchText(path) {
-  const token = accessToken();
   const res = await fetch(`${apiBase}${path}`, {
-    headers: {
-      ...(token ? { "X-DREC-Access-Token": token } : {}),
-    },
+    headers: authHeaders(false),
   });
   if (res.status === 401) {
     throw new Error("Access token required");
@@ -166,11 +181,8 @@ async function fetchText(path) {
 }
 
 async function downloadProtectedFile(path, filename, type) {
-  const token = accessToken();
   const res = await fetch(`${apiBase}${path}`, {
-    headers: {
-      ...(token ? { "X-DREC-Access-Token": token } : {}),
-    },
+    headers: authHeaders(false),
   });
   if (res.status === 401) {
     throw new Error("Access token required");
@@ -604,7 +616,8 @@ async function loadAccessPolicy() {
   try {
     const data = await fetchJson("/security/access-policy");
     const roles = data.configured_roles || [];
-    target.textContent = `${data.current_role || "unknown"} · ${data.mode || "token"} · ${roles.length ? roles.join("/") : "admin only"}`;
+    const actor = data.current_actor ? ` · ${data.current_actor}` : "";
+    target.textContent = `${data.current_role || "unknown"}${actor} · ${data.mode || "token"} · ${roles.length ? roles.join("/") : "admin only"}`;
   } catch {
     target.textContent = accessToken() ? "Access check failed" : "Set access token";
   }
