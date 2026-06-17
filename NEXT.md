@@ -141,6 +141,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added safe Apply Rewrite action that updates draft captions without approving, queueing, scheduling, or publishing
 - [x] Added bulk Apply All Safe Rewrites action for detector-clear rewrite candidates
 - [x] Added First Cycle Handoff Pack for the safe rewrite -> approval -> queue -> schedule -> handoff path
+- [x] Added Approval Cockpit for prioritizing clear draft assets before human approval
 
 ## Next Engineering Tasks
 
@@ -265,6 +266,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add safe Apply Rewrite action before asset approval and queueing
 - [x] Add bulk Apply All Safe Rewrites action before asset approval and queueing
 - [x] Add First Cycle Handoff Pack for first manual publishing cycle coordination
+- [x] Add Approval Cockpit for human review prioritization before queueing
 - [ ] Connect Meta Graph API credentials
 - [x] Implement real Facebook publish scheduling behind Meta readiness and enable flags
 - [x] Implement Instagram two-step publish worker behind Meta readiness and enable flags

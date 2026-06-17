@@ -4478,6 +4478,150 @@ async def operations_asset_review_session_markdown(_: None = Depends(require_acc
     )
 
 
+def approval_score(item: dict):
+    score = 0
+    if item.get("recommended_decision") == "human_can_clear_and_approve":
+        score += 50
+    if item.get("detector_status") == "clear":
+        score += 25
+    if item.get("media_count"):
+        score += 10
+    format_score = {"single": 12, "story": 10, "carousel": 8, "reel": 6}
+    score += format_score.get(item.get("format"), 4)
+    if item.get("findings"):
+        score -= 20
+    if not (item.get("caption_preview") or "").strip():
+        score -= 30
+    return score
+
+
+async def approval_cockpit_payload():
+    review = await asset_review_session_payload()
+    candidates = []
+    for item in review.get("session_items") or []:
+        blockers = []
+        if item.get("detector_status") != "clear":
+            blockers.append("Detector is not clear.")
+        if item.get("compliance_status") != "clear":
+            blockers.append("Safety status is not clear.")
+        if item.get("review_status") == "approved":
+            blockers.append("Already approved.")
+        if item.get("review_status") == "rejected":
+            blockers.append("Rejected asset.")
+        if not item.get("caption_preview"):
+            blockers.append("Missing caption.")
+        media_gap = ""
+        if not item.get("media_count") and item.get("format") in {"single", "story", "carousel", "reel"}:
+            media_gap = "Needs approved media/design before publishing handoff."
+        score = approval_score(item)
+        candidates.append(
+            {
+                **item,
+                "approval_score": score,
+                "approval_status": "ready_for_human_review" if not blockers else "blocked",
+                "blockers": blockers,
+                "media_gap": media_gap,
+                "reviewer_prompt": "\n".join(
+                    [
+                        f"Review: {item.get('topic')}",
+                        "1. Does the Mandarin copy stay educational, not diagnostic?",
+                        "2. Are claims general and non-guaranteed?",
+                        "3. Is the CTA appropriate for a health-education post?",
+                        "4. If safe, mark Safety Clear and Approve. If unsure, keep draft and add a note.",
+                    ]
+                ),
+            }
+        )
+    candidates.sort(
+        key=lambda item: (
+            item.get("approval_status") != "ready_for_human_review",
+            -item.get("approval_score", 0),
+            item.get("topic") or "",
+        )
+    )
+    ready = [item for item in candidates if item.get("approval_status") == "ready_for_human_review"]
+    return {
+        "phase": "approval_cockpit",
+        "mode": "human_approval_only",
+        "ready_count": len(ready),
+        "blocked_count": len(candidates) - len(ready),
+        "recommended_first_asset": ready[0] if ready else None,
+        "approval_items": candidates[:40],
+        "rules": [
+            "This cockpit does not approve, queue, schedule, or publish assets.",
+            "A human reviewer must approve medical meaning and brand fit.",
+            "Clear detector status is necessary but not enough for publishing.",
+            "Media/design gaps can be fixed after copy approval but before handoff.",
+        ],
+        "next_step": "Open the highest-scored ready item, review the prompt, then approve only if the human checklist passes.",
+    }
+
+
+@app.get("/operations/approval-cockpit")
+async def operations_approval_cockpit(_: None = Depends(require_access_token)):
+    return await approval_cockpit_payload()
+
+
+@app.get("/operations/approval-cockpit.md")
+async def operations_approval_cockpit_markdown(_: None = Depends(require_access_token)):
+    payload = await approval_cockpit_payload()
+    generated_at = datetime.now(timezone.utc).isoformat()
+    first = payload.get("recommended_first_asset") or {}
+    lines = [
+        "# DREC Content OS Approval Cockpit",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this cockpit to prioritize human review. It is read-only and does not approve, queue, schedule, or publish anything.",
+        "",
+        "## Summary",
+        "",
+        f"- Ready for human review: {payload.get('ready_count')}",
+        f"- Blocked: {payload.get('blocked_count')}",
+        f"- Recommended first asset: {first.get('topic') or 'None'}",
+        "",
+        "## Rules",
+        "",
+        *markdown_list(payload.get("rules"), "- Human approval required."),
+        "",
+        "## Approval Shortlist",
+        "",
+    ]
+    for index, item in enumerate(payload.get("approval_items") or [], start=1):
+        blockers = item.get("blockers") or ["None"]
+        lines.extend(
+            [
+                f"### {index}. {item.get('topic')}",
+                "",
+                f"- Asset ID: {item.get('asset_id')}",
+                f"- Score: {item.get('approval_score')}",
+                f"- Status: {item.get('approval_status')}",
+                f"- Channel / format: {item.get('channel')} / {item.get('format')}",
+                f"- Safety / review: {item.get('compliance_status')} / {item.get('review_status')}",
+                f"- Media: {item.get('media_count')} ({item.get('media_gap') or 'No media gap noted.'})",
+                f"- Blockers: {', '.join(blockers)}",
+                f"- Next step: {item.get('next_step')}",
+                "",
+                "Reviewer prompt:",
+                "",
+                "```",
+                item.get("reviewer_prompt") or "",
+                "```",
+                "",
+                "Caption preview:",
+                "",
+                item.get("caption_preview") or "No caption available.",
+                "",
+            ]
+        )
+    lines.extend(["## Next Step", "", f"- {payload.get('next_step')}", ""])
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-approval-cockpit.md"'},
+    )
+
+
 SAFE_REWRITE_REPLACEMENTS = [
     ("不等于个人诊断或治疗方案", "仅供健康教育参考"),
     ("个人诊断或治疗方案", "个人医疗建议"),

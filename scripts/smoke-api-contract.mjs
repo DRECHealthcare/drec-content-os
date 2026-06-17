@@ -41,6 +41,8 @@ const requiredRoutes = [
   "GET /operations/asset-safety-review.md",
   "GET /operations/asset-review-session",
   "GET /operations/asset-review-session.md",
+  "GET /operations/approval-cockpit",
+  "GET /operations/approval-cockpit.md",
   "GET /operations/asset-rewrite-pack",
   "GET /operations/asset-rewrite-pack.md",
   "GET /operations/first-cycle-handoff",
@@ -587,6 +589,21 @@ const requiredSnippets = [
     name: "asset review session export",
     file: "main",
     text: "drec-asset-review-session-pack.md",
+  },
+  {
+    name: "approval cockpit route",
+    file: "main",
+    text: "approval_cockpit_payload",
+  },
+  {
+    name: "approval cockpit export",
+    file: "main",
+    text: "drec-approval-cockpit.md",
+  },
+  {
+    name: "approval cockpit safety",
+    file: "main",
+    text: "human_approval_only",
   },
   {
     name: "asset rewrite pack route",
@@ -1507,6 +1524,21 @@ const requiredSnippets = [
     name: "web asset review session loader",
     file: "web",
     text: "loadAssetReviewSession",
+  },
+  {
+    name: "web approval cockpit action",
+    file: "web",
+    text: "download-approval-cockpit",
+  },
+  {
+    name: "web approval cockpit loader",
+    file: "web",
+    text: "loadApprovalCockpit",
+  },
+  {
+    name: "web approval cockpit endpoint",
+    file: "web",
+    text: "/operations/approval-cockpit",
   },
   {
     name: "web asset rewrite pack action",
