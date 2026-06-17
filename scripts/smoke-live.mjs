@@ -752,6 +752,10 @@ const checks = [
         && data.mode === "manual_safe_sequence"
         && Array.isArray(data.stages)
         && Array.isArray(data.safety_rules)
+        && data.links?.doctor_reply_inbox === "/operations/doctor-reply-inbox-pack.md"
+        && data.links?.production_reply_inbox === "/operations/production-reply-inbox-pack.md"
+        && data.links?.pre_schedule_gate === "/operations/pre-schedule-gate.md"
+        && data.links?.scheduler_recovery === "/operations/scheduler-recovery-pack.md"
         && data.safety_rules.some((rule) => rule.includes("do not approve"));
     },
   },
@@ -764,7 +768,10 @@ const checks = [
       return text.includes("# DREC Content OS First Cycle Handoff Pack")
         && text.includes("## Manual Sequence")
         && text.includes("## Safety Rules")
-        && text.includes("Apply detector-clear safe rewrites");
+        && text.includes("Apply detector-clear safe rewrites")
+        && text.includes("Doctor Reply Inbox")
+        && text.includes("Production Reply Inbox")
+        && text.includes("Scheduler Recovery");
     },
   },
   {

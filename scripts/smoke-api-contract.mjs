@@ -923,6 +923,26 @@ const requiredSnippets = [
     text: "manual_safe_sequence",
   },
   {
+    name: "first cycle handoff doctor reply inbox link",
+    file: "main",
+    text: "\"doctor_reply_inbox\": \"/operations/doctor-reply-inbox-pack.md\"",
+  },
+  {
+    name: "first cycle handoff production reply inbox link",
+    file: "main",
+    text: "\"production_reply_inbox\": \"/operations/production-reply-inbox-pack.md\"",
+  },
+  {
+    name: "first cycle handoff pre schedule gate link",
+    file: "main",
+    text: "\"pre_schedule_gate\": \"/operations/pre-schedule-gate.md\"",
+  },
+  {
+    name: "first cycle handoff scheduler recovery link",
+    file: "main",
+    text: "\"scheduler_recovery\": \"/operations/scheduler-recovery-pack.md\"",
+  },
+  {
     name: "first cycle sprint pack route",
     file: "main",
     text: "first_cycle_sprint_pack_payload",
