@@ -102,7 +102,7 @@ Stage 1 is now a working thin-core workflow:
 - Download a protected launch evidence report with manual test status, readiness, risk, Meta setup, and safe go-live rules
 - Download a protected First Test Kit with current next action, sample topics, manual metric values, acceptance criteria, and safety notes
 - Download a protected First Test Run Tracker with live step status, evidence fields, and pass rules for the first manual workflow test
-- Download a protected Manual Cycle QA report that summarizes the current test decision, blockers, risk, handoff, and learning gaps
+- Download a protected Manual Cycle QA report that summarizes the current test decision, action links, blockers, risk, handoff, and learning gaps
 - Download a protected CSV operations snapshot for audit or backup before rollout changes
 - Download a protected Pipeline Board CSV that shows each topic's next action from brief through asset, queue, publishing, metrics, and learning
 - Download a protected Audit Trail CSV that shows recent review, scheduler, role, and actor evidence before launch or Meta activation

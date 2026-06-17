@@ -116,6 +116,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added First Test Kit export for safe first manual workflow testing
 - [x] Added First Test Run Tracker export for live manual test evidence capture
 - [x] Added Manual Cycle QA export for post-test blockers, risk, handoff, and learning review
+- [x] Added Manual Cycle QA action links for doctor and production reply inbox flows
 - [x] Added Meta OAuth guide endpoint and UI card for future credential connection
 - [x] Replaced browser prompt access-token entry with an inline token panel for app/browser compatibility
 - [x] Added session-only token storage by default, plus explicit Remember and Clear controls

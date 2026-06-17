@@ -603,6 +603,21 @@ const requiredSnippets = [
     text: "## QA Decision",
   },
   {
+    name: "manual cycle qa action links",
+    file: "main",
+    text: "## Current-Cycle Action Links",
+  },
+  {
+    name: "manual cycle qa doctor reply inbox link",
+    file: "main",
+    text: "- Doctor reply inbox: `/operations/doctor-reply-inbox-pack.md`",
+  },
+  {
+    name: "manual cycle qa production reply inbox link",
+    file: "main",
+    text: "- Production reply inbox: `/operations/production-reply-inbox-pack.md`",
+  },
+  {
     name: "daily ops checklist export",
     file: "main",
     text: "drec-daily-ops-checklist.md",

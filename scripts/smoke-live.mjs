@@ -245,6 +245,9 @@ const checks = [
       const text = await res.text();
       return text.includes("# DREC Content OS Manual Cycle QA")
         && text.includes("## QA Decision")
+        && text.includes("## Current-Cycle Action Links")
+        && text.includes("Doctor reply inbox")
+        && text.includes("Production reply inbox")
         && text.includes("## Risk QA")
         && text.includes("## Learning QA");
     },
