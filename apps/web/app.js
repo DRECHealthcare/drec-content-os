@@ -10,6 +10,7 @@ let latestSprintItems = [];
 let latestDoctorSendItems = [];
 let latestDoctorPolishItems = [];
 let latestProductionItems = [];
+let latestLearningWeightSuggestions = [];
 
 const titleMap = {
   dashboard: "Dashboard",
@@ -1366,6 +1367,8 @@ async function loadLearningSummary() {
     const planTopics = data.plan_recommendations?.topics || [];
     const insights = data.outcome_insights || {};
     const topSignals = insights.top_signals || [];
+    const suggestions = data.suggested_learning_weights || [];
+    latestLearningWeightSuggestions = suggestions;
     container.innerHTML = `
       <article class="learning-card wide-learning">
         <h3>Next Best Move</h3>
@@ -1415,6 +1418,19 @@ async function loadLearningSummary() {
               <button type="button" data-revert-weight="${escapeHtml(weight.id)}">Revert</button>
             </div>
           `).join("") : "<p>No active learning weights yet.</p>"}
+        </div>
+      </article>
+      <article class="learning-card wide-learning">
+        <h3>Suggested Learning Weights</h3>
+        <div class="weight-list">
+          ${suggestions.length ? suggestions.map((weight, index) => `
+            <div class="weight-row">
+              <span><strong>${escapeHtml(weight.dimension)}</strong> ${escapeHtml(weight.key)}</span>
+              <span>${escapeHtml(weight.previous_value ?? "base")} → ${escapeHtml(weight.value)}</span>
+              <small>${escapeHtml(weight.reason || weight.safe_use_note || "Planning guidance only.")}</small>
+              <button type="button" data-create-learning-suggestion="${escapeHtml(index)}">Log Weight</button>
+            </div>
+          `).join("") : "<p>No suggested weights yet. Record outcomes first, or active weights already cover the top signals.</p>"}
         </div>
       </article>
     `;
@@ -4981,6 +4997,39 @@ document.getElementById("review-items").addEventListener("click", async (event) 
 });
 
 document.getElementById("learning-summary").addEventListener("click", async (event) => {
+  const suggestionButton = event.target.closest("[data-create-learning-suggestion]");
+  if (suggestionButton) {
+    const message = document.getElementById("weight-message");
+    const index = Number(suggestionButton.dataset.createLearningSuggestion);
+    const suggestion = latestLearningWeightSuggestions[index];
+    if (!suggestion) {
+      if (message) message.textContent = "Learning suggestion not found. Refresh Learning and try again.";
+      return;
+    }
+    suggestionButton.disabled = true;
+    suggestionButton.textContent = "Logging";
+    try {
+      await fetchJson("/learning-weights", {
+        method: "POST",
+        body: JSON.stringify({
+          dimension: suggestion.dimension,
+          key: suggestion.key,
+          value: Number(suggestion.value),
+          previous_value: suggestion.previous_value ?? null,
+          reason: suggestion.reason || suggestion.safe_use_note || null,
+          source: suggestion.source || "suggested_from_outcome_signal",
+        }),
+      });
+      if (message) message.textContent = "Suggested learning weight logged.";
+      await Promise.all([loadLearningSummary(), loadLoopStatus(), loadQuarterlyMemo()]);
+    } catch (error) {
+      if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not log suggested learning weight.";
+      suggestionButton.disabled = false;
+      suggestionButton.textContent = "Log Weight";
+    }
+    return;
+  }
+
   const button = event.target.closest("[data-revert-weight]");
   if (!button) return;
   button.disabled = true;

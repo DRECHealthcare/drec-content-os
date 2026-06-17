@@ -1624,6 +1624,21 @@ const requiredSnippets = [
     text: "outcome_insights",
   },
   {
+    name: "suggested learning weights payload",
+    file: "main",
+    text: "suggested_learning_weights",
+  },
+  {
+    name: "suggested learning weights helper",
+    file: "main",
+    text: "suggested_learning_weights_from_insights",
+  },
+  {
+    name: "suggested learning weights safety",
+    file: "main",
+    text: "Reversible planning weight only. It does not approve content, schedule, publish, or change Meta settings.",
+  },
+  {
     name: "weekly report outcome insights",
     file: "main",
     text: "## Outcome Insights",
@@ -2252,6 +2267,26 @@ const requiredSnippets = [
     name: "web quarterly memo loader",
     file: "web",
     text: "/learning/quarterly-memo",
+  },
+  {
+    name: "web suggested learning weights card",
+    file: "web",
+    text: "Suggested Learning Weights",
+  },
+  {
+    name: "web suggested learning weights action",
+    file: "web",
+    text: "data-create-learning-suggestion",
+  },
+  {
+    name: "web suggested learning weights state",
+    file: "web",
+    text: "latestLearningWeightSuggestions",
+  },
+  {
+    name: "web suggested learning weights source",
+    file: "web",
+    text: "suggested_from_outcome_signal",
   },
   {
     name: "web metrics template action",

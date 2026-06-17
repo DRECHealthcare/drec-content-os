@@ -150,6 +150,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added Notify Rail readiness for n8n/WhatsApp approval alerts without live sending
 - [x] Added Insight Inbox Sense Brief for ads, competitors, audience observations, ideas, and learning inputs
 - [x] Added Quarterly Learning Memo with posting-time heat, outcome signals, weight-change log, and next-quarter actions
+- [x] Added Suggested Learning Weights from measured outcome signals with one-click reversible logging
 - [x] Added Backup & Recovery Pack for rebuild evidence, required exports, recovery order, and degraded mode
 - [x] Added manual Ads Planning Pack with candidate tests, CPL targets, budget rules, and media buyer handoff
 - [x] Added Asset Review Session Pack with detector findings, recommended decisions, and next approval steps

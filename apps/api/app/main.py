@@ -10041,6 +10041,50 @@ def outcome_insights_from_rows(outcomes: list[dict], dimensions: list[str] | Non
     }
 
 
+def suggested_learning_weights_from_insights(insights: dict, active_weights: list[dict]):
+    active_pairs = {
+        (str(weight.get("dimension") or ""), str(weight.get("key") or ""))
+        for weight in active_weights
+        if weight.get("is_active") is not False
+    }
+    suggestions = []
+    for signal in (insights.get("top_signals") or [])[:6]:
+        dimension = str(signal.get("dimension") or "").strip()
+        key = str(signal.get("key") or "").strip()
+        if not dimension or not key or (dimension, key) in active_pairs:
+            continue
+        count = int(safe_float(signal.get("count"), 0))
+        avg_score = safe_float(signal.get("avg_score"), 0)
+        saves_total = int(safe_float(signal.get("saves_total"), 0))
+        shares_total = int(safe_float(signal.get("shares_total"), 0))
+        confidence = "measured" if count >= 3 else "directional"
+        value = 1.08 if confidence == "measured" and avg_score >= 1 else 1.05 if avg_score >= 1 else 1.02
+        suggestions.append(
+            {
+                "dimension": dimension,
+                "key": key,
+                "value": value,
+                "previous_value": 1.0,
+                "source": "suggested_from_outcome_signal",
+                "confidence": confidence,
+                "evidence": {
+                    "count": count,
+                    "avg_score": avg_score,
+                    "saves_total": saves_total,
+                    "shares_total": shares_total,
+                    "best_post_id": signal.get("best_post_id"),
+                },
+                "reason": (
+                    f"{signal.get('label') or f'{dimension}: {key}'} showed {confidence} performance "
+                    f"across {count} outcome(s), avg score {avg_score}, saves {saves_total}, shares {shares_total}. "
+                    "Use as planning guidance only; keep human review mandatory."
+                ),
+                "safe_use_note": "Reversible planning weight only. It does not approve content, schedule, publish, or change Meta settings.",
+            }
+        )
+    return suggestions
+
+
 @app.get("/briefs")
 async def list_content_briefs(_: None = Depends(require_access_token)):
     return {"items": await fetch_content_brief_list()}
@@ -14572,12 +14616,14 @@ async def learning_summary(_: None = Depends(require_access_token)):
         else "Use approval and rejection patterns to refine next week's topics."
     )
     plan_recommendations = await learning_recommended_topics("zh", 5)
+    suggested_weights = suggested_learning_weights_from_insights(insights, weights)
     return {
         "queue": queue,
         "feedback": feedback,
         "recent_briefs": recent_briefs,
         "recent_outcomes": recent_outcomes,
         "weights": weights,
+        "suggested_learning_weights": suggested_weights,
         "recommendation": recommendation,
         "plan_recommendations": plan_recommendations,
         "outcome_insights": insights,
