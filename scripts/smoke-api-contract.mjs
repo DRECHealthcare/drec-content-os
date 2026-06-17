@@ -1715,6 +1715,31 @@ const requiredSnippets = [
     text: "/operations/import-asset-review-decisions",
   },
   {
+    name: "web asset media attachments download action",
+    file: "web",
+    text: "download-asset-media-attachments",
+  },
+  {
+    name: "web asset media attachments preview action",
+    file: "web",
+    text: "preview-asset-media-attachments",
+  },
+  {
+    name: "web asset media attachments import action",
+    file: "web",
+    text: "import-asset-media-attachments",
+  },
+  {
+    name: "web asset media attachments import endpoint",
+    file: "web",
+    text: "/operations/import-asset-media-attachments",
+  },
+  {
+    name: "web asset media attachments preview renderer",
+    file: "web",
+    text: "renderAssetMediaAttachmentPreview",
+  },
+  {
     name: "web asset review note action",
     file: "web",
     text: "data-copy-asset-review",

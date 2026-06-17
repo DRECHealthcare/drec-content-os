@@ -2759,6 +2759,16 @@ document.getElementById("download-asset-review-decisions")?.addEventListener("cl
   }
 });
 
+document.getElementById("download-asset-media-attachments")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/asset-media-attachments.csv", "drec-asset-media-attachments.csv", "text/csv");
+    message.textContent = "Asset media attachments CSV downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download asset media attachments.";
+  }
+});
+
 document.getElementById("download-asset-worklist")?.addEventListener("click", async () => {
   const message = document.getElementById("media-message");
   try {
@@ -2977,6 +2987,37 @@ function renderAssetReviewDecisionPreview(data) {
   `;
 }
 
+function renderAssetMediaAttachmentPreview(data) {
+  const container = document.getElementById("asset-media-attachment-preview");
+  if (!container) return;
+  const rows = data.planned || data.imported || [];
+  const skipped = data.skipped || [];
+  container.innerHTML = `
+    <article class="insight-card">
+      <strong>${data.dry_run ? "Media Attachment Preview" : "Media Attachment Import"}</strong>
+      <small>${rows.length} row(s) ready · ${skipped.length} skipped</small>
+      ${rows.length ? `
+        <ul>${rows.slice(0, 10).map((row) => `
+          <li>
+            <strong>${escapeHtml(row.topic || row.asset_id || "")}</strong>
+            ${escapeHtml(row.new_media_count || 0)} media URL(s)
+            ${row.visual_qa_status ? ` · ${escapeHtml(row.visual_qa_status)}` : ""}
+            ${row.synced_queue_count ? ` · ${escapeHtml(row.synced_queue_count)} queue sync` : ""}
+          </li>
+        `).join("")}</ul>
+      ` : ""}
+      ${skipped.length ? `
+        <h4>Skipped Rows</h4>
+        <ul>${skipped.slice(0, 10).map((row) => `<li><strong>Row ${escapeHtml(row.row || "")}</strong> ${escapeHtml(row.asset_id || "")}${row.asset_id ? " · " : ""}${escapeHtml(row.reason || "")}</li>`).join("")}</ul>
+      ` : ""}
+      ${Array.isArray(data.safety) && data.safety.length ? `
+        <h4>Safety</h4>
+        <ul>${data.safety.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+      ` : ""}
+    </article>
+  `;
+}
+
 async function uploadAssetReviewDecisions({ dryRun }) {
   const message = document.getElementById("media-message");
   const fileInput = document.getElementById("asset-review-decisions-file");
@@ -3000,12 +3041,43 @@ async function uploadAssetReviewDecisions({ dryRun }) {
   }
 }
 
+async function uploadAssetMediaAttachments({ dryRun }) {
+  const message = document.getElementById("media-message");
+  const fileInput = document.getElementById("asset-media-attachments-file");
+  const file = fileInput?.files?.[0];
+  if (!file) {
+    message.textContent = "Choose a media attachment CSV first.";
+    return;
+  }
+  const body = new FormData();
+  body.append("file", file);
+  body.append("dry_run", dryRun ? "true" : "false");
+  message.textContent = dryRun ? "Previewing media attachments..." : "Importing media attachments...";
+  try {
+    const data = await fetchForm("/operations/import-asset-media-attachments", body);
+    if (!dryRun) fileInput.value = "";
+    message.textContent = data.message || (dryRun ? "Media attachments previewed." : "Media attachments imported.");
+    renderAssetMediaAttachmentPreview(data);
+    if (!dryRun) await Promise.all([loadAssets(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadPreScheduleGate(), loadLoopStatus()]);
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : dryRun ? "Could not preview media attachments." : "Could not import media attachments.";
+  }
+}
+
 document.getElementById("preview-asset-review-decisions")?.addEventListener("click", async () => {
   await uploadAssetReviewDecisions({ dryRun: true });
 });
 
 document.getElementById("import-asset-review-decisions")?.addEventListener("click", async () => {
   await uploadAssetReviewDecisions({ dryRun: false });
+});
+
+document.getElementById("preview-asset-media-attachments")?.addEventListener("click", async () => {
+  await uploadAssetMediaAttachments({ dryRun: true });
+});
+
+document.getElementById("import-asset-media-attachments")?.addEventListener("click", async () => {
+  await uploadAssetMediaAttachments({ dryRun: false });
 });
 
 document.getElementById("plan-form").addEventListener("submit", async (event) => {
