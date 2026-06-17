@@ -37,6 +37,7 @@ const checks = [
         && text.includes("first-cycle-sprint")
         && text.includes("download-doctor-review-polish")
         && text.includes("download-doctor-review-bridge")
+        && text.includes("download-doctor-send-queue")
         && text.includes("download-doctor-reply-inbox")
         && text.includes("doctor-review-polish")
         && text.includes("download-doctor-approval-request")
@@ -74,6 +75,7 @@ const checks = [
         && text.includes("/operations/cycle-command-center.md")
         && text.includes("/operations/cycle-evidence-ledger.csv")
         && text.includes("/operations/doctor-review-bridge.md")
+        && text.includes("/operations/doctor-send-queue.csv")
         && text.includes("/operations/doctor-review-polish-pack")
         && text.includes("/operations/doctor-review-polish-pack.md")
         && text.includes("/operations/doctor-reply-inbox-pack.md")
@@ -575,6 +577,18 @@ const checks = [
         && text.includes("## Paste-Back Reply Template")
         && text.includes("Doctor Reply Text")
         && text.includes("read-only");
+    },
+  },
+  {
+    name: "Doctor send queue",
+    url: `${apiBase}/operations/doctor-send-queue.csv`,
+    auth: true,
+    validate: async (res) => {
+      const text = await res.text();
+      return text.includes("asset_id,topic,channel,format,copy_to_doctor,doctor_reply_template")
+        && text.includes("reply_preview_result")
+        && text.includes("reply_import_result")
+        && text.includes("Send queue only");
     },
   },
   {

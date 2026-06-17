@@ -66,6 +66,7 @@ Stage 1 is now a working thin-core workflow:
 - Use the Assets Review Session summary and Markdown pack to run a focused human approval meeting with detector findings, recommended decisions, and next steps
 - Download the Doctor Approval Request to send a short, copyable medical review request for the safest ready assets without approving, queueing, scheduling, publishing, or sending Meta requests
 - Download the Doctor Review Bridge to copy one send-ready doctor message and matching paste-back reply template for the current review batch
+- Download the Doctor Send Queue CSV to track each doctor-review asset, sent status, reviewer, preview result, and import result without approving or publishing anything
 - Use the Doctor Review Polish Pack inside Assets to give doctors calmer, clearer Mandarin review copy suggestions while keeping approval, media, scheduling, publishing, and Meta as separate gates
 - Copy individual or full-batch polished doctor review messages from Assets so the first five ready assets can be reviewed without opening the Markdown pack
 - Download the Doctor Reply Inbox Pack to collect doctor decisions in the exact paste-back format before previewing and importing replies

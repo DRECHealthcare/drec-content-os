@@ -5796,6 +5796,58 @@ async def operations_doctor_review_bridge_markdown(_: None = Depends(require_acc
     )
 
 
+@app.get("/operations/doctor-send-queue.csv")
+async def operations_doctor_send_queue_csv(_: None = Depends(require_access_token)):
+    payload = await doctor_review_bridge_payload()
+    output = StringIO()
+    fieldnames = [
+        "asset_id",
+        "topic",
+        "channel",
+        "format",
+        "copy_to_doctor",
+        "doctor_reply_template",
+        "safe_approval_rule",
+        "send_status",
+        "sent_to",
+        "sent_by",
+        "sent_at",
+        "reply_received_at",
+        "reply_preview_result",
+        "reply_import_result",
+        "notes",
+        "safe_use_note",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for item in payload.get("bridge_items") or []:
+        writer.writerow(
+            {
+                "asset_id": item.get("asset_id") or "",
+                "topic": item.get("topic") or "",
+                "channel": item.get("channel") or "",
+                "format": item.get("format") or "",
+                "copy_to_doctor": item.get("copy_to_review") or "",
+                "doctor_reply_template": item.get("reply_template") or "",
+                "safe_approval_rule": item.get("safe_use_rule") or "Only import approval when Decision: approve and Safety: clear are explicit.",
+                "send_status": "",
+                "sent_to": "",
+                "sent_by": "",
+                "sent_at": "",
+                "reply_received_at": "",
+                "reply_preview_result": "",
+                "reply_import_result": "",
+                "notes": "",
+                "safe_use_note": "Send queue only. It does not approve, import, attach media, queue, schedule, publish, or send Meta requests.",
+            }
+        )
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-doctor-send-queue.csv"'},
+    )
+
+
 @app.get("/operations/doctor-approval-pack")
 async def operations_doctor_approval_pack(_: None = Depends(require_access_token)):
     return await doctor_approval_pack_payload()

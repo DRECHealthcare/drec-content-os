@@ -56,6 +56,7 @@ const requiredRoutes = [
   "GET /operations/doctor-approval-pack.md",
   "GET /operations/doctor-review-bridge",
   "GET /operations/doctor-review-bridge.md",
+  "GET /operations/doctor-send-queue.csv",
   "GET /operations/doctor-review-polish-pack",
   "GET /operations/doctor-review-polish-pack.md",
   "GET /operations/doctor-reply-inbox-pack",
@@ -923,6 +924,36 @@ const requiredSnippets = [
     name: "doctor review bridge UI endpoint",
     file: "web",
     text: "/operations/doctor-review-bridge.md",
+  },
+  {
+    name: "doctor send queue route",
+    file: "main",
+    text: "operations_doctor_send_queue_csv",
+  },
+  {
+    name: "doctor send queue export",
+    file: "main",
+    text: "drec-doctor-send-queue.csv",
+  },
+  {
+    name: "doctor send queue tracking fields",
+    file: "main",
+    text: "reply_preview_result",
+  },
+  {
+    name: "doctor send queue safety",
+    file: "main",
+    text: "Send queue only. It does not approve, import, attach media, queue, schedule, publish, or send Meta requests.",
+  },
+  {
+    name: "doctor send queue UI action",
+    file: "web",
+    text: "download-doctor-send-queue",
+  },
+  {
+    name: "doctor send queue UI endpoint",
+    file: "web",
+    text: "/operations/doctor-send-queue.csv",
   },
   {
     name: "doctor reply import route",

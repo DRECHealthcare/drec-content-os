@@ -3107,6 +3107,16 @@ document.getElementById("download-doctor-review-bridge")?.addEventListener("clic
   }
 });
 
+document.getElementById("download-doctor-send-queue")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/doctor-send-queue.csv", "drec-doctor-send-queue.csv", "text/csv");
+    message.textContent = "Doctor send queue downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download doctor send queue.";
+  }
+});
+
 document.getElementById("download-doctor-review-polish")?.addEventListener("click", async () => {
   const message = document.getElementById("media-message");
   try {
