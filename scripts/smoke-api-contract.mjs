@@ -43,6 +43,7 @@ const requiredRoutes = [
   "GET /operations/asset-review-session.md",
   "GET /operations/doctor-approval-pack",
   "GET /operations/doctor-approval-pack.md",
+  "GET /operations/doctor-decision-worksheet.csv",
   "GET /operations/approval-cockpit",
   "GET /operations/approval-cockpit.md",
   "GET /operations/post-approval-production",
@@ -615,6 +616,16 @@ const requiredSnippets = [
     name: "doctor approval pack safety",
     file: "main",
     text: "human_medical_review_only",
+  },
+  {
+    name: "doctor decision worksheet export",
+    file: "main",
+    text: "drec-doctor-decision-worksheet.csv",
+  },
+  {
+    name: "doctor decision worksheet checklist",
+    file: "main",
+    text: "doctor_check_no_guaranteed_outcome",
   },
   {
     name: "approval cockpit route",
@@ -1630,6 +1641,16 @@ const requiredSnippets = [
     name: "web doctor approval pack endpoint",
     file: "web",
     text: "/operations/doctor-approval-pack.md",
+  },
+  {
+    name: "web doctor decision worksheet action",
+    file: "web",
+    text: "download-doctor-decision-worksheet",
+  },
+  {
+    name: "web doctor decision worksheet endpoint",
+    file: "web",
+    text: "/operations/doctor-decision-worksheet.csv",
   },
   {
     name: "web asset review session loader",

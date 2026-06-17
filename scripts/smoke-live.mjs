@@ -347,6 +347,17 @@ const checks = [
     },
   },
   {
+    name: "Doctor decision worksheet",
+    url: `${apiBase}/operations/doctor-decision-worksheet.csv`,
+    auth: true,
+    validate: async (res) => {
+      const text = await res.text();
+      return text.includes("asset_id,topic,channel,format,current_safety,current_review,detector_status,recommended_decision")
+        && text.includes("doctor_check_no_guaranteed_outcome")
+        && text.includes("reviewer_safety_decision,reviewer_review_decision,reviewer_name,review_notes");
+    },
+  },
+  {
     name: "Approval cockpit",
     url: `${apiBase}/operations/approval-cockpit`,
     auth: true,

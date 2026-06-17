@@ -2809,6 +2809,16 @@ document.getElementById("download-doctor-approval-pack")?.addEventListener("clic
   }
 });
 
+document.getElementById("download-doctor-decision-worksheet")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/doctor-decision-worksheet.csv", "drec-doctor-decision-worksheet.csv", "text/csv");
+    message.textContent = "Doctor decision worksheet downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download doctor decision worksheet.";
+  }
+});
+
 document.getElementById("download-approval-cockpit")?.addEventListener("click", async () => {
   const message = document.getElementById("media-message");
   try {

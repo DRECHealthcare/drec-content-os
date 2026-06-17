@@ -4710,6 +4710,7 @@ async def operations_doctor_approval_pack_markdown(_: None = Depends(require_acc
         "",
         "## How To Record Decisions",
         "",
+        "- Use `Download Doctor Worksheet` for a doctor-friendly CSV with checklist fields.",
         "- Use `Download Review Decisions` to export the CSV.",
         "- Fill `reviewer_safety_decision`, `reviewer_review_decision`, `reviewer_name`, and `review_notes`.",
         "- Use `Preview Decisions` before import.",
@@ -5548,6 +5549,63 @@ async def operations_asset_review_decisions_csv(_: None = Depends(require_access
         output.getvalue(),
         media_type="text/csv",
         headers={"Content-Disposition": 'attachment; filename="drec-asset-review-decisions.csv"'},
+    )
+
+
+@app.get("/operations/doctor-decision-worksheet.csv")
+async def operations_doctor_decision_worksheet_csv(_: None = Depends(require_access_token)):
+    payload = await doctor_approval_pack_payload()
+    items = payload.get("review_items") or []
+    output = StringIO()
+    fieldnames = [
+        "asset_id",
+        "topic",
+        "channel",
+        "format",
+        "current_safety",
+        "current_review",
+        "detector_status",
+        "recommended_decision",
+        "doctor_check_educational_not_diagnostic",
+        "doctor_check_no_guaranteed_outcome",
+        "doctor_check_no_medication_instruction",
+        "doctor_check_mandarin_accurate",
+        "doctor_check_cta_appropriate",
+        "copy_to_review",
+        "reviewer_safety_decision",
+        "reviewer_review_decision",
+        "reviewer_name",
+        "review_notes",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for item in items:
+        writer.writerow(
+            {
+                "asset_id": item.get("asset_id") or "",
+                "topic": item.get("topic") or "",
+                "channel": item.get("channel") or "",
+                "format": item.get("format") or "",
+                "current_safety": item.get("compliance_status") or "",
+                "current_review": item.get("review_status") or "",
+                "detector_status": item.get("detector_status") or "",
+                "recommended_decision": "approve only if all doctor checks are yes" if item.get("approval_status") == "ready_for_human_review" else "needs edits before approval",
+                "doctor_check_educational_not_diagnostic": "",
+                "doctor_check_no_guaranteed_outcome": "",
+                "doctor_check_no_medication_instruction": "",
+                "doctor_check_mandarin_accurate": "",
+                "doctor_check_cta_appropriate": "",
+                "copy_to_review": item.get("caption_preview") or "",
+                "reviewer_safety_decision": "",
+                "reviewer_review_decision": "",
+                "reviewer_name": "",
+                "review_notes": "",
+            }
+        )
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-doctor-decision-worksheet.csv"'},
     )
 
 
