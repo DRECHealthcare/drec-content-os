@@ -6244,8 +6244,10 @@ async def first_cycle_sprint_pack_payload():
         ],
         "links": {
             "doctor_approval_request": "/operations/doctor-approval-request.md",
+            "doctor_reply_inbox": "/operations/doctor-reply-inbox-pack.md",
             "doctor_decision_worksheet": "/operations/doctor-decision-worksheet.csv",
             "post_approval_production": "/operations/post-approval-production.md",
+            "production_reply_inbox": "/operations/production-reply-inbox-pack.md",
             "production_design_worksheet": "/operations/production-design-worksheet.csv",
             "pre_schedule_gate": "/operations/pre-schedule-gate.md",
         },

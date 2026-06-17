@@ -770,6 +770,8 @@ const checks = [
         && data.mode === "read_only_coordination_pack"
         && Array.isArray(data.sprint_items)
         && Array.isArray(data.safety)
+        && data.links?.doctor_reply_inbox === "/operations/doctor-reply-inbox-pack.md"
+        && data.links?.production_reply_inbox === "/operations/production-reply-inbox-pack.md"
         && data.safety.some((rule) => rule.includes("read-only"));
     },
   },
@@ -782,6 +784,8 @@ const checks = [
       return text.includes("# DREC Content OS First Cycle Sprint Pack")
         && text.includes("Doctor reply template")
         && text.includes("Production reply template")
+        && text.includes("Doctor Reply Inbox")
+        && text.includes("Production Reply Inbox")
         && text.includes("## Safety Rules");
     },
   },

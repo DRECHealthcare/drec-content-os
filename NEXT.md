@@ -158,6 +158,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added full-batch Sprint Board copy actions for doctor review and production handoff messages
 - [x] Added Today Runbook links for doctor polish, scheduler recovery, and the remaining external setup gates
 - [x] Added Today Runbook links for doctor reply inbox and production reply inbox paste-back flows
+- [x] Added First Cycle Sprint Pack links for doctor and production reply inbox paste-back flows
 
 ## Next Engineering Tasks
 

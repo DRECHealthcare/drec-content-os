@@ -933,6 +933,16 @@ const requiredSnippets = [
     text: "This sprint pack is read-only and does not approve, attach media, queue, schedule, publish, or send Meta requests.",
   },
   {
+    name: "first cycle sprint doctor reply inbox link",
+    file: "main",
+    text: "\"doctor_reply_inbox\": \"/operations/doctor-reply-inbox-pack.md\"",
+  },
+  {
+    name: "first cycle sprint production reply inbox link",
+    file: "main",
+    text: "\"production_reply_inbox\": \"/operations/production-reply-inbox-pack.md\"",
+  },
+  {
     name: "first cycle sprint tracker route",
     file: "main",
     text: "operations_first_cycle_sprint_tracker_csv",
