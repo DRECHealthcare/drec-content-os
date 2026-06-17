@@ -42,7 +42,7 @@ document.querySelectorAll("nav button").forEach((button) => {
       loadLearningSummary();
       loadQuarterlyMemo();
     }
-    if (screen === "scheduler" || screen === "review") loadPublishQueue();
+    if (screen === "scheduler" || screen === "review") Promise.all([loadPublishQueue(), loadPreScheduleGate()]);
     if (screen === "meta") Promise.all([loadMetaReadiness(), loadMetaSetupChecklist(), loadNotifyRail()]);
   });
 });
@@ -2450,6 +2450,7 @@ async function loadPublishQueue() {
     queueContainer.innerHTML = queueMarkup;
     reviewContainer.innerHTML = reviewMarkup;
     renderWeekSchedule(filteredItems);
+    loadPreScheduleGate();
   } catch {
     const message = '<p class="status-note">Set the access token to load the publish queue.</p>';
     queueContainer.dataset.items = "[]";
@@ -2457,6 +2458,46 @@ async function loadPublishQueue() {
     queueContainer.innerHTML = message;
     reviewContainer.innerHTML = message;
     renderWeekSchedule([]);
+    const gateContainer = document.getElementById("pre-schedule-gate");
+    if (gateContainer) gateContainer.innerHTML = message;
+  }
+}
+
+function renderPreScheduleGate(data) {
+  const container = document.getElementById("pre-schedule-gate");
+  if (!container) return;
+  const items = data.gate_items || [];
+  container.innerHTML = `
+    <article class="learning-card">
+      <h3>Pre-Schedule Gate</h3>
+      <p>${escapeHtml(data.ready_to_schedule_count || 0)} ready</p>
+      <small>${escapeHtml(data.mode || "read_only_schedule_readiness")}</small>
+    </article>
+    <article class="learning-card">
+      <h3>Blocked</h3>
+      <p>${escapeHtml(data.blocked_count || 0)}</p>
+      <small>fix before scheduling</small>
+    </article>
+    <article class="learning-card">
+      <h3>Needs Design</h3>
+      <p>${escapeHtml(data.post_approval_needs_media_count || 0)}</p>
+      <small>after asset approval</small>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Schedule Readiness</h3>
+      <ul>${items.length ? items.slice(0, 5).map((item) => `<li><strong>${escapeHtml(item.channel || "unknown")} / ${escapeHtml(item.format || "unknown")}</strong> · ${escapeHtml(item.gate_status || "")}<br><small>${escapeHtml((item.blockers || []).join("; ") || item.next_step || "")}</small></li>`).join("") : "<li>No queue items yet. Approve and queue assets first.</li>"}</ul>
+    </article>
+  `;
+}
+
+async function loadPreScheduleGate() {
+  const container = document.getElementById("pre-schedule-gate");
+  if (!container) return;
+  try {
+    const data = await fetchJson("/operations/pre-schedule-gate");
+    renderPreScheduleGate(data);
+  } catch {
+    container.innerHTML = '<p class="status-note">Set the access token to load the pre-schedule gate.</p>';
   }
 }
 
@@ -2777,6 +2818,15 @@ document.getElementById("download-first-cycle-handoff")?.addEventListener("click
   }
 });
 
+async function downloadPreScheduleGate(messageElement) {
+  try {
+    await downloadProtectedFile("/operations/pre-schedule-gate.md", "drec-pre-schedule-gate.md", "text/markdown");
+    if (messageElement) messageElement.textContent = "Pre-schedule gate downloaded.";
+  } catch (error) {
+    if (messageElement) messageElement.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download pre-schedule gate.";
+  }
+}
+
 document.getElementById("download-post-approval-production")?.addEventListener("click", async () => {
   const message = document.getElementById("media-message");
   try {
@@ -2785,6 +2835,14 @@ document.getElementById("download-post-approval-production")?.addEventListener("
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download production pack.";
   }
+});
+
+document.getElementById("download-pre-schedule-gate")?.addEventListener("click", async () => {
+  await downloadPreScheduleGate(document.getElementById("queue-message"));
+});
+
+document.getElementById("download-scheduler-pre-schedule-gate")?.addEventListener("click", async () => {
+  await downloadPreScheduleGate(document.getElementById("queue-message"));
 });
 
 document.getElementById("refresh-style-library")?.addEventListener("click", async () => {
@@ -4210,6 +4268,7 @@ loadMediaAssets();
 loadLearningSummary();
 loadQuarterlyMemo();
 loadPublishQueue();
+loadPreScheduleGate();
 loadMetaReadiness();
 loadMetaSetupChecklist();
 loadOutcomes();

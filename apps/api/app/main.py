@@ -9296,6 +9296,154 @@ def review_schedule_queue_lines(item: dict, index: int, label: str):
     ]
 
 
+def pre_schedule_production_blockers(item: dict):
+    blockers = []
+    media_urls = [url for url in item.get("media_urls") or [] if url]
+    latest_feedback = item.get("latest_feedback") or {}
+    if item.get("status") != "draft":
+        blockers.append("Needs draft status before schedule approval.")
+    if item.get("compliance_status") != "clear":
+        blockers.append("Needs compliance clear.")
+    if latest_feedback.get("action") != "approve":
+        blockers.append("Needs human queue review approval.")
+    if not (item.get("caption") or "").strip():
+        blockers.append("Needs final caption.")
+    if item.get("planned_slot"):
+        blockers.append("Already has planned time; use schedule audit instead.")
+    if item.get("format") in {"carousel", "single", "reel", "story"} and not media_urls:
+        blockers.append("Needs approved media/design URL before scheduling.")
+    return blockers
+
+
+async def pre_schedule_gate_payload():
+    queue_items = await fetch_publish_queue_items(200)
+    production = await post_approval_production_payload()
+    candidates = []
+    for item in queue_items:
+        if item.get("status") not in {"draft", "scheduled"}:
+            continue
+        blockers = pre_schedule_production_blockers(item)
+        media_urls = [url for url in item.get("media_urls") or [] if url]
+        candidates.append(
+            {
+                "queue_id": item.get("id"),
+                "asset_id": item.get("asset_id"),
+                "channel": item.get("channel"),
+                "format": item.get("format"),
+                "status": item.get("status"),
+                "compliance_status": item.get("compliance_status"),
+                "latest_review": (item.get("latest_feedback") or {}).get("action") or "none",
+                "planned_slot": item.get("planned_slot"),
+                "media_count": len(media_urls),
+                "media_urls": media_urls,
+                "caption_preview": feedback_excerpt(item.get("caption"), 220),
+                "gate_status": "ready_to_schedule" if not blockers else "blocked",
+                "blockers": blockers,
+                "production_checklist": [
+                    "Human queue review approval is recorded.",
+                    "Caption is compliance-clear and final.",
+                    "Approved media/design URL is attached for visual formats.",
+                    "Visual QA confirms DREC branding, legibility, safe claims, and correct crop.",
+                    "Schedule audit is checked after planned time is chosen.",
+                ],
+                "next_step": "Schedule into the next open MYT slot." if not blockers else "Resolve blockers before using Schedule Approved.",
+            }
+        )
+    candidates.sort(
+        key=lambda item: (
+            item.get("gate_status") != "ready_to_schedule",
+            item.get("planned_slot") is not None,
+            item.get("channel") or "",
+            item.get("format") or "",
+        )
+    )
+    ready = [item for item in candidates if item.get("gate_status") == "ready_to_schedule"]
+    blocked = [item for item in candidates if item.get("gate_status") == "blocked"]
+    return {
+        "phase": "pre_schedule_gate",
+        "mode": "read_only_schedule_readiness",
+        "ready_to_schedule_count": len(ready),
+        "blocked_count": len(blocked),
+        "waiting_approval_count": production.get("waiting_approval_count", 0),
+        "post_approval_needs_media_count": production.get("needs_media_count", 0),
+        "gate_items": candidates[:40],
+        "rules": [
+            "This gate is read-only and does not schedule, queue, publish, or send Meta requests.",
+            "Schedule only draft queue items with human approval, compliance clear status, final caption, and approved media/design.",
+            "Visual formats need an approved media/design URL before scheduling.",
+            "Run Schedule Audit after scheduling and before manual handoff or Meta dry runs.",
+        ],
+        "next_step": "If no queue items are ready, finish human approval and media/design handoff before scheduling.",
+    }
+
+
+@app.get("/operations/pre-schedule-gate")
+async def operations_pre_schedule_gate(_: None = Depends(require_access_token)):
+    return await pre_schedule_gate_payload()
+
+
+@app.get("/operations/pre-schedule-gate.md")
+async def operations_pre_schedule_gate_markdown(_: None = Depends(require_access_token)):
+    payload = await pre_schedule_gate_payload()
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    lines = [
+        "# DREC Content OS Pre-Schedule Gate",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this gate before scheduling queue items. It is read-only and does not schedule, queue, publish, or send Meta requests.",
+        "",
+        "## Summary",
+        "",
+        f"- Ready to schedule: {payload.get('ready_to_schedule_count')}",
+        f"- Blocked before schedule: {payload.get('blocked_count')}",
+        f"- Assets still waiting for human approval: {payload.get('waiting_approval_count')}",
+        f"- Post-approval items needing media/design: {payload.get('post_approval_needs_media_count')}",
+        "",
+        "## Rules",
+        "",
+        *markdown_list(payload.get("rules"), "- Human approval and visual QA required."),
+        "",
+        "## Gate Items",
+        "",
+    ]
+    items = payload.get("gate_items") or []
+    if not items:
+        lines.extend(["- No draft or scheduled queue items found. Approve and queue assets first.", ""])
+    for index, item in enumerate(items, start=1):
+        lines.extend(
+            [
+                f"### {index}. {item.get('channel')} / {item.get('format')}",
+                "",
+                f"- Queue ID: {item.get('queue_id')}",
+                f"- Asset ID: {item.get('asset_id') or 'n/a'}",
+                f"- Gate status: {item.get('gate_status')}",
+                f"- Current status: {item.get('status')}",
+                f"- Safety: {item.get('compliance_status')}",
+                f"- Latest review: {item.get('latest_review')}",
+                f"- Planned slot: {item.get('planned_slot') or 'not scheduled'}",
+                f"- Media count: {item.get('media_count')}",
+                f"- Blockers: {', '.join(item.get('blockers') or []) or 'none'}",
+                f"- Next step: {item.get('next_step')}",
+                "",
+                "Production checklist:",
+                "",
+                *markdown_list(item.get("production_checklist"), "- Run human visual QA."),
+                "",
+                "Caption preview:",
+                "",
+                item.get("caption_preview") or "No caption available.",
+                "",
+            ]
+        )
+    lines.extend(["## Next Step", "", f"- {payload.get('next_step')}", ""])
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-pre-schedule-gate.md"'},
+    )
+
+
 @app.get("/operations/review-to-schedule-pack.md")
 async def operations_review_to_schedule_pack(_: None = Depends(require_access_token)):
     generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")

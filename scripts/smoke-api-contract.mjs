@@ -45,6 +45,8 @@ const requiredRoutes = [
   "GET /operations/approval-cockpit.md",
   "GET /operations/post-approval-production",
   "GET /operations/post-approval-production.md",
+  "GET /operations/pre-schedule-gate",
+  "GET /operations/pre-schedule-gate.md",
   "GET /operations/asset-rewrite-pack",
   "GET /operations/asset-rewrite-pack.md",
   "GET /operations/first-cycle-handoff",
@@ -621,6 +623,21 @@ const requiredSnippets = [
     name: "post approval production safety",
     file: "main",
     text: "production_prep_only",
+  },
+  {
+    name: "pre schedule gate route",
+    file: "main",
+    text: "pre_schedule_gate_payload",
+  },
+  {
+    name: "pre schedule gate export",
+    file: "main",
+    text: "drec-pre-schedule-gate.md",
+  },
+  {
+    name: "pre schedule gate safety",
+    file: "main",
+    text: "read_only_schedule_readiness",
   },
   {
     name: "asset rewrite pack route",
@@ -1696,6 +1713,21 @@ const requiredSnippets = [
     name: "web review to schedule action",
     file: "web",
     text: "download-review-schedule-pack",
+  },
+  {
+    name: "web pre schedule gate action",
+    file: "web",
+    text: "download-pre-schedule-gate",
+  },
+  {
+    name: "web pre schedule gate loader",
+    file: "web",
+    text: "loadPreScheduleGate",
+  },
+  {
+    name: "web pre schedule gate endpoint",
+    file: "web",
+    text: "/operations/pre-schedule-gate",
   },
   {
     name: "web review to schedule endpoint",
