@@ -44,6 +44,8 @@ const requiredRoutes = [
   "GET /operations/asset-review-session",
   "GET /operations/asset-review-session.md",
   "GET /operations/doctor-approval-pack",
+  "GET /operations/doctor-approval-request",
+  "GET /operations/doctor-approval-request.md",
   "GET /operations/doctor-approval-pack.md",
   "GET /operations/doctor-decision-worksheet.csv",
   "GET /operations/approval-cockpit",
@@ -649,6 +651,21 @@ const requiredSnippets = [
     name: "doctor approval pack export",
     file: "main",
     text: "drec-doctor-approval-pack.md",
+  },
+  {
+    name: "doctor approval request route",
+    file: "main",
+    text: "doctor_approval_request_payload",
+  },
+  {
+    name: "doctor approval request export",
+    file: "main",
+    text: "drec-doctor-approval-request.md",
+  },
+  {
+    name: "doctor approval request safety",
+    file: "main",
+    text: "This request is read-only and does not approve, queue, schedule, publish, or send Meta requests.",
   },
   {
     name: "doctor approval pack safety",
@@ -1714,6 +1731,16 @@ const requiredSnippets = [
     name: "web doctor approval pack endpoint",
     file: "web",
     text: "/operations/doctor-approval-pack.md",
+  },
+  {
+    name: "web doctor approval request action",
+    file: "web",
+    text: "download-doctor-approval-request",
+  },
+  {
+    name: "web doctor approval request endpoint",
+    file: "web",
+    text: "/operations/doctor-approval-request.md",
   },
   {
     name: "web doctor decision worksheet action",

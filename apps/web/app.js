@@ -2839,6 +2839,16 @@ document.getElementById("download-doctor-approval-pack")?.addEventListener("clic
   }
 });
 
+document.getElementById("download-doctor-approval-request")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/doctor-approval-request.md", "drec-doctor-approval-request.md", "text/markdown");
+    message.textContent = "Doctor approval request downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download doctor approval request.";
+  }
+});
+
 document.getElementById("download-doctor-decision-worksheet")?.addEventListener("click", async () => {
   const message = document.getElementById("media-message");
   try {

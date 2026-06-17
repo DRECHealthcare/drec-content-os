@@ -30,6 +30,7 @@ const checks = [
     validate: async (res) => {
       const text = await res.text();
       return text.includes("DREC")
+        && text.includes("download-doctor-approval-request")
         && text.includes("download-doctor-decision-worksheet")
         && text.includes("download-asset-media-attachments")
         && text.includes("download-production-design-worksheet")
@@ -50,6 +51,7 @@ const checks = [
     validate: async (res) => {
       const text = await res.text();
       return text.includes("/operations/doctor-decision-worksheet.csv")
+        && text.includes("/operations/doctor-approval-request.md")
         && text.includes("/operations/import-asset-media-attachments")
         && text.includes("/operations/production-design-worksheet.csv")
         && text.includes("/operations/import-production-design-worksheet")
@@ -378,6 +380,30 @@ const checks = [
         && Array.isArray(data.review_items)
         && Array.isArray(data.rules)
         && data.rules.some((rule) => rule.includes("read-only"));
+    },
+  },
+  {
+    name: "Doctor approval request",
+    url: `${apiBase}/operations/doctor-approval-request`,
+    auth: true,
+    validate: async (res) => {
+      const data = await res.json();
+      return data.phase === "doctor_approval_request"
+        && data.mode === "copyable_doctor_review_request"
+        && Array.isArray(data.request_items)
+        && Array.isArray(data.safety)
+        && data.safety.some((rule) => rule.includes("does not approve"));
+    },
+  },
+  {
+    name: "Doctor approval request markdown",
+    url: `${apiBase}/operations/doctor-approval-request.md`,
+    auth: true,
+    validate: async (res) => {
+      const text = await res.text();
+      return text.includes("# DREC Content OS Doctor Approval Request")
+        && text.includes("## Reply Format")
+        && text.includes("Doctor reply template");
     },
   },
   {

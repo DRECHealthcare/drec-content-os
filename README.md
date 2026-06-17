@@ -64,6 +64,7 @@ Stage 1 is now a working thin-core workflow:
 - Download an Ads Planning Pack from Insight Inbox with manual candidate tests, CPL targets from Knowledge Base, budget rules, and media buyer handoff
 - Use Create Post for one-off content; it now saves a linked brief and draft asset into the review workflow with style, target signal, media, and compliance evidence attached
 - Use the Assets Review Session summary and Markdown pack to run a focused human approval meeting with detector findings, recommended decisions, and next steps
+- Download the Doctor Approval Request to send a short, copyable medical review request for the safest ready assets without approving, queueing, scheduling, publishing, or sending Meta requests
 - Use the Assets Rewrite Pack to prepare safer suggested captions for pending assets without auto-approving or changing saved content
 - Apply a suggested rewrite to a draft asset while keeping human approval, queueing, scheduling, and publishing as separate gates
 - Apply all detector-clear safe rewrites in one reviewed batch while still keeping approval, queueing, scheduling, and publishing locked behind human gates

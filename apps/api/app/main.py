@@ -4710,9 +4710,122 @@ async def doctor_approval_pack_payload():
     }
 
 
+async def doctor_approval_request_payload():
+    pack = await doctor_approval_pack_payload()
+    ready_items = [
+        item
+        for item in pack.get("review_items") or []
+        if item.get("approval_status") == "ready_for_human_review"
+    ]
+    request_items = []
+    for item in ready_items[:5]:
+        request_items.append(
+            {
+                "asset_id": item.get("asset_id"),
+                "topic": item.get("topic"),
+                "channel": item.get("channel"),
+                "format": item.get("format"),
+                "copy_to_review": item.get("caption_preview") or "",
+                "reply_template": "\n".join(
+                    [
+                        f"Asset ID: {item.get('asset_id') or ''}",
+                        "Decision: approve / needs edits / reject",
+                        "Safety: clear / needs review / blocked",
+                        "Notes:",
+                    ]
+                ),
+            }
+        )
+    return {
+        "phase": "doctor_approval_request",
+        "mode": "copyable_doctor_review_request",
+        "ready_count": len(ready_items),
+        "blocked_count": pack.get("blocked_count") or 0,
+        "recommended_first_asset": pack.get("recommended_first_asset"),
+        "request_items": request_items,
+        "message": "Please review the draft Chinese health-education posts below. Approve only if the medical meaning is safe, educational, non-diagnostic, and non-guaranteed.",
+        "reply_format": [
+            "Decision: approve / needs edits / reject",
+            "Safety: clear / needs review / blocked",
+            "Notes: short reason or required edit",
+        ],
+        "safety": [
+            "This request is read-only and does not approve, queue, schedule, publish, or send Meta requests.",
+            "A doctor approval reply must still be recorded through the review decision workflow.",
+            "Design/media, scheduling, and publishing remain separate gates after copy approval.",
+        ],
+        "next_step": "Send this request to the doctor, then enter the reply through Review Decisions or the Doctor Worksheet.",
+    }
+
+
 @app.get("/operations/doctor-approval-pack")
 async def operations_doctor_approval_pack(_: None = Depends(require_access_token)):
     return await doctor_approval_pack_payload()
+
+
+@app.get("/operations/doctor-approval-request")
+async def operations_doctor_approval_request(_: None = Depends(require_access_token)):
+    return await doctor_approval_request_payload()
+
+
+@app.get("/operations/doctor-approval-request.md")
+async def operations_doctor_approval_request_markdown(_: None = Depends(require_access_token)):
+    payload = await doctor_approval_request_payload()
+    generated_at = datetime.now(timezone.utc).isoformat()
+    first = payload.get("recommended_first_asset") or {}
+    lines = [
+        "# DREC Content OS Doctor Approval Request",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        payload.get("message") or "",
+        "",
+        "## Summary",
+        "",
+        f"- Ready for doctor review: {payload.get('ready_count')}",
+        f"- Blocked before doctor review: {payload.get('blocked_count')}",
+        f"- Recommended first asset: {first.get('topic') or 'None'}",
+        "",
+        "## Safety Rules",
+        "",
+        *markdown_list(payload.get("safety"), "- Read-only request."),
+        "",
+        "## Reply Format",
+        "",
+        *markdown_list(payload.get("reply_format"), "- Decision / safety / notes."),
+        "",
+        "## Posts To Review",
+        "",
+    ]
+    items = payload.get("request_items") or []
+    if not items:
+        lines.extend(["- No posts are ready for doctor review yet.", ""])
+    for index, item in enumerate(items, start=1):
+        lines.extend(
+            [
+                f"### {index}. {item.get('topic') or 'Untitled asset'}",
+                "",
+                f"- Asset ID: `{item.get('asset_id')}`",
+                f"- Channel / format: {item.get('channel')} / {item.get('format')}",
+                "",
+                "Copy to review:",
+                "",
+                item.get("copy_to_review") or "No copy available.",
+                "",
+                "Doctor reply template:",
+                "",
+                "```",
+                item.get("reply_template") or "",
+                "```",
+                "",
+            ]
+        )
+    lines.extend(["## Next Step", "", f"- {payload.get('next_step')}", ""])
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-doctor-approval-request.md"'},
+    )
 
 
 @app.get("/operations/doctor-approval-pack.md")
