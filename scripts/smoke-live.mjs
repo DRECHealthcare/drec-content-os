@@ -31,6 +31,9 @@ const checks = [
       const text = await res.text();
       return text.includes("DREC")
         && text.includes("download-doctor-approval-request")
+        && text.includes("doctor-reply-text")
+        && text.includes("preview-doctor-replies")
+        && text.includes("import-doctor-replies")
         && text.includes("download-doctor-decision-worksheet")
         && text.includes("download-asset-media-attachments")
         && text.includes("download-production-design-worksheet")
@@ -52,6 +55,7 @@ const checks = [
       const text = await res.text();
       return text.includes("/operations/doctor-decision-worksheet.csv")
         && text.includes("/operations/doctor-approval-request.md")
+        && text.includes("/operations/import-doctor-replies")
         && text.includes("/operations/import-asset-media-attachments")
         && text.includes("/operations/production-design-worksheet.csv")
         && text.includes("/operations/import-production-design-worksheet")
@@ -615,6 +619,30 @@ const checks = [
     validate: async (res) => {
       const data = await res.json();
       return data.dry_run === true && data.skipped_count === 1 && data.skipped?.[0]?.reason === "Asset not found.";
+    },
+  },
+  {
+    name: "Doctor reply import dry run",
+    url: `${apiBase}/operations/import-doctor-replies`,
+    method: "POST",
+    auth: true,
+    headers: { "Content-Type": "application/json" },
+    body: () => JSON.stringify({
+      dry_run: true,
+      reviewer_name: "Smoke Test",
+      reply_text: [
+        "Asset ID: 00000000-0000-0000-0000-000000000000",
+        "Decision: approve",
+        "Safety: clear",
+        "Notes: Dry-run only",
+      ].join("\n"),
+    }),
+    validate: async (res) => {
+      const data = await res.json();
+      return data.dry_run === true
+        && data.skipped_count === 1
+        && data.skipped?.[0]?.reason === "Asset not found."
+        && data.safety?.some((item) => item.includes("does not queue"));
     },
   },
   {

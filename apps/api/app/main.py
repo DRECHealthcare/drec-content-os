@@ -36,6 +36,7 @@ from .models import (
     ContentBriefIn,
     ContentBriefStatusIn,
     CreativeDraftIn,
+    DoctorReplyImportIn,
     FeedbackIn,
     KnowledgeEntryIn,
     LearningWeightIn,
@@ -6074,6 +6075,51 @@ def normalize_asset_review_decision(value: str | None):
     return "invalid"
 
 
+def parse_doctor_reply_blocks(reply_text: str):
+    blocks = []
+    current = {}
+    note_lines = []
+
+    def flush():
+        if not current and not note_lines:
+            return
+        item = dict(current)
+        if note_lines:
+            item["review_notes"] = "\n".join(note_lines).strip()
+        blocks.append(item)
+
+    for raw_line in (reply_text or "").splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        match = re.match(r"^(asset\s*id|asset_id|id)\s*[:：]\s*(.+)$", line, flags=re.IGNORECASE)
+        if match:
+            if current:
+                flush()
+                current = {}
+                note_lines = []
+            current["asset_id"] = match.group(2).strip().strip("`")
+            continue
+        match = re.match(r"^(decision|review)\s*[:：]\s*(.+)$", line, flags=re.IGNORECASE)
+        if match:
+            current["reviewer_review_decision"] = match.group(2).strip()
+            continue
+        match = re.match(r"^(safety|safety decision)\s*[:：]\s*(.+)$", line, flags=re.IGNORECASE)
+        if match:
+            current["reviewer_safety_decision"] = match.group(2).strip()
+            continue
+        match = re.match(r"^(notes?|reason)\s*[:：]\s*(.*)$", line, flags=re.IGNORECASE)
+        if match:
+            note = match.group(2).strip()
+            if note:
+                note_lines.append(note)
+            continue
+        if current:
+            note_lines.append(line)
+    flush()
+    return blocks
+
+
 async def decode_asset_review_decisions_csv(file: UploadFile):
     raw = await file.read()
     if len(raw) > 512_000:
@@ -6178,6 +6224,108 @@ async def import_asset_review_decisions(
             if dry_run
             else f"Imported {len(imported)} asset review decision(s), {len(skipped)} skipped."
         ),
+    }
+
+
+@app.post("/operations/import-doctor-replies")
+async def import_doctor_replies(
+    payload: DoctorReplyImportIn,
+    session: dict = Depends(require_review_access),
+):
+    reply_text = (payload.reply_text or "").strip()
+    if not reply_text:
+        raise HTTPException(status_code=400, detail="Doctor reply text is required.")
+    if len(reply_text.encode("utf-8")) > 128_000:
+        raise HTTPException(status_code=413, detail="Doctor reply text is too large. Keep imports below 128 KB.")
+    rows = parse_doctor_reply_blocks(reply_text)
+    planned = []
+    imported = []
+    skipped = []
+    if not rows:
+        skipped.append({"row": 1, "reason": "No doctor reply blocks found. Use Asset ID, Decision, Safety, and Notes lines."})
+    fallback_reviewer = (payload.reviewer_name or "").strip()
+    for index, row in enumerate(rows, start=1):
+        asset_id = (row.get("asset_id") or "").strip()
+        if not asset_id:
+            skipped.append({"row": index, "reason": "Missing Asset ID."})
+            continue
+        safety_decision = normalize_review_safety_decision(row.get("reviewer_safety_decision"))
+        review_decision = normalize_asset_review_decision(row.get("reviewer_review_decision"))
+        notes = (row.get("review_notes") or "").strip()
+        if safety_decision == "invalid" or review_decision == "invalid":
+            skipped.append({"row": index, "asset_id": asset_id, "reason": "Decision must use safety clear/pending/flagged and review approved/review/rejected."})
+            continue
+        if safety_decision is None and review_decision is None and not notes:
+            skipped.append({"row": index, "asset_id": asset_id, "reason": "No doctor decision provided."})
+            continue
+        existing = await asset_by_id(asset_id)
+        if existing is None:
+            skipped.append({"row": index, "asset_id": asset_id, "reason": "Asset not found."})
+            continue
+        target_safety = safety_decision or existing.get("compliance_status")
+        if review_decision == "approved" and target_safety != "clear":
+            skipped.append({"row": index, "asset_id": asset_id, "reason": "Approval requires Safety: clear or an already clear asset."})
+            continue
+        reviewer_name = fallback_reviewer
+        reason_parts = ["Doctor reply text import."]
+        if reviewer_name:
+            reason_parts.append(f"Reviewer: {reviewer_name}.")
+        if notes:
+            reason_parts.append(f"Notes: {notes}")
+        reason = " ".join(reason_parts)
+        plan = {
+            "row": index,
+            "asset_id": asset_id,
+            "topic": (existing.get("metadata") or {}).get("topic") or "",
+            "current_safety": existing.get("compliance_status") or "",
+            "current_review": existing.get("review_status") or "",
+            "target_safety": safety_decision or "",
+            "target_review": review_decision or "",
+            "reviewer_name": reviewer_name,
+            "review_notes": notes,
+        }
+        if payload.dry_run:
+            planned.append(plan)
+            continue
+        applied = []
+        if safety_decision is not None and safety_decision != existing.get("compliance_status"):
+            await update_asset_compliance(asset_id, AssetComplianceIn(compliance_status=safety_decision, reason=reason), session)
+            applied.append(f"safety:{safety_decision}")
+        if review_decision is not None and review_decision != existing.get("review_status"):
+            await update_asset_status(asset_id, AssetStatusIn(review_status=review_decision, reason=reason), session)
+            applied.append(f"review:{review_decision}")
+        if notes and not applied:
+            await save_feedback(
+                FeedbackIn(
+                    module="doctor_reply_import",
+                    ref_type="asset",
+                    ref_id=asset_id,
+                    action="edit",
+                    reason=reason,
+                    before_text=existing.get("caption"),
+                    tags=["doctor_reply_import", "note_only", *audit_tags(session)],
+                )
+            )
+            applied.append("note")
+        imported.append({**plan, "applied": applied or ["no_change"]})
+    return {
+        "dry_run": payload.dry_run,
+        "planned_count": len(planned),
+        "imported_count": len(imported),
+        "skipped_count": len(skipped),
+        "planned": planned,
+        "imported": imported,
+        "skipped": skipped,
+        "message": (
+            f"Previewed {len(planned)} doctor reply decision(s), {len(skipped)} skipped."
+            if payload.dry_run
+            else f"Imported {len(imported)} doctor reply decision(s), {len(skipped)} skipped."
+        ),
+        "safety": [
+            "Doctor reply import records review and safety decisions only.",
+            "It does not queue, schedule, publish, send Meta requests, or attach media/design.",
+            "Approval still requires Safety: clear before review can become approved.",
+        ],
     }
 
 

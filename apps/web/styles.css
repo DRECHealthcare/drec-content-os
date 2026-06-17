@@ -904,6 +904,29 @@ button[type="submit"] {
   opacity: .5;
 }
 
+.quick-composer {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(180px, 1fr) auto auto;
+  gap: 10px;
+  align-items: end;
+  max-width: 100%;
+}
+
+.quick-composer textarea {
+  min-height: 92px;
+}
+
+.quick-composer button {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #FFF;
+  color: var(--navy);
+  font-weight: 800;
+  cursor: pointer;
+}
+
 .queue-list {
   margin-top: 18px;
   display: grid;
@@ -1061,7 +1084,7 @@ button[type="submit"] {
   .token-panel input { flex: 1; width: auto; }
   .token-button { margin-left: auto; }
   .screen { padding: 18px; }
-  .grid, .loop, .split-form, .learning-grid, .handoff-summary, .creative-preview, .weight-row, .scheduler-toolbar, .week-schedule, .workflow-steps, .test-path-list { grid-template-columns: 1fr; }
+  .grid, .loop, .split-form, .learning-grid, .handoff-summary, .creative-preview, .weight-row, .scheduler-toolbar, .week-schedule, .workflow-steps, .test-path-list, .quick-composer { grid-template-columns: 1fr; }
   .workflow-head, .workflow-primary { align-items: stretch; flex-direction: column; }
   .workflow-primary button { width: 100%; }
   .loop div { border-right: 0; border-bottom: 1px solid var(--line); }

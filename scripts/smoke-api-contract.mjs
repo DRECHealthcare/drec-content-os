@@ -48,6 +48,7 @@ const requiredRoutes = [
   "GET /operations/doctor-approval-request.md",
   "GET /operations/doctor-approval-pack.md",
   "GET /operations/doctor-decision-worksheet.csv",
+  "POST /operations/import-doctor-replies",
   "GET /operations/approval-cockpit",
   "GET /operations/approval-cockpit.md",
   "GET /operations/post-approval-production",
@@ -666,6 +667,21 @@ const requiredSnippets = [
     name: "doctor approval request safety",
     file: "main",
     text: "This request is read-only and does not approve, queue, schedule, publish, or send Meta requests.",
+  },
+  {
+    name: "doctor reply import route",
+    file: "main",
+    text: "import_doctor_replies",
+  },
+  {
+    name: "doctor reply parser",
+    file: "main",
+    text: "parse_doctor_reply_blocks",
+  },
+  {
+    name: "doctor reply import safety",
+    file: "main",
+    text: "It does not queue, schedule, publish, send Meta requests, or attach media/design.",
   },
   {
     name: "doctor approval pack safety",
@@ -1741,6 +1757,26 @@ const requiredSnippets = [
     name: "web doctor approval request endpoint",
     file: "web",
     text: "/operations/doctor-approval-request.md",
+  },
+  {
+    name: "web doctor reply text input",
+    file: "web",
+    text: "doctor-reply-text",
+  },
+  {
+    name: "web doctor reply preview action",
+    file: "web",
+    text: "preview-doctor-replies",
+  },
+  {
+    name: "web doctor reply import action",
+    file: "web",
+    text: "import-doctor-replies",
+  },
+  {
+    name: "web doctor reply import endpoint",
+    file: "web",
+    text: "/operations/import-doctor-replies",
   },
   {
     name: "web doctor decision worksheet action",

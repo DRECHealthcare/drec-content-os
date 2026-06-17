@@ -3111,6 +3111,34 @@ async function uploadAssetReviewDecisions({ dryRun }) {
   }
 }
 
+async function importDoctorReplies({ dryRun }) {
+  const message = document.getElementById("media-message");
+  const textInput = document.getElementById("doctor-reply-text");
+  const reviewerInput = document.getElementById("doctor-reply-reviewer");
+  const replyText = textInput?.value?.trim() || "";
+  if (!replyText) {
+    message.textContent = "Paste the doctor reply text first.";
+    return;
+  }
+  message.textContent = dryRun ? "Previewing doctor reply..." : "Importing doctor reply...";
+  try {
+    const data = await fetchJson("/operations/import-doctor-replies", {
+      method: "POST",
+      body: JSON.stringify({
+        reply_text: replyText,
+        dry_run: dryRun,
+        reviewer_name: reviewerInput?.value?.trim() || "",
+      }),
+    });
+    if (!dryRun) textInput.value = "";
+    message.textContent = data.message || (dryRun ? "Doctor reply previewed." : "Doctor reply imported.");
+    renderAssetReviewDecisionPreview(data);
+    if (!dryRun) await Promise.all([loadAssets(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : dryRun ? "Could not preview doctor reply." : "Could not import doctor reply.";
+  }
+}
+
 async function uploadAssetMediaAttachments({ dryRun }) {
   const message = document.getElementById("media-message");
   const fileInput = document.getElementById("asset-media-attachments-file");
@@ -3163,6 +3191,14 @@ document.getElementById("preview-asset-review-decisions")?.addEventListener("cli
 
 document.getElementById("import-asset-review-decisions")?.addEventListener("click", async () => {
   await uploadAssetReviewDecisions({ dryRun: false });
+});
+
+document.getElementById("preview-doctor-replies")?.addEventListener("click", async () => {
+  await importDoctorReplies({ dryRun: true });
+});
+
+document.getElementById("import-doctor-replies")?.addEventListener("click", async () => {
+  await importDoctorReplies({ dryRun: false });
 });
 
 document.getElementById("preview-asset-media-attachments")?.addEventListener("click", async () => {
