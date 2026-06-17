@@ -12,6 +12,7 @@ const titleMap = {
   plan: "Weekly Plan",
   compose: "Create A Post",
   creative: "Creative Studio",
+  video: "Video Studio",
   assets: "Assets",
   review: "Review Queue",
   scheduler: "Scheduler",
@@ -29,6 +30,7 @@ document.querySelectorAll("nav button").forEach((button) => {
     document.getElementById("title").textContent = titleMap[screen] || screen;
     if (screen === "plan") loadBriefs();
     if (screen === "creative") loadStyleLibrary();
+    if (screen === "video") loadVideoStudio();
     if (screen === "assets") Promise.all([loadAssets(), loadMediaAssets()]);
     if (screen === "outcomes") loadOutcomes();
     if (screen === "learning") loadLearningSummary();
@@ -978,6 +980,81 @@ async function loadStyleLibrary() {
     document.getElementById("brand-token-board").innerHTML = "";
     document.getElementById("style-library").innerHTML = '<p class="status-note">Set the access token to load Creative Studio.</p>';
     if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not load Creative Studio.";
+  }
+}
+
+function renderVideoStudio(data) {
+  const readiness = document.getElementById("video-readiness");
+  const jobsContainer = document.getElementById("video-jobs");
+  if (!readiness || !jobsContainer) return;
+  const modules = data.sop_modules || [];
+  const hardStops = data.hard_stop_rules || [];
+  const specs = data.export_specs || {};
+  readiness.innerHTML = `
+    <article class="learning-card">
+      <h3>Manual Ready</h3>
+      <p>${escapeHtml(data.manual_edit_ready_count || 0)} / ${escapeHtml(data.reel_asset_count || 0)} reel assets</p>
+      <small>${escapeHtml(data.overall_status || "")}</small>
+    </article>
+    <article class="learning-card">
+      <h3>DREC Cut</h3>
+      <p>${escapeHtml(data.automation_status || "not_built_yet")}</p>
+      <small>${escapeHtml(data.phase || "")}</small>
+    </article>
+    <article class="learning-card">
+      <h3>Approved Video</h3>
+      <p>${escapeHtml(data.approved_video_media_count || 0)} media item(s)</p>
+      <small>Use only approved footage for handoff.</small>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>SOP Checklist</h3>
+      <ul>${modules.length ? modules.map((item) => `<li><strong>${escapeHtml(item.name)}</strong>: ${escapeHtml(item.check)}</li>`).join("") : "<li>No SOP modules found.</li>"}</ul>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Hard Stop Rules</h3>
+      <ul>${hardStops.length ? hardStops.map((rule) => `<li>${escapeHtml(rule)}</li>`).join("") : "<li>Human review required before publishing.</li>"}</ul>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Export Specs</h3>
+      <ul>${Object.entries(specs).map(([key, value]) => `<li><strong>${escapeHtml(key.replaceAll("_", " "))}</strong>: ${escapeHtml(value)}</li>`).join("")}</ul>
+    </article>
+  `;
+  const jobs = data.jobs || [];
+  jobsContainer.innerHTML = jobs.length
+    ? jobs.map((job) => {
+      const blockers = job.blockers || [];
+      return `
+        <article class="queue-item">
+          <div>
+            <strong>${escapeHtml(job.topic || "Reel asset")}</strong>
+            <span>${escapeHtml(job.channel || "organic")} · ${escapeHtml(job.style_key || "reel_script_v1")}</span>
+          </div>
+          <div class="summary-row">
+            <span>Review: ${escapeHtml(job.review_status || "")}</span>
+            <span>Safety: ${escapeHtml(job.compliance_status || "")}</span>
+            <span>Script: ${escapeHtml(job.script_beats || 0)} beats</span>
+            <span>Media: ${escapeHtml(job.media_count || 0)}</span>
+          </div>
+          <p>${escapeHtml(job.next_step || "")}</p>
+          <ul>${blockers.length ? blockers.map((blocker) => `<li>${escapeHtml(blocker)}</li>`).join("") : "<li>Ready for manual edit handoff.</li>"}</ul>
+        </article>
+      `;
+    }).join("")
+    : '<p class="status-note">No reel assets yet. Create a reel draft first.</p>';
+}
+
+async function loadVideoStudio() {
+  const message = document.getElementById("video-message");
+  try {
+    const data = await fetchJson("/video/studio-readiness");
+    renderVideoStudio(data);
+    if (message) message.textContent = data.next_step || "Video Studio loaded.";
+  } catch (error) {
+    const readiness = document.getElementById("video-readiness");
+    const jobs = document.getElementById("video-jobs");
+    if (readiness) readiness.innerHTML = "";
+    if (jobs) jobs.innerHTML = '<p class="status-note">Set the access token to load Video Studio.</p>';
+    if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not load Video Studio.";
   }
 }
 
@@ -2068,6 +2145,25 @@ document.getElementById("download-style-guide")?.addEventListener("click", async
     if (message) message.textContent = "Creative style guide downloaded.";
   } catch (error) {
     if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download Creative Style Guide.";
+  }
+});
+
+document.getElementById("refresh-video-studio")?.addEventListener("click", async () => {
+  const button = document.getElementById("refresh-video-studio");
+  button.disabled = true;
+  button.textContent = "Refreshing";
+  await loadVideoStudio();
+  button.disabled = false;
+  button.textContent = "Refresh Video Studio";
+});
+
+document.getElementById("download-video-sop")?.addEventListener("click", async () => {
+  const message = document.getElementById("video-message");
+  try {
+    await downloadProtectedFile("/video/sop-pack.md", "drec-video-studio-sop-pack.md", "text/markdown");
+    if (message) message.textContent = "Video SOP pack downloaded.";
+  } catch (error) {
+    if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download Video SOP Pack.";
   }
 });
 

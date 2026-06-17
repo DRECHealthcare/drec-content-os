@@ -71,6 +71,8 @@ const requiredRoutes = [
   "GET /briefs/asset-pack.md",
   "GET /creative/style-library",
   "GET /creative/style-guide.md",
+  "GET /video/studio-readiness",
+  "GET /video/sop-pack.md",
   "POST /composer/draft-post",
   "GET /metrics/published-source",
   "POST /metrics/import-csv",
@@ -1066,6 +1068,36 @@ const requiredSnippets = [
     name: "web creative style guide endpoint",
     file: "web",
     text: "/creative/style-guide.md",
+  },
+  {
+    name: "video studio readiness route",
+    file: "main",
+    text: "video_studio_readiness",
+  },
+  {
+    name: "video sop pack export",
+    file: "main",
+    text: "drec-video-studio-sop-pack.md",
+  },
+  {
+    name: "video automation future lock",
+    file: "main",
+    text: "DREC Cut automation remains off",
+  },
+  {
+    name: "web video studio screen",
+    file: "web",
+    text: "Video Studio",
+  },
+  {
+    name: "web video readiness endpoint",
+    file: "web",
+    text: "/video/studio-readiness",
+  },
+  {
+    name: "web video sop endpoint",
+    file: "web",
+    text: "/video/sop-pack.md",
   },
   {
     name: "web composer target signal",

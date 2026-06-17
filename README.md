@@ -62,6 +62,7 @@ Stage 1 is now a working thin-core workflow:
 - Generate weekly DREC content briefs
 - Use Create Post for one-off content; it now saves a linked brief and draft asset into the review workflow with style, target signal, media, and compliance evidence attached
 - Use Creative Studio to review the DREC style library, brand tokens, KB style rules, safety rules, and style-learning signals before drafting or approving assets
+- Use Video Studio to review reel readiness, approved video media, blockers, manual SOP steps, and the future DREC Cut lock before production handoff
 - See the next best workflow action, operating counts, and copyable Test Path on the Dashboard, backed by the API, so testing and automation can move from brief to approved asset to queue, handoff, published ID, metrics, and report without guessing
 - Use the Dashboard's live Test Path checklist to see which manual-cycle step is complete and jump to the next screen
 - See launch readiness on the Dashboard, separating manual-use readiness from real Meta automation readiness

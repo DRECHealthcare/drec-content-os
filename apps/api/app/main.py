@@ -6219,6 +6219,238 @@ async def creative_style_guide(_: None = Depends(require_access_token)):
     )
 
 
+VIDEO_SOP_MODULES = [
+    {
+        "key": "hook_clarity",
+        "name": "Hook clarity",
+        "check": "First three seconds state the belief, mistake, or question clearly.",
+    },
+    {
+        "key": "medical_wording",
+        "name": "Medical wording",
+        "check": "Educational framing only; no diagnosis, guaranteed reversal, or personalized prescription.",
+    },
+    {
+        "key": "trim_ramble",
+        "name": "Trim ramble",
+        "check": "Remove filler and keep one mechanism, one example, one safe close.",
+    },
+    {
+        "key": "subtitle_plan",
+        "name": "Subtitle plan",
+        "check": "Mandarin-first subtitles with enough safe area for mobile viewing.",
+    },
+    {
+        "key": "brand_lower_third",
+        "name": "Brand lower-third",
+        "check": "Use DREC navy, teal, and restrained orange only for emphasis.",
+    },
+    {
+        "key": "b_roll",
+        "name": "B-roll / proof",
+        "check": "Add clinic, food, glucose, lab, or whiteboard visuals only when rights are approved.",
+    },
+    {
+        "key": "compliance_gate",
+        "name": "Compliance gate",
+        "check": "Stop if asset or media is not compliance-clear and human-approved.",
+    },
+    {
+        "key": "cta_close",
+        "name": "CTA close",
+        "check": "Close with save, discuss with clinician, or DREC consult; avoid pressure language.",
+    },
+    {
+        "key": "export_specs",
+        "name": "Export specs",
+        "check": "Vertical 1080x1920, H.264 MP4, clear audio, readable subtitles.",
+    },
+    {
+        "key": "human_review",
+        "name": "Final human review",
+        "check": "A reviewer watches the final reel before scheduling or publishing.",
+    },
+]
+
+
+VIDEO_HARD_STOP_RULES = [
+    "DREC Cut automation remains off until a real video editor workflow is built and reviewed.",
+    "Do not publish reels with private, expired, unapproved, or patient-identifiable media URLs.",
+    "Do not treat AI-generated scripts as medical approval.",
+    "Do not schedule a reel until asset review is approved and compliance status is clear.",
+]
+
+
+def video_job_blockers(asset: dict, approved_video_count: int):
+    metadata = asset.get("metadata") or {}
+    script = metadata.get("reel_script") or []
+    media_urls = [str(url) for url in asset.get("media_urls") or [] if url]
+    blockers = []
+    if asset.get("format") != "reel":
+        blockers.append("Only reel assets enter Video Studio.")
+    if not script:
+        blockers.append("Needs a reel script.")
+    if asset.get("review_status") != "approved":
+        blockers.append("Needs human asset approval.")
+    if asset.get("compliance_status") != "clear":
+        blockers.append("Needs compliance clear.")
+    if not media_urls and not approved_video_count:
+        blockers.append("Needs approved vertical video media or a source clip.")
+    if media_urls and not any(is_video_url(url) for url in media_urls) and not approved_video_count:
+        blockers.append("Attached media is not a video URL.")
+    return blockers
+
+
+async def video_studio_readiness_payload():
+    assets = await fetch_asset_list(200)
+    media_assets = await fetch_media_asset_list(200)
+    reel_assets = [asset for asset in assets if asset.get("format") == "reel" and asset.get("review_status") != "rejected"]
+    approved_video_media = [
+        media
+        for media in media_assets
+        if media.get("media_type") == "video" and media.get("approval_status") == "approved" and media.get("source_url")
+    ]
+    jobs = []
+    approved_video_count = len(approved_video_media)
+    for asset in reel_assets[:20]:
+        metadata = asset.get("metadata") or {}
+        script = metadata.get("reel_script") or []
+        media_urls = [str(url) for url in asset.get("media_urls") or [] if url]
+        blockers = video_job_blockers(asset, approved_video_count)
+        jobs.append(
+            {
+                "asset_id": asset.get("id"),
+                "topic": metadata.get("topic") or "Reel asset",
+                "channel": asset.get("channel"),
+                "review_status": asset.get("review_status"),
+                "compliance_status": asset.get("compliance_status"),
+                "style_key": metadata.get("style_key") or "reel_script_v1",
+                "script_beats": len(script),
+                "media_count": len(media_urls),
+                "has_video_media": any(is_video_url(url) for url in media_urls),
+                "approved_video_media_available": approved_video_count,
+                "preset": "manual_sop_reel",
+                "blockers": blockers,
+                "next_step": (
+                    "Ready for manual edit handoff; keep DREC Cut automation off."
+                    if not blockers
+                    else blockers[0]
+                ),
+            }
+        )
+    ready_jobs = [job for job in jobs if not job.get("blockers")]
+    if ready_jobs:
+        overall_status = "ready_for_manual_edit"
+    elif reel_assets:
+        overall_status = "needs_review_or_media"
+    else:
+        overall_status = "needs_reel_assets"
+    reel_styles = [
+        {"key": style.get("key"), "name": style.get("name"), "rules": style.get("rules") or []}
+        for style in CREATIVE_STYLE_LIBRARY
+        if "reel" in (style.get("formats") or [])
+    ]
+    return {
+        "phase": "future_drec_cut_manual_ready",
+        "automation_status": "not_built_yet",
+        "overall_status": overall_status,
+        "reel_asset_count": len(reel_assets),
+        "manual_edit_ready_count": len(ready_jobs),
+        "approved_video_media_count": approved_video_count,
+        "jobs": jobs,
+        "sop_modules": VIDEO_SOP_MODULES,
+        "export_specs": {
+            "aspect_ratio": "9:16",
+            "resolution": "1080x1920",
+            "format": "MP4 H.264",
+            "audio": "Clear voice, normalized, no distracting background music.",
+            "subtitle_safe_area": "Keep subtitles away from platform UI edges.",
+        },
+        "hard_stop_rules": VIDEO_HARD_STOP_RULES,
+        "style_reference": reel_styles,
+        "next_step": (
+            "Send ready jobs to manual edit and record final assets back into the media library."
+            if ready_jobs
+            else "Create or approve a reel asset, then attach approved video media before manual editing."
+        ),
+    }
+
+
+@app.get("/video/studio-readiness")
+async def video_studio_readiness(_: None = Depends(require_access_token)):
+    return await video_studio_readiness_payload()
+
+
+@app.get("/video/sop-pack.md")
+async def video_sop_pack(_: None = Depends(require_access_token)):
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    payload = await video_studio_readiness_payload()
+    lines = [
+        "# DREC Content OS Video Studio SOP Pack",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this pack for manual reel production. DREC Cut automation remains off until the future video phase is built and reviewed.",
+        "",
+        "## DREC Cut Automation Status",
+        "",
+        f"- Phase: {payload.get('phase')}",
+        f"- Automation status: {payload.get('automation_status')}",
+        f"- Overall status: {payload.get('overall_status')}",
+        f"- Manual edit ready: {payload.get('manual_edit_ready_count')} / {payload.get('reel_asset_count')}",
+        "",
+        "## Manual Reel Jobs",
+        "",
+    ]
+    if not payload.get("jobs"):
+        lines.append("- No reel assets are ready yet. Create a reel draft first.")
+    for job in payload.get("jobs") or []:
+        lines.extend(
+            [
+                f"### {job.get('topic')}",
+                "",
+                f"- Asset ID: {job.get('asset_id')}",
+                f"- Review: {job.get('review_status')}",
+                f"- Safety: {job.get('compliance_status')}",
+                f"- Script beats: {job.get('script_beats')}",
+                f"- Media count: {job.get('media_count')}",
+                f"- Approved video media available: {job.get('approved_video_media_available')}",
+                f"- Next step: {job.get('next_step')}",
+                "- Blockers:",
+                *markdown_list(job.get("blockers"), "- None. Ready for manual edit handoff."),
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## SOP Checklist",
+            "",
+        ]
+    )
+    for module in payload.get("sop_modules") or []:
+        lines.extend([f"- {module.get('name')}: {module.get('check')}"])
+    lines.extend(
+        [
+            "",
+            "## Hard Stop Rules",
+            "",
+            *markdown_list(payload.get("hard_stop_rules")),
+            "",
+            "## Export Specs",
+            "",
+        ]
+    )
+    specs = payload.get("export_specs") or {}
+    for key, value in specs.items():
+        lines.append(f"- {key.replace('_', ' ').title()}: {value}")
+    lines.extend(["", "## Next Step", "", f"- {payload.get('next_step')}", ""])
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-video-studio-sop-pack.md"'},
+    )
+
+
 def composer_brief(composer: ComposerPostIn, knowledge: dict):
     safe_points = [str(point).strip() for point in composer.points if str(point).strip()]
     hook_primary = safe_points[0] if safe_points else (
