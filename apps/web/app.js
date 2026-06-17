@@ -1816,6 +1816,7 @@ function renderAssetRewritePack(data) {
       <h3>Cleaner After Rewrite</h3>
       <p>${escapeHtml(data.clear_after_rewrite_count || 0)}</p>
       <small>still needs human approval</small>
+      ${data.clear_after_rewrite_count ? '<button type="button" data-apply-all-safe-rewrites>Apply All Safe Rewrites</button>' : ""}
     </article>
     <article class="learning-card">
       <h3>Still Needs Review</h3>
@@ -1846,10 +1847,28 @@ async function loadAssetRewritePack() {
 }
 
 document.getElementById("asset-rewrite-pack")?.addEventListener("click", async (event) => {
-  const button = event.target.closest("[data-apply-asset-rewrite]");
-  if (!button) return;
+  const allButton = event.target.closest("[data-apply-all-safe-rewrites]");
   const container = document.getElementById("asset-rewrite-pack");
   const message = document.getElementById("media-message");
+  if (allButton) {
+    const confirmed = window.confirm("Apply all clear safe rewrites? Assets will still need human approval before queueing.");
+    if (!confirmed) return;
+    const originalText = allButton.textContent;
+    allButton.disabled = true;
+    allButton.textContent = "Applying";
+    try {
+      const data = await fetchJson("/assets/apply-safe-rewrites", { method: "POST" });
+      message.textContent = data.message || "Safe rewrites applied. Human approval is still required.";
+      await Promise.all([loadAssets(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
+    } catch (error) {
+      message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not apply safe rewrites.";
+      allButton.disabled = false;
+      allButton.textContent = originalText;
+    }
+    return;
+  }
+  const button = event.target.closest("[data-apply-asset-rewrite]");
+  if (!button) return;
   const items = JSON.parse(container.dataset.rewriteItems || "[]");
   const item = items.find((entry) => entry.asset_id === button.dataset.applyAssetRewrite);
   if (!item?.suggested_caption) {

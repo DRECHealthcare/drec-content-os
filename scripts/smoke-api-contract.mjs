@@ -98,6 +98,7 @@ const requiredRoutes = [
   "POST /assets/queue-ready",
   "POST /assets/{asset_id}/queue",
   "PATCH /assets/{asset_id}/caption",
+  "POST /assets/apply-safe-rewrites",
   "PATCH /assets/{asset_id}/compliance",
   "POST /publish-queue/{item_id}/schedule-next",
   "POST /publish-queue/schedule-approved",
@@ -609,6 +610,11 @@ const requiredSnippets = [
     name: "asset rewrite apply audit",
     file: "main",
     text: "Safe caption rewrite applied; human approval still required.",
+  },
+  {
+    name: "asset rewrite bulk audit",
+    file: "main",
+    text: "Bulk safe rewrite applied; human approval still required.",
   },
   {
     name: "asset review decisions export",
@@ -1504,6 +1510,16 @@ const requiredSnippets = [
     name: "web asset rewrite apply endpoint",
     file: "web",
     text: "/caption",
+  },
+  {
+    name: "web asset rewrite bulk action",
+    file: "web",
+    text: "data-apply-all-safe-rewrites",
+  },
+  {
+    name: "web asset rewrite bulk endpoint",
+    file: "web",
+    text: "/assets/apply-safe-rewrites",
   },
   {
     name: "web asset review decisions action",

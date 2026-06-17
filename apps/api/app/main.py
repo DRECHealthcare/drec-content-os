@@ -6950,6 +6950,91 @@ async def update_asset_caption(
     }
 
 
+@app.post("/assets/apply-safe-rewrites")
+async def apply_safe_asset_rewrites(session: dict = Depends(require_review_access)):
+    payload = await asset_rewrite_pack_payload()
+    candidates = [
+        item for item in payload.get("rewrite_items", [])
+        if item.get("after_status") == "clear" and item.get("suggested_caption")
+    ]
+    applied = []
+    skipped = []
+    for item in candidates:
+        asset_id = item.get("asset_id")
+        existing = await asset_by_id(asset_id)
+        if existing is None:
+            skipped.append({"asset_id": asset_id, "reason": "Asset not found."})
+            continue
+        if existing.get("review_status") == "approved":
+            skipped.append({"asset_id": asset_id, "reason": "Already approved; rewrite manually after returning to review."})
+            continue
+        caption = (item.get("suggested_caption") or "").strip()
+        compliance = check_text(caption)
+        if compliance.get("status") != "clear":
+            skipped.append({"asset_id": asset_id, "reason": "Suggested rewrite is not compliance-clear."})
+            continue
+        metadata = existing.get("metadata") or {}
+        rewrite_history = list(metadata.get("rewrite_history") or [])
+        rewrite_history.append(
+            {
+                "source": "asset_safe_rewrite_pack_bulk",
+                "applied_at": datetime.now(timezone.utc).isoformat(),
+                "actor": session.get("actor") or "unknown",
+                "before_status": check_text(existing.get("caption") or "").get("status"),
+                "after_status": compliance.get("status"),
+                "reason": "Bulk safe rewrite applied; human approval still required.",
+            }
+        )
+        metadata["rewrite_history"] = rewrite_history[-10:]
+        row = await fetch_row(
+            """
+            update assets
+            set caption = $2,
+                compliance_status = 'clear',
+                review_status = case when review_status = 'rejected' then 'review' else review_status end,
+                metadata = $3::jsonb,
+                updated_at = now()
+            where id = $1
+            returning id, brief_id, channel, format, caption, media_urls, metadata,
+                      compliance_status, review_status, created_at
+            """,
+            asset_id,
+            caption,
+            json.dumps(metadata),
+        )
+        if row is None and supabase_rest.configured():
+            row = await supabase_rest.update(
+                "assets",
+                {
+                    "caption": caption,
+                    "compliance_status": "clear",
+                    "review_status": "review" if existing.get("review_status") == "rejected" else existing.get("review_status"),
+                    "metadata": metadata,
+                },
+                {"id": f"eq.{asset_id}"},
+            )
+        await save_feedback(
+            FeedbackIn(
+                module="asset_rewrite",
+                ref_type="asset",
+                ref_id=asset_id,
+                action="bulk_edit",
+                reason="Bulk safe rewrite applied; human approval still required.",
+                before_text=existing.get("caption"),
+                after_text=caption,
+                tags=["asset_rewrite", "bulk_safe_rewrite", "clear", *audit_tags(session)],
+            )
+        )
+        applied.append(row or {**existing, "caption": caption, "compliance_status": "clear", "metadata": metadata})
+    return {
+        "applied_count": len(applied),
+        "skipped_count": len(skipped),
+        "items": applied,
+        "skipped": skipped,
+        "message": f"Applied {len(applied)} safe rewrite(s). Human approval is still required before queueing.",
+    }
+
+
 async def existing_queue_for_asset(asset_id: str):
     row = await fetch_row(
         """
