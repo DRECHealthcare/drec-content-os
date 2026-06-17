@@ -4269,6 +4269,211 @@ async def operations_asset_safety_review(_: None = Depends(require_access_token)
     )
 
 
+def asset_review_recommended_decision(asset: dict, detector: dict):
+    if asset.get("review_status") == "rejected":
+        return "keep_rejected"
+    if detector.get("status") == "blocked":
+        return "rewrite_before_approval"
+    if asset.get("compliance_status") == "clear" and asset.get("review_status") == "approved":
+        return "ready_to_queue"
+    if detector.get("status") == "clear" and (asset.get("caption") or "").strip():
+        return "human_can_clear_and_approve"
+    return "human_review_required"
+
+
+def asset_review_next_step(asset: dict, detector: dict, media_count: int):
+    decision = asset_review_recommended_decision(asset, detector)
+    if decision == "ready_to_queue":
+        return "Queue this asset, then schedule it from Review Queue/Scheduler."
+    if decision == "rewrite_before_approval":
+        return "Rewrite the caption before marking Safety Clear or Approve."
+    if decision == "keep_rejected":
+        return "Leave rejected unless a human creates a new revised asset."
+    if not media_count and asset.get("format") in {"carousel", "single", "story", "reel"}:
+        return "Review copy first, then attach approved media/design before publishing."
+    if decision == "human_can_clear_and_approve":
+        return "Human reviewer can mark Safety Clear and Approve if the checklist passes."
+    return "Human reviewer should keep Safety Pending or request edits."
+
+
+async def asset_review_session_payload():
+    assets = await fetch_asset_list(200)
+    active_assets = [asset for asset in assets if asset.get("review_status") != "rejected"]
+    media_assets = await fetch_media_asset_list(200)
+    usable_media = [
+        media
+        for media in media_assets
+        if media.get("approval_status") == "approved"
+        and media.get("rights_status") in {"owned", "licensed", "partner", "patient_consented"}
+    ]
+    session_items = []
+    for asset in active_assets:
+        metadata = asset.get("metadata") or {}
+        caption = asset.get("caption") or ""
+        detector = check_text(caption)
+        media_urls = [url for url in asset.get("media_urls") or [] if url]
+        findings = [
+            {
+                "severity": finding.get("severity"),
+                "rule_id": finding.get("rule_id"),
+                "message": finding.get("message"),
+                "matches": finding.get("matches") or [],
+            }
+            for finding in detector.get("findings", [])
+        ]
+        item = {
+            "asset_id": asset.get("id"),
+            "brief_id": asset.get("brief_id"),
+            "topic": metadata.get("topic") or asset.get("format") or "Untitled asset",
+            "channel": asset.get("channel"),
+            "format": asset.get("format"),
+            "review_status": asset.get("review_status"),
+            "compliance_status": asset.get("compliance_status"),
+            "media_count": len(media_urls),
+            "caption_preview": feedback_excerpt(caption, 260),
+            "detector_status": detector.get("status"),
+            "detector_recommendation": detector.get("recommendation"),
+            "findings": findings,
+            "recommended_decision": asset_review_recommended_decision(asset, detector),
+            "next_step": asset_review_next_step(asset, detector, len(media_urls)),
+            "copy_review_note": "\n".join(
+                [
+                    "DREC Asset Review Session Note",
+                    "",
+                    f"Asset ID: {asset.get('id') or ''}",
+                    f"Topic: {metadata.get('topic') or ''}",
+                    f"Current Safety / Review: {asset.get('compliance_status') or ''} / {asset.get('review_status') or ''}",
+                    f"Detector: {detector.get('status')} - {detector.get('recommendation')}",
+                    "",
+                    "Decision:",
+                    "[ ] Safety Clear",
+                    "[ ] Approve",
+                    "[ ] Needs Rewrite",
+                    "[ ] Reject",
+                    "",
+                    "Reviewer note:",
+                ]
+            ),
+        }
+        session_items.append(item)
+    priority_order = {
+        "rewrite_before_approval": 0,
+        "human_review_required": 1,
+        "human_can_clear_and_approve": 2,
+        "ready_to_queue": 3,
+        "keep_rejected": 4,
+    }
+    session_items.sort(
+        key=lambda item: (
+            priority_order.get(item.get("recommended_decision"), 9),
+            item.get("topic") or "",
+        )
+    )
+    ready_to_queue = [item for item in session_items if item.get("recommended_decision") == "ready_to_queue"]
+    can_approve = [item for item in session_items if item.get("recommended_decision") == "human_can_clear_and_approve"]
+    needs_rewrite = [item for item in session_items if item.get("recommended_decision") == "rewrite_before_approval"]
+    return {
+        "phase": "asset_review_session",
+        "mode": "human_review_required",
+        "active_asset_count": len(active_assets),
+        "ready_to_queue_count": len(ready_to_queue),
+        "can_approve_count": len(can_approve),
+        "needs_rewrite_count": len(needs_rewrite),
+        "usable_media_count": len(usable_media),
+        "session_items": session_items[:40],
+        "decision_rules": [
+            "Approve only after a human reviewer confirms the medical-safety checklist.",
+            "Safety Clear and Approve are separate decisions.",
+            "Blocked detector findings require rewrite before approval.",
+            "Queue only approved, Safety Clear assets.",
+            "Publishing still uses manual handoff until Meta readiness is green.",
+        ],
+        "next_step": "Clear and approve the safest assets first, then queue them for scheduling.",
+    }
+
+
+@app.get("/operations/asset-review-session")
+async def operations_asset_review_session(_: None = Depends(require_access_token)):
+    return await asset_review_session_payload()
+
+
+@app.get("/operations/asset-review-session.md")
+async def operations_asset_review_session_markdown(_: None = Depends(require_access_token)):
+    generated_at = datetime.now(timezone.utc).isoformat()
+    payload = await asset_review_session_payload()
+    lines = [
+        "# DREC Content OS Asset Review Session Pack",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this during a live human review session to decide which draft assets can move to queue. It is read-only and does not approve, queue, schedule, or publish anything.",
+        "",
+        "## Session Summary",
+        "",
+        f"- Active assets: {payload.get('active_asset_count')}",
+        f"- Can approve after human check: {payload.get('can_approve_count')}",
+        f"- Ready to queue: {payload.get('ready_to_queue_count')}",
+        f"- Needs rewrite: {payload.get('needs_rewrite_count')}",
+        f"- Approved usable media: {payload.get('usable_media_count')}",
+        "",
+        "## Decision Rules",
+        "",
+        *markdown_list(payload.get("decision_rules"), "- Human review required."),
+        "",
+        "## Review Items",
+        "",
+    ]
+    items = payload.get("session_items") or []
+    if not items:
+        lines.extend(["- No active assets found. Save a brief as an asset first.", ""])
+    for index, item in enumerate(items, start=1):
+        finding_lines = [
+            f"- [{finding.get('severity')}] {finding.get('rule_id')}: {finding.get('message')} ({', '.join(finding.get('matches') or []) or 'no match text'})"
+            for finding in item.get("findings") or []
+        ] or ["- No obvious detector findings. Human review is still required."]
+        lines.extend(
+            [
+                f"### {index}. {item.get('topic')}",
+                "",
+                f"- Asset ID: {item.get('asset_id')}",
+                f"- Channel / format: {item.get('channel')} / {item.get('format')}",
+                f"- Current safety / review: {item.get('compliance_status')} / {item.get('review_status')}",
+                f"- Media count: {item.get('media_count')}",
+                f"- Detector: {item.get('detector_status')} - {item.get('detector_recommendation')}",
+                f"- Recommended decision: {item.get('recommended_decision')}",
+                f"- Next step: {item.get('next_step')}",
+                "",
+                "Detector findings:",
+                "",
+                *finding_lines,
+                "",
+                "Caption preview:",
+                "",
+                item.get("caption_preview") or "No caption available.",
+                "",
+                "Copy review note:",
+                "",
+                "```",
+                item.get("copy_review_note") or "",
+                "```",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## Next Step",
+            "",
+            f"- {payload.get('next_step')}",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-asset-review-session-pack.md"'},
+    )
+
+
 @app.get("/operations/asset-review-decisions.csv")
 async def operations_asset_review_decisions_csv(_: None = Depends(require_access_token)):
     assets = await fetch_asset_list(200)

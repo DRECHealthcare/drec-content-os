@@ -36,7 +36,7 @@ document.querySelectorAll("nav button").forEach((button) => {
     if (screen === "creative") loadStyleLibrary();
     if (screen === "templates") loadTemplateStudio();
     if (screen === "video") loadVideoStudio();
-    if (screen === "assets") Promise.all([loadAssets(), loadMediaAssets()]);
+    if (screen === "assets") Promise.all([loadAssets(), loadMediaAssets(), loadAssetReviewSession()]);
     if (screen === "outcomes") loadOutcomes();
     if (screen === "learning") {
       loadLearningSummary();
@@ -1751,6 +1751,55 @@ async function loadAssets() {
   }
 }
 
+function renderAssetReviewSession(data) {
+  const container = document.getElementById("asset-review-session");
+  if (!container) return;
+  const items = data.session_items || [];
+  const rules = data.decision_rules || [];
+  container.innerHTML = `
+    <article class="learning-card">
+      <h3>Review Session</h3>
+      <p>${escapeHtml(data.active_asset_count || 0)} active asset(s)</p>
+      <small>${escapeHtml(data.mode || "human_review_required")}</small>
+    </article>
+    <article class="learning-card">
+      <h3>Can Approve</h3>
+      <p>${escapeHtml(data.can_approve_count || 0)}</p>
+      <small>after human checklist</small>
+    </article>
+    <article class="learning-card">
+      <h3>Ready To Queue</h3>
+      <p>${escapeHtml(data.ready_to_queue_count || 0)}</p>
+      <small>approved + Safety Clear</small>
+    </article>
+    <article class="learning-card">
+      <h3>Needs Rewrite</h3>
+      <p>${escapeHtml(data.needs_rewrite_count || 0)}</p>
+      <small>detector or reviewer block</small>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Next Review Items</h3>
+      <ul>${items.length ? items.slice(0, 6).map((item) => `<li><strong>${escapeHtml(item.topic || "Untitled asset")}</strong> · ${escapeHtml(item.recommended_decision || "")}<br><small>${escapeHtml(item.next_step || "")}</small></li>`).join("") : "<li>No active assets found.</li>"}</ul>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Decision Rules</h3>
+      <ul>${rules.length ? rules.map((rule) => `<li>${escapeHtml(rule)}</li>`).join("") : "<li>Human review required before queueing.</li>"}</ul>
+      <p>${escapeHtml(data.next_step || "")}</p>
+    </article>
+  `;
+}
+
+async function loadAssetReviewSession() {
+  const container = document.getElementById("asset-review-session");
+  if (!container) return;
+  try {
+    const data = await fetchJson("/operations/asset-review-session");
+    renderAssetReviewSession(data);
+  } catch (error) {
+    container.innerHTML = '<p class="status-note">Set the access token to load the asset review session.</p>';
+  }
+}
+
 async function runAssetBatchAction(button, path, label) {
   const message = document.getElementById("media-message");
   const originalText = button.textContent;
@@ -1767,7 +1816,7 @@ async function runAssetBatchAction(button, path, label) {
       `${data.skipped || 0} skipped`,
     ].filter(Boolean).join(", ");
     message.textContent = `${label} complete: ${summary}.`;
-    await Promise.all([loadAssets(), loadPublishQueue(), loadLoopStatus(), loadLearningSummary()]);
+    await Promise.all([loadAssets(), loadAssetReviewSession(), loadPublishQueue(), loadLoopStatus(), loadLearningSummary()]);
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : `${label} failed.`;
   } finally {
@@ -2473,6 +2522,16 @@ document.getElementById("download-asset-safety-review")?.addEventListener("click
   }
 });
 
+document.getElementById("download-asset-review-session")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/asset-review-session.md", "drec-asset-review-session-pack.md", "text/markdown");
+    message.textContent = "Asset review session pack downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download asset review session.";
+  }
+});
+
 document.getElementById("refresh-style-library")?.addEventListener("click", async () => {
   const button = document.getElementById("refresh-style-library");
   button.disabled = true;
@@ -2611,7 +2670,7 @@ async function uploadAssetReviewDecisions({ dryRun }) {
     if (!dryRun) fileInput.value = "";
     message.textContent = data.message || (dryRun ? "Review decisions previewed." : "Review decisions imported.");
     renderAssetReviewDecisionPreview(data);
-    if (!dryRun) await Promise.all([loadAssets(), loadLoopStatus(), loadLearningSummary()]);
+    if (!dryRun) await Promise.all([loadAssets(), loadAssetReviewSession(), loadLoopStatus(), loadLearningSummary()]);
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : dryRun ? "Could not preview review decisions." : "Could not import review decisions.";
   }
@@ -2698,7 +2757,7 @@ document.getElementById("save-all-assets").addEventListener("click", async () =>
   try {
     const data = await fetchJson(`/briefs/draft-assets?limit=${encodeURIComponent(limit)}`, { method: "POST" });
     message.textContent = `Assets ready: ${data.created || 0} created, ${data.reused || 0} reused, ${data.skipped || 0} skipped.`;
-    await Promise.all([loadBriefs(), loadAssets(), loadLoopStatus(), loadLearningSummary()]);
+    await Promise.all([loadBriefs(), loadAssets(), loadAssetReviewSession(), loadLoopStatus(), loadLearningSummary()]);
     if ((data.created || data.reused || 0) > 0) showScreen("assets");
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not save all draft assets.";
@@ -2757,7 +2816,7 @@ document.getElementById("brief-items").addEventListener("click", async (event) =
     try {
       const data = await fetchJson(`/briefs/${assetButton.dataset.draftAssetBrief}/draft-asset`, { method: "POST" });
       document.getElementById("plan-message").textContent = data.reused ? "Existing draft asset opened." : "Draft asset saved.";
-      await Promise.all([loadBriefs(), loadAssets(), loadLoopStatus(), loadLearningSummary()]);
+      await Promise.all([loadBriefs(), loadAssets(), loadAssetReviewSession(), loadLoopStatus(), loadLearningSummary()]);
       showScreen("assets");
     } catch (error) {
       document.getElementById("plan-message").textContent = error.message === "Access token required" ? "Set the access token first." : "Could not save draft asset.";
@@ -2888,7 +2947,7 @@ document.getElementById("compose-form").addEventListener("submit", async (event)
     renderDraft(draft, compliance);
     saveAssetButton.disabled = !draft.assetId;
     queueButton.disabled = !draft.assetId || compliance.status === "flagged";
-    await Promise.all([loadBriefs(), loadAssets(), loadLoopStatus(), loadLearningSummary()]);
+    await Promise.all([loadBriefs(), loadAssets(), loadAssetReviewSession(), loadLoopStatus(), loadLearningSummary()]);
   } catch (error) {
     renderDraft(draft, null);
     document.getElementById("compose-result").insertAdjacentHTML(
@@ -2911,7 +2970,7 @@ document.getElementById("compose-result").addEventListener("click", (event) => {
 
 document.getElementById("save-asset").addEventListener("click", async () => {
   if (!currentDraft) return;
-  await Promise.all([loadAssets(), loadLoopStatus()]);
+  await Promise.all([loadAssets(), loadAssetReviewSession(), loadLoopStatus()]);
   showScreen("assets");
 });
 
@@ -2988,7 +3047,7 @@ document.getElementById("asset-items").addEventListener("click", async (event) =
         method: "PATCH",
         body: JSON.stringify({ compliance_status: status, reason }),
       });
-      await Promise.all([loadAssets(), loadLoopStatus(), loadLearningSummary()]);
+      await Promise.all([loadAssets(), loadAssetReviewSession(), loadLoopStatus(), loadLearningSummary()]);
     } catch {
       complianceButton.disabled = false;
       complianceButton.textContent = originalText;
@@ -3017,7 +3076,7 @@ document.getElementById("asset-items").addEventListener("click", async (event) =
         method: "PATCH",
         body: JSON.stringify({ review_status: status, reason }),
       });
-      await Promise.all([loadAssets(), loadLoopStatus(), loadLearningSummary()]);
+      await Promise.all([loadAssets(), loadAssetReviewSession(), loadLoopStatus(), loadLearningSummary()]);
     } catch {
       statusButton.disabled = false;
       statusButton.textContent = originalText;
@@ -3887,6 +3946,7 @@ loadLaunchReadiness();
 loadKb();
 loadBriefs();
 loadAssets();
+loadAssetReviewSession();
 loadMediaAssets();
 loadLearningSummary();
 loadQuarterlyMemo();

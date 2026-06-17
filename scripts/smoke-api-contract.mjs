@@ -39,6 +39,8 @@ const requiredRoutes = [
   "GET /operations/asset-review.csv",
   "GET /operations/asset-review-worklist.md",
   "GET /operations/asset-safety-review.md",
+  "GET /operations/asset-review-session",
+  "GET /operations/asset-review-session.md",
   "GET /operations/asset-review-decisions.csv",
   "POST /operations/import-asset-review-decisions",
   "GET /operations/review-log.md",
@@ -569,6 +571,16 @@ const requiredSnippets = [
     name: "asset safety review export",
     file: "main",
     text: "drec-asset-safety-review.md",
+  },
+  {
+    name: "asset review session route",
+    file: "main",
+    text: "asset_review_session_payload",
+  },
+  {
+    name: "asset review session export",
+    file: "main",
+    text: "drec-asset-review-session-pack.md",
   },
   {
     name: "asset review decisions export",
@@ -1436,6 +1448,16 @@ const requiredSnippets = [
     text: "download-asset-safety-review",
   },
   {
+    name: "web asset review session action",
+    file: "web",
+    text: "download-asset-review-session",
+  },
+  {
+    name: "web asset review session loader",
+    file: "web",
+    text: "loadAssetReviewSession",
+  },
+  {
     name: "web asset review decisions action",
     file: "web",
     text: "download-asset-review-decisions",
@@ -1479,6 +1501,11 @@ const requiredSnippets = [
     name: "web asset safety review endpoint",
     file: "web",
     text: "/operations/asset-safety-review.md",
+  },
+  {
+    name: "web asset review session endpoint",
+    file: "web",
+    text: "/operations/asset-review-session",
   },
   {
     name: "web asset review decisions endpoint",

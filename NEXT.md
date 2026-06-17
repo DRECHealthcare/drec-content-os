@@ -136,6 +136,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added Quarterly Learning Memo with posting-time heat, outcome signals, weight-change log, and next-quarter actions
 - [x] Added Backup & Recovery Pack for rebuild evidence, required exports, recovery order, and degraded mode
 - [x] Added manual Ads Planning Pack with candidate tests, CPL targets, budget rules, and media buyer handoff
+- [x] Added Asset Review Session Pack with detector findings, recommended decisions, and next approval steps
 
 ## Next Engineering Tasks
 
@@ -255,6 +256,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add Quarterly Learning Memo for posting-time heat and self-review
 - [x] Add Backup & Recovery Pack for weekly backup and rebuild readiness
 - [x] Add manual Ads Planning Pack before Marketing API spend automation
+- [x] Add Asset Review Session Pack for the current draft-approval bottleneck
 - [ ] Connect Meta Graph API credentials
 - [x] Implement real Facebook publish scheduling behind Meta readiness and enable flags
 - [x] Implement Instagram two-step publish worker behind Meta readiness and enable flags
