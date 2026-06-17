@@ -45,6 +45,7 @@ const checks = [
         && text.includes("download-production-design-worksheet")
         && text.includes("preview-production-design-worksheet")
         && text.includes("import-production-design-worksheet")
+        && text.includes("download-scheduler-health")
         && text.includes("download-schedule-worksheet")
         && text.includes("preview-schedule-worksheet")
         && text.includes("import-schedule-worksheet")
@@ -75,6 +76,7 @@ const checks = [
         && text.includes("/operations/import-asset-media-attachments")
         && text.includes("/operations/production-design-worksheet.csv")
         && text.includes("/operations/import-production-design-worksheet")
+        && text.includes("/operations/scheduler-health.md")
         && text.includes("/publish-queue/import-schedule-worksheet")
         && text.includes("/operations/import-review-queue-decisions")
         && text.includes("renderReviewQueueDecisionPreview");
@@ -239,6 +241,30 @@ const checks = [
         && text.includes("DREC_ACCESS_TOKEN")
         && text.includes("## Safety Rules")
         && text.includes("DREC Scheduler Dry Run");
+    },
+  },
+  {
+    name: "Scheduler health",
+    url: `${apiBase}/operations/scheduler-health`,
+    auth: true,
+    validate: async (res) => {
+      const data = await res.json();
+      return data.phase === "scheduler_health"
+        && data.mode === "read_only_diagnostics"
+        && Boolean(data.heartbeat)
+        && Array.isArray(data.checks)
+        && String(data.required_secret_scope || "").includes("admin");
+    },
+  },
+  {
+    name: "Scheduler health pack",
+    url: `${apiBase}/operations/scheduler-health.md`,
+    auth: true,
+    validate: async (res) => {
+      const text = await res.text();
+      return text.includes("# DREC Content OS Scheduler Health Pack")
+        && text.includes("without recording a fake heartbeat")
+        && text.includes("admin token or legacy DREC_ACCESS_TOKEN");
     },
   },
   {

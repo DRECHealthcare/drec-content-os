@@ -15,6 +15,7 @@ from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 
 from .auth import (
+    ROLE_SCOPES,
     access_policy_payload,
     require_access_token,
     require_admin_access,
@@ -532,7 +533,7 @@ async def meta_setup_checklist(_: None = Depends(require_access_token)):
         "heartbeat": scheduler_heartbeat,
         "steps": [
             "Open GitHub repository Settings > Secrets and variables > Actions.",
-            "Add repository secret DREC_ACCESS_TOKEN with the current DREC app access token.",
+            "Add repository secret DREC_ACCESS_TOKEN with the current admin or legacy DREC app access token.",
             "Optionally add repository variable DREC_API_BASE_URL when the API URL changes.",
             "Run the DREC Scheduler Dry Run workflow manually once before trusting the recurring schedule.",
         ],
@@ -1864,7 +1865,7 @@ async def operations_scheduler_activation_pack(_: None = Depends(require_access_
     optional_variable_lines = [f"- {variable}" for variable in scheduler.get("optional_github_variables", [])] or ["- DREC_API_BASE_URL"]
     activation_steps = [
         "Open GitHub repository Settings > Secrets and variables > Actions.",
-        "Add repository secret DREC_ACCESS_TOKEN with the current DREC app access token.",
+        "Add repository secret DREC_ACCESS_TOKEN with the current admin or legacy DREC app access token.",
         "Optionally add repository variable DREC_API_BASE_URL when the API URL changes.",
         "Open Actions > DREC Scheduler Dry Run and choose Run workflow.",
         "Refresh Meta Setup or Automation Status; heartbeat should become recent after a successful run.",
@@ -1938,7 +1939,7 @@ async def operations_scheduler_activation_pack(_: None = Depends(require_access_
         "",
         "- Missing heartbeat: confirm GitHub Actions secret DREC_ACCESS_TOKEN is set and current.",
         "- API failure: confirm DREC_API_BASE_URL is unset or set to https://drec-content-os-api.fly.dev.",
-        "- Auth failure: rotate the DREC app access token in GitHub Actions secret and rerun manually.",
+        "- Auth failure: rotate the DREC app access token in GitHub Actions secret and confirm it is admin-scoped or the legacy DREC_ACCESS_TOKEN.",
         "- Risk failure: clear content risk items before relying on recurring dry runs.",
         "",
         "## Automation Gates",
@@ -1954,6 +1955,123 @@ async def operations_scheduler_activation_pack(_: None = Depends(require_access_
         "\n".join(lines),
         media_type="text/markdown",
         headers={"Content-Disposition": 'attachment; filename="drec-scheduler-activation-pack.md"'},
+    )
+
+
+async def scheduler_health_payload():
+    setup = await meta_setup_checklist(None)
+    automation = await automation_status_payload()
+    risk = await content_risk_audit_payload()
+    scheduler = setup.get("scheduler_setup") or {}
+    heartbeat = scheduler.get("heartbeat") or {}
+    heartbeat_status = heartbeat.get("status") or "missing"
+    access_policy = access_policy_payload()
+    current_status = "healthy" if heartbeat_status == "recent" else "needs_attention"
+    likely_causes = []
+    if heartbeat_status == "missing":
+        likely_causes.extend(
+            [
+                "GitHub Actions secret DREC_ACCESS_TOKEN has not been added.",
+                "DREC Scheduler Dry Run has not been run manually yet.",
+                "GitHub Actions may be disabled for the repository.",
+            ]
+        )
+    elif heartbeat_status == "stale":
+        likely_causes.extend(
+            [
+                "The GitHub Actions secret may be expired, rotated, or not admin-scoped.",
+                "The scheduled workflow may be disabled after repository inactivity or account settings changes.",
+                "The workflow may be failing before it reaches the heartbeat step.",
+            ]
+        )
+    else:
+        likely_causes.append("No scheduler issue detected from heartbeat evidence.")
+    return {
+        "phase": "scheduler_health",
+        "mode": "read_only_diagnostics",
+        "status": current_status,
+        "heartbeat": heartbeat,
+        "workflow_file": scheduler.get("workflow_file") or ".github/workflows/drec-scheduler-dry-run.yml",
+        "required_secret": "DREC_ACCESS_TOKEN",
+        "required_secret_scope": "admin token or legacy DREC_ACCESS_TOKEN because /operations/scheduler-heartbeat requires admin access",
+        "optional_variable": "DREC_API_BASE_URL",
+        "default_api_base_url": scheduler.get("default_api_base_url") or "https://drec-content-os-api.fly.dev",
+        "likely_causes": likely_causes,
+        "checks": [
+            "Open GitHub > Actions and confirm DREC Scheduler Dry Run is enabled.",
+            "Open the latest DREC Scheduler Dry Run run and check whether it reached Record scheduler heartbeat.",
+            "Confirm repository secret DREC_ACCESS_TOKEN exists and is the current admin or legacy app token.",
+            "Confirm repository variable DREC_API_BASE_URL is unset or set to https://drec-content-os-api.fly.dev.",
+            "Run the workflow manually once; refresh Automation Status and expect the heartbeat to become recent.",
+        ],
+        "safety": [
+            "This health pack is read-only and does not record a heartbeat.",
+            "Do not paste secret values into GitHub files, docs, screenshots, or browser-visible fields.",
+            "The recurring workflow calls dry-run endpoints only; live Meta switches remain locked separately.",
+        ],
+        "evidence": {
+            "automation_status": automation.get("overall_status"),
+            "scheduler_gate": next((gate for gate in automation.get("gates", []) if gate.get("key") == "scheduler"), None),
+            "risk_status": risk.get("overall_status"),
+            "access_mode": access_policy.get("mode"),
+            "admin_scope_required": "admin" in ROLE_SCOPES.get("admin", []),
+        },
+    }
+
+
+@app.get("/operations/scheduler-health")
+async def operations_scheduler_health(_: None = Depends(require_access_token)):
+    return await scheduler_health_payload()
+
+
+@app.get("/operations/scheduler-health.md")
+async def operations_scheduler_health_markdown(_: None = Depends(require_access_token)):
+    payload = await scheduler_health_payload()
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    heartbeat = payload.get("heartbeat") or {}
+    evidence = payload.get("evidence") or {}
+    scheduler_gate = evidence.get("scheduler_gate") or {}
+    lines = [
+        "# DREC Content OS Scheduler Health Pack",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this pack to diagnose the recurring GitHub dry-run scheduler without recording a fake heartbeat.",
+        "",
+        "## Current Scheduler Evidence",
+        "",
+        f"- Status: {payload.get('status')}",
+        f"- Workflow file: {payload.get('workflow_file')}",
+        f"- Latest heartbeat: {heartbeat.get('status') or 'missing'}",
+        f"- Last seen: {heartbeat.get('last_seen_at') or 'none'}",
+        f"- Age minutes: {heartbeat.get('age_minutes')}",
+        f"- Detail: {heartbeat.get('detail') or 'No heartbeat detail available.'}",
+        f"- Automation gate: {evidence.get('automation_status') or 'unknown'}",
+        f"- Scheduler gate: {scheduler_gate.get('status') or 'unknown'} — {scheduler_gate.get('detail') or 'no detail'}",
+        f"- Risk status: {evidence.get('risk_status') or 'unknown'}",
+        "",
+        "## Required GitHub Secret",
+        "",
+        f"- {payload.get('required_secret')}: {payload.get('required_secret_scope')}",
+        f"- Optional variable: {payload.get('optional_variable')} = {payload.get('default_api_base_url')}",
+        "",
+        "## Likely Causes",
+        "",
+        *markdown_list(payload.get("likely_causes"), "- No issue detected."),
+        "",
+        "## Checks",
+        "",
+        *markdown_list(payload.get("checks"), "- Run the scheduler workflow manually once."),
+        "",
+        "## Safety",
+        "",
+        *markdown_list(payload.get("safety"), "- Read-only diagnostics."),
+        "",
+    ]
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-scheduler-health-pack.md"'},
     )
 
 

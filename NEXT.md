@@ -105,6 +105,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added protected content risk audit across automation gates, assets, queue, and media
 - [x] Added GitHub Actions dry-run scheduler template for publishing, metrics, automation, and risk checks
 - [x] Added GitHub scheduler heartbeat recording so recurring dry-run checks can prove they are running
+- [x] Added Scheduler Health Pack for diagnosing stale GitHub dry-run heartbeats without faking heartbeat evidence
 - [x] Added launch readiness status combining manual workflow, handoff, scheduler dry run, security, Meta, and risk gates
 - [x] Added Dashboard "Can I Use It?" decision showing safe test scope and not-yet-ready scope
 - [x] Added "Can I Use It Now" decision to Launch Evidence and Operator Pack exports
@@ -235,6 +236,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add one-click content risk audit before publishing or automation rollout
 - [x] Add safe dry-run scheduler workflow before enabling real Meta jobs
 - [x] Add scheduler heartbeat evidence for recurring GitHub dry-run checks
+- [x] Add scheduler health diagnostics for stale GitHub heartbeat evidence
 - [x] Add Dashboard launch readiness summary for manual-use vs automation-ready status
 - [x] Add plain-language Dashboard test/use decision before full Meta automation
 - [x] Add test/use decision to downloadable launch evidence and operator pack

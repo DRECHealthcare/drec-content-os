@@ -4238,6 +4238,16 @@ document.getElementById("download-scheduler-pack").addEventListener("click", asy
   }
 });
 
+document.getElementById("download-scheduler-health").addEventListener("click", async () => {
+  const message = document.getElementById("meta-message");
+  try {
+    await downloadProtectedFile("/operations/scheduler-health.md", "drec-scheduler-health-pack.md", "text/markdown");
+    message.textContent = "Scheduler health pack downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download scheduler health pack.";
+  }
+});
+
 document.getElementById("refresh-notify-rail")?.addEventListener("click", async () => {
   const button = document.getElementById("refresh-notify-rail");
   const message = document.getElementById("meta-message");
