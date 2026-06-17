@@ -88,6 +88,7 @@ Stage 1 is now a working thin-core workflow:
 - Download a Meta Credential Wizard worksheet that explains each required Meta/Supabase value, where to collect it, where to store it, and the hard-stop rules before live setup
 - See the Supabase service-role readiness gate before stricter RLS policies are applied
 - See the current Access Role on the Dashboard and optionally configure separate viewer, reviewer, operator, and admin tokens while the legacy access token remains accepted; scoped routes now protect review, scheduling, metrics, and admin-sensitive actions, with optional actor labels for audit trails
+- Download an Access Control Pack with role-token setup, actor naming, handoff policy, and rotation rules before full user login is added
 - Download a protected RLS Hardening Plan and review the prepared strict server-only Supabase migration before applying it
 - Use safer session-only access-token storage by default, with explicit Remember and Clear controls for shared testing devices
 - Pull learning-informed topic recommendations into the next weekly plan

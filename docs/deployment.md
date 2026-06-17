@@ -38,12 +38,17 @@ import performance data, roll up outcomes, and run metrics dry runs; admin token
 are reserved for security rollout and scheduler heartbeat setup.
 Operators can fill the browser `Actor name` field, or send `X-DREC-Actor`, so
 review and scheduler feedback rows include role/actor audit tags.
+The Dashboard `Download Access Pack` action calls
+`/security/access-control-pack.md` and exports role-token setup guidance, actor
+naming rules, handoff policy, and rotation rules before full user login is
+added.
 
 The API exposes:
 
 - `GET /health`
 - `GET /loop-status`
 - `GET /security/access-policy`
+- `GET /security/access-control-pack.md`
 - `GET /operations/launch-evidence.md`
 - `POST /operations/scheduler-heartbeat`
 - `GET/POST /kb`

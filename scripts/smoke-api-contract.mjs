@@ -17,6 +17,7 @@ const requiredRoutes = [
   "GET /workflow/status",
   "GET /security/status",
   "GET /security/access-policy",
+  "GET /security/access-control-pack.md",
   "GET /security/rls-hardening-plan.md",
   "GET /automation/status",
   "GET /operations/launch-readiness",
@@ -228,6 +229,21 @@ const requiredSnippets = [
     name: "security access policy route",
     file: "main",
     text: "/security/access-policy",
+  },
+  {
+    name: "security access control pack route",
+    file: "main",
+    text: "security_access_control_pack",
+  },
+  {
+    name: "security access control actor rule",
+    file: "main",
+    text: "Actor name field",
+  },
+  {
+    name: "security access control export",
+    file: "main",
+    text: "drec-access-control-pack.md",
   },
   {
     name: "role token auth compatibility",
@@ -808,6 +824,16 @@ const requiredSnippets = [
     name: "web rls plan action",
     file: "web",
     text: "download-rls-plan",
+  },
+  {
+    name: "web access pack action",
+    file: "web",
+    text: "download-access-pack",
+  },
+  {
+    name: "web access pack endpoint",
+    file: "web",
+    text: "/security/access-control-pack.md",
   },
   {
     name: "web rls plan endpoint",

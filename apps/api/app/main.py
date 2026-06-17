@@ -877,6 +877,97 @@ async def security_access_policy(session: dict = Depends(require_access_token)):
     return access_policy_payload(session.get("role", "none"), session.get("actor", ""))
 
 
+@app.get("/security/access-control-pack.md")
+async def security_access_control_pack(session: dict = Depends(require_admin_access)):
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    policy = access_policy_payload(session.get("role", "none"), session.get("actor", ""))
+    role_lines = [
+        f"| {role.get('role')} | {', '.join(role.get('scopes') or [])} |"
+        for role in policy.get("recommended_roles", [])
+    ]
+    scope_lines = [
+        f"| {scope} | {', '.join(items)} |"
+        for scope, items in (policy.get("enforced_scopes") or {}).items()
+    ]
+    configured = ", ".join(policy.get("configured_roles") or []) or "None"
+    commands = [
+        "# Generate each token locally, then paste only into Fly secrets.",
+        'DREC_VIEWER_TOKEN="$(openssl rand -base64 32)"',
+        'DREC_REVIEWER_TOKEN="$(openssl rand -base64 32)"',
+        'DREC_OPERATOR_TOKEN="$(openssl rand -base64 32)"',
+        'DREC_ADMIN_TOKEN="$(openssl rand -base64 32)"',
+        'fly secrets set DREC_VIEWER_TOKEN="$DREC_VIEWER_TOKEN" DREC_REVIEWER_TOKEN="$DREC_REVIEWER_TOKEN" DREC_OPERATOR_TOKEN="$DREC_OPERATOR_TOKEN" DREC_ADMIN_TOKEN="$DREC_ADMIN_TOKEN"',
+        "fly deploy",
+        'DREC_ACCESS_TOKEN="$DREC_ADMIN_TOKEN" DREC_ACTOR="admin-name" npm run smoke:live',
+    ]
+    lines = [
+        "# DREC Content OS Access Control Pack",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this before handing the app to multiple operators. It gives role-token setup, actor naming, and rotation rules until full user login is added.",
+        "",
+        "## Current Access State",
+        "",
+        f"- Mode: {policy.get('mode')}",
+        f"- Current role: {policy.get('current_role')}",
+        f"- Current actor: {policy.get('current_actor') or 'not set'}",
+        f"- Current scopes: {', '.join(policy.get('current_scopes') or []) or 'none'}",
+        f"- Configured roles: {configured}",
+        f"- Legacy access token accepted: {'yes' if policy.get('legacy_access_token_enabled') else 'no'}",
+        "",
+        "## Recommended Roles",
+        "",
+        "| Role | Scopes |",
+        "| --- | --- |",
+        *role_lines,
+        "",
+        "## Enforced Scope Map",
+        "",
+        "| Scope | Protects |",
+        "| --- | --- |",
+        *scope_lines,
+        "",
+        "## Safe Setup Command Template",
+        "",
+        "```bash",
+        *commands,
+        "```",
+        "",
+        "## Actor Naming Rule",
+        "",
+        "- Every tester should fill the browser Actor name field before review, scheduling, publishing handoff, or metrics work.",
+        "- Use a stable name such as `dr-eason`, `reviewer-lim`, or an email-style label.",
+        "- Actor labels are stored in feedback/audit tags; they are not a password and should not contain secrets.",
+        "",
+        "## Handoff Policy",
+        "",
+        "- Viewer token: reading and exports only.",
+        "- Reviewer token: asset safety review, queue review, and feedback decisions.",
+        "- Operator token: review, scheduling, publishing handoff, and metrics closeout.",
+        "- Admin token: deployment, security exports, scheduler heartbeat setup, and credential rollout only.",
+        "",
+        "## Rotation Rules",
+        "",
+        "- Rotate the admin token after any shared-screen setup session.",
+        "- Rotate reviewer/operator tokens when a team member no longer needs access.",
+        "- Keep the legacy DREC_ACCESS_TOKEN only during migration; move routine users to role tokens.",
+        "- After token changes, redeploy Fly and run live smoke with an admin actor label.",
+        "",
+        "## Proof To Save",
+        "",
+        "- Download Access Control Pack after token setup.",
+        "- Download Audit Trail after the first review/scheduler test with actor labels.",
+        "- Save Launch Evidence before enabling Meta live switches.",
+        "",
+    ]
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-access-control-pack.md"'},
+    )
+
+
 @app.get("/security/rls-hardening-plan.md")
 async def security_rls_hardening_plan(_: None = Depends(require_admin_access)):
     security = security_status_payload()
