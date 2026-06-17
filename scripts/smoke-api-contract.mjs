@@ -41,6 +41,8 @@ const requiredRoutes = [
   "GET /operations/asset-safety-review.md",
   "GET /operations/asset-review-session",
   "GET /operations/asset-review-session.md",
+  "GET /operations/doctor-approval-pack",
+  "GET /operations/doctor-approval-pack.md",
   "GET /operations/approval-cockpit",
   "GET /operations/approval-cockpit.md",
   "GET /operations/post-approval-production",
@@ -598,6 +600,21 @@ const requiredSnippets = [
     name: "asset review session export",
     file: "main",
     text: "drec-asset-review-session-pack.md",
+  },
+  {
+    name: "doctor approval pack route",
+    file: "main",
+    text: "doctor_approval_pack_payload",
+  },
+  {
+    name: "doctor approval pack export",
+    file: "main",
+    text: "drec-doctor-approval-pack.md",
+  },
+  {
+    name: "doctor approval pack safety",
+    file: "main",
+    text: "human_medical_review_only",
   },
   {
     name: "approval cockpit route",
@@ -1603,6 +1620,16 @@ const requiredSnippets = [
     name: "web asset review session action",
     file: "web",
     text: "download-asset-review-session",
+  },
+  {
+    name: "web doctor approval pack action",
+    file: "web",
+    text: "download-doctor-approval-pack",
+  },
+  {
+    name: "web doctor approval pack endpoint",
+    file: "web",
+    text: "/operations/doctor-approval-pack.md",
   },
   {
     name: "web asset review session loader",

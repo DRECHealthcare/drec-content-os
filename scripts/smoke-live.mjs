@@ -323,6 +323,30 @@ const checks = [
     },
   },
   {
+    name: "Doctor approval pack",
+    url: `${apiBase}/operations/doctor-approval-pack`,
+    auth: true,
+    validate: async (res) => {
+      const data = await res.json();
+      return data.phase === "doctor_approval_pack"
+        && data.mode === "human_medical_review_only"
+        && Array.isArray(data.review_items)
+        && Array.isArray(data.rules)
+        && data.rules.some((rule) => rule.includes("read-only"));
+    },
+  },
+  {
+    name: "Doctor approval markdown",
+    url: `${apiBase}/operations/doctor-approval-pack.md`,
+    auth: true,
+    validate: async (res) => {
+      const text = await res.text();
+      return text.includes("# DREC Content OS Doctor Approval Pack")
+        && text.includes("## How To Record Decisions")
+        && text.includes("Doctor Safety Checklist");
+    },
+  },
+  {
     name: "Approval cockpit",
     url: `${apiBase}/operations/approval-cockpit`,
     auth: true,

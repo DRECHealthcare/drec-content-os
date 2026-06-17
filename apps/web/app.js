@@ -2799,6 +2799,16 @@ document.getElementById("download-asset-review-session")?.addEventListener("clic
   }
 });
 
+document.getElementById("download-doctor-approval-pack")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/doctor-approval-pack.md", "drec-doctor-approval-pack.md", "text/markdown");
+    message.textContent = "Doctor approval pack downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download doctor approval pack.";
+  }
+});
+
 document.getElementById("download-approval-cockpit")?.addEventListener("click", async () => {
   const message = document.getElementById("media-message");
   try {

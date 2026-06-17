@@ -4623,6 +4623,115 @@ async def operations_approval_cockpit_markdown(_: None = Depends(require_access_
     )
 
 
+def doctor_approval_item_lines(item: dict, index: int):
+    blockers = item.get("blockers") or []
+    return [
+        f"## {index}. {item.get('topic') or 'Untitled asset'}",
+        "",
+        f"- Asset ID: `{item.get('asset_id')}`",
+        f"- Channel / format: {item.get('channel')} / {item.get('format')}",
+        f"- Current status: safety `{item.get('compliance_status')}` / review `{item.get('review_status')}`",
+        f"- Detector status: {item.get('detector_status')}",
+        f"- Media count: {item.get('media_count')}",
+        f"- Approval status: {item.get('approval_status')}",
+        f"- Blockers: {', '.join(blockers) if blockers else 'none'}",
+        "",
+        "### Copy To Review",
+        "",
+        item.get("caption_preview") or "No copy available.",
+        "",
+        "### Doctor Safety Checklist",
+        "",
+        "- [ ] The copy is educational and does not diagnose the reader.",
+        "- [ ] The copy does not promise reversal, cure, guaranteed weight loss, or guaranteed blood-sugar results.",
+        "- [ ] The copy does not tell a reader to start, stop, or change medication without their own doctor.",
+        "- [ ] The Mandarin meaning is accurate, calm, and not fear-based.",
+        "- [ ] The CTA is appropriate for saving, discussing with a doctor, or booking a qualified consultation.",
+        "",
+        "### Decision",
+        "",
+        "- Reviewer name:",
+        "- Decision: approve / needs edits / reject",
+        "- Safety decision: clear / needs review / blocked",
+        "- Notes:",
+        "",
+    ]
+
+
+async def doctor_approval_pack_payload():
+    cockpit = await approval_cockpit_payload()
+    items = cockpit.get("approval_items") or []
+    ready = [item for item in items if item.get("approval_status") == "ready_for_human_review"]
+    return {
+        "phase": "doctor_approval_pack",
+        "mode": "human_medical_review_only",
+        "ready_count": len(ready),
+        "blocked_count": len(items) - len(ready),
+        "recommended_first_asset": cockpit.get("recommended_first_asset"),
+        "review_items": items[:20],
+        "decision_fields": [
+            "reviewer_name",
+            "decision: approve | needs edits | reject",
+            "safety_decision: clear | needs review | blocked",
+            "notes",
+        ],
+        "rules": [
+            "This pack is read-only and does not approve, queue, schedule, publish, or send Meta requests.",
+            "Only a human medical reviewer can approve the Mandarin meaning and safety framing.",
+            "Use the review decision CSV/import workflow after the reviewer has made a decision.",
+            "Design/media can be prepared after copy approval, but visual QA still remains separate.",
+        ],
+        "next_step": "Review the recommended first asset, then record the doctor's decision through the review decision CSV or the asset review controls.",
+    }
+
+
+@app.get("/operations/doctor-approval-pack")
+async def operations_doctor_approval_pack(_: None = Depends(require_access_token)):
+    return await doctor_approval_pack_payload()
+
+
+@app.get("/operations/doctor-approval-pack.md")
+async def operations_doctor_approval_pack_markdown(_: None = Depends(require_access_token)):
+    payload = await doctor_approval_pack_payload()
+    generated_at = datetime.now(timezone.utc).isoformat()
+    first = payload.get("recommended_first_asset") or {}
+    lines = [
+        "# DREC Content OS Doctor Approval Pack",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this pack for human medical review of draft Chinese content. It is read-only and does not approve, queue, schedule, publish, or send Meta requests.",
+        "",
+        "## Summary",
+        "",
+        f"- Ready for doctor review: {payload.get('ready_count')}",
+        f"- Blocked before doctor review: {payload.get('blocked_count')}",
+        f"- Recommended first asset: {first.get('topic') or 'None'}",
+        "",
+        "## How To Record Decisions",
+        "",
+        "- Use `Download Review Decisions` to export the CSV.",
+        "- Fill `reviewer_safety_decision`, `reviewer_review_decision`, `reviewer_name`, and `review_notes`.",
+        "- Use `Preview Decisions` before import.",
+        "- Import only after the reviewer has made the decision.",
+        "",
+        "## Rules",
+        "",
+        *markdown_list(payload.get("rules"), "- Human medical review required."),
+        "",
+        "## Review Items",
+        "",
+    ]
+    for index, item in enumerate(payload.get("review_items") or [], start=1):
+        lines.extend(doctor_approval_item_lines(item, index))
+    lines.extend(["## Next Step", "", f"- {payload.get('next_step')}", ""])
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-doctor-approval-pack.md"'},
+    )
+
+
 def production_media_task(item: dict):
     fmt = item.get("format")
     if fmt == "reel":
