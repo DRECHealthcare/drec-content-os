@@ -793,6 +793,34 @@ button[type="submit"] {
   white-space: pre;
 }
 
+.learning-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.learning-actions button {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #FFF;
+  color: var(--navy);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.sprint-board {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sprint-item-card p {
+  margin: 0;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
 .wide-learning {
   grid-column: 1 / -1;
 }
@@ -1084,7 +1112,7 @@ button[type="submit"] {
   .token-panel input { flex: 1; width: auto; }
   .token-button { margin-left: auto; }
   .screen { padding: 18px; }
-  .grid, .loop, .split-form, .learning-grid, .handoff-summary, .creative-preview, .weight-row, .scheduler-toolbar, .week-schedule, .workflow-steps, .test-path-list, .quick-composer { grid-template-columns: 1fr; }
+  .grid, .loop, .split-form, .learning-grid, .handoff-summary, .creative-preview, .weight-row, .scheduler-toolbar, .week-schedule, .workflow-steps, .test-path-list, .quick-composer, .sprint-board { grid-template-columns: 1fr; }
   .workflow-head, .workflow-primary { align-items: stretch; flex-direction: column; }
   .workflow-primary button { width: 100%; }
   .loop div { border-right: 0; border-bottom: 1px solid var(--line); }

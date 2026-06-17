@@ -1907,6 +1907,36 @@ const requiredSnippets = [
     text: "/operations/first-cycle-sprint-pack.md",
   },
   {
+    name: "web first cycle sprint board",
+    file: "web",
+    text: "first-cycle-sprint",
+  },
+  {
+    name: "web first cycle sprint loader",
+    file: "web",
+    text: "loadFirstCycleSprintPack",
+  },
+  {
+    name: "web first cycle sprint renderer",
+    file: "web",
+    text: "renderFirstCycleSprintPack",
+  },
+  {
+    name: "web first cycle sprint api endpoint",
+    file: "web",
+    text: "/operations/first-cycle-sprint-pack",
+  },
+  {
+    name: "web first cycle sprint doctor copy",
+    file: "web",
+    text: "data-copy-sprint-doctor",
+  },
+  {
+    name: "web first cycle sprint production copy",
+    file: "web",
+    text: "data-copy-sprint-production",
+  },
+  {
     name: "web first cycle handoff loader",
     file: "web",
     text: "loadFirstCycleHandoff",

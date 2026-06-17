@@ -31,6 +31,7 @@ const checks = [
       const text = await res.text();
       return text.includes("DREC")
         && text.includes("download-first-cycle-sprint-pack")
+        && text.includes("first-cycle-sprint")
         && text.includes("download-doctor-approval-request")
         && text.includes("doctor-reply-text")
         && text.includes("preview-doctor-replies")
@@ -58,7 +59,11 @@ const checks = [
     validate: async (res) => {
       const text = await res.text();
       return text.includes("/operations/doctor-decision-worksheet.csv")
+        && text.includes("/operations/first-cycle-sprint-pack")
         && text.includes("/operations/first-cycle-sprint-pack.md")
+        && text.includes("renderFirstCycleSprintPack")
+        && text.includes("data-copy-sprint-doctor")
+        && text.includes("data-copy-sprint-production")
         && text.includes("/operations/doctor-approval-request.md")
         && text.includes("/operations/import-doctor-replies")
         && text.includes("/operations/import-production-replies")
