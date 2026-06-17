@@ -245,6 +245,9 @@ const checks = [
     validate: async (res) => {
       const text = await res.text();
       return text.includes("# DREC Content OS First Test Run Tracker")
+        && text.includes("## Evidence Source Links")
+        && text.includes("Production reply inbox")
+        && text.includes("Metrics closeout")
         && text.includes("## Step Tracker")
         && text.includes("## Pass Rule");
     },

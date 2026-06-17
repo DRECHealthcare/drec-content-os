@@ -633,6 +633,21 @@ const requiredSnippets = [
     text: "## Step Tracker",
   },
   {
+    name: "test run tracker evidence links",
+    file: "main",
+    text: "## Evidence Source Links",
+  },
+  {
+    name: "test run tracker production reply inbox link",
+    file: "main",
+    text: "- Production reply inbox: `/operations/production-reply-inbox-pack.md`",
+  },
+  {
+    name: "test run tracker metrics closeout link",
+    file: "main",
+    text: "- Metrics closeout: `/operations/metrics-closeout-pack.md`",
+  },
+  {
     name: "manual cycle qa export",
     file: "main",
     text: "drec-manual-cycle-qa.md",
