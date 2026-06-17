@@ -5506,6 +5506,161 @@ async def operations_first_cycle_handoff_markdown(_: None = Depends(require_acce
     )
 
 
+async def first_cycle_sprint_pack_payload():
+    doctor = await doctor_approval_request_payload()
+    production = await post_approval_production_payload()
+    pre_schedule = await pre_schedule_gate_payload()
+    doctor_items = doctor.get("request_items") or []
+    production_items = production.get("production_items") or []
+    production_by_asset = {
+        str(item.get("asset_id")): item
+        for item in production_items
+        if item.get("asset_id")
+    }
+    sprint_items = []
+    for item in doctor_items[:5]:
+        asset_id = str(item.get("asset_id") or "")
+        prod = production_by_asset.get(asset_id, {})
+        sprint_items.append(
+            {
+                "asset_id": asset_id,
+                "topic": item.get("topic") or prod.get("topic") or "",
+                "channel": item.get("channel") or prod.get("channel") or "",
+                "format": item.get("format") or prod.get("format") or "",
+                "copy_to_review": item.get("copy_to_review") or "",
+                "doctor_reply_template": item.get("reply_template") or "",
+                "production_task": prod.get("media_task") or "Prepare approved media/design after doctor approval.",
+                "visual_direction": prod.get("visual_direction") or "",
+                "template_suggestion": prod.get("template_suggestion") or "",
+                "rights_check": prod.get("rights_check") or "",
+                "production_reply_template": "\n".join(
+                    [
+                        f"Asset ID: {asset_id}",
+                        "Media URLs: https://...",
+                        "Visual QA: passed / pending / needs_work",
+                        "Rights: owned / licensed / approved stock / patient consent",
+                        "Notes:",
+                    ]
+                ),
+            }
+        )
+    return {
+        "phase": "first_cycle_sprint_pack",
+        "mode": "read_only_coordination_pack",
+        "ready_for_doctor_review": doctor.get("ready_count", 0),
+        "waiting_approval": production.get("waiting_approval_count", 0),
+        "needs_media": production.get("needs_media_count", 0),
+        "ready_to_schedule": pre_schedule.get("ready_to_schedule_count", 0),
+        "sprint_items": sprint_items,
+        "operator_steps": [
+            "Send the doctor review request for the listed assets.",
+            "Paste the doctor's reply into Assets -> Doctor Reply Text and preview before import.",
+            "After approval, send the production task and reply template to design/production.",
+            "Paste design/media replies into Assets -> Production Reply Text and preview before import.",
+            "Run Pre-Schedule Gate before queueing/scheduling handoff work.",
+        ],
+        "safety": [
+            "This sprint pack is read-only and does not approve, attach media, queue, schedule, publish, or send Meta requests.",
+            "Doctor replies must be previewed before import.",
+            "Production replies only attach approved media/design URLs; they are not medical approval.",
+            "Scheduling remains locked until human approval, safety clear, media/design, and queue review gates are ready.",
+        ],
+        "links": {
+            "doctor_approval_request": "/operations/doctor-approval-request.md",
+            "doctor_decision_worksheet": "/operations/doctor-decision-worksheet.csv",
+            "post_approval_production": "/operations/post-approval-production.md",
+            "production_design_worksheet": "/operations/production-design-worksheet.csv",
+            "pre_schedule_gate": "/operations/pre-schedule-gate.md",
+        },
+    }
+
+
+@app.get("/operations/first-cycle-sprint-pack")
+async def operations_first_cycle_sprint_pack(_: None = Depends(require_access_token)):
+    return await first_cycle_sprint_pack_payload()
+
+
+@app.get("/operations/first-cycle-sprint-pack.md")
+async def operations_first_cycle_sprint_pack_markdown(_: None = Depends(require_access_token)):
+    payload = await first_cycle_sprint_pack_payload()
+    generated_at = datetime.now(timezone.utc).isoformat()
+    lines = [
+        "# DREC Content OS First Cycle Sprint Pack",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this pack to coordinate the current approval and production bottleneck in one pass. It is read-only and keeps approval, production, scheduling, publishing, and Meta automation as separate gates.",
+        "",
+        "## Snapshot",
+        "",
+        f"- Ready for doctor review: {payload.get('ready_for_doctor_review')}",
+        f"- Waiting approval: {payload.get('waiting_approval')}",
+        f"- Needs media/design: {payload.get('needs_media')}",
+        f"- Ready to schedule: {payload.get('ready_to_schedule')}",
+        "",
+        "## Operator Steps",
+        "",
+        *markdown_list(payload.get("operator_steps"), "- Follow the safe sprint sequence."),
+        "",
+        "## Sprint Items",
+        "",
+    ]
+    items = payload.get("sprint_items") or []
+    if not items:
+        lines.extend(["- No sprint items are ready. Create or review draft assets first.", ""])
+    for index, item in enumerate(items, start=1):
+        lines.extend(
+            [
+                f"### {index}. {item.get('topic') or 'Untitled asset'}",
+                "",
+                f"- Asset ID: `{item.get('asset_id')}`",
+                f"- Channel / format: {item.get('channel')} / {item.get('format')}",
+                "",
+                "Doctor copy to review:",
+                "",
+                item.get("copy_to_review") or "No copy available.",
+                "",
+                "Doctor reply template:",
+                "",
+                "```",
+                item.get("doctor_reply_template") or "",
+                "```",
+                "",
+                "Production task after doctor approval:",
+                "",
+                f"- Task: {item.get('production_task')}",
+                f"- Visual direction: {item.get('visual_direction') or 'Use safe DREC educational visual treatment.'}",
+                f"- Template: {item.get('template_suggestion') or 'Use the matching Template Studio layout.'}",
+                f"- Rights check: {item.get('rights_check') or 'Use only approved/licensed/owned/patient-consented media.'}",
+                "",
+                "Production reply template:",
+                "",
+                "```",
+                item.get("production_reply_template") or "",
+                "```",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## Safety Rules",
+            "",
+            *markdown_list(payload.get("safety"), "- Keep gates separate."),
+            "",
+            "## Related Links",
+            "",
+        ]
+    )
+    for label, path in (payload.get("links") or {}).items():
+        lines.append(f"- {label.replace('_', ' ').title()}: `{path}`")
+    lines.append("")
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-first-cycle-sprint-pack.md"'},
+    )
+
+
 def runbook_status_label(status: str | None):
     value = (status or "").strip()
     if value in {"ready", "clear", "ready_to_schedule", "ready_for_worker_testing", "manual_ops_ready_auto_blocked"}:

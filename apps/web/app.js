@@ -2879,6 +2879,16 @@ document.getElementById("download-asset-rewrite-pack")?.addEventListener("click"
   }
 });
 
+document.getElementById("download-first-cycle-sprint-pack")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/first-cycle-sprint-pack.md", "drec-first-cycle-sprint-pack.md", "text/markdown");
+    message.textContent = "First cycle sprint pack downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download first cycle sprint pack.";
+  }
+});
+
 document.getElementById("download-first-cycle-handoff")?.addEventListener("click", async () => {
   const message = document.getElementById("media-message");
   try {

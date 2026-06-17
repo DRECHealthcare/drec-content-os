@@ -30,6 +30,7 @@ const checks = [
     validate: async (res) => {
       const text = await res.text();
       return text.includes("DREC")
+        && text.includes("download-first-cycle-sprint-pack")
         && text.includes("download-doctor-approval-request")
         && text.includes("doctor-reply-text")
         && text.includes("preview-doctor-replies")
@@ -57,6 +58,7 @@ const checks = [
     validate: async (res) => {
       const text = await res.text();
       return text.includes("/operations/doctor-decision-worksheet.csv")
+        && text.includes("/operations/first-cycle-sprint-pack.md")
         && text.includes("/operations/doctor-approval-request.md")
         && text.includes("/operations/import-doctor-replies")
         && text.includes("/operations/import-production-replies")
@@ -594,6 +596,31 @@ const checks = [
         && text.includes("## Manual Sequence")
         && text.includes("## Safety Rules")
         && text.includes("Apply detector-clear safe rewrites");
+    },
+  },
+  {
+    name: "First cycle sprint pack",
+    url: `${apiBase}/operations/first-cycle-sprint-pack`,
+    auth: true,
+    validate: async (res) => {
+      const data = await res.json();
+      return data.phase === "first_cycle_sprint_pack"
+        && data.mode === "read_only_coordination_pack"
+        && Array.isArray(data.sprint_items)
+        && Array.isArray(data.safety)
+        && data.safety.some((rule) => rule.includes("read-only"));
+    },
+  },
+  {
+    name: "First cycle sprint markdown",
+    url: `${apiBase}/operations/first-cycle-sprint-pack.md`,
+    auth: true,
+    validate: async (res) => {
+      const text = await res.text();
+      return text.includes("# DREC Content OS First Cycle Sprint Pack")
+        && text.includes("Doctor reply template")
+        && text.includes("Production reply template")
+        && text.includes("## Safety Rules");
     },
   },
   {

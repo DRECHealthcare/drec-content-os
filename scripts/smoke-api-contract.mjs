@@ -60,6 +60,8 @@ const requiredRoutes = [
   "GET /operations/asset-rewrite-pack.md",
   "GET /operations/first-cycle-handoff",
   "GET /operations/first-cycle-handoff.md",
+  "GET /operations/first-cycle-sprint-pack",
+  "GET /operations/first-cycle-sprint-pack.md",
   "GET /operations/today-runbook",
   "GET /operations/today-runbook.md",
   "GET /operations/asset-media-attachments.csv",
@@ -788,6 +790,21 @@ const requiredSnippets = [
     name: "first cycle handoff safety",
     file: "main",
     text: "manual_safe_sequence",
+  },
+  {
+    name: "first cycle sprint pack route",
+    file: "main",
+    text: "first_cycle_sprint_pack_payload",
+  },
+  {
+    name: "first cycle sprint pack export",
+    file: "main",
+    text: "drec-first-cycle-sprint-pack.md",
+  },
+  {
+    name: "first cycle sprint pack safety",
+    file: "main",
+    text: "This sprint pack is read-only and does not approve, attach media, queue, schedule, publish, or send Meta requests.",
   },
   {
     name: "today runbook route",
@@ -1878,6 +1895,16 @@ const requiredSnippets = [
     name: "web first cycle handoff action",
     file: "web",
     text: "download-first-cycle-handoff",
+  },
+  {
+    name: "web first cycle sprint action",
+    file: "web",
+    text: "download-first-cycle-sprint-pack",
+  },
+  {
+    name: "web first cycle sprint endpoint",
+    file: "web",
+    text: "/operations/first-cycle-sprint-pack.md",
   },
   {
     name: "web first cycle handoff loader",
