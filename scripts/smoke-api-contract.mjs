@@ -603,6 +603,26 @@ const requiredSnippets = [
     text: "## Sample Metric Entry After Manual Publishing",
   },
   {
+    name: "first test kit action links",
+    file: "main",
+    text: "## First-Test Action Links",
+  },
+  {
+    name: "first test kit doctor reply inbox link",
+    file: "main",
+    text: "- Doctor reply inbox: `/operations/doctor-reply-inbox-pack.md`",
+  },
+  {
+    name: "first test kit production reply inbox link",
+    file: "main",
+    text: "- Production reply inbox: `/operations/production-reply-inbox-pack.md`",
+  },
+  {
+    name: "first test kit launch evidence link",
+    file: "main",
+    text: "- Launch evidence: `/operations/launch-evidence.md`",
+  },
+  {
     name: "test run tracker export",
     file: "main",
     text: "drec-first-test-run-tracker.md",

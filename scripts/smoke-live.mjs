@@ -229,6 +229,10 @@ const checks = [
     validate: async (res) => {
       const text = await res.text();
       return text.includes("# DREC Content OS First Test Kit")
+        && text.includes("## First-Test Action Links")
+        && text.includes("Doctor reply inbox")
+        && text.includes("Production reply inbox")
+        && text.includes("Launch evidence")
         && text.includes("## Copy/Paste Weekly Topics")
         && text.includes("## Sample Metric Entry After Manual Publishing")
         && text.includes("## Acceptance Criteria");

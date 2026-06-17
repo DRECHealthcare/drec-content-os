@@ -100,7 +100,7 @@ Stage 1 is now a working thin-core workflow:
 - Download a protected Weekly Cycle Pack from Learning that combines planning inputs, reply inbox handoff links, asset review, schedule/handoff, learning closeout, and weekly safety rules
 - See overdue scheduled publishing items in risk audit and Daily Ops before missed handoff windows distort the workflow
 - Download a protected launch evidence report with manual test status, readiness, action links, risk, Meta setup, and safe go-live rules
-- Download a protected First Test Kit with current next action, sample topics, manual metric values, acceptance criteria, and safety notes
+- Download a protected First Test Kit with current next action, first-test action links, sample topics, manual metric values, acceptance criteria, and safety notes
 - Download a protected First Test Run Tracker with live step status, evidence fields, and pass rules for the first manual workflow test
 - Download a protected Manual Cycle QA report that summarizes the current test decision, action links, blockers, risk, handoff, and learning gaps
 - Download a protected CSV operations snapshot for audit or backup before rollout changes
