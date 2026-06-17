@@ -10227,6 +10227,207 @@ async def publish_queue_schedule_csv(_: None = Depends(require_access_token)):
     )
 
 
+@app.get("/publish-queue/schedule-worksheet.csv")
+async def publish_queue_schedule_worksheet_csv(_: None = Depends(require_access_token)):
+    rows = await fetch_publish_queue_items(200)
+    candidates = []
+    for item in rows:
+        state, blockers = review_queue_state(item)
+        if state == "ready_to_schedule":
+            suggestion = await suggest_publish_slot(item.get("channel") or "facebook", ignore_item_id=str(item.get("id")))
+            candidates.append({**item, "suggestion": suggestion})
+    output = StringIO()
+    fieldnames = [
+        "queue_id",
+        "asset_id",
+        "channel",
+        "format",
+        "status",
+        "compliance_status",
+        "review_state",
+        "suggested_slot_utc",
+        "suggested_slot_myt",
+        "planned_slot",
+        "schedule_decision",
+        "scheduler_name",
+        "schedule_notes",
+        "media_urls",
+        "caption",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for item in candidates:
+        suggestion = item.get("suggestion") or {}
+        writer.writerow(
+            {
+                "queue_id": item.get("id") or "",
+                "asset_id": item.get("asset_id") or "",
+                "channel": item.get("channel") or "",
+                "format": item.get("format") or "",
+                "status": item.get("status") or "",
+                "compliance_status": item.get("compliance_status") or "",
+                "review_state": "ready_to_schedule",
+                "suggested_slot_utc": suggestion.get("suggested_slot") or "",
+                "suggested_slot_myt": suggestion.get("local_slot") or "",
+                "planned_slot": suggestion.get("suggested_slot") or "",
+                "schedule_decision": "",
+                "scheduler_name": "",
+                "schedule_notes": "",
+                "media_urls": "\n".join([url for url in item.get("media_urls") or [] if url]),
+                "caption": item.get("caption") or "",
+            }
+        )
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-schedule-worksheet.csv"'},
+    )
+
+
+def normalize_schedule_decision(value: str | None):
+    text = (value or "").strip().lower().replace("_", " ").replace("-", " ")
+    if not text:
+        return "schedule"
+    if text in {"schedule", "scheduled", "approve", "approved", "yes", "y"}:
+        return "schedule"
+    if text in {"skip", "hold", "no", "n", "pending"}:
+        return "skip"
+    return "invalid"
+
+
+async def set_queue_planned_slot(item: dict, planned_slot: datetime):
+    item_id = str(item.get("id"))
+    row = await fetch_row(
+        """
+        update publish_queue
+        set status = 'scheduled',
+            planned_slot = $2,
+            updated_at = now()
+        where id = $1
+        returning id, asset_id, channel, format, caption, media_urls, planned_slot, status,
+                  compliance_status, external_post_id, created_at
+        """,
+        item_id,
+        planned_slot,
+    )
+    if row is None:
+        row = await supabase_rest.update(
+            "publish_queue",
+            {
+                "status": "scheduled",
+                "planned_slot": planned_slot.isoformat(),
+            },
+            {"id": f"eq.{item_id}"},
+        )
+    return row or {**item, "status": "scheduled", "planned_slot": planned_slot.isoformat()}
+
+
+async def decode_schedule_worksheet_csv(file: UploadFile):
+    raw = await file.read()
+    if len(raw) > 512_000:
+        raise HTTPException(status_code=413, detail="Schedule worksheet CSV is too large. Keep imports below 512 KB.")
+    try:
+        return raw.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise HTTPException(status_code=400, detail="Schedule worksheet CSV must be UTF-8 text.") from exc
+
+
+@app.post("/publish-queue/import-schedule-worksheet")
+async def import_schedule_worksheet(
+    file: UploadFile = File(...),
+    dry_run: bool = Form(True),
+    session: dict = Depends(require_schedule_access),
+):
+    csv_text = await decode_schedule_worksheet_csv(file)
+    reader = csv.DictReader(StringIO(csv_text))
+    required = {"queue_id", "planned_slot"}
+    headers = set(reader.fieldnames or [])
+    if not required.issubset(headers):
+        missing = sorted(required - headers)
+        raise HTTPException(status_code=400, detail={"message": "Schedule worksheet CSV is missing required columns.", "missing": missing})
+    queue_items = await fetch_publish_queue_items(500)
+    by_id = {str(item.get("id")): item for item in queue_items if item.get("id")}
+    planned_rows = await planned_queue_slots()
+    planned = []
+    imported = []
+    skipped = []
+    for index, row in enumerate(reader, start=2):
+        queue_id = (row.get("queue_id") or "").strip()
+        if not queue_id:
+            skipped.append({"row": index, "reason": "Missing queue_id."})
+            continue
+        decision = normalize_schedule_decision(row.get("schedule_decision"))
+        if decision == "skip":
+            skipped.append({"row": index, "queue_id": queue_id, "reason": "Schedule decision is skip."})
+            continue
+        if decision == "invalid":
+            skipped.append({"row": index, "queue_id": queue_id, "reason": "schedule_decision must be schedule or skip."})
+            continue
+        item = by_id.get(queue_id)
+        if item is None:
+            skipped.append({"row": index, "queue_id": queue_id, "reason": "Queue item not found."})
+            continue
+        state, blockers = review_queue_state(item)
+        if state != "ready_to_schedule":
+            skipped.append({"row": index, "queue_id": queue_id, "reason": "Queue item is not review-approved and ready to schedule.", "blockers": blockers})
+            continue
+        media_urls = [url for url in item.get("media_urls") or [] if url]
+        if not media_urls:
+            skipped.append({"row": index, "queue_id": queue_id, "reason": "Needs approved media/design URL before scheduling."})
+            continue
+        planned_slot = parse_datetime((row.get("planned_slot") or "").strip())
+        if not planned_slot:
+            skipped.append({"row": index, "queue_id": queue_id, "reason": "planned_slot must be an ISO datetime."})
+            continue
+        planned_local = planned_slot.astimezone(MYT)
+        if planned_local <= datetime.now(MYT) + timedelta(minutes=30):
+            skipped.append({"row": index, "queue_id": queue_id, "reason": "planned_slot must be at least 30 minutes in the future."})
+            continue
+        if planned_local.weekday() == 6:
+            skipped.append({"row": index, "queue_id": queue_id, "reason": "planned_slot cannot be on Sunday."})
+            continue
+        if not slot_is_open(planned_local, planned_rows, ignore_item_id=queue_id):
+            skipped.append({"row": index, "queue_id": queue_id, "reason": "planned_slot conflicts with an existing slot within 90 minutes."})
+            continue
+        plan = {
+            "row": index,
+            "queue_id": queue_id,
+            "asset_id": item.get("asset_id") or "",
+            "channel": item.get("channel") or "",
+            "format": item.get("format") or "",
+            "planned_slot": planned_slot.astimezone(timezone.utc).isoformat(),
+            "planned_slot_myt": planned_local.isoformat(),
+            "scheduler_name": (row.get("scheduler_name") or "").strip(),
+            "schedule_notes": (row.get("schedule_notes") or "").strip(),
+        }
+        if dry_run:
+            planned.append(plan)
+            continue
+        updated = await set_queue_planned_slot(item, planned_slot)
+        planned_rows.append({"id": queue_id, "channel": item.get("channel"), "planned_slot": planned_slot.isoformat()})
+        imported.append({**plan, "status": updated.get("status") or "scheduled"})
+    return {
+        "dry_run": dry_run,
+        "planned_count": len(planned),
+        "imported_count": len(imported),
+        "skipped_count": len(skipped),
+        "planned": planned,
+        "imported": imported,
+        "skipped": skipped,
+        "message": (
+            f"Previewed {len(planned)} schedule worksheet row(s), {len(skipped)} skipped."
+            if dry_run
+            else f"Imported {len(imported)} schedule worksheet row(s), {len(skipped)} skipped."
+        ),
+        "safety": [
+            "Schedule worksheet import only sets planned time and scheduled status for already review-approved queue items.",
+            "It does not publish, dispatch Meta requests, or record external post IDs.",
+            "Run Schedule Audit and Publishing Handoff after import.",
+        ],
+        "actor": session.get("actor"),
+    }
+
+
 def review_schedule_asset_lines(asset: dict, index: int):
     metadata = asset.get("metadata") or {}
     return [

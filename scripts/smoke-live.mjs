@@ -35,6 +35,9 @@ const checks = [
         && text.includes("download-production-design-worksheet")
         && text.includes("preview-production-design-worksheet")
         && text.includes("import-production-design-worksheet")
+        && text.includes("download-schedule-worksheet")
+        && text.includes("preview-schedule-worksheet")
+        && text.includes("import-schedule-worksheet")
         && text.includes("download-review-queue-decisions")
         && text.includes("preview-review-queue-decisions")
         && text.includes("import-review-queue-decisions");
@@ -50,6 +53,7 @@ const checks = [
         && text.includes("/operations/import-asset-media-attachments")
         && text.includes("/operations/production-design-worksheet.csv")
         && text.includes("/operations/import-production-design-worksheet")
+        && text.includes("/publish-queue/import-schedule-worksheet")
         && text.includes("/operations/import-review-queue-decisions")
         && text.includes("renderReviewQueueDecisionPreview");
     },
@@ -1040,6 +1044,36 @@ const checks = [
     validate: async (res) => {
       const text = await res.text();
       return text.includes("queue_id,asset_id,status,channel,format,planned_slot,compliance_status,external_post_id,handoff_ready,blockers,media_urls,caption,created_at");
+    },
+  },
+  {
+    name: "Schedule worksheet CSV",
+    url: `${apiBase}/publish-queue/schedule-worksheet.csv`,
+    auth: true,
+    validate: async (res) => {
+      const text = await res.text();
+      return text.includes("queue_id,asset_id,channel,format,status,compliance_status,review_state,suggested_slot_utc,suggested_slot_myt,planned_slot,schedule_decision,scheduler_name,schedule_notes,media_urls,caption");
+    },
+  },
+  {
+    name: "Schedule worksheet import dry run",
+    url: `${apiBase}/publish-queue/import-schedule-worksheet`,
+    method: "POST",
+    auth: true,
+    body: () => {
+      const form = new FormData();
+      const future = new Date(Date.now() + 86400000).toISOString();
+      const csv = [
+        "queue_id,planned_slot,schedule_decision,scheduler_name,schedule_notes",
+        `00000000-0000-0000-0000-000000000000,${future},schedule,Smoke Scheduler,Dry-run only`,
+      ].join("\n");
+      form.append("file", new Blob([csv], { type: "text/csv" }), "schedule-worksheet-smoke.csv");
+      form.append("dry_run", "true");
+      return form;
+    },
+    validate: async (res) => {
+      const data = await res.json();
+      return data.dry_run === true && data.skipped_count === 1 && data.skipped?.[0]?.reason === "Queue item not found.";
     },
   },
   {

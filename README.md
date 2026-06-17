@@ -155,6 +155,7 @@ Stage 1 is now a working thin-core workflow:
 - Download a Creative Style Guide for the current style library, brand colors, review rules, and performance-style signals
 - Suggest the next open MYT publishing slot for compliance-clear queue items and schedule them without guessing
 - Filter the scheduler by status/channel and scan the next 7 days of planned posts
+- Download, preview, and import a Schedule Worksheet CSV to batch-fill planned slots for already review-approved queue items without publishing or sending Meta requests
 - Download a Schedule Audit before handoff or Meta dry runs to catch duplicate planned slots, near-channel conflicts, missing times, and overdue scheduled items
 - Download the full publishing schedule as CSV for spreadsheet review, blockers, captions, media links, and handoff readiness
 - Download scheduled posts as a calendar file for manual publishing reminders

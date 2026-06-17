@@ -101,6 +101,8 @@ const requiredRoutes = [
   "GET /publish-queue/schedule-audit.md",
   "GET /publish-queue/calendar.ics",
   "GET /publish-queue/schedule.csv",
+  "GET /publish-queue/schedule-worksheet.csv",
+  "POST /publish-queue/import-schedule-worksheet",
   "GET /briefs/plan.csv",
   "GET /briefs/asset-pack.md",
   "GET /creative/style-library",
@@ -322,6 +324,21 @@ const requiredSnippets = [
     name: "publishing schedule csv export",
     file: "main",
     text: "drec-publishing-schedule.csv",
+  },
+  {
+    name: "schedule worksheet csv export",
+    file: "main",
+    text: "drec-schedule-worksheet.csv",
+  },
+  {
+    name: "schedule worksheet import route",
+    file: "main",
+    text: "import_schedule_worksheet",
+  },
+  {
+    name: "schedule worksheet import safety",
+    file: "main",
+    text: "It does not publish, dispatch Meta requests, or record external post IDs.",
   },
   {
     name: "workflow readiness report",
@@ -2029,6 +2046,21 @@ const requiredSnippets = [
     text: "download-schedule-csv",
   },
   {
+    name: "web schedule worksheet action",
+    file: "web",
+    text: "download-schedule-worksheet",
+  },
+  {
+    name: "web schedule worksheet preview action",
+    file: "web",
+    text: "preview-schedule-worksheet",
+  },
+  {
+    name: "web schedule worksheet import action",
+    file: "web",
+    text: "import-schedule-worksheet",
+  },
+  {
     name: "web schedule audit action",
     file: "web",
     text: "download-schedule-audit",
@@ -2042,6 +2074,16 @@ const requiredSnippets = [
     name: "web publishing schedule csv endpoint",
     file: "web",
     text: "/publish-queue/schedule.csv",
+  },
+  {
+    name: "web schedule worksheet endpoint",
+    file: "web",
+    text: "/publish-queue/schedule-worksheet.csv",
+  },
+  {
+    name: "web schedule worksheet import endpoint",
+    file: "web",
+    text: "/publish-queue/import-schedule-worksheet",
   },
   {
     name: "web review queue filter",

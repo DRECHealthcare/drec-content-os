@@ -2099,6 +2099,36 @@ function renderHandoff(data) {
   `;
 }
 
+function renderScheduleWorksheetPreview(data) {
+  const container = document.getElementById("schedule-worksheet-preview");
+  if (!container) return;
+  const rows = data.planned || data.imported || [];
+  const skipped = data.skipped || [];
+  container.innerHTML = `
+    <article class="insight-card">
+      <strong>${data.dry_run ? "Schedule Worksheet Preview" : "Schedule Worksheet Import"}</strong>
+      <small>${rows.length} row(s) ready · ${skipped.length} skipped</small>
+      ${rows.length ? `
+        <ul>${rows.slice(0, 10).map((row) => `
+          <li>
+            <strong>${escapeHtml(row.channel || "channel")} / ${escapeHtml(row.format || "format")}</strong>
+            ${escapeHtml(formatDate(row.planned_slot) || row.planned_slot_myt || "")}
+            ${row.scheduler_name ? ` · ${escapeHtml(row.scheduler_name)}` : ""}
+          </li>
+        `).join("")}</ul>
+      ` : ""}
+      ${skipped.length ? `
+        <h4>Skipped Rows</h4>
+        <ul>${skipped.slice(0, 10).map((row) => `<li><strong>Row ${escapeHtml(row.row || "")}</strong> ${escapeHtml(row.queue_id || "")}${row.queue_id ? " · " : ""}${escapeHtml(row.reason || "")}</li>`).join("")}</ul>
+      ` : ""}
+      ${Array.isArray(data.safety) && data.safety.length ? `
+        <h4>Safety</h4>
+        <ul>${data.safety.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+      ` : ""}
+    </article>
+  `;
+}
+
 function renderMetaPublishingJobDryRun(data) {
   const container = document.getElementById("meta-publishing-result");
   const results = data.results || [];
@@ -3780,6 +3810,48 @@ document.getElementById("download-schedule-csv")?.addEventListener("click", asyn
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download schedule CSV.";
   }
+});
+
+document.getElementById("download-schedule-worksheet")?.addEventListener("click", async () => {
+  const message = document.getElementById("queue-message");
+  message.textContent = "Preparing schedule worksheet...";
+  try {
+    await downloadProtectedFile("/publish-queue/schedule-worksheet.csv", "drec-schedule-worksheet.csv", "text/csv");
+    message.textContent = "Schedule worksheet downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download schedule worksheet.";
+  }
+});
+
+async function uploadScheduleWorksheet({ dryRun }) {
+  const message = document.getElementById("queue-message");
+  const fileInput = document.getElementById("schedule-worksheet-file");
+  const file = fileInput?.files?.[0];
+  if (!file) {
+    message.textContent = "Choose a schedule worksheet CSV first.";
+    return;
+  }
+  const body = new FormData();
+  body.append("file", file);
+  body.append("dry_run", dryRun ? "true" : "false");
+  message.textContent = dryRun ? "Previewing schedule worksheet..." : "Importing schedule worksheet...";
+  try {
+    const data = await fetchForm("/publish-queue/import-schedule-worksheet", body);
+    if (!dryRun) fileInput.value = "";
+    message.textContent = data.message || (dryRun ? "Schedule worksheet previewed." : "Schedule worksheet imported.");
+    renderScheduleWorksheetPreview(data);
+    if (!dryRun) await Promise.all([loadPublishQueue(), loadPreScheduleGate(), loadLoopStatus()]);
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : dryRun ? "Could not preview schedule worksheet." : "Could not import schedule worksheet.";
+  }
+}
+
+document.getElementById("preview-schedule-worksheet")?.addEventListener("click", async () => {
+  await uploadScheduleWorksheet({ dryRun: true });
+});
+
+document.getElementById("import-schedule-worksheet")?.addEventListener("click", async () => {
+  await uploadScheduleWorksheet({ dryRun: false });
 });
 
 document.getElementById("download-schedule-audit")?.addEventListener("click", async () => {

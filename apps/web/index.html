@@ -478,6 +478,13 @@
             <button id="download-run-sheet" type="button">Download Run Sheet</button>
             <button id="download-scheduler-pre-schedule-gate" type="button">Download Pre-Schedule Gate</button>
             <button id="download-schedule-csv" type="button">Download Schedule CSV</button>
+            <button id="download-schedule-worksheet" type="button">Download Schedule Worksheet</button>
+            <label class="file-action">
+              Schedule CSV
+              <input id="schedule-worksheet-file" type="file" accept=".csv,text/csv">
+            </label>
+            <button id="preview-schedule-worksheet" type="button">Preview Schedule</button>
+            <button id="import-schedule-worksheet" type="button">Import Schedule</button>
             <button id="download-schedule-audit" type="button">Download Schedule Audit</button>
             <button id="download-calendar" type="button">Download Calendar</button>
             <button id="dry-run-facebook" type="button">Dry Run Facebook</button>
@@ -487,6 +494,7 @@
         <div id="compliance-result" class="compliance-result"></div>
         <div id="queue-message" class="status-note"></div>
         <div id="handoff-result" class="handoff-panel"></div>
+        <div id="schedule-worksheet-preview" class="learning-grid"></div>
         <div class="scheduler-toolbar">
           <label>
             Status
