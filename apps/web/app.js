@@ -37,7 +37,7 @@ document.querySelectorAll("nav button").forEach((button) => {
     if (screen === "outcomes") loadOutcomes();
     if (screen === "learning") loadLearningSummary();
     if (screen === "scheduler" || screen === "review") loadPublishQueue();
-    if (screen === "meta") Promise.all([loadMetaReadiness(), loadMetaSetupChecklist()]);
+    if (screen === "meta") Promise.all([loadMetaReadiness(), loadMetaSetupChecklist(), loadNotifyRail()]);
   });
 });
 
@@ -856,6 +856,63 @@ async function loadMetaSetupChecklist() {
   } catch (error) {
     latestMetaSetupCommands = [];
     container.innerHTML = '<p class="status-note">Set the access token to load the setup checklist.</p>';
+  }
+}
+
+function renderNotifyRail(data) {
+  const container = document.getElementById("notify-rail");
+  if (!container) return;
+  const alerts = data.alerts || [];
+  const webhook = data.webhook_templates || {};
+  const roleCounts = data.role_counts || {};
+  const urgencyCounts = data.urgency_counts || {};
+  container.innerHTML = `
+    <article class="learning-card">
+      <h3>Notify Rail</h3>
+      <p>${escapeHtml(data.overall_status || "not_checked")}</p>
+      <small>${escapeHtml(data.send_status || "manual_pack_only")}</small>
+    </article>
+    <article class="learning-card">
+      <h3>Alerts</h3>
+      <p>${Number(data.alert_count || 0)} waiting</p>
+      <small>High: ${Number(urgencyCounts.high || 0)} · Medium: ${Number(urgencyCounts.medium || 0)} · Low: ${Number(urgencyCounts.low || 0)}</small>
+    </article>
+    <article class="learning-card">
+      <h3>Roles</h3>
+      <ul>${Object.entries(roleCounts).length ? Object.entries(roleCounts).map(([role, count]) => `<li><strong>${escapeHtml(role)}</strong> ${Number(count || 0)}</li>`).join("") : "<li>No role alerts.</li>"}</ul>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>n8n Webhook</h3>
+      <p>${escapeHtml(webhook.n8n_event_name || "drec.notification.digest")} · ${escapeHtml(webhook.method || "POST")}</p>
+      <small>Future Fly secret: ${escapeHtml(webhook.future_env_secret || "DREC_NOTIFY_WEBHOOK_URL")}</small>
+      <p>${escapeHtml(webhook.auth || "Use a private shared token before live sending.")}</p>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Approval Rules</h3>
+      <ul>${(data.approval_rules || []).map((rule) => `<li>${escapeHtml(rule)}</li>`).join("")}</ul>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Message Queue</h3>
+      ${alerts.length ? alerts.slice(0, 10).map((alert) => `
+        <div class="queue-mini">
+          <strong>${escapeHtml(alert.title || "Alert")}</strong>
+          <span>${escapeHtml(alert.role || "")} · ${escapeHtml(alert.urgency || "")} · ${escapeHtml(alert.screen || "")}</span>
+          <p>${escapeHtml(alert.detail || "")}</p>
+          <small>${escapeHtml(alert.action || "")}</small>
+        </div>
+      `).join("") : '<p class="status-note">No alerts waiting right now.</p>'}
+    </article>
+  `;
+}
+
+async function loadNotifyRail() {
+  const container = document.getElementById("notify-rail");
+  if (!container) return;
+  try {
+    const data = await fetchJson("/notifications/rail-readiness");
+    renderNotifyRail(data);
+  } catch (error) {
+    container.innerHTML = '<p class="status-note">Set the access token to load Notify Rail.</p>';
   }
 }
 
@@ -3052,6 +3109,30 @@ document.getElementById("download-scheduler-pack").addEventListener("click", asy
     message.textContent = "Scheduler activation pack downloaded.";
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download scheduler pack.";
+  }
+});
+
+document.getElementById("refresh-notify-rail")?.addEventListener("click", async () => {
+  const button = document.getElementById("refresh-notify-rail");
+  const message = document.getElementById("meta-message");
+  button.disabled = true;
+  button.textContent = "Refreshing";
+  try {
+    await loadNotifyRail();
+    message.textContent = "Notify Rail refreshed.";
+  } finally {
+    button.disabled = false;
+    button.textContent = "Refresh Notify Rail";
+  }
+});
+
+document.getElementById("download-whatsapp-pack")?.addEventListener("click", async () => {
+  const message = document.getElementById("meta-message");
+  try {
+    await downloadProtectedFile("/notifications/whatsapp-approval-pack.md", "drec-whatsapp-approval-rail-pack.md", "text/markdown");
+    message.textContent = "WhatsApp approval rail pack downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download WhatsApp approval rail pack.";
   }
 });
 

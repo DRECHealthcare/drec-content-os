@@ -131,6 +131,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added Creative Studio style library with brand tokens, style guide export, and learning signals
 - [x] Added Template Studio for static render template readiness and QA handoff
 - [x] Added Video Studio readiness with manual reel SOP pack and DREC Cut future-phase guardrails
+- [x] Added Notify Rail readiness for n8n/WhatsApp approval alerts without live sending
 
 ## Next Engineering Tasks
 
@@ -245,6 +246,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add Creative Studio style library before deeper template/video work
 - [x] Add Template Studio static render readiness before generated image automation
 - [x] Add Video Studio readiness lane before future DREC Cut automation
+- [x] Add Notify Rail dry-run pack before live n8n/WhatsApp approval messages
 - [ ] Connect Meta Graph API credentials
 - [x] Implement real Facebook publish scheduling behind Meta readiness and enable flags
 - [x] Implement Instagram two-step publish worker behind Meta readiness and enable flags

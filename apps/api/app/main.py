@@ -1925,6 +1925,251 @@ async def operations_scheduler_activation_pack(_: None = Depends(require_access_
     )
 
 
+def notify_alert_payload(kind: str, role: str, urgency: str, title: str, detail: str, action: str, ref_id: str = "", screen: str = "dashboard"):
+    return {
+        "kind": kind,
+        "role": role,
+        "urgency": urgency,
+        "title": title,
+        "detail": detail,
+        "action": action,
+        "ref_id": str(ref_id or ""),
+        "screen": screen,
+        "channel": "whatsapp",
+        "n8n_event": f"drec.{kind}",
+        "whatsapp_text": "\n".join(
+            [
+                f"DREC Content OS: {title}",
+                detail,
+                f"Action: {action}",
+                f"Screen: {screen}",
+            ]
+        ),
+    }
+
+
+async def notification_rail_payload():
+    handoff = await publishing_handoff(None)
+    risk = await content_risk_audit_payload()
+    automation = await automation_status_payload()
+    assets = await fetch_asset_list(200)
+    media_assets = await fetch_media_asset_list(200)
+    scheduler_heartbeat = await latest_scheduler_heartbeat()
+    alerts = []
+    for item in (handoff.get("ready_items") or [])[:5]:
+        alerts.append(
+            notify_alert_payload(
+                "publish_ready",
+                "operator",
+                "high",
+                f"Ready to publish: {item.get('channel')} / {item.get('format')}",
+                f"Queue item is scheduled for {item.get('planned_slot') or 'the next planned slot'} and compliance-clear.",
+                "Open Scheduler, copy handoff, publish manually, then Record Published.",
+                item.get("id"),
+                "scheduler",
+            )
+        )
+    for item in (handoff.get("needs_review") or [])[:5]:
+        blockers = ", ".join(item.get("handoff_blockers") or ["Needs review"])
+        alerts.append(
+            notify_alert_payload(
+                "handoff_blocked",
+                "operator",
+                "medium",
+                f"Publishing handoff blocked: {item.get('channel')} / {item.get('format')}",
+                blockers,
+                "Fix the blocker before publishing or Meta dry runs.",
+                item.get("id"),
+                "scheduler",
+            )
+        )
+    for asset in assets[:20]:
+        if asset.get("review_status") != "approved" or asset.get("compliance_status") != "clear":
+            metadata = asset.get("metadata") or {}
+            alerts.append(
+                notify_alert_payload(
+                    "asset_review_needed",
+                    "reviewer",
+                    "medium",
+                    f"Asset needs review: {metadata.get('topic') or asset.get('format')}",
+                    f"Review: {asset.get('review_status')} · Safety: {asset.get('compliance_status')}",
+                    "Open Assets and complete human safety review before queueing.",
+                    asset.get("id"),
+                    "assets",
+                )
+            )
+    for media in media_assets[:20]:
+        if media.get("approval_status") != "approved":
+            alerts.append(
+                notify_alert_payload(
+                    "media_review_needed",
+                    "reviewer",
+                    "low",
+                    f"Media needs approval: {media.get('title') or media.get('media_type')}",
+                    f"Approval: {media.get('approval_status')} · Rights: {media.get('rights_status')}",
+                    "Open Assets and approve or block the media before use.",
+                    media.get("id"),
+                    "assets",
+                )
+            )
+    for item in (risk.get("items") or [])[:8]:
+        if item.get("severity") in {"block", "warn"}:
+            alerts.append(
+                notify_alert_payload(
+                    "risk_attention",
+                    "admin" if item.get("severity") == "block" else "operator",
+                    "high" if item.get("severity") == "block" else "medium",
+                    item.get("title") or "Content risk needs attention",
+                    item.get("detail") or "Review Content Risk Audit.",
+                    item.get("action") or "Open Dashboard and run Content Risk Audit.",
+                    item.get("id"),
+                    "dashboard",
+                )
+            )
+    if scheduler_heartbeat.get("status") != "recent":
+        alerts.append(
+            notify_alert_payload(
+                "scheduler_heartbeat_needed",
+                "admin",
+                "medium",
+                "Dry-run scheduler heartbeat needs attention",
+                scheduler_heartbeat.get("detail") or "No recent GitHub scheduler heartbeat has been recorded.",
+                "Run the GitHub dry-run scheduler and confirm heartbeat evidence.",
+                "scheduler-heartbeat",
+                "meta",
+            )
+        )
+    role_counts = {}
+    urgency_counts = {}
+    for alert in alerts:
+        role_counts[alert["role"]] = role_counts.get(alert["role"], 0) + 1
+        urgency_counts[alert["urgency"]] = urgency_counts.get(alert["urgency"], 0) + 1
+    sample_payload = {
+        "event": "drec.notification.digest",
+        "mode": "dry_run",
+        "generated_at": datetime.utcnow().isoformat() + "Z",
+        "alerts": alerts[:5],
+    }
+    return {
+        "overall_status": "ready_for_dry_run" if alerts else "quiet",
+        "send_status": "manual_pack_only",
+        "alert_count": len(alerts),
+        "role_counts": role_counts,
+        "urgency_counts": urgency_counts,
+        "alerts": alerts[:30],
+        "scheduler_heartbeat": scheduler_heartbeat,
+        "automation_status": automation.get("overall_status"),
+        "webhook_templates": {
+            "n8n_event_name": "drec.notification.digest",
+            "future_env_secret": "DREC_NOTIFY_WEBHOOK_URL",
+            "method": "POST",
+            "auth": "Add a private shared token in n8n before live sending.",
+            "sample_payload": sample_payload,
+        },
+        "approval_rules": [
+            "Never auto-approve content from a WhatsApp reply.",
+            "Use WhatsApp replies as review notes; final state changes must happen in the app or a protected API route.",
+            "Do not send patient-identifiable media or private signed URLs to WhatsApp groups.",
+            "Keep live sending off until one dry-run digest is reviewed.",
+        ],
+        "next_step": (
+            "Review the dry-run alerts and wire the n8n webhook only after the message format is approved."
+            if alerts
+            else "No urgent alerts. Keep the rail in dry-run and review after the next planning/review cycle."
+        ),
+    }
+
+
+@app.get("/notifications/rail-readiness")
+async def notification_rail_readiness(_: None = Depends(require_access_token)):
+    return await notification_rail_payload()
+
+
+@app.get("/notifications/whatsapp-approval-pack.md")
+async def whatsapp_approval_pack(_: None = Depends(require_access_token)):
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    payload = await notification_rail_payload()
+    webhook = payload.get("webhook_templates") or {}
+    sample_payload = json.dumps(webhook.get("sample_payload") or {}, ensure_ascii=False, indent=2)
+    lines = [
+        "# DREC Content OS WhatsApp Approval Rail Pack",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this pack to connect n8n and WhatsApp notifications safely. It does not send messages or approve content by itself.",
+        "",
+        "## Rail Status",
+        "",
+        f"- Overall status: {payload.get('overall_status')}",
+        f"- Send status: {payload.get('send_status')}",
+        f"- Alert count: {payload.get('alert_count')}",
+        f"- Automation status: {payload.get('automation_status')}",
+        "",
+        "## n8n Webhook Plan",
+        "",
+        f"- Event name: {webhook.get('n8n_event_name')}",
+        f"- Method: {webhook.get('method')}",
+        f"- Future Fly secret: `{webhook.get('future_env_secret')}`",
+        f"- Auth: {webhook.get('auth')}",
+        "",
+        "### Sample Dry-Run Payload",
+        "",
+        "```json",
+        sample_payload,
+        "```",
+        "",
+        "## WhatsApp Message Queue",
+        "",
+    ]
+    if not payload.get("alerts"):
+        lines.append("- No alerts are waiting right now.")
+    for index, alert in enumerate(payload.get("alerts") or [], start=1):
+        lines.extend(
+            [
+                f"### {index}. {alert.get('title')}",
+                "",
+                f"- Role: {alert.get('role')}",
+                f"- Urgency: {alert.get('urgency')}",
+                f"- Screen: {alert.get('screen')}",
+                f"- Ref ID: {alert.get('ref_id')}",
+                f"- Detail: {alert.get('detail')}",
+                f"- Action: {alert.get('action')}",
+                "",
+                "Message:",
+                "",
+                "```text",
+                alert.get("whatsapp_text") or "",
+                "```",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## Approval Rules",
+            "",
+            *markdown_list(payload.get("approval_rules")),
+            "",
+            "## n8n Setup Steps",
+            "",
+            "1. Create an n8n workflow with a private webhook trigger.",
+            "2. Add a shared-token check before any WhatsApp node runs.",
+            "3. Send only the `whatsapp_text`, role, urgency, and app screen to the WhatsApp rail.",
+            "4. Route replies into a review note or operator task, not automatic approval.",
+            "5. Review one dry-run digest before setting any future live webhook secret.",
+            "",
+            "## Next Step",
+            "",
+            f"- {payload.get('next_step')}",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-whatsapp-approval-rail-pack.md"'},
+    )
+
+
 @app.get("/operations/launch-evidence.md")
 async def operations_launch_evidence(_: None = Depends(require_access_token)):
     generated_at = datetime.now(timezone.utc).isoformat()

@@ -60,6 +60,8 @@ const requiredRoutes = [
   "GET /meta/credential-intake-pack.md",
   "GET /meta/preflight-audit",
   "GET /meta/preflight-audit.md",
+  "GET /notifications/rail-readiness",
+  "GET /notifications/whatsapp-approval-pack.md",
   "GET /kb/export.csv",
   "GET /kb/context",
   "GET /publish-queue/suggest-slot",
@@ -790,6 +792,41 @@ const requiredSnippets = [
     name: "meta credential intake pack safety",
     file: "main",
     text: "It is a checklist and evidence sheet only",
+  },
+  {
+    name: "notification rail route",
+    file: "main",
+    text: "notification_rail_readiness",
+  },
+  {
+    name: "whatsapp approval pack route",
+    file: "main",
+    text: "whatsapp_approval_pack",
+  },
+  {
+    name: "notification rail no auto approve",
+    file: "main",
+    text: "Never auto-approve content from a WhatsApp reply",
+  },
+  {
+    name: "web notify rail action",
+    file: "web",
+    text: "refresh-notify-rail",
+  },
+  {
+    name: "web whatsapp pack action",
+    file: "web",
+    text: "download-whatsapp-pack",
+  },
+  {
+    name: "web notification rail endpoint",
+    file: "web",
+    text: "/notifications/rail-readiness",
+  },
+  {
+    name: "web whatsapp pack endpoint",
+    file: "web",
+    text: "/notifications/whatsapp-approval-pack.md",
   },
   {
     name: "knowledge context route",
