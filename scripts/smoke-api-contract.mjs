@@ -573,6 +573,26 @@ const requiredSnippets = [
     text: "## Can I Use It Now",
   },
   {
+    name: "launch evidence action links",
+    file: "main",
+    text: "## Evidence Action Links",
+  },
+  {
+    name: "launch evidence scheduler recovery link",
+    file: "main",
+    text: "- Scheduler recovery: `/operations/scheduler-recovery-pack.md`",
+  },
+  {
+    name: "launch evidence meta preflight link",
+    file: "main",
+    text: "- Meta preflight: `/meta/preflight-audit.md`",
+  },
+  {
+    name: "launch evidence rls plan link",
+    file: "main",
+    text: "- Supabase RLS plan: `/security/rls-hardening-plan.md`",
+  },
+  {
     name: "first test kit export",
     file: "main",
     text: "drec-first-test-kit.md",

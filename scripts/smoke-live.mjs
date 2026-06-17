@@ -211,7 +211,15 @@ const checks = [
     auth: true,
     validate: async (res) => {
       const text = await res.text();
-      return text.includes("# DREC Content OS Launch Evidence") && text.includes("## Can I Use It Now") && text.includes("## Manual Test Path") && text.includes("## Safe Go-Live Rule");
+      return text.includes("# DREC Content OS Launch Evidence")
+        && text.includes("## Can I Use It Now")
+        && text.includes("## Evidence Action Links")
+        && text.includes("Doctor reply inbox")
+        && text.includes("Production reply inbox")
+        && text.includes("Meta preflight")
+        && text.includes("Supabase RLS plan")
+        && text.includes("## Manual Test Path")
+        && text.includes("## Safe Go-Live Rule");
     },
   },
   {

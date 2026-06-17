@@ -121,6 +121,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added Daily Ops action links for runbook, QA, doctor, production, pre-schedule, and scheduler recovery flows
 - [x] Added Operator Pack action links for daily runbook, QA, doctor, production, Meta, Supabase, and scheduler recovery flows
 - [x] Added Publishing Run Sheet action links for approval, production, schedule audit, scheduler recovery, and metrics closeout
+- [x] Added Launch Evidence action links for manual cycle proof, scheduler recovery, Meta preflight, and Supabase RLS proof
 - [x] Added Meta OAuth guide endpoint and UI card for future credential connection
 - [x] Replaced browser prompt access-token entry with an inline token panel for app/browser compatibility
 - [x] Added session-only token storage by default, plus explicit Remember and Clear controls
