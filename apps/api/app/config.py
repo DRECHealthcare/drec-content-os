@@ -9,6 +9,10 @@ class Settings(BaseSettings):
     supabase_service_role_key: Optional[str] = None
     supabase_api_key: Optional[str] = None
     drec_access_token: Optional[str] = None
+    drec_viewer_token: Optional[str] = None
+    drec_reviewer_token: Optional[str] = None
+    drec_operator_token: Optional[str] = None
+    drec_admin_token: Optional[str] = None
     meta_graph_version: str = "v23.0"
     meta_app_id: Optional[str] = None
     meta_app_secret: Optional[str] = None

@@ -2,6 +2,8 @@ import { readFile } from "node:fs/promises";
 
 const files = {
   main: "apps/api/app/main.py",
+  auth: "apps/api/app/auth.py",
+  config: "apps/api/app/config.py",
   models: "apps/api/app/models.py",
   schema: "supabase/schema.sql",
   web: "apps/web/app.js",
@@ -14,6 +16,7 @@ const requiredRoutes = [
   "GET /health",
   "GET /workflow/status",
   "GET /security/status",
+  "GET /security/access-policy",
   "GET /security/rls-hardening-plan.md",
   "GET /automation/status",
   "GET /operations/launch-readiness",
@@ -217,6 +220,21 @@ const requiredSnippets = [
     name: "security service role readiness",
     file: "main",
     text: "ready_for_rls_hardening",
+  },
+  {
+    name: "security access policy route",
+    file: "main",
+    text: "/security/access-policy",
+  },
+  {
+    name: "role token auth compatibility",
+    file: "config",
+    text: "drec_viewer_token",
+  },
+  {
+    name: "role token scope map",
+    file: "auth",
+    text: "ROLE_SCOPES",
   },
   {
     name: "security rls hardening plan route",
@@ -722,6 +740,16 @@ const requiredSnippets = [
     name: "web automation gate card",
     file: "web",
     text: "automation-count",
+  },
+  {
+    name: "web access role card",
+    file: "web",
+    text: "access-role-count",
+  },
+  {
+    name: "web access policy endpoint",
+    file: "web",
+    text: "/security/access-policy",
   },
   {
     name: "web operations snapshot action",

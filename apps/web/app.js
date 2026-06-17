@@ -72,6 +72,7 @@ function refreshProtectedData() {
   loadMetaReadiness();
   loadMetaSetupChecklist();
   loadLaunchReadiness();
+  loadAccessPolicy();
 }
 
 function showTokenPanel() {
@@ -594,6 +595,18 @@ async function loadLaunchReadiness() {
   } catch {
     document.getElementById("launch-count").textContent = accessToken() ? "API access failed" : "Set access token";
     container.innerHTML = "";
+  }
+}
+
+async function loadAccessPolicy() {
+  const target = document.getElementById("access-role-count");
+  if (!target) return;
+  try {
+    const data = await fetchJson("/security/access-policy");
+    const roles = data.configured_roles || [];
+    target.textContent = `${data.current_role || "unknown"} · ${data.mode || "token"} · ${roles.length ? roles.join("/") : "admin only"}`;
+  } catch {
+    target.textContent = accessToken() ? "Access check failed" : "Set access token";
   }
 }
 
@@ -3209,4 +3222,5 @@ loadPublishQueue();
 loadMetaReadiness();
 loadMetaSetupChecklist();
 loadOutcomes();
+loadAccessPolicy();
 updateTokenButton();

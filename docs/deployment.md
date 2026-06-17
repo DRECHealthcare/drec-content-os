@@ -23,13 +23,21 @@ fly launch --no-deploy
 fly secrets set DATABASE_URL="postgresql://..."
 fly secrets set SUPABASE_URL="https://..."
 fly secrets set SUPABASE_SERVICE_ROLE_KEY="..."
+fly secrets set DREC_ACCESS_TOKEN="..."
 fly deploy
 ```
+
+Optional role-token hardening can be added without breaking the existing access
+token. Set `DREC_VIEWER_TOKEN`, `DREC_REVIEWER_TOKEN`, `DREC_OPERATOR_TOKEN`,
+and `DREC_ADMIN_TOKEN` as Fly secrets, then check `/security/access-policy` or
+the Dashboard `Access Role` card. The existing `DREC_ACCESS_TOKEN` remains
+accepted as admin for backward compatibility.
 
 The API exposes:
 
 - `GET /health`
 - `GET /loop-status`
+- `GET /security/access-policy`
 - `GET /operations/launch-evidence.md`
 - `POST /operations/scheduler-heartbeat`
 - `GET/POST /kb`

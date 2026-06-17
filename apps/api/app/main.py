@@ -12,7 +12,7 @@ from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
-from .auth import require_access_token
+from .auth import access_policy_payload, require_access_token
 from .config import settings
 from .compliance import check_text
 from .db import close_db, connect_db, fetch_row, fetch_rows
@@ -698,6 +698,11 @@ def security_status_payload():
 @app.get("/security/status")
 async def security_status(_: None = Depends(require_access_token)):
     return security_status_payload()
+
+
+@app.get("/security/access-policy")
+async def security_access_policy(session: dict = Depends(require_access_token)):
+    return access_policy_payload(session.get("role", "none"))
 
 
 @app.get("/security/rls-hardening-plan.md")
