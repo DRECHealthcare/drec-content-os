@@ -67,6 +67,7 @@ Stage 1 is now a working thin-core workflow:
 - Use the Assets Rewrite Pack to prepare safer suggested captions for pending assets without auto-approving or changing saved content
 - Apply a suggested rewrite to a draft asset while keeping human approval, queueing, scheduling, and publishing as separate gates
 - Apply all detector-clear safe rewrites in one reviewed batch while still keeping approval, queueing, scheduling, and publishing locked behind human gates
+- Use the First Cycle Handoff Pack to move from safe rewrites through human approval, queueing, scheduling, manual handoff, and metrics without bypassing safety gates
 - Use Creative Studio to review the DREC style library, brand tokens, KB style rules, safety rules, and style-learning signals before drafting or approving assets
 - Use Template Studio to map static assets to DREC layout templates, render rules, brand tokens, and final QA before artwork handoff
 - Use Video Studio to review reel readiness, approved video media, blockers, manual SOP steps, and the future DREC Cut lock before production handoff

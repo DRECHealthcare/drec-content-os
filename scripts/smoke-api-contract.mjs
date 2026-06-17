@@ -43,6 +43,8 @@ const requiredRoutes = [
   "GET /operations/asset-review-session.md",
   "GET /operations/asset-rewrite-pack",
   "GET /operations/asset-rewrite-pack.md",
+  "GET /operations/first-cycle-handoff",
+  "GET /operations/first-cycle-handoff.md",
   "GET /operations/asset-review-decisions.csv",
   "POST /operations/import-asset-review-decisions",
   "GET /operations/review-log.md",
@@ -600,6 +602,21 @@ const requiredSnippets = [
     name: "asset rewrite pack safety",
     file: "main",
     text: "suggested_rewrite_only",
+  },
+  {
+    name: "first cycle handoff route",
+    file: "main",
+    text: "first_cycle_handoff_payload",
+  },
+  {
+    name: "first cycle handoff export",
+    file: "main",
+    text: "drec-first-cycle-handoff-pack.md",
+  },
+  {
+    name: "first cycle handoff safety",
+    file: "main",
+    text: "manual_safe_sequence",
   },
   {
     name: "asset rewrite apply route",
@@ -1500,6 +1517,21 @@ const requiredSnippets = [
     name: "web asset rewrite pack loader",
     file: "web",
     text: "loadAssetRewritePack",
+  },
+  {
+    name: "web first cycle handoff action",
+    file: "web",
+    text: "download-first-cycle-handoff",
+  },
+  {
+    name: "web first cycle handoff loader",
+    file: "web",
+    text: "loadFirstCycleHandoff",
+  },
+  {
+    name: "web first cycle handoff endpoint",
+    file: "web",
+    text: "/operations/first-cycle-handoff",
   },
   {
     name: "web asset rewrite apply action",

@@ -4680,6 +4680,159 @@ async def operations_asset_rewrite_pack_markdown(_: None = Depends(require_acces
     )
 
 
+async def first_cycle_handoff_payload():
+    loop = await loop_status()
+    workflow = build_workflow_guidance(loop)
+    review = await asset_review_session_payload()
+    rewrite = await asset_rewrite_pack_payload()
+    queue_items = await fetch_publish_queue_items(200)
+    ready_queue_items = [item for item in queue_items if not queue_item_blockers(item)]
+    clear_rewrites = [
+        item for item in rewrite.get("rewrite_items", [])
+        if item.get("after_status") == "clear"
+    ]
+    can_approve = review.get("can_approve_count", 0)
+    ready_to_queue = review.get("ready_to_queue_count", 0)
+    queue_total = sum(item.get("count", 0) for item in loop.get("queue") or [])
+    stages = [
+        {
+            "key": "safe_rewrite",
+            "status": "ready" if clear_rewrites else "done" if not rewrite.get("rewrite_count") else "needs_review",
+            "label": "Apply detector-clear safe rewrites",
+            "detail": f"{len(clear_rewrites)} rewrite candidate(s) become detector-clear, still requiring human approval.",
+            "action": "Use Apply All Safe Rewrites, then refresh Assets.",
+            "screen": "assets",
+        },
+        {
+            "key": "human_approval",
+            "status": "ready" if can_approve else "waiting",
+            "label": "Human safety approval",
+            "detail": f"{can_approve} asset(s) can be safety-cleared and approved after human review.",
+            "action": "Read the review notes, mark Safety Clear, then Approve only if meaning is safe.",
+            "screen": "assets",
+        },
+        {
+            "key": "queue",
+            "status": "ready" if ready_to_queue else "waiting",
+            "label": "Queue approved assets",
+            "detail": f"{ready_to_queue} approved, compliance-clear asset(s) are ready to queue.",
+            "action": "Use Queue Ready Assets when at least one approved asset exists.",
+            "screen": "assets",
+        },
+        {
+            "key": "schedule",
+            "status": "ready" if queue_total else "waiting",
+            "label": "Schedule first manual post",
+            "detail": f"{queue_total} queue item(s) exist.",
+            "action": "Open Scheduler, choose the next slot, then build publishing handoff.",
+            "screen": "scheduler",
+        },
+        {
+            "key": "handoff",
+            "status": "ready" if ready_queue_items else "waiting",
+            "label": "Manual publishing handoff",
+            "detail": f"{len(ready_queue_items)} item(s) have no handoff blockers.",
+            "action": "Use Publishing Handoff, publish manually, then record the post ID.",
+            "screen": "scheduler",
+        },
+    ]
+    first_open = next((stage for stage in stages if stage.get("status") in {"ready", "needs_review", "waiting"}), stages[-1])
+    return {
+        "phase": "first_cycle_handoff",
+        "mode": "manual_safe_sequence",
+        "next_action": workflow.get("next_action"),
+        "recommended_step": first_open,
+        "summary": {
+            "active_assets": review.get("active_asset_count", 0),
+            "safe_rewrite_candidates": len(clear_rewrites),
+            "can_approve_after_human_review": can_approve,
+            "ready_to_queue": ready_to_queue,
+            "queue_total": queue_total,
+            "handoff_ready": len(ready_queue_items),
+        },
+        "stages": stages,
+        "safety_rules": [
+            "Safe rewrites may update draft captions, but they do not approve, queue, schedule, or publish.",
+            "Human review must confirm the Mandarin meaning and medical-safety framing before approval.",
+            "Queue only approved assets with compliance_status clear.",
+            "Keep Meta publishing manual until Meta credentials and service-role security gates are ready.",
+        ],
+        "links": {
+            "asset_review_session": "/operations/asset-review-session.md",
+            "asset_rewrite_pack": "/operations/asset-rewrite-pack.md",
+            "review_to_schedule_pack": "/operations/review-to-schedule-pack.md",
+            "publishing_run_sheet": "/operations/publishing-run-sheet.md",
+            "operator_pack": "/operations/operator-pack.md",
+        },
+    }
+
+
+@app.get("/operations/first-cycle-handoff")
+async def operations_first_cycle_handoff(_: None = Depends(require_access_token)):
+    return await first_cycle_handoff_payload()
+
+
+@app.get("/operations/first-cycle-handoff.md")
+async def operations_first_cycle_handoff_markdown(_: None = Depends(require_access_token)):
+    payload = await first_cycle_handoff_payload()
+    generated_at = datetime.now(timezone.utc).isoformat()
+    summary = payload.get("summary") or {}
+    stage_lines = []
+    for index, stage in enumerate(payload.get("stages") or [], start=1):
+        stage_lines.extend(
+            [
+                f"### {index}. {stage.get('label')}",
+                "",
+                f"- Status: {stage.get('status')}",
+                f"- Detail: {stage.get('detail')}",
+                f"- Action: {stage.get('action')}",
+                f"- Screen: {stage.get('screen')}",
+                "",
+            ]
+        )
+    link_lines = [
+        f"- {label.replace('_', ' ').title()}: `{path}`"
+        for label, path in (payload.get("links") or {}).items()
+    ]
+    lines = [
+        "# DREC Content OS First Cycle Handoff Pack",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this pack to move the first content cycle from draft assets toward manual publishing without bypassing safety gates.",
+        "",
+        "## Summary",
+        "",
+        f"- Active assets: {summary.get('active_assets')}",
+        f"- Safe rewrite candidates: {summary.get('safe_rewrite_candidates')}",
+        f"- Can approve after human review: {summary.get('can_approve_after_human_review')}",
+        f"- Ready to queue: {summary.get('ready_to_queue')}",
+        f"- Queue total: {summary.get('queue_total')}",
+        f"- Handoff ready: {summary.get('handoff_ready')}",
+        "",
+        "## Recommended Next Step",
+        "",
+        f"- {((payload.get('recommended_step') or {}).get('label'))}: {((payload.get('recommended_step') or {}).get('action'))}",
+        "",
+        "## Manual Sequence",
+        "",
+        *stage_lines,
+        "## Safety Rules",
+        "",
+        *markdown_list(payload.get("safety_rules"), "- Human safety review required."),
+        "",
+        "## Related Packs",
+        "",
+        *link_lines,
+        "",
+    ]
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-first-cycle-handoff-pack.md"'},
+    )
+
+
 @app.get("/operations/asset-review-decisions.csv")
 async def operations_asset_review_decisions_csv(_: None = Depends(require_access_token)):
     assets = await fetch_asset_list(200)
