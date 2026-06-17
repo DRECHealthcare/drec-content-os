@@ -33,6 +33,8 @@ const checks = [
         && text.includes("download-doctor-decision-worksheet")
         && text.includes("download-asset-media-attachments")
         && text.includes("download-production-design-worksheet")
+        && text.includes("preview-production-design-worksheet")
+        && text.includes("import-production-design-worksheet")
         && text.includes("download-review-queue-decisions")
         && text.includes("preview-review-queue-decisions")
         && text.includes("import-review-queue-decisions");
@@ -47,6 +49,7 @@ const checks = [
       return text.includes("/operations/doctor-decision-worksheet.csv")
         && text.includes("/operations/import-asset-media-attachments")
         && text.includes("/operations/production-design-worksheet.csv")
+        && text.includes("/operations/import-production-design-worksheet")
         && text.includes("/operations/import-review-queue-decisions")
         && text.includes("renderReviewQueueDecisionPreview");
     },
@@ -602,6 +605,29 @@ const checks = [
     validate: async (res) => {
       const data = await res.json();
       return data.dry_run === true && data.skipped_count === 1 && data.skipped?.[0]?.reason === "Asset not found.";
+    },
+  },
+  {
+    name: "Production design worksheet import dry run",
+    url: `${apiBase}/operations/import-production-design-worksheet`,
+    method: "POST",
+    auth: true,
+    body: () => {
+      const form = new FormData();
+      const csv = [
+        "asset_id,new_media_urls,visual_qa_status,rights_note,producer_name,production_notes",
+        "00000000-0000-0000-0000-000000000000,https://example.com/design.jpg,pending,Dry-run only,Smoke Designer,Dry-run design worksheet",
+      ].join("\n");
+      form.append("file", new Blob([csv], { type: "text/csv" }), "production-design-worksheet-smoke.csv");
+      form.append("dry_run", "true");
+      return form;
+    },
+    validate: async (res) => {
+      const data = await res.json();
+      return data.source === "production_design_worksheet"
+        && data.dry_run === true
+        && data.skipped_count === 1
+        && data.skipped?.[0]?.reason === "Asset not found.";
     },
   },
   {

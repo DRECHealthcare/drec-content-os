@@ -3094,6 +3094,29 @@ async function uploadAssetMediaAttachments({ dryRun }) {
   }
 }
 
+async function uploadProductionDesignWorksheet({ dryRun }) {
+  const message = document.getElementById("media-message");
+  const fileInput = document.getElementById("production-design-worksheet-file");
+  const file = fileInput?.files?.[0];
+  if (!file) {
+    message.textContent = "Choose a production design worksheet CSV first.";
+    return;
+  }
+  const body = new FormData();
+  body.append("file", file);
+  body.append("dry_run", dryRun ? "true" : "false");
+  message.textContent = dryRun ? "Previewing design worksheet..." : "Importing design worksheet...";
+  try {
+    const data = await fetchForm("/operations/import-production-design-worksheet", body);
+    if (!dryRun) fileInput.value = "";
+    message.textContent = data.message || (dryRun ? "Design worksheet previewed." : "Design worksheet imported.");
+    renderAssetMediaAttachmentPreview(data);
+    if (!dryRun) await Promise.all([loadAssets(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadPreScheduleGate(), loadLoopStatus()]);
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : dryRun ? "Could not preview design worksheet." : "Could not import design worksheet.";
+  }
+}
+
 document.getElementById("preview-asset-review-decisions")?.addEventListener("click", async () => {
   await uploadAssetReviewDecisions({ dryRun: true });
 });
@@ -3108,6 +3131,14 @@ document.getElementById("preview-asset-media-attachments")?.addEventListener("cl
 
 document.getElementById("import-asset-media-attachments")?.addEventListener("click", async () => {
   await uploadAssetMediaAttachments({ dryRun: false });
+});
+
+document.getElementById("preview-production-design-worksheet")?.addEventListener("click", async () => {
+  await uploadProductionDesignWorksheet({ dryRun: true });
+});
+
+document.getElementById("import-production-design-worksheet")?.addEventListener("click", async () => {
+  await uploadProductionDesignWorksheet({ dryRun: false });
 });
 
 document.getElementById("plan-form").addEventListener("submit", async (event) => {

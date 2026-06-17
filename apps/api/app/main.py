@@ -5919,6 +5919,22 @@ async def import_asset_media_attachments(
     }
 
 
+@app.post("/operations/import-production-design-worksheet")
+async def import_production_design_worksheet(
+    file: UploadFile = File(...),
+    dry_run: bool = Form(True),
+    session: dict = Depends(require_review_access),
+):
+    result = await import_asset_media_attachments(file=file, dry_run=dry_run, session=session)
+    result["source"] = "production_design_worksheet"
+    result["message"] = (
+        f"Previewed {result.get('planned_count', 0)} production design worksheet row(s), {result.get('skipped_count', 0)} skipped."
+        if dry_run
+        else f"Imported {result.get('imported_count', 0)} production design worksheet row(s), {result.get('skipped_count', 0)} skipped."
+    )
+    return result
+
+
 def normalize_review_safety_decision(value: str | None):
     text = (value or "").strip().lower().replace("_", " ").replace("-", " ")
     if not text:

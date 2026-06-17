@@ -61,6 +61,7 @@ const requiredRoutes = [
   "GET /operations/today-runbook.md",
   "GET /operations/asset-media-attachments.csv",
   "POST /operations/import-asset-media-attachments",
+  "POST /operations/import-production-design-worksheet",
   "GET /operations/asset-review-decisions.csv",
   "POST /operations/import-asset-review-decisions",
   "GET /operations/review-log.md",
@@ -776,6 +777,11 @@ const requiredSnippets = [
     name: "asset media attachment import route",
     file: "main",
     text: "import_asset_media_attachments",
+  },
+  {
+    name: "production design worksheet import route",
+    file: "main",
+    text: "import_production_design_worksheet",
   },
   {
     name: "asset media attachment import dry run",
@@ -1733,6 +1739,16 @@ const requiredSnippets = [
     text: "download-production-design-worksheet",
   },
   {
+    name: "web production design worksheet preview action",
+    file: "web",
+    text: "preview-production-design-worksheet",
+  },
+  {
+    name: "web production design worksheet import action",
+    file: "web",
+    text: "import-production-design-worksheet",
+  },
+  {
     name: "web post approval production loader",
     file: "web",
     text: "loadPostApprovalProduction",
@@ -1746,6 +1762,11 @@ const requiredSnippets = [
     name: "web production design worksheet endpoint",
     file: "web",
     text: "/operations/production-design-worksheet.csv",
+  },
+  {
+    name: "web production design worksheet import endpoint",
+    file: "web",
+    text: "/operations/import-production-design-worksheet",
   },
   {
     name: "web asset rewrite pack action",
