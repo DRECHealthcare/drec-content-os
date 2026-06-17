@@ -2549,6 +2549,41 @@ const requiredSnippets = [
     text: "doctor-review-polish",
   },
   {
+    name: "web doctor send queue board",
+    file: "web",
+    text: "doctor-send-queue",
+  },
+  {
+    name: "web doctor send queue loader",
+    file: "web",
+    text: "loadDoctorSendQueue",
+  },
+  {
+    name: "web doctor send queue endpoint",
+    file: "web",
+    text: "/operations/doctor-review-bridge",
+  },
+  {
+    name: "web doctor send queue copy",
+    file: "web",
+    text: "data-copy-doctor-send",
+  },
+  {
+    name: "web doctor reply template copy",
+    file: "web",
+    text: "data-copy-doctor-reply-template",
+  },
+  {
+    name: "web doctor send queue batch copy",
+    file: "web",
+    text: "data-copy-doctor-send-all",
+  },
+  {
+    name: "web doctor send queue batch helper",
+    file: "web",
+    text: "doctorSendBatchText",
+  },
+  {
     name: "web doctor review polish loader",
     file: "web",
     text: "loadDoctorReviewPolishPack",

@@ -7,6 +7,7 @@ let editingQueueItem = null;
 let latestMetaSetupCommands = [];
 let latestMetaOAuthUrl = "";
 let latestSprintItems = [];
+let latestDoctorSendItems = [];
 let latestDoctorPolishItems = [];
 let latestProductionItems = [];
 
@@ -39,7 +40,7 @@ document.querySelectorAll("nav button").forEach((button) => {
     if (screen === "creative") loadStyleLibrary();
     if (screen === "templates") loadTemplateStudio();
     if (screen === "video") loadVideoStudio();
-    if (screen === "assets") Promise.all([loadAssets(), loadMediaAssets(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack()]);
+    if (screen === "assets") Promise.all([loadAssets(), loadMediaAssets(), loadDoctorSendQueue(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack()]);
     if (screen === "outcomes") loadOutcomes();
     if (screen === "learning") {
       loadLearningSummary();
@@ -1806,6 +1807,96 @@ function doctorPolishBatchText(items) {
   ].join("\n\n");
 }
 
+function doctorSendText(item) {
+  return [
+    `Doctor review: ${item.topic || "Untitled asset"}`,
+    `Asset ID: ${item.asset_id || ""}`,
+    `Channel / format: ${item.channel || ""} / ${item.format || ""}`,
+    "",
+    "Copy to review:",
+    item.copy_to_review || "No copy available.",
+    "",
+    "Reply format:",
+    item.reply_template || "",
+    "",
+    "Safe use rule:",
+    item.safe_use_rule || "Only import approval when Decision: approve and Safety: clear are explicit.",
+  ].join("\n");
+}
+
+function doctorReplyTemplateText(item) {
+  return item.reply_template || [
+    `Asset ID: ${item.asset_id || ""}`,
+    "Decision: approve / changes_needed / reject",
+    "Safety: clear / needs_edit / unsafe",
+    "Notes:",
+  ].join("\n");
+}
+
+function doctorSendBatchText(items) {
+  return [
+    "DREC Doctor Send Queue",
+    `Items: ${items.length}`,
+    "Please review the copy below. Approve only if the medical meaning is safe, educational, non-diagnostic, and non-guaranteed.",
+    "Reply with Decision: approve and Safety: clear only when the asset is safe to move forward.",
+    "This copied text does not approve, attach media, queue, schedule, publish, or send Meta requests.",
+    "",
+    ...items.map((item, index) => [
+      `--- ${index + 1} / ${items.length} ---`,
+      doctorSendText(item),
+    ].join("\n")),
+  ].join("\n\n");
+}
+
+function renderDoctorSendQueue(data) {
+  const container = document.getElementById("doctor-send-queue");
+  if (!container) return;
+  const items = data.bridge_items || [];
+  latestDoctorSendItems = items;
+  const itemCards = items.map((item, index) => `
+    <article class="learning-card sprint-item-card">
+      <h4>${index + 1}. ${escapeHtml(item.topic || "Untitled asset")}</h4>
+      <small>${escapeHtml(item.channel || "channel")} / ${escapeHtml(item.format || "format")} · ${escapeHtml(item.asset_id || "")}</small>
+      <p>${escapeHtml((item.copy_to_review || "").slice(0, 260))}${(item.copy_to_review || "").length > 260 ? "..." : ""}</p>
+      <div class="learning-actions">
+        <button type="button" data-copy-doctor-send="${escapeHtml(item.asset_id || "")}">Copy Doctor</button>
+        <button type="button" data-copy-doctor-reply-template="${escapeHtml(item.asset_id || "")}">Copy Reply</button>
+      </div>
+    </article>
+  `).join("");
+  container.innerHTML = `
+    <article class="learning-card">
+      <h3>Doctor Send Queue</h3>
+      <p>${escapeHtml(data.bridge_item_count || items.length)}</p>
+      <small>${escapeHtml(data.mode || "manual_doctor_review")}</small>
+    </article>
+    <article class="learning-card">
+      <h3>Review Status</h3>
+      <p>${escapeHtml(data.ready_for_review || 0)}</p>
+      <small>doctor approval required</small>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Copy To Doctor</h3>
+      <p>${escapeHtml(data.paste_back_template || "Copy the review text, then paste back the doctor's explicit decision and safety status.")}</p>
+      <div class="learning-actions sprint-bulk-actions">
+        <button type="button" data-copy-doctor-send-all>Copy All Doctor</button>
+      </div>
+      <div class="sprint-board">${itemCards || '<p class="status-note">No doctor send items are ready yet.</p>'}</div>
+    </article>
+  `;
+}
+
+async function loadDoctorSendQueue() {
+  const container = document.getElementById("doctor-send-queue");
+  if (!container) return;
+  try {
+    const data = await fetchJson("/operations/doctor-review-bridge");
+    renderDoctorSendQueue(data);
+  } catch (error) {
+    container.innerHTML = '<p class="status-note">Set the access token to load the doctor send queue.</p>';
+  }
+}
+
 function renderDoctorReviewPolishPack(data) {
   const container = document.getElementById("doctor-review-polish");
   if (!container) return;
@@ -2225,7 +2316,7 @@ document.getElementById("asset-rewrite-pack")?.addEventListener("click", async (
     try {
       const data = await fetchJson("/assets/apply-safe-rewrites", { method: "POST" });
       message.textContent = data.message || "Safe rewrites applied. Human approval is still required.";
-      await Promise.all([loadAssets(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
+      await Promise.all([loadAssets(), loadDoctorSendQueue(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
     } catch (error) {
       message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not apply safe rewrites.";
       allButton.disabled = false;
@@ -2255,7 +2346,7 @@ document.getElementById("asset-rewrite-pack")?.addEventListener("click", async (
       }),
     });
     message.textContent = data.message || "Rewrite applied. Human approval is still required.";
-    await Promise.all([loadAssets(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
+    await Promise.all([loadAssets(), loadDoctorSendQueue(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not apply rewrite.";
     button.disabled = false;
@@ -2279,7 +2370,7 @@ async function runAssetBatchAction(button, path, label) {
       `${data.skipped || 0} skipped`,
     ].filter(Boolean).join(", ");
     message.textContent = `${label} complete: ${summary}.`;
-    await Promise.all([loadAssets(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadPublishQueue(), loadLoopStatus(), loadLearningSummary()]);
+    await Promise.all([loadAssets(), loadDoctorSendQueue(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadPublishQueue(), loadLoopStatus(), loadLearningSummary()]);
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : `${label} failed.`;
   } finally {
@@ -3473,7 +3564,7 @@ async function uploadAssetReviewDecisions({ dryRun }) {
     if (!dryRun) fileInput.value = "";
     message.textContent = data.message || (dryRun ? "Review decisions previewed." : "Review decisions imported.");
     renderAssetReviewDecisionPreview(data);
-    if (!dryRun) await Promise.all([loadAssets(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
+    if (!dryRun) await Promise.all([loadAssets(), loadDoctorSendQueue(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : dryRun ? "Could not preview review decisions." : "Could not import review decisions.";
   }
@@ -3501,7 +3592,7 @@ async function importDoctorReplies({ dryRun }) {
     if (!dryRun) textInput.value = "";
     message.textContent = data.message || (dryRun ? "Doctor reply previewed." : "Doctor reply imported.");
     renderAssetReviewDecisionPreview(data);
-    if (!dryRun) await Promise.all([loadAssets(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
+    if (!dryRun) await Promise.all([loadAssets(), loadDoctorSendQueue(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : dryRun ? "Could not preview doctor reply." : "Could not import doctor reply.";
   }
@@ -3524,7 +3615,7 @@ async function uploadAssetMediaAttachments({ dryRun }) {
     if (!dryRun) fileInput.value = "";
     message.textContent = data.message || (dryRun ? "Media attachments previewed." : "Media attachments imported.");
     renderAssetMediaAttachmentPreview(data);
-    if (!dryRun) await Promise.all([loadAssets(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadPreScheduleGate(), loadLoopStatus()]);
+    if (!dryRun) await Promise.all([loadAssets(), loadDoctorSendQueue(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadPreScheduleGate(), loadLoopStatus()]);
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : dryRun ? "Could not preview media attachments." : "Could not import media attachments.";
   }
@@ -3552,7 +3643,7 @@ async function importProductionReplies({ dryRun }) {
     if (!dryRun) textInput.value = "";
     message.textContent = data.message || (dryRun ? "Production reply previewed." : "Production reply imported.");
     renderAssetMediaAttachmentPreview(data);
-    if (!dryRun) await Promise.all([loadAssets(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadPreScheduleGate(), loadLoopStatus()]);
+    if (!dryRun) await Promise.all([loadAssets(), loadDoctorSendQueue(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadPreScheduleGate(), loadLoopStatus()]);
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : dryRun ? "Could not preview production reply." : "Could not import production reply.";
   }
@@ -3575,7 +3666,7 @@ async function uploadProductionDesignWorksheet({ dryRun }) {
     if (!dryRun) fileInput.value = "";
     message.textContent = data.message || (dryRun ? "Design worksheet previewed." : "Design worksheet imported.");
     renderAssetMediaAttachmentPreview(data);
-    if (!dryRun) await Promise.all([loadAssets(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadPreScheduleGate(), loadLoopStatus()]);
+    if (!dryRun) await Promise.all([loadAssets(), loadDoctorSendQueue(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadPreScheduleGate(), loadLoopStatus()]);
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : dryRun ? "Could not preview design worksheet." : "Could not import design worksheet.";
   }
@@ -3694,7 +3785,7 @@ document.getElementById("save-all-assets").addEventListener("click", async () =>
   try {
     const data = await fetchJson(`/briefs/draft-assets?limit=${encodeURIComponent(limit)}`, { method: "POST" });
     message.textContent = `Assets ready: ${data.created || 0} created, ${data.reused || 0} reused, ${data.skipped || 0} skipped.`;
-    await Promise.all([loadBriefs(), loadAssets(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
+    await Promise.all([loadBriefs(), loadAssets(), loadDoctorSendQueue(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
     if ((data.created || data.reused || 0) > 0) showScreen("assets");
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not save all draft assets.";
@@ -3753,7 +3844,7 @@ document.getElementById("brief-items").addEventListener("click", async (event) =
     try {
       const data = await fetchJson(`/briefs/${assetButton.dataset.draftAssetBrief}/draft-asset`, { method: "POST" });
       document.getElementById("plan-message").textContent = data.reused ? "Existing draft asset opened." : "Draft asset saved.";
-      await Promise.all([loadBriefs(), loadAssets(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
+      await Promise.all([loadBriefs(), loadAssets(), loadDoctorSendQueue(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
       showScreen("assets");
     } catch (error) {
       document.getElementById("plan-message").textContent = error.message === "Access token required" ? "Set the access token first." : "Could not save draft asset.";
@@ -3884,7 +3975,7 @@ document.getElementById("compose-form").addEventListener("submit", async (event)
     renderDraft(draft, compliance);
     saveAssetButton.disabled = !draft.assetId;
     queueButton.disabled = !draft.assetId || compliance.status === "flagged";
-    await Promise.all([loadBriefs(), loadAssets(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
+    await Promise.all([loadBriefs(), loadAssets(), loadDoctorSendQueue(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
   } catch (error) {
     renderDraft(draft, null);
     document.getElementById("compose-result").insertAdjacentHTML(
@@ -3907,7 +3998,7 @@ document.getElementById("compose-result").addEventListener("click", (event) => {
 
 document.getElementById("save-asset").addEventListener("click", async () => {
   if (!currentDraft) return;
-  await Promise.all([loadAssets(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus()]);
+  await Promise.all([loadAssets(), loadDoctorSendQueue(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus()]);
   showScreen("assets");
 });
 
@@ -4022,7 +4113,7 @@ document.getElementById("asset-items").addEventListener("click", async (event) =
         method: "PATCH",
         body: JSON.stringify({ compliance_status: status, reason }),
       });
-      await Promise.all([loadAssets(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
+      await Promise.all([loadAssets(), loadDoctorSendQueue(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
     } catch {
       complianceButton.disabled = false;
       complianceButton.textContent = originalText;
@@ -4051,7 +4142,7 @@ document.getElementById("asset-items").addEventListener("click", async (event) =
         method: "PATCH",
         body: JSON.stringify({ review_status: status, reason }),
       });
-      await Promise.all([loadAssets(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
+      await Promise.all([loadAssets(), loadDoctorSendQueue(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
     } catch {
       statusButton.disabled = false;
       statusButton.textContent = originalText;
@@ -4134,24 +4225,24 @@ document.getElementById("cancel-queue-edit").addEventListener("click", () => {
 });
 
 document.addEventListener("click", async (event) => {
-  const productionAllButton = event.target.closest("[data-copy-production-design-all]");
-  if (productionAllButton) {
+  const productionDesignAllButton = event.target.closest("[data-copy-production-design-all]");
+  if (productionDesignAllButton) {
     const message = document.getElementById("media-message") || document.getElementById("asset-message");
     if (!latestProductionItems.length) {
       if (message) message.textContent = "No production items to copy yet.";
       return;
     }
-    const original = productionAllButton.textContent;
-    productionAllButton.disabled = true;
-    productionAllButton.textContent = "Copying";
+    const original = productionDesignAllButton.textContent;
+    productionDesignAllButton.disabled = true;
+    productionDesignAllButton.textContent = "Copying";
     try {
       await navigator.clipboard.writeText(productionBatchText(latestProductionItems));
       if (message) message.textContent = "All production design text copied.";
     } catch {
       if (message) message.textContent = "Browser blocked clipboard copy. Download the production pack instead.";
     } finally {
-      productionAllButton.disabled = false;
-      productionAllButton.textContent = original;
+      productionDesignAllButton.disabled = false;
+      productionDesignAllButton.textContent = original;
     }
     return;
   }
@@ -4176,6 +4267,54 @@ document.addEventListener("click", async (event) => {
     } finally {
       productionDesignButton.disabled = false;
       productionDesignButton.textContent = original;
+    }
+    return;
+  }
+
+  const doctorSendAllButton = event.target.closest("[data-copy-doctor-send-all]");
+  if (doctorSendAllButton) {
+    const message = document.getElementById("media-message") || document.getElementById("asset-message");
+    if (!latestDoctorSendItems.length) {
+      if (message) message.textContent = "No doctor send items to copy yet.";
+      return;
+    }
+    const original = doctorSendAllButton.textContent;
+    doctorSendAllButton.disabled = true;
+    doctorSendAllButton.textContent = "Copying";
+    try {
+      await navigator.clipboard.writeText(doctorSendBatchText(latestDoctorSendItems));
+      if (message) message.textContent = "All doctor send queue text copied.";
+    } catch {
+      if (message) message.textContent = "Browser blocked clipboard copy. Download the send queue instead.";
+    } finally {
+      doctorSendAllButton.disabled = false;
+      doctorSendAllButton.textContent = original;
+    }
+    return;
+  }
+
+  const doctorSendButton = event.target.closest("[data-copy-doctor-send]");
+  const doctorReplyTemplateButton = event.target.closest("[data-copy-doctor-reply-template]");
+  const doctorQueueButton = doctorSendButton || doctorReplyTemplateButton;
+  if (doctorQueueButton) {
+    const assetId = doctorSendButton?.dataset.copyDoctorSend || doctorReplyTemplateButton?.dataset.copyDoctorReplyTemplate || "";
+    const item = latestDoctorSendItems.find((candidate) => candidate.asset_id === assetId);
+    const message = document.getElementById("media-message") || document.getElementById("asset-message");
+    if (!item) {
+      if (message) message.textContent = "Doctor send item not found. Refresh Assets and try again.";
+      return;
+    }
+    const original = doctorQueueButton.textContent;
+    doctorQueueButton.disabled = true;
+    doctorQueueButton.textContent = "Copying";
+    try {
+      await navigator.clipboard.writeText(doctorSendButton ? doctorSendText(item) : doctorReplyTemplateText(item));
+      if (message) message.textContent = doctorSendButton ? "Doctor review text copied." : "Doctor reply template copied.";
+    } catch {
+      if (message) message.textContent = "Browser blocked clipboard copy. Download the send queue instead.";
+    } finally {
+      doctorQueueButton.disabled = false;
+      doctorQueueButton.textContent = original;
     }
     return;
   }
@@ -5200,6 +5339,7 @@ loadLaunchReadiness();
 loadKb();
 loadBriefs();
 loadAssets();
+loadDoctorSendQueue();
 loadDoctorReviewPolishPack();
 loadFirstCycleSprintPack();
 loadFirstCycleHandoff();

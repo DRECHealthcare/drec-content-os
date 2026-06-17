@@ -156,6 +156,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added Doctor Review Polish Pack for calmer Mandarin review copy suggestions without approving, queueing, scheduling, publishing, or sending Meta requests
 - [x] Added Doctor Review Bridge for one-message doctor handoff plus paste-back reply template before preview/import
 - [x] Added Doctor Send Queue CSV for row-level doctor-review send tracking, reply preview evidence, and import evidence
+- [x] Rendered Doctor Send Queue inside Assets with copy-ready doctor review messages and reply templates
 - [x] Added full-batch Doctor Polish copy actions for the first ready review set
 - [x] Added Doctor Reply Inbox Pack for exact paste-back doctor decisions before preview/import
 - [x] Added gated doctor reply adoption for polished copy, requiring explicit `Use polished copy: yes`, `Decision: approve`, and `Safety: clear`
