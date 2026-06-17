@@ -4878,6 +4878,199 @@ async def doctor_approval_request_payload():
     }
 
 
+def doctor_review_polish_copy(item: dict):
+    topic = (item.get("topic") or "控糖与代谢健康").strip()
+    fmt = (item.get("format") or "single").strip().lower()
+    soft_topic = topic.replace("逆转", "改善").replace("治愈", "管理")
+    safety_line = "这不是诊断或个人治疗建议；如果血糖或用药有疑问，请和自己的医生讨论。"
+    if fmt == "carousel":
+        return "\n".join(
+            [
+                f"封面：{soft_topic}",
+                "第1页：先看一个容易被忽略的观察点。",
+                "第2页：空腹血糖、饭后血糖和 HbA1c 看的角度不一样，建议一起理解。",
+                "第3页：如果饭后很困、腰围增加或脂肪肝反复出现，可以把它当成代谢讯号，而不是单一症状。",
+                "第4页：饮食、活动、睡眠和复诊记录，往往比只看某一次数字更有参考价值。",
+                "第5页：保存这篇，下次复诊时可以带着报告和问题一起讨论。",
+                safety_line,
+            ]
+        )
+    if fmt == "reel":
+        return "\n".join(
+            [
+                f"Hook：{soft_topic}，可以先从一个小线索看起。",
+                "很多人只看一次血糖数字，但代谢状态通常要看趋势。",
+                "建议把空腹血糖、饭后反应、腰围和 HbA1c 放在一起理解。",
+                "如果数字长期异常，最稳妥的做法是带着记录去复诊。",
+                "字幕提示：语气保持解释型，避免承诺效果。",
+                safety_line,
+            ]
+        )
+    if fmt == "story":
+        return "\n".join(
+            [
+                f"Frame 1：{soft_topic}",
+                "Frame 2：你通常只看空腹血糖，还是也会看饭后反应？",
+                "Frame 3：保存这题，复诊时可以和医生一起看趋势。",
+                safety_line,
+            ]
+        )
+    return "\n".join(
+        [
+            f"{soft_topic}",
+            "",
+            "很多血糖和代谢问题，不适合只靠一次数字判断。",
+            "更完整的做法，是把体检报告、饭后反应、腰围、睡眠和用药记录一起看。",
+            "如果最近的读数反复异常，可以先记录下来，复诊时和医生讨论下一步。",
+            "",
+            "保存这篇，给自己一个更清楚的控糖检查方向。",
+            safety_line,
+        ]
+    )
+
+
+def doctor_review_polish_item(item: dict):
+    suggested_copy = doctor_review_polish_copy(item)
+    return {
+        "asset_id": item.get("asset_id"),
+        "brief_id": item.get("brief_id"),
+        "topic": item.get("topic"),
+        "channel": item.get("channel"),
+        "format": item.get("format"),
+        "approval_score": item.get("approval_score"),
+        "current_caption": item.get("caption_preview") or "",
+        "suggested_review_copy": suggested_copy,
+        "why_this_is_safer": [
+            "Uses educational framing instead of diagnosis or treatment instruction.",
+            "Avoids guaranteed reversal, cure, or medication-change claims.",
+            "Uses soft Mandarin phrasing such as can discuss, can observe, and may indicate.",
+            "Keeps doctor review as the decision gate before approval, design, scheduling, or publishing.",
+        ],
+        "doctor_reply_template": "\n".join(
+            [
+                f"Asset ID: {item.get('asset_id') or ''}",
+                "Decision: approve / needs edits / reject",
+                "Safety: clear / needs review / blocked",
+                "Use polished copy: yes / edit first / no",
+                "Notes:",
+            ]
+        ),
+        "reviewer_checklist": [
+            "Mandarin meaning is medically accurate and calm.",
+            "No reader diagnosis, treatment plan, medication instruction, or guaranteed outcome.",
+            "CTA points to saving, learning, or qualified consultation.",
+            "If the polished copy changes meaning, edit before approval.",
+        ],
+        "next_step": "Send the polished copy to the doctor for review, then import the doctor reply before any production or scheduling work.",
+    }
+
+
+async def doctor_review_polish_pack_payload():
+    cockpit = await approval_cockpit_payload()
+    ready_items = [
+        item
+        for item in cockpit.get("approval_items") or []
+        if item.get("approval_status") == "ready_for_human_review"
+    ]
+    polish_items = [doctor_review_polish_item(item) for item in ready_items[:10]]
+    return {
+        "phase": "doctor_review_polish_pack",
+        "mode": "suggested_copy_only",
+        "ready_for_review": len(ready_items),
+        "polish_count": len(polish_items),
+        "polish_items": polish_items,
+        "style_rules": [
+            "Write like a doctor explaining calmly to Chinese-speaking adults around 50.",
+            "Prefer everyday health contexts such as blood sugar reports, HbA1c, waist size, fatty liver, meals, sleep, and follow-up visits.",
+            "Avoid hard-selling, miracle-cure language, fear-based claims, diagnosis, and medication instructions.",
+            "Use softer wording such as can observe, may indicate, worth discussing, and bring records to a doctor.",
+        ],
+        "safety": [
+            "This pack is read-only and suggested-copy only.",
+            "It does not approve, attach media, queue, schedule, publish, or send Meta requests.",
+            "A doctor or qualified reviewer must approve meaning and safety before the copy becomes usable.",
+            "Production and scheduling remain separate gates after doctor approval.",
+        ],
+        "next_step": "Copy one polished item into the doctor review request, ask for a decision, then import the reply through the doctor reply workflow.",
+    }
+
+
+@app.get("/operations/doctor-review-polish-pack")
+async def operations_doctor_review_polish_pack(_: None = Depends(require_access_token)):
+    return await doctor_review_polish_pack_payload()
+
+
+@app.get("/operations/doctor-review-polish-pack.md")
+async def operations_doctor_review_polish_pack_markdown(_: None = Depends(require_access_token)):
+    payload = await doctor_review_polish_pack_payload()
+    generated_at = datetime.now(timezone.utc).isoformat()
+    lines = [
+        "# DREC Content OS Doctor Review Polish Pack",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this pack to give the doctor cleaner Mandarin copy suggestions for review. It is read-only, suggested-copy only, and does not approve or publish anything.",
+        "",
+        "## Summary",
+        "",
+        f"- Ready for review: {payload.get('ready_for_review')}",
+        f"- Polished suggestions: {payload.get('polish_count')}",
+        f"- Mode: {payload.get('mode')}",
+        "",
+        "## Style Rules",
+        "",
+        *markdown_list(payload.get("style_rules"), "- Calm doctor-style Mandarin."),
+        "",
+        "## Safety Rules",
+        "",
+        *markdown_list(payload.get("safety"), "- Suggested copy only."),
+        "",
+        "## Polished Review Items",
+        "",
+    ]
+    items = payload.get("polish_items") or []
+    if not items:
+        lines.extend(["- No ready assets are available for polish review yet.", ""])
+    for index, item in enumerate(items, start=1):
+        lines.extend(
+            [
+                f"### {index}. {item.get('topic') or 'Untitled asset'}",
+                "",
+                f"- Asset ID: `{item.get('asset_id')}`",
+                f"- Channel / format: {item.get('channel')} / {item.get('format')}",
+                "",
+                "Current copy:",
+                "",
+                item.get("current_caption") or "No current copy available.",
+                "",
+                "Suggested polished copy:",
+                "",
+                item.get("suggested_review_copy") or "",
+                "",
+                "Why this is safer:",
+                "",
+                *markdown_list(item.get("why_this_is_safer"), "- Suggested safer framing."),
+                "",
+                "Reviewer checklist:",
+                "",
+                *markdown_list(item.get("reviewer_checklist"), "- Doctor review required."),
+                "",
+                "Doctor reply template:",
+                "",
+                "```",
+                item.get("doctor_reply_template") or "",
+                "```",
+                "",
+            ]
+        )
+    lines.extend(["## Next Step", "", f"- {payload.get('next_step')}", ""])
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-doctor-review-polish-pack.md"'},
+    )
+
+
 @app.get("/operations/doctor-approval-pack")
 async def operations_doctor_approval_pack(_: None = Depends(require_access_token)):
     return await doctor_approval_pack_payload()

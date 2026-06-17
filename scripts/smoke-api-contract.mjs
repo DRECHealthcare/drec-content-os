@@ -49,6 +49,8 @@ const requiredRoutes = [
   "GET /operations/doctor-approval-request",
   "GET /operations/doctor-approval-request.md",
   "GET /operations/doctor-approval-pack.md",
+  "GET /operations/doctor-review-polish-pack",
+  "GET /operations/doctor-review-polish-pack.md",
   "GET /operations/doctor-decision-worksheet.csv",
   "POST /operations/import-doctor-replies",
   "GET /operations/approval-cockpit",
@@ -823,6 +825,21 @@ const requiredSnippets = [
     name: "first cycle sprint pack route",
     file: "main",
     text: "first_cycle_sprint_pack_payload",
+  },
+  {
+    name: "doctor review polish pack route",
+    file: "main",
+    text: "doctor_review_polish_pack_payload",
+  },
+  {
+    name: "doctor review polish pack export",
+    file: "main",
+    text: "drec-doctor-review-polish-pack.md",
+  },
+  {
+    name: "doctor review polish pack safety",
+    file: "main",
+    text: "This pack is read-only and suggested-copy only.",
   },
   {
     name: "first cycle sprint pack export",
@@ -1943,6 +1960,31 @@ const requiredSnippets = [
     name: "web first cycle sprint action",
     file: "web",
     text: "download-first-cycle-sprint-pack",
+  },
+  {
+    name: "web doctor review polish action",
+    file: "web",
+    text: "download-doctor-review-polish",
+  },
+  {
+    name: "web doctor review polish board",
+    file: "web",
+    text: "doctor-review-polish",
+  },
+  {
+    name: "web doctor review polish loader",
+    file: "web",
+    text: "loadDoctorReviewPolishPack",
+  },
+  {
+    name: "web doctor review polish endpoint",
+    file: "web",
+    text: "/operations/doctor-review-polish-pack",
+  },
+  {
+    name: "web doctor review polish copy",
+    file: "web",
+    text: "data-copy-doctor-polish",
   },
   {
     name: "web first cycle sprint tracker action",

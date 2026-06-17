@@ -33,6 +33,8 @@ const checks = [
         && text.includes("download-first-cycle-sprint-pack")
         && text.includes("download-first-cycle-sprint-tracker")
         && text.includes("first-cycle-sprint")
+        && text.includes("download-doctor-review-polish")
+        && text.includes("doctor-review-polish")
         && text.includes("download-doctor-approval-request")
         && text.includes("doctor-reply-text")
         && text.includes("preview-doctor-replies")
@@ -61,6 +63,10 @@ const checks = [
     validate: async (res) => {
       const text = await res.text();
       return text.includes("/operations/doctor-decision-worksheet.csv")
+        && text.includes("/operations/doctor-review-polish-pack")
+        && text.includes("/operations/doctor-review-polish-pack.md")
+        && text.includes("renderDoctorReviewPolishPack")
+        && text.includes("data-copy-doctor-polish")
         && text.includes("/operations/first-cycle-sprint-pack")
         && text.includes("/operations/first-cycle-sprint-pack.md")
         && text.includes("/operations/first-cycle-sprint-tracker.csv")
@@ -461,6 +467,31 @@ const checks = [
       return text.includes("# DREC Content OS Doctor Approval Pack")
         && text.includes("## How To Record Decisions")
         && text.includes("Doctor Safety Checklist");
+    },
+  },
+  {
+    name: "Doctor review polish pack",
+    url: `${apiBase}/operations/doctor-review-polish-pack`,
+    auth: true,
+    validate: async (res) => {
+      const data = await res.json();
+      return data.phase === "doctor_review_polish_pack"
+        && data.mode === "suggested_copy_only"
+        && Array.isArray(data.polish_items)
+        && Array.isArray(data.safety)
+        && data.safety.some((rule) => rule.includes("suggested-copy only"));
+    },
+  },
+  {
+    name: "Doctor review polish markdown",
+    url: `${apiBase}/operations/doctor-review-polish-pack.md`,
+    auth: true,
+    validate: async (res) => {
+      const text = await res.text();
+      return text.includes("# DREC Content OS Doctor Review Polish Pack")
+        && text.includes("## Polished Review Items")
+        && text.includes("Suggested polished copy")
+        && text.includes("## Safety Rules");
     },
   },
   {

@@ -65,6 +65,7 @@ Stage 1 is now a working thin-core workflow:
 - Use Create Post for one-off content; it now saves a linked brief and draft asset into the review workflow with style, target signal, media, and compliance evidence attached
 - Use the Assets Review Session summary and Markdown pack to run a focused human approval meeting with detector findings, recommended decisions, and next steps
 - Download the Doctor Approval Request to send a short, copyable medical review request for the safest ready assets without approving, queueing, scheduling, publishing, or sending Meta requests
+- Use the Doctor Review Polish Pack inside Assets to give doctors calmer, clearer Mandarin review copy suggestions while keeping approval, media, scheduling, publishing, and Meta as separate gates
 - Paste doctor reply text back into Assets to preview/import review decisions without converting WhatsApp-style replies into CSV
 - Use the Assets Rewrite Pack to prepare safer suggested captions for pending assets without auto-approving or changing saved content
 - Apply a suggested rewrite to a draft asset while keeping human approval, queueing, scheduling, and publishing as separate gates

@@ -138,6 +138,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added Backup & Recovery Pack for rebuild evidence, required exports, recovery order, and degraded mode
 - [x] Added manual Ads Planning Pack with candidate tests, CPL targets, budget rules, and media buyer handoff
 - [x] Added Asset Review Session Pack with detector findings, recommended decisions, and next approval steps
+- [x] Added Doctor Review Polish Pack for calmer Mandarin review copy suggestions without approving, queueing, scheduling, publishing, or sending Meta requests
 - [x] Added Asset Safe Rewrite Pack with suggested safer captions for pending draft assets
 - [x] Added safe Apply Rewrite action that updates draft captions without approving, queueing, scheduling, or publishing
 - [x] Added bulk Apply All Safe Rewrites action for detector-clear rewrite candidates
