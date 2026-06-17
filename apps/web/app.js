@@ -1829,6 +1829,16 @@ document.getElementById("download-pipeline-board")?.addEventListener("click", as
   }
 });
 
+document.getElementById("download-audit-trail")?.addEventListener("click", async () => {
+  const message = document.getElementById("test-path-message");
+  try {
+    await downloadProtectedFile("/operations/audit-trail.csv", "drec-audit-trail.csv", "text/csv");
+    message.textContent = "Audit trail downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download audit trail.";
+  }
+});
+
 document.getElementById("download-launch-evidence")?.addEventListener("click", async () => {
   const message = document.getElementById("test-path-message");
   try {

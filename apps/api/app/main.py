@@ -2718,6 +2718,58 @@ async def operations_snapshot_csv(_: None = Depends(require_access_token)):
     )
 
 
+def audit_tag_value(tags, prefix):
+    for tag in tags or []:
+        if isinstance(tag, str) and tag.startswith(prefix):
+            return tag[len(prefix) :].strip()
+    return ""
+
+
+@app.get("/operations/audit-trail.csv")
+async def operations_audit_trail_csv(_: None = Depends(require_access_token)):
+    feedback = await snapshot_select(
+        "feedback",
+        """
+        select id, module, ref_type, ref_id, action, reason, tags, created_at
+        from feedback
+        order by created_at desc
+        limit 500
+        """,
+        {
+            "select": "id,module,ref_type,ref_id,action,reason,tags,created_at",
+            "order": "created_at.desc",
+            "limit": "500",
+        },
+    )
+    rows = []
+    for item in feedback:
+        tags = item.get("tags") or []
+        rows.append(
+            {
+                "created_at": str(item.get("created_at") or ""),
+                "module": item.get("module") or "",
+                "ref_type": item.get("ref_type") or "",
+                "ref_id": item.get("ref_id") or "",
+                "action": item.get("action") or "",
+                "role": audit_tag_value(tags, "role:"),
+                "actor": audit_tag_value(tags, "actor:"),
+                "tags": "; ".join(str(tag) for tag in tags),
+                "reason": item.get("reason") or "",
+                "feedback_id": str(item.get("id") or ""),
+            }
+        )
+    output = StringIO()
+    fieldnames = ["created_at", "module", "ref_type", "ref_id", "action", "role", "actor", "tags", "reason", "feedback_id"]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    writer.writerows(rows)
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-audit-trail.csv"'},
+    )
+
+
 def markdown_list(items, empty="- None"):
     clean = [str(item).strip() for item in items or [] if str(item or "").strip()]
     return [f"- {item}" for item in clean] if clean else [empty]

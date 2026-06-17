@@ -31,6 +31,7 @@ const requiredRoutes = [
   "GET /operations/risk-audit",
   "GET /operations/snapshot.csv",
   "GET /operations/pipeline-board.csv",
+  "GET /operations/audit-trail.csv",
   "GET /operations/creative-pack.md",
   "GET /operations/media-shot-list.csv",
   "GET /operations/asset-review.csv",
@@ -420,6 +421,16 @@ const requiredSnippets = [
     name: "pipeline board status fields",
     file: "main",
     text: "pipeline_stage",
+  },
+  {
+    name: "audit trail export",
+    file: "main",
+    text: "drec-audit-trail.csv",
+  },
+  {
+    name: "audit trail actor fields",
+    file: "main",
+    text: '"role", "actor"',
   },
   {
     name: "creative pack export",
@@ -815,6 +826,16 @@ const requiredSnippets = [
     name: "web pipeline board endpoint",
     file: "web",
     text: "/operations/pipeline-board.csv",
+  },
+  {
+    name: "web audit trail action",
+    file: "web",
+    text: "download-audit-trail",
+  },
+  {
+    name: "web audit trail endpoint",
+    file: "web",
+    text: "/operations/audit-trail.csv",
   },
   {
     name: "web launch evidence action",
