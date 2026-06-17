@@ -31,6 +31,7 @@ const checks = [
       const text = await res.text();
       return text.includes("DREC")
         && text.includes("download-first-cycle-sprint-pack")
+        && text.includes("download-first-cycle-sprint-tracker")
         && text.includes("first-cycle-sprint")
         && text.includes("download-doctor-approval-request")
         && text.includes("doctor-reply-text")
@@ -61,6 +62,7 @@ const checks = [
       return text.includes("/operations/doctor-decision-worksheet.csv")
         && text.includes("/operations/first-cycle-sprint-pack")
         && text.includes("/operations/first-cycle-sprint-pack.md")
+        && text.includes("/operations/first-cycle-sprint-tracker.csv")
         && text.includes("renderFirstCycleSprintPack")
         && text.includes("data-copy-sprint-doctor")
         && text.includes("data-copy-sprint-production")
@@ -626,6 +628,16 @@ const checks = [
         && text.includes("Doctor reply template")
         && text.includes("Production reply template")
         && text.includes("## Safety Rules");
+    },
+  },
+  {
+    name: "First cycle sprint tracker CSV",
+    url: `${apiBase}/operations/first-cycle-sprint-tracker.csv`,
+    auth: true,
+    validate: async (res) => {
+      const text = await res.text();
+      return text.includes("asset_id,topic,channel,format,doctor_decision,doctor_safety,doctor_reviewer,doctor_notes,production_media_urls,production_visual_qa,production_rights,production_producer,production_notes")
+        && text.includes("safe_use_note");
     },
   },
   {

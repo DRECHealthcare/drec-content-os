@@ -2975,6 +2975,16 @@ document.getElementById("download-first-cycle-sprint-pack")?.addEventListener("c
   }
 });
 
+document.getElementById("download-first-cycle-sprint-tracker")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/first-cycle-sprint-tracker.csv", "drec-first-cycle-sprint-tracker.csv", "text/csv");
+    message.textContent = "First cycle sprint tracker downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download first cycle sprint tracker.";
+  }
+});
+
 document.getElementById("download-first-cycle-handoff")?.addEventListener("click", async () => {
   const message = document.getElementById("media-message");
   try {

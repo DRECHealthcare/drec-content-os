@@ -5661,6 +5661,68 @@ async def operations_first_cycle_sprint_pack_markdown(_: None = Depends(require_
     )
 
 
+@app.get("/operations/first-cycle-sprint-tracker.csv")
+async def operations_first_cycle_sprint_tracker_csv(_: None = Depends(require_access_token)):
+    payload = await first_cycle_sprint_pack_payload()
+    output = StringIO()
+    fieldnames = [
+        "asset_id",
+        "topic",
+        "channel",
+        "format",
+        "doctor_decision",
+        "doctor_safety",
+        "doctor_reviewer",
+        "doctor_notes",
+        "production_media_urls",
+        "production_visual_qa",
+        "production_rights",
+        "production_producer",
+        "production_notes",
+        "copy_to_review",
+        "production_task",
+        "visual_direction",
+        "template_suggestion",
+        "rights_check",
+        "doctor_reply_template",
+        "production_reply_template",
+        "safe_use_note",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for item in payload.get("sprint_items") or []:
+        writer.writerow(
+            {
+                "asset_id": item.get("asset_id") or "",
+                "topic": item.get("topic") or "",
+                "channel": item.get("channel") or "",
+                "format": item.get("format") or "",
+                "doctor_decision": "",
+                "doctor_safety": "",
+                "doctor_reviewer": "",
+                "doctor_notes": "",
+                "production_media_urls": "",
+                "production_visual_qa": "",
+                "production_rights": "",
+                "production_producer": "",
+                "production_notes": "",
+                "copy_to_review": item.get("copy_to_review") or "",
+                "production_task": item.get("production_task") or "",
+                "visual_direction": item.get("visual_direction") or "",
+                "template_suggestion": item.get("template_suggestion") or "",
+                "rights_check": item.get("rights_check") or "",
+                "doctor_reply_template": item.get("doctor_reply_template") or "",
+                "production_reply_template": item.get("production_reply_template") or "",
+                "safe_use_note": "Tracker only. Import doctor replies and production replies through the preview flows; this CSV does not approve, attach media, queue, schedule, publish, or send Meta requests.",
+            }
+        )
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-first-cycle-sprint-tracker.csv"'},
+    )
+
+
 def runbook_status_label(status: str | None):
     value = (status or "").strip()
     if value in {"ready", "clear", "ready_to_schedule", "ready_for_worker_testing", "manual_ops_ready_auto_blocked"}:

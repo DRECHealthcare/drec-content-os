@@ -62,6 +62,7 @@ const requiredRoutes = [
   "GET /operations/first-cycle-handoff.md",
   "GET /operations/first-cycle-sprint-pack",
   "GET /operations/first-cycle-sprint-pack.md",
+  "GET /operations/first-cycle-sprint-tracker.csv",
   "GET /operations/today-runbook",
   "GET /operations/today-runbook.md",
   "GET /operations/asset-media-attachments.csv",
@@ -805,6 +806,21 @@ const requiredSnippets = [
     name: "first cycle sprint pack safety",
     file: "main",
     text: "This sprint pack is read-only and does not approve, attach media, queue, schedule, publish, or send Meta requests.",
+  },
+  {
+    name: "first cycle sprint tracker route",
+    file: "main",
+    text: "operations_first_cycle_sprint_tracker_csv",
+  },
+  {
+    name: "first cycle sprint tracker export",
+    file: "main",
+    text: "drec-first-cycle-sprint-tracker.csv",
+  },
+  {
+    name: "first cycle sprint tracker safety",
+    file: "main",
+    text: "Tracker only. Import doctor replies and production replies through the preview flows",
   },
   {
     name: "today runbook route",
@@ -1902,9 +1918,19 @@ const requiredSnippets = [
     text: "download-first-cycle-sprint-pack",
   },
   {
+    name: "web first cycle sprint tracker action",
+    file: "web",
+    text: "download-first-cycle-sprint-tracker",
+  },
+  {
     name: "web first cycle sprint endpoint",
     file: "web",
     text: "/operations/first-cycle-sprint-pack.md",
+  },
+  {
+    name: "web first cycle sprint tracker endpoint",
+    file: "web",
+    text: "/operations/first-cycle-sprint-tracker.csv",
   },
   {
     name: "web first cycle sprint board",

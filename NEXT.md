@@ -146,6 +146,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added Pre-Schedule Gate for queue review, final caption, approved media/design, and visual QA readiness before scheduling
 - [x] Added safe Attach Media action for linking approved design/media URLs back to draft assets without approving, queueing, scheduling, or publishing
 - [x] Added Asset Media Attachment CSV export/import for spreadsheet-style design/media handoff while preserving approval and publishing gates
+- [x] Added First Cycle Sprint Tracker CSV for one-sheet doctor decision and production delivery tracking before preview/import
 
 ## Next Engineering Tasks
 
@@ -271,6 +272,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add bulk Apply All Safe Rewrites action before asset approval and queueing
 - [x] Add First Cycle Handoff Pack for first manual publishing cycle coordination
 - [x] Add Approval Cockpit for human review prioritization before queueing
+- [x] Add First Cycle Sprint Tracker CSV for doctor and production coordination
 - [ ] Connect Meta Graph API credentials
 - [x] Implement real Facebook publish scheduling behind Meta readiness and enable flags
 - [x] Implement Instagram two-step publish worker behind Meta readiness and enable flags
