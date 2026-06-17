@@ -2967,6 +2967,16 @@ document.getElementById("download-daily-ops")?.addEventListener("click", async (
   }
 });
 
+document.getElementById("download-cycle-command-center")?.addEventListener("click", async () => {
+  const message = document.getElementById("test-path-message");
+  try {
+    await downloadProtectedFile("/operations/cycle-command-center.md", "drec-cycle-command-center.md", "text/markdown");
+    message.textContent = "Cycle command center downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download cycle command center.";
+  }
+});
+
 document.getElementById("download-operator-pack")?.addEventListener("click", async () => {
   const message = document.getElementById("test-path-message");
   try {

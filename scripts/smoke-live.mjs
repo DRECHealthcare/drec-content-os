@@ -32,6 +32,7 @@ const checks = [
       return text.includes("DREC")
         && text.includes("download-first-cycle-sprint-pack")
         && text.includes("download-first-cycle-sprint-tracker")
+        && text.includes("download-cycle-command-center")
         && text.includes("first-cycle-sprint")
         && text.includes("download-doctor-review-polish")
         && text.includes("download-doctor-review-bridge")
@@ -69,6 +70,7 @@ const checks = [
     validate: async (res) => {
       const text = await res.text();
       return text.includes("/operations/doctor-decision-worksheet.csv")
+        && text.includes("/operations/cycle-command-center.md")
         && text.includes("/operations/doctor-review-bridge.md")
         && text.includes("/operations/doctor-review-polish-pack")
         && text.includes("/operations/doctor-review-polish-pack.md")
@@ -254,6 +256,21 @@ const checks = [
         && text.includes("Metrics closeout")
         && text.includes("## Step Tracker")
         && text.includes("## Pass Rule");
+    },
+  },
+  {
+    name: "Cycle command center",
+    url: `${apiBase}/operations/cycle-command-center.md`,
+    auth: true,
+    validate: async (res) => {
+      const text = await res.text();
+      return text.includes("# DREC Content OS Cycle Command Center")
+        && text.includes("## Do Next")
+        && text.includes("## Action Links")
+        && text.includes("## Evidence To Collect")
+        && text.includes("## Stop Rules")
+        && text.includes("Doctor Review Bridge")
+        && text.includes("Production Handoff Bridge");
     },
   },
   {

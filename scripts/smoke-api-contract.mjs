@@ -33,6 +33,8 @@ const requiredRoutes = [
   "GET /operations/launch-evidence.md",
   "GET /operations/first-test-kit.md",
   "GET /operations/test-run-tracker.md",
+  "GET /operations/cycle-command-center",
+  "GET /operations/cycle-command-center.md",
   "GET /operations/manual-cycle-qa.md",
   "GET /operations/daily-ops-checklist.md",
   "GET /operations/risk-audit",
@@ -650,6 +652,36 @@ const requiredSnippets = [
     name: "test run tracker metrics closeout link",
     file: "main",
     text: "- Metrics closeout: `/operations/metrics-closeout-pack.md`",
+  },
+  {
+    name: "cycle command center route",
+    file: "main",
+    text: "cycle_command_center_payload",
+  },
+  {
+    name: "cycle command center export",
+    file: "main",
+    text: "drec-cycle-command-center.md",
+  },
+  {
+    name: "cycle command center evidence",
+    file: "main",
+    text: "## Evidence To Collect",
+  },
+  {
+    name: "cycle command center stop rules",
+    file: "main",
+    text: "## Stop Rules",
+  },
+  {
+    name: "cycle command center UI action",
+    file: "web",
+    text: "download-cycle-command-center",
+  },
+  {
+    name: "cycle command center UI endpoint",
+    file: "web",
+    text: "/operations/cycle-command-center.md",
   },
   {
     name: "manual cycle qa export",

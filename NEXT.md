@@ -117,6 +117,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added First Test Run Tracker export for live manual test evidence capture
 - [x] Added First Test Kit action links for first-cycle handoff, doctor reply, production reply, metrics, and launch evidence
 - [x] Added First Test Run Tracker evidence links for reply inboxes, pre-schedule, run sheet, metrics, and launch proof
+- [x] Added Cycle Command Center for live next action, bridge links, evidence fields, and stop rules
 - [x] Added Manual Cycle QA export for post-test blockers, risk, handoff, and learning review
 - [x] Added First Cycle Handoff links for doctor reply, production reply, pre-schedule, and scheduler recovery flows
 - [x] Added Manual Cycle QA action links for doctor and production reply inbox flows

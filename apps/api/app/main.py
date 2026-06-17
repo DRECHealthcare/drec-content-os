@@ -2767,6 +2767,166 @@ async def operations_test_run_tracker(_: None = Depends(require_access_token)):
     )
 
 
+async def cycle_command_center_payload():
+    runbook = await today_runbook_payload()
+    checklist = await test_run_checklist_payload()
+    risk = await content_risk_audit_payload()
+    launch = await launch_readiness_payload()
+    doctor_bridge = await doctor_review_bridge_payload()
+    production_bridge = await production_handoff_bridge_payload()
+    summary = runbook.get("summary") or {}
+    action = runbook.get("immediate_action") or {}
+    open_steps = [
+        step for step in checklist.get("steps") or []
+        if step.get("status") in {"open", "locked"}
+    ]
+    evidence_fields = [
+        "Doctor message sent time",
+        "Doctor reviewer name",
+        "Doctor reply preview result",
+        "Doctor import result",
+        "Production message sent time",
+        "Production reply preview result",
+        "Media/design import result",
+        "Pre-schedule gate result",
+        "Schedule audit result",
+        "Manual publishing post ID",
+        "Metrics import or rollup result",
+    ]
+    return {
+        "phase": "cycle_command_center",
+        "mode": "read_only_live_cycle_control",
+        "overall_status": runbook.get("overall_status"),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "immediate_action": action,
+        "summary": {
+            **summary,
+            "manual_cycle_status": checklist.get("overall_status"),
+            "manual_cycle_done": checklist.get("done_count"),
+            "manual_cycle_required": checklist.get("total_required"),
+            "risk_status": risk.get("overall_status"),
+            "risk_blocks": risk.get("block_count", 0),
+            "risk_warnings": risk.get("warn_count", 0),
+            "doctor_bridge_items": doctor_bridge.get("bridge_item_count", 0),
+            "production_bridge_items": production_bridge.get("bridge_item_count", 0),
+        },
+        "open_steps": open_steps,
+        "operator_sequence": runbook.get("operator_sequence") or [],
+        "evidence_fields": evidence_fields,
+        "stop_rules": [
+            "Stop before import if preview output does not match the human reply.",
+            "Stop before production if doctor approval is missing, unclear, or not Safety: clear.",
+            "Stop before scheduling if media/design URLs, visual QA, or rights notes are missing.",
+            "Stop before publishing if risk audit has any block or the item is not handoff-ready.",
+            "Stop before Meta automation until Meta readiness, scheduler heartbeat, and Supabase service-role security gates are green.",
+        ],
+        "links": {
+            "today_runbook": "/operations/today-runbook.md",
+            "doctor_review_bridge": "/operations/doctor-review-bridge.md",
+            "doctor_reply_inbox": "/operations/doctor-reply-inbox-pack.md",
+            "approval_cockpit": "/operations/approval-cockpit.md",
+            "production_handoff_bridge": "/operations/production-handoff-bridge.md",
+            "production_reply_inbox": "/operations/production-reply-inbox-pack.md",
+            "pre_schedule_gate": "/operations/pre-schedule-gate.md",
+            "review_to_schedule": "/operations/review-to-schedule-pack.md",
+            "publishing_run_sheet": "/operations/publishing-run-sheet.md",
+            "metrics_closeout": "/operations/metrics-closeout-pack.md",
+            "launch_evidence": "/operations/launch-evidence.md",
+            "meta_preflight": "/meta/preflight-audit.md",
+            "security_rls": "/security/rls-hardening-plan.md",
+        },
+        "safety": [
+            "This command center is read-only and does not approve, import, attach media, queue, schedule, publish, or send Meta requests.",
+            "It summarizes live workflow state and evidence collection needs for the current manual cycle.",
+            "Use bridge exports for copy/send work, then use preview/import flows for returned replies.",
+        ],
+        "next_step": action.get("action") or "Follow the first open manual workflow step.",
+    }
+
+
+@app.get("/operations/cycle-command-center")
+async def operations_cycle_command_center(_: None = Depends(require_access_token)):
+    return await cycle_command_center_payload()
+
+
+@app.get("/operations/cycle-command-center.md")
+async def operations_cycle_command_center_markdown(_: None = Depends(require_access_token)):
+    payload = await cycle_command_center_payload()
+    summary = payload.get("summary") or {}
+    action = payload.get("immediate_action") or {}
+    lines = [
+        "# DREC Content OS Cycle Command Center",
+        "",
+        f"Generated: {payload.get('generated_at')}",
+        "",
+        "Use this as the one-page command center for the current manual cycle. It is read-only and keeps doctor approval, production, scheduling, publishing, metrics, and Meta automation as separate gates.",
+        "",
+        "## Do Next",
+        "",
+        f"- Action: {action.get('label') or 'Follow manual workflow'}",
+        f"- Screen: {action.get('screen') or 'dashboard'}",
+        f"- How: {payload.get('next_step')}",
+        "",
+        "## Live Cycle Snapshot",
+        "",
+        f"- Overall status: {payload.get('overall_status')}",
+        f"- Manual cycle: {summary.get('manual_cycle_status')} ({summary.get('manual_cycle_done')}/{summary.get('manual_cycle_required')} required steps done)",
+        f"- Can test now: {'yes' if summary.get('can_test_now') else 'no'}",
+        f"- Can auto-publish: {'yes' if summary.get('can_auto_publish') else 'no'}",
+        f"- Assets ready for human review: {summary.get('assets_ready_for_human_review')}",
+        f"- Assets waiting approval: {summary.get('assets_waiting_approval')}",
+        f"- Doctor bridge items: {summary.get('doctor_bridge_items')}",
+        f"- Production bridge items: {summary.get('production_bridge_items')}",
+        f"- Ready to schedule: {summary.get('ready_to_schedule')}",
+        f"- Schedule blocks: {summary.get('schedule_blocks')}",
+        f"- Risk: {summary.get('risk_status')} ({summary.get('risk_blocks')} block / {summary.get('risk_warnings')} warn)",
+        f"- Meta status: {summary.get('meta_status')}",
+        f"- Security status: {summary.get('security_status')}",
+        f"- Automation status: {summary.get('automation_status')}",
+        "",
+        "## Current Operator Sequence",
+        "",
+        *markdown_list(payload.get("operator_sequence"), "- Follow the live runbook sequence."),
+        "",
+        "## Open Or Locked Steps",
+        "",
+    ]
+    open_steps = payload.get("open_steps") or []
+    if not open_steps:
+        lines.extend(["- No open or locked manual steps found.", ""])
+    for step in open_steps:
+        lines.append(f"- {step.get('status')}: {step.get('label')} - {step.get('detail')} | Action: {step.get('action')} ({step.get('screen')})")
+    lines.extend(
+        [
+            "",
+            "## Action Links",
+            "",
+            *[
+                f"- {label.replace('_', ' ').title()}: `{path}`"
+                for label, path in (payload.get("links") or {}).items()
+            ],
+            "",
+            "## Evidence To Collect",
+            "",
+            *markdown_list(payload.get("evidence_fields"), "- Evidence field."),
+            "",
+            "## Stop Rules",
+            "",
+            *markdown_list(payload.get("stop_rules"), "- Stop before continuing."),
+            "",
+            "## Safety",
+            "",
+            *markdown_list(payload.get("safety"), "- Read-only command center."),
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-cycle-command-center.md"'},
+    )
+
+
 @app.get("/operations/manual-cycle-qa.md")
 async def operations_manual_cycle_qa(_: None = Depends(require_access_token)):
     generated_at = datetime.now(timezone.utc).isoformat()
