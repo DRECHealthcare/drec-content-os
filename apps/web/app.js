@@ -3241,6 +3241,7 @@ function renderAssetReviewDecisionPreview(data) {
           <li>
             <strong>${escapeHtml(row.topic || row.asset_id || "")}</strong>
             ${escapeHtml(row.target_safety || "no safety change")} / ${escapeHtml(row.target_review || "no review change")}
+            ${row.caption_update && row.caption_update !== "none" ? ` · ${escapeHtml(row.caption_update)}` : ""}
             ${Array.isArray(row.applied) && row.applied.length ? ` · ${escapeHtml(row.applied.join(", "))}` : ""}
           </li>
         `).join("")}</ul>

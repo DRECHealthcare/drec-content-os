@@ -37,6 +37,7 @@ const checks = [
         && text.includes("doctor-review-polish")
         && text.includes("download-doctor-approval-request")
         && text.includes("doctor-reply-text")
+        && text.includes("Use polished copy")
         && text.includes("preview-doctor-replies")
         && text.includes("import-doctor-replies")
         && text.includes("production-reply-text")
@@ -67,6 +68,7 @@ const checks = [
         && text.includes("/operations/doctor-review-polish-pack.md")
         && text.includes("renderDoctorReviewPolishPack")
         && text.includes("data-copy-doctor-polish")
+        && text.includes("caption_update")
         && text.includes("/operations/first-cycle-sprint-pack")
         && text.includes("/operations/first-cycle-sprint-pack.md")
         && text.includes("/operations/first-cycle-sprint-tracker.csv")
@@ -742,6 +744,7 @@ const checks = [
         "Asset ID: 00000000-0000-0000-0000-000000000000",
         "Decision: approve",
         "Safety: clear",
+        "Use polished copy: yes",
         "Notes: Dry-run only",
       ].join("\n"),
     }),
@@ -751,6 +754,40 @@ const checks = [
         && data.skipped_count === 1
         && data.skipped?.[0]?.reason === "Asset not found."
         && data.safety?.some((item) => item.includes("does not queue"));
+    },
+  },
+  {
+    name: "Doctor polished copy import preview",
+    url: `${apiBase}/operations/doctor-review-polish-pack`,
+    auth: true,
+    validate: async (res) => {
+      const pack = await res.json();
+      const item = pack.polish_items?.[0];
+      if (!item?.asset_id) return pack.polish_count === 0;
+      const preview = await fetch(`${apiBase}/operations/import-doctor-replies`, {
+        method: "POST",
+        headers: {
+          ...headersFor({ auth: true }),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          dry_run: true,
+          reviewer_name: "Smoke Test",
+          reply_text: [
+            `Asset ID: ${item.asset_id}`,
+            "Decision: approve",
+            "Safety: clear",
+            "Use polished copy: yes",
+            "Notes: Dry-run polished-copy preview only",
+          ].join("\n"),
+        }),
+      });
+      if (!preview.ok) return false;
+      const data = await preview.json();
+      return data.dry_run === true
+        && data.planned_count === 1
+        && data.planned?.[0]?.use_polished_copy === true
+        && data.planned?.[0]?.caption_update === "will_apply_polished_copy";
     },
   },
   {

@@ -712,9 +712,24 @@ const requiredSnippets = [
     text: "parse_doctor_reply_blocks",
   },
   {
+    name: "doctor reply polished copy parser",
+    file: "main",
+    text: "use_polished_copy",
+  },
+  {
+    name: "doctor reply polished copy gate",
+    file: "main",
+    text: "Using polished copy requires Decision: approve and Safety: clear.",
+  },
+  {
+    name: "doctor reply polished copy caption apply",
+    file: "main",
+    text: "caption:polished_copy",
+  },
+  {
     name: "doctor reply import safety",
     file: "main",
-    text: "It does not queue, schedule, publish, send Meta requests, or attach media/design.",
+    text: "can apply polished copy only when the doctor explicitly says yes with Decision: approve and Safety: clear.",
   },
   {
     name: "doctor approval pack safety",
@@ -1855,6 +1870,11 @@ const requiredSnippets = [
     name: "web doctor reply text input",
     file: "web",
     text: "doctor-reply-text",
+  },
+  {
+    name: "web doctor reply polished copy preview",
+    file: "web",
+    text: "caption_update",
   },
   {
     name: "web doctor reply preview action",

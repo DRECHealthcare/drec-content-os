@@ -6759,6 +6759,17 @@ def normalize_asset_review_decision(value: str | None):
     return "invalid"
 
 
+def normalize_yes_no(value: str | None):
+    text = (value or "").strip().lower().replace("_", " ").replace("-", " ")
+    if not text:
+        return None
+    if text in {"yes", "y", "true", "use", "use polished", "apply", "apply polished", "approved"}:
+        return True
+    if text in {"no", "n", "false", "do not use", "dont use", "don't use", "edit first", "manual edit", "not yet"}:
+        return False
+    return "invalid"
+
+
 def parse_doctor_reply_blocks(reply_text: str):
     blocks = []
     current = {}
@@ -6791,6 +6802,10 @@ def parse_doctor_reply_blocks(reply_text: str):
         match = re.match(r"^(safety|safety decision)\s*[:：]\s*(.+)$", line, flags=re.IGNORECASE)
         if match:
             current["reviewer_safety_decision"] = match.group(2).strip()
+            continue
+        match = re.match(r"^(use\s+polished\s+copy|polished\s+copy|apply\s+polish|apply\s+polished\s+copy)\s*[:：]\s*(.+)$", line, flags=re.IGNORECASE)
+        if match:
+            current["use_polished_copy"] = match.group(2).strip()
             continue
         match = re.match(r"^(notes?|reason)\s*[:：]\s*(.*)$", line, flags=re.IGNORECASE)
         if match:
@@ -6935,11 +6950,12 @@ async def import_doctor_replies(
             continue
         safety_decision = normalize_review_safety_decision(row.get("reviewer_safety_decision"))
         review_decision = normalize_asset_review_decision(row.get("reviewer_review_decision"))
+        use_polished_copy = normalize_yes_no(row.get("use_polished_copy"))
         notes = (row.get("review_notes") or "").strip()
-        if safety_decision == "invalid" or review_decision == "invalid":
+        if safety_decision == "invalid" or review_decision == "invalid" or use_polished_copy == "invalid":
             skipped.append({"row": index, "asset_id": asset_id, "reason": "Decision must use safety clear/pending/flagged and review approved/review/rejected."})
             continue
-        if safety_decision is None and review_decision is None and not notes:
+        if safety_decision is None and review_decision is None and use_polished_copy is None and not notes:
             skipped.append({"row": index, "asset_id": asset_id, "reason": "No doctor decision provided."})
             continue
         existing = await asset_by_id(asset_id)
@@ -6950,10 +6966,35 @@ async def import_doctor_replies(
         if review_decision == "approved" and target_safety != "clear":
             skipped.append({"row": index, "asset_id": asset_id, "reason": "Approval requires Safety: clear or an already clear asset."})
             continue
+        polished_caption = ""
+        if use_polished_copy is True:
+            if review_decision != "approved" or target_safety != "clear":
+                skipped.append({"row": index, "asset_id": asset_id, "reason": "Using polished copy requires Decision: approve and Safety: clear."})
+                continue
+            if existing.get("review_status") == "approved":
+                skipped.append({"row": index, "asset_id": asset_id, "reason": "Approved assets must return to review before polished copy can be applied."})
+                continue
+            polish_item = doctor_review_polish_item(
+                {
+                    "asset_id": asset_id,
+                    "brief_id": existing.get("brief_id"),
+                    "topic": (existing.get("metadata") or {}).get("topic") or "",
+                    "channel": existing.get("channel"),
+                    "format": existing.get("format"),
+                    "caption_preview": existing.get("caption") or "",
+                }
+            )
+            polished_caption = polish_item.get("suggested_review_copy") or ""
+            compliance = check_text(polished_caption)
+            if compliance.get("status") == "flagged":
+                skipped.append({"row": index, "asset_id": asset_id, "reason": "Polished copy was blocked by the compliance detector."})
+                continue
         reviewer_name = fallback_reviewer
         reason_parts = ["Doctor reply text import."]
         if reviewer_name:
             reason_parts.append(f"Reviewer: {reviewer_name}.")
+        if use_polished_copy is True:
+            reason_parts.append("Doctor approved use of polished copy.")
         if notes:
             reason_parts.append(f"Notes: {notes}")
         reason = " ".join(reason_parts)
@@ -6967,11 +7008,22 @@ async def import_doctor_replies(
             "target_review": review_decision or "",
             "reviewer_name": reviewer_name,
             "review_notes": notes,
+            "use_polished_copy": bool(use_polished_copy is True),
+            "caption_update": "will_apply_polished_copy" if use_polished_copy is True else "none",
+            "polished_caption_preview": feedback_excerpt(polished_caption, 220) if polished_caption else "",
         }
         if payload.dry_run:
             planned.append(plan)
             continue
         applied = []
+        if use_polished_copy is True:
+            await update_asset_caption(
+                asset_id,
+                AssetRewriteIn(caption=polished_caption, reason=reason),
+                session,
+            )
+            existing = await asset_by_id(asset_id) or existing
+            applied.append("caption:polished_copy")
         if safety_decision is not None and safety_decision != existing.get("compliance_status"):
             await update_asset_compliance(asset_id, AssetComplianceIn(compliance_status=safety_decision, reason=reason), session)
             applied.append(f"safety:{safety_decision}")
@@ -7006,7 +7058,7 @@ async def import_doctor_replies(
             else f"Imported {len(imported)} doctor reply decision(s), {len(skipped)} skipped."
         ),
         "safety": [
-            "Doctor reply import records review and safety decisions only.",
+            "Doctor reply import records review and safety decisions, and can apply polished copy only when the doctor explicitly says yes with Decision: approve and Safety: clear.",
             "It does not queue, schedule, publish, send Meta requests, or attach media/design.",
             "Approval still requires Safety: clear before review can become approved.",
         ],
