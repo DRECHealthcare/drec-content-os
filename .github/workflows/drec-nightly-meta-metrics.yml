@@ -1,0 +1,71 @@
+name: DREC Nightly Meta Metrics
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 18 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: drec-nightly-meta-metrics
+  cancel-in-progress: false
+
+jobs:
+  nightly-meta-metrics:
+    runs-on: ubuntu-latest
+    env:
+      DREC_API_BASE_URL: ${{ vars.DREC_API_BASE_URL || 'https://drec-content-os-api.fly.dev' }}
+      DREC_ACCESS_TOKEN: ${{ secrets.DREC_ACCESS_TOKEN }}
+      DREC_ENABLE_REAL_META_METRICS: ${{ vars.DREC_ENABLE_REAL_META_METRICS || 'false' }}
+    steps:
+      - name: Skip when access token is missing
+        if: ${{ env.DREC_ACCESS_TOKEN == '' }}
+        run: |
+          echo "DREC_ACCESS_TOKEN is not configured. Skipping nightly Meta metrics."
+
+      - name: Choose metrics mode
+        if: ${{ env.DREC_ACCESS_TOKEN != '' }}
+        run: |
+          if [ "${DREC_ENABLE_REAL_META_METRICS}" = "true" ]; then
+            echo "DREC_METRICS_DRY_RUN=false" >> "$GITHUB_ENV"
+            echo "DREC_METRICS_MODE=live_metrics" >> "$GITHUB_ENV"
+          else
+            echo "DREC_METRICS_DRY_RUN=true" >> "$GITHUB_ENV"
+            echo "DREC_METRICS_MODE=dry_run" >> "$GITHUB_ENV"
+          fi
+
+      - name: Check automation gate
+        if: ${{ env.DREC_ACCESS_TOKEN != '' }}
+        run: |
+          curl --fail --silent --show-error \
+            --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
+            "${DREC_API_BASE_URL}/automation/status"
+
+      - name: Check Meta readiness before live metrics
+        if: ${{ env.DREC_ACCESS_TOKEN != '' }}
+        run: |
+          if [ "${DREC_METRICS_DRY_RUN}" != "false" ]; then
+            echo "Dry-run metrics mode selected. Skipping live Meta readiness precheck."
+            exit 0
+          fi
+          curl --fail --silent --show-error \
+            --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
+            "${DREC_API_BASE_URL}/meta/readiness"
+
+      - name: Run nightly Meta metrics job
+        if: ${{ env.DREC_ACCESS_TOKEN != '' }}
+        run: |
+          curl --fail --silent --show-error \
+            --request POST \
+            --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
+            "${DREC_API_BASE_URL}/jobs/nightly-meta-metrics?dry_run=${DREC_METRICS_DRY_RUN}&limit=25&rollup=true"
+
+      - name: Record metrics scheduler heartbeat
+        if: ${{ env.DREC_ACCESS_TOKEN != '' }}
+        run: |
+          curl --fail --silent --show-error \
+            --request POST \
+            --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
+            "${DREC_API_BASE_URL}/operations/scheduler-heartbeat?workflow=drec-nightly-meta-metrics&mode=${DREC_METRICS_MODE}"

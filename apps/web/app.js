@@ -726,10 +726,12 @@ function renderMetaSetupChecklist(data) {
   const oauth = data.oauth_guide || {};
   latestMetaOAuthUrl = oauth.oauth_dialog_url || oauth.oauth_dialog_url_template || "";
   const scheduler = data.scheduler_setup || {};
+  const nightlyScheduler = data.nightly_metrics_scheduler || {};
   const githubSecrets = scheduler.required_github_secrets || [];
   const githubVariables = scheduler.optional_github_variables || [];
   const schedulerSteps = scheduler.steps || [];
   const schedulerHeartbeat = scheduler.heartbeat || {};
+  const nightlySteps = nightlyScheduler.steps || [];
   container.innerHTML = `
     <article class="learning-card wide-learning">
       <h3>Credential Setup Checklist</h3>
@@ -768,6 +770,19 @@ function renderMetaSetupChecklist(data) {
       </ul>
       <ol>${schedulerSteps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol>
       <p>${escapeHtml(scheduler.safety || "")}</p>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Nightly Metrics Scheduler</h3>
+      <p>${escapeHtml(nightlyScheduler.status || "not_checked")}</p>
+      <small>${escapeHtml(nightlyScheduler.workflow_file || ".github/workflows/drec-nightly-meta-metrics.yml")}</small>
+      <ul>
+        <li><strong>Schedule</strong> ${escapeHtml(nightlyScheduler.schedule || "daily 02:30 Asia/Kuala_Lumpur")}</li>
+        <li><strong>Default</strong> ${escapeHtml(nightlyScheduler.default_mode || "dry_run")}</li>
+        <li><strong>GitHub switch</strong> ${escapeHtml(nightlyScheduler.live_enable_github_variable || "DREC_ENABLE_REAL_META_METRICS=true")}</li>
+        <li><strong>Fly switch</strong> ${escapeHtml(nightlyScheduler.live_enable_fly_secret || "META_ENABLE_METRICS_JOB=true")}</li>
+      </ul>
+      <ol>${nightlySteps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol>
+      <p>${escapeHtml(nightlyScheduler.safety || "")}</p>
     </article>
     <article class="learning-card wide-learning">
       <h3>Safety Notes</h3>

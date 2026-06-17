@@ -80,6 +80,7 @@ Stage 1 is now a working thin-core workflow:
 - Record GitHub dry-run scheduler heartbeats so the app can show whether the every-6-hour checks are actually running
 - See the GitHub Scheduler Setup steps in Meta Setup and the Operator Pack before turning on recurring dry-run checks
 - Download a Scheduler Activation Pack from Meta Setup with the GitHub secret, optional API variable, first-run check, heartbeat expectation, and dry-run safety rules
+- Use the guarded DREC Nightly Meta Metrics GitHub workflow, defaulting to dry-run and requiring both GitHub and Fly enable switches before live metrics ingestion
 - Generate a Meta OAuth guide with redirect URI, required scopes, setup steps, and a copyable Login dialog URL/template before real credentials are installed
 - See the Supabase service-role readiness gate before stricter RLS policies are applied
 - Download a protected RLS Hardening Plan and review the prepared strict server-only Supabase migration before applying it
@@ -137,6 +138,7 @@ Stage 1 is now a working thin-core workflow:
 - Dry-run the scheduler-ready Meta publishing job against due scheduled posts before real posting is enabled
 - Check the scheduled Meta publishing job from Meta Setup without using the terminal
 - Download a Meta Credential Intake Pack with required values, OAuth scope checklist, safe command template, verification fields, and go-live rules
+- See the Nightly Metrics Scheduler in Meta Setup, including its default dry-run mode and live enable switches
 - Dry-run the scheduler-ready nightly Meta metrics job before real ingestion is enabled
 - Load the latest published post into Performance so raw metrics and outcomes do not require retyping the Meta ID and context
 - Save raw metrics and roll them into a learning outcome in one Performance action

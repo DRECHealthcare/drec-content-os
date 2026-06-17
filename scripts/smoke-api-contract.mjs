@@ -6,6 +6,7 @@ const files = {
   schema: "supabase/schema.sql",
   web: "apps/web/app.js",
   schedulerWorkflow: ".github/workflows/drec-scheduler-dry-run.yml",
+  realMetricsWorkflow: ".github/workflows/drec-nightly-meta-metrics.yml",
   strictRlsMigration: "supabase/migrations/20260617040906_strict_server_only_rls.sql",
 };
 
@@ -1149,14 +1150,34 @@ const requiredSnippets = [
     text: "scheduler_setup",
   },
   {
+    name: "api nightly metrics scheduler payload",
+    file: "main",
+    text: "nightly_metrics_scheduler",
+  },
+  {
     name: "api scheduler github secret",
     file: "main",
     text: "required_github_secrets",
   },
   {
+    name: "api scheduler heartbeat mode",
+    file: "main",
+    text: "safe_mode",
+  },
+  {
     name: "web scheduler heartbeat detail",
     file: "web",
     text: "schedulerHeartbeat.detail",
+  },
+  {
+    name: "web nightly metrics scheduler card",
+    file: "web",
+    text: "Nightly Metrics Scheduler",
+  },
+  {
+    name: "web nightly metrics scheduler switch",
+    file: "web",
+    text: "DREC_ENABLE_REAL_META_METRICS=true",
   },
   {
     name: "operator pack scheduler setup",
@@ -1182,6 +1203,26 @@ const requiredSnippets = [
     name: "github scheduler heartbeat",
     file: "schedulerWorkflow",
     text: "/operations/scheduler-heartbeat",
+  },
+  {
+    name: "real metrics workflow job",
+    file: "realMetricsWorkflow",
+    text: "/jobs/nightly-meta-metrics?dry_run=${DREC_METRICS_DRY_RUN}&limit=25&rollup=true",
+  },
+  {
+    name: "real metrics workflow default dry run",
+    file: "realMetricsWorkflow",
+    text: "DREC_ENABLE_REAL_META_METRICS || 'false'",
+  },
+  {
+    name: "real metrics workflow live readiness check",
+    file: "realMetricsWorkflow",
+    text: "/meta/readiness",
+  },
+  {
+    name: "real metrics workflow live heartbeat",
+    file: "realMetricsWorkflow",
+    text: "workflow=drec-nightly-meta-metrics&mode=${DREC_METRICS_MODE}",
   },
 ];
 

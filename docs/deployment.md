@@ -205,6 +205,23 @@ The workflow checks:
 - Nightly Meta metrics in dry-run mode at 02:30 Asia/Kuala_Lumpur
 - Automation status and content risk audit gates
 
+## GitHub Nightly Meta Metrics Scheduler
+
+The repository also includes `.github/workflows/drec-nightly-meta-metrics.yml`.
+It runs daily at 02:30 Asia/Kuala_Lumpur and defaults to dry-run mode. Live
+metrics ingestion requires both of these switches:
+
+```text
+GitHub Actions variable: DREC_ENABLE_REAL_META_METRICS=true
+Fly secret: META_ENABLE_METRICS_JOB=true
+```
+
+Keep the GitHub variable unset or `false` until Meta readiness is green and a
+manual workflow dispatch has passed in dry-run mode. Even when the GitHub
+variable is true, the API still blocks live ingestion unless the Fly
+`META_ENABLE_METRICS_JOB` secret is enabled and Meta credentials/permissions
+pass readiness checks.
+
 ## Nightly Meta Metrics Job
 
 The API has guarded job endpoints for future scheduling:

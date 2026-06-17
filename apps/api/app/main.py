@@ -372,6 +372,23 @@ async def meta_setup_checklist(_: None = Depends(require_access_token)):
         ],
         "safety": "The GitHub workflow calls only dry-run endpoints, so it checks publishing and metrics readiness without posting to Meta or mutating live records.",
     }
+    nightly_metrics_scheduler = {
+        "status": "armed_dry_run" if scheduler_heartbeat.get("status") in {"recent", "stale"} else "needs_first_run",
+        "workflow_file": ".github/workflows/drec-nightly-meta-metrics.yml",
+        "schedule": "daily 02:30 Asia/Kuala_Lumpur",
+        "required_github_secrets": ["DREC_ACCESS_TOKEN"],
+        "optional_github_variables": ["DREC_API_BASE_URL"],
+        "live_enable_github_variable": "DREC_ENABLE_REAL_META_METRICS=true",
+        "live_enable_fly_secret": "META_ENABLE_METRICS_JOB=true",
+        "default_mode": "dry_run",
+        "steps": [
+            "Keep DREC_ENABLE_REAL_META_METRICS unset or false while Meta credentials are pending.",
+            "After Meta readiness is green, set Fly secret META_ENABLE_METRICS_JOB=true.",
+            "Set GitHub Actions variable DREC_ENABLE_REAL_META_METRICS=true only after a successful dry run.",
+            "Run DREC Nightly Meta Metrics manually once and confirm raw metrics plus rollup results.",
+        ],
+        "safety": "The workflow defaults to dry-run. Live ingestion requires both the GitHub variable and the Fly META_ENABLE_METRICS_JOB lock to be enabled, and the API still checks Meta readiness.",
+    }
     return {
         "overall_status": "ready_to_enable" if readiness.get("overall_status") == "ready_for_worker_testing" and security.get("rls_hardening_ready") else "needs_setup",
         "missing_credentials": [item["key"] for item in missing_env],
@@ -380,6 +397,7 @@ async def meta_setup_checklist(_: None = Depends(require_access_token)):
         "setup_commands": setup_commands,
         "oauth_guide": oauth_guide,
         "scheduler_setup": scheduler_setup,
+        "nightly_metrics_scheduler": nightly_metrics_scheduler,
         "steps": [
             {
                 "label": "Install Supabase service role key on Fly",
@@ -411,6 +429,11 @@ async def meta_setup_checklist(_: None = Depends(require_access_token)):
                 "status": "locked",
                 "detail": "Enable META_ENABLE_PUBLISHING, META_ENABLE_PUBLISHING_JOB, and META_ENABLE_METRICS_JOB after readiness is green.",
             },
+            {
+                "label": "Arm nightly Meta metrics scheduler",
+                "status": "locked" if readiness.get("overall_status") != "ready_for_worker_testing" else nightly_metrics_scheduler["status"],
+                "detail": "Use DREC Nightly Meta Metrics in dry-run mode first; live ingestion needs both GitHub and Fly switches.",
+            },
         ],
         "notes": [
             "Do not paste secret values into GitHub, Vercel, or the browser UI.",
@@ -430,6 +453,7 @@ async def meta_credential_intake_pack(_: None = Depends(require_access_token)):
     required_secrets = setup.get("required_secrets") or []
     setup_commands = setup.get("setup_commands") or []
     scheduler = setup.get("scheduler_setup") or {}
+    nightly_scheduler = setup.get("nightly_metrics_scheduler") or {}
     command_lines = [f"```bash", *setup_commands, "```"] if setup_commands else ["- No setup commands available."]
     scope_lines = [f"- {scope}" for scope in oauth.get("required_scopes", [])] or ["- No scopes listed."]
     secret_lines = [
@@ -454,6 +478,7 @@ async def meta_credential_intake_pack(_: None = Depends(require_access_token)):
         f"- Missing permissions: {', '.join(missing_permissions) or 'None'}",
         f"- OAuth configured: {'yes' if oauth.get('configured') else 'no'}",
         f"- Scheduler dry-run status: {scheduler.get('status') or 'not_checked'}",
+        f"- Nightly metrics scheduler: {nightly_scheduler.get('status') or 'not_checked'}",
         "",
         "## Values To Collect",
         "",
@@ -485,8 +510,18 @@ async def meta_credential_intake_pack(_: None = Depends(require_access_token)):
         "- Keep manual handoff as the publishing path until Meta readiness is green.",
         "- Run Meta Setup dry-run publishing before enabling META_ENABLE_PUBLISHING or META_ENABLE_PUBLISHING_JOB.",
         "- Run nightly metrics in dry-run mode before enabling META_ENABLE_METRICS_JOB.",
+        "- Keep DREC_ENABLE_REAL_META_METRICS unset or false until the first dry-run metrics workflow succeeds.",
         "- Do one Facebook-only live test before Instagram publishing or metrics automation.",
         "- After every credential change, run the live smoke check and save the Launch Evidence export.",
+        "",
+        "## Nightly Metrics Scheduler",
+        "",
+        f"- Workflow file: {nightly_scheduler.get('workflow_file') or '.github/workflows/drec-nightly-meta-metrics.yml'}",
+        f"- Schedule: {nightly_scheduler.get('schedule') or 'daily 02:30 Asia/Kuala_Lumpur'}",
+        f"- Default mode: {nightly_scheduler.get('default_mode') or 'dry_run'}",
+        f"- Live GitHub variable: {nightly_scheduler.get('live_enable_github_variable') or 'DREC_ENABLE_REAL_META_METRICS=true'}",
+        f"- Live Fly secret: {nightly_scheduler.get('live_enable_fly_secret') or 'META_ENABLE_METRICS_JOB=true'}",
+        f"- Safety: {nightly_scheduler.get('safety') or 'Live ingestion remains locked until Meta readiness and enable switches are green.'}",
         "",
         "## Evidence Fields",
         "",
@@ -1113,22 +1148,28 @@ async def operations_test_run_checklist(_: None = Depends(require_access_token))
 
 
 @app.post("/operations/scheduler-heartbeat")
-async def operations_scheduler_heartbeat(_: None = Depends(require_access_token)):
+async def operations_scheduler_heartbeat(
+    workflow: str = "DREC Scheduler Dry Run",
+    mode: str = "dry_run",
+    _: None = Depends(require_access_token),
+):
+    safe_workflow = re.sub(r"[^a-zA-Z0-9_. -]", "", workflow)[:80] or "github-actions"
+    safe_mode = re.sub(r"[^a-zA-Z0-9_-]", "", mode)[:40] or "dry_run"
     payload = {
         "recorded_at": datetime.now(timezone.utc).isoformat(),
         "source": "github-actions",
-        "workflow": "DREC Scheduler Dry Run",
-        "mode": "dry_run",
+        "workflow": safe_workflow,
+        "mode": safe_mode,
     }
     await save_feedback(
         FeedbackIn(
             module="ops",
             ref_type="scheduler",
-            ref_id="github-actions",
+            ref_id=safe_workflow,
             action="heartbeat",
             before_text=json.dumps(payload, ensure_ascii=False),
-            reason="GitHub scheduler dry-run checks completed.",
-            tags=["github-actions", "scheduler", "dry-run"],
+            reason=f"GitHub scheduler {safe_mode} checks completed.",
+            tags=["github-actions", "scheduler", safe_mode],
         )
     )
     return {"heartbeat": await latest_scheduler_heartbeat()}
@@ -1141,6 +1182,7 @@ async def operations_scheduler_activation_pack(_: None = Depends(require_access_
     security = security_status_payload()
     risk = await content_risk_audit_payload()
     scheduler = setup.get("scheduler_setup", {})
+    nightly_scheduler = setup.get("nightly_metrics_scheduler", {})
     heartbeat = scheduler.get("heartbeat", {})
     generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
     required_secret_lines = [f"- {secret}" for secret in scheduler.get("required_github_secrets", [])] or ["- DREC_ACCESS_TOKEN"]
@@ -1199,6 +1241,16 @@ async def operations_scheduler_activation_pack(_: None = Depends(require_access_
         "- Nightly Meta metrics dry run at 02:30 Malaysia time.",
         "- Automation and content risk checks.",
         "- Scheduler heartbeat recording after checks pass.",
+        "- Separate DREC Nightly Meta Metrics workflow, dry-run by default, ready for live ingestion after credential approval.",
+        "",
+        "## Nightly Metrics Scheduler",
+        "",
+        f"- Workflow file: {nightly_scheduler.get('workflow_file', '.github/workflows/drec-nightly-meta-metrics.yml')}",
+        f"- Schedule: {nightly_scheduler.get('schedule', 'daily 02:30 Asia/Kuala_Lumpur')}",
+        f"- Default mode: {nightly_scheduler.get('default_mode', 'dry_run')}",
+        f"- Live GitHub switch: {nightly_scheduler.get('live_enable_github_variable', 'DREC_ENABLE_REAL_META_METRICS=true')}",
+        f"- Live Fly switch: {nightly_scheduler.get('live_enable_fly_secret', 'META_ENABLE_METRICS_JOB=true')}",
+        f"- Safety: {nightly_scheduler.get('safety', 'Live metrics ingestion is double-locked until credentials are approved.')}",
         "",
         "## Safety Rules",
         "",
