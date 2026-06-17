@@ -11,6 +11,7 @@ const titleMap = {
   dashboard: "Dashboard",
   plan: "Weekly Plan",
   compose: "Create A Post",
+  creative: "Creative Studio",
   assets: "Assets",
   review: "Review Queue",
   scheduler: "Scheduler",
@@ -27,6 +28,7 @@ document.querySelectorAll("nav button").forEach((button) => {
     document.querySelectorAll(".screen").forEach((item) => item.classList.toggle("active", item.id === screen));
     document.getElementById("title").textContent = titleMap[screen] || screen;
     if (screen === "plan") loadBriefs();
+    if (screen === "creative") loadStyleLibrary();
     if (screen === "assets") Promise.all([loadAssets(), loadMediaAssets()]);
     if (screen === "outcomes") loadOutcomes();
     if (screen === "learning") loadLearningSummary();
@@ -910,6 +912,73 @@ function renderRiskAudit(data) {
       </ul>
     </article>
   `;
+}
+
+function renderBrandTokens(tokens) {
+  const container = document.getElementById("brand-token-board");
+  if (!container) return;
+  const entries = Object.entries(tokens || {});
+  container.innerHTML = entries.length
+    ? entries.map(([name, value]) => `
+      <article class="learning-card">
+        <h3>${escapeHtml(name.replaceAll("_", " "))}</h3>
+        <div class="style-swatch" style="background:${escapeHtml(value)}"></div>
+        <p><code>${escapeHtml(value)}</code></p>
+      </article>
+    `).join("")
+    : '<p class="status-note">No brand tokens found.</p>';
+}
+
+function renderStyleLibrary(data) {
+  const container = document.getElementById("style-library");
+  if (!container) return;
+  const styles = data.styles || [];
+  const styleRules = data.style_rules || [];
+  const safetyRules = data.safety_rules || [];
+  container.innerHTML = `
+    ${styles.length ? styles.map((style) => {
+      const signal = style.learning_signal || {};
+      return `
+        <article class="learning-card wide-learning">
+          <h3>${escapeHtml(style.name || style.key)}</h3>
+          <p>${escapeHtml(style.best_for || "")}</p>
+          <small>${escapeHtml((style.formats || []).join(" · "))}</small>
+          <div class="summary-row">
+            <span>Weight: ${escapeHtml(style.current_weight ?? "not set")}</span>
+            <span>Outcomes: ${escapeHtml(signal.count || 0)}</span>
+            <span>Avg score: ${escapeHtml(signal.avg_score ?? "n/a")}</span>
+          </div>
+          <div class="palette-row">
+            ${(style.palette || []).map((color) => `<i style="background:${escapeHtml(color)}" title="${escapeHtml(color)}"></i>`).join("")}
+          </div>
+          <ul>${(style.rules || []).map((rule) => `<li>${escapeHtml(rule)}</li>`).join("")}</ul>
+          <small>${escapeHtml(style.recommendation || "")}</small>
+        </article>
+      `;
+    }).join("") : '<p class="status-note">No styles found.</p>'}
+    <article class="learning-card wide-learning">
+      <h3>Active KB Style Rules</h3>
+      <ul>${styleRules.length ? styleRules.map((rule) => `<li>${escapeHtml(rule)}</li>`).join("") : "<li>DREC educational, calm, evidence-led, Mandarin-first.</li>"}</ul>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Safety Rules</h3>
+      <ul>${safetyRules.length ? safetyRules.map((rule) => `<li>${escapeHtml(rule)}</li>`).join("") : "<li>Education only. Avoid guaranteed outcomes, diagnosis, and personal medical claims.</li>"}</ul>
+    </article>
+  `;
+}
+
+async function loadStyleLibrary() {
+  const message = document.getElementById("creative-message");
+  try {
+    const data = await fetchJson("/creative/style-library");
+    renderBrandTokens(data.brand_tokens || {});
+    renderStyleLibrary(data);
+    if (message) message.textContent = data.next_step || "Style library loaded.";
+  } catch (error) {
+    document.getElementById("brand-token-board").innerHTML = "";
+    document.getElementById("style-library").innerHTML = '<p class="status-note">Set the access token to load Creative Studio.</p>';
+    if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not load Creative Studio.";
+  }
 }
 
 async function loadLearningSummary() {
@@ -1980,6 +2049,25 @@ document.getElementById("download-asset-safety-review")?.addEventListener("click
     message.textContent = "Asset safety review pack downloaded.";
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download asset safety review.";
+  }
+});
+
+document.getElementById("refresh-style-library")?.addEventListener("click", async () => {
+  const button = document.getElementById("refresh-style-library");
+  button.disabled = true;
+  button.textContent = "Refreshing";
+  await loadStyleLibrary();
+  button.disabled = false;
+  button.textContent = "Refresh Styles";
+});
+
+document.getElementById("download-style-guide")?.addEventListener("click", async () => {
+  const message = document.getElementById("creative-message");
+  try {
+    await downloadProtectedFile("/creative/style-guide.md", "drec-creative-style-guide.md", "text/markdown");
+    if (message) message.textContent = "Creative style guide downloaded.";
+  } catch (error) {
+    if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download Creative Style Guide.";
   }
 });
 

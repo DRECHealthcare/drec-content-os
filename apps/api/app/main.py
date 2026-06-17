@@ -73,6 +73,78 @@ LEARNING_TOPIC_LIBRARY = {
 
 FORMAT_ROTATION = ["carousel", "single", "reel", "carousel", "story"]
 STAGE_ROTATION = ["TOFU", "TOFU", "MOFU", "MOFU", "BOFU"]
+CREATIVE_STYLE_LIBRARY = [
+    {
+        "key": "edu_carousel_navy",
+        "name": "DREC Navy Education",
+        "best_for": "Mechanism explainers, doctor education, save-worthy carousel posts",
+        "formats": ["carousel", "single", "story"],
+        "palette": ["#0F2A4A", "#1FA9A0", "#F58220"],
+        "rules": [
+            "Use navy as the base, teal for structure, and orange only for CTA or contrast.",
+            "Keep one main idea per slide.",
+            "Avoid small text baked into generated images.",
+        ],
+    },
+    {
+        "key": "myth_truth_pair",
+        "name": "Myth / Truth Pair",
+        "best_for": "Contrarian hooks, belief correction, everyday metabolic myths",
+        "formats": ["carousel", "single", "reel"],
+        "palette": ["#0F2A4A", "#E2E8F0", "#1FA9A0"],
+        "rules": [
+            "Name the common belief first, then correct it calmly.",
+            "Do not shame the audience or use fear as the main lever.",
+            "Close with one observable next step.",
+        ],
+    },
+    {
+        "key": "story_case",
+        "name": "Case Story",
+        "best_for": "Consented or anonymized stories, lab-report education, MOFU trust building",
+        "formats": ["carousel", "reel"],
+        "palette": ["#143A63", "#1FA9A0", "#F1F5F8"],
+        "rules": [
+            "Use only consented or anonymized details.",
+            "Frame outcomes as individual context, never guaranteed replication.",
+            "Show the behavior or measurement lesson, not a miracle claim.",
+        ],
+    },
+    {
+        "key": "quote_authority",
+        "name": "Doctor Quote",
+        "best_for": "Authority posts, newspaper pull quotes, single-image reminders",
+        "formats": ["single", "story", "carousel"],
+        "palette": ["#0F2A4A", "#FFFFFF", "#F58220"],
+        "rules": [
+            "Use one short quote with strong contrast.",
+            "Add credential context without overcrowding.",
+            "Keep the CTA secondary.",
+        ],
+    },
+    {
+        "key": "reel_script_v1",
+        "name": "Reel Script",
+        "best_for": "Short educational reels before the future DREC Cut phase",
+        "formats": ["reel"],
+        "palette": ["#0F2A4A", "#1FA9A0", "#E8722A"],
+        "rules": [
+            "Open with a clear spoken hook in the first three seconds.",
+            "Use one mechanism, one example, one safe close.",
+            "Keep final editing manual until DREC Cut is built.",
+        ],
+    },
+]
+CREATIVE_BRAND_TOKENS = {
+    "navy": "#0F2A4A",
+    "navy_2": "#143A63",
+    "teal": "#1FA9A0",
+    "teal_dark": "#0E6B64",
+    "orange": "#F58220",
+    "orange_video": "#E8722A",
+    "background": "#F1F5F8",
+    "ink": "#1D2935",
+}
 MYT = timezone(timedelta(hours=8))
 PUBLISH_SLOT_ROTATION = {
     "facebook": [(9, 30), (20, 30)],
@@ -4983,7 +5055,7 @@ def outcome_group_insights(outcomes: list[dict], dimension: str):
 async def outcome_insights():
     outcomes = await fetch_rows(
         """
-        select post_id, pillar, funnel_stage, format, channel, audience_label,
+        select post_id, pillar, funnel_stage, hook_archetype, style_key, format, channel, audience_label,
                score, shares, saves, cpl, vs_plan_note, created_at
         from outcomes
         order by created_at desc
@@ -4994,12 +5066,12 @@ async def outcome_insights():
         outcomes = await supabase_rest.select(
             "outcomes",
             {
-                "select": "post_id,pillar,funnel_stage,format,channel,audience_label,score,shares,saves,cpl,vs_plan_note,created_at",
+                "select": "post_id,pillar,funnel_stage,hook_archetype,style_key,format,channel,audience_label,score,shares,saves,cpl,vs_plan_note,created_at",
                 "order": "created_at.desc",
                 "limit": "200",
             },
         )
-    dimensions = ["format", "channel", "pillar", "funnel_stage", "audience_label"]
+    dimensions = ["format", "channel", "pillar", "funnel_stage", "style_key", "audience_label"]
     by_dimension = {dimension: outcome_group_insights(outcomes, dimension) for dimension in dimensions}
     top_signals = []
     for dimension, items in by_dimension.items():
@@ -6017,6 +6089,134 @@ async def create_creative_draft(draft: CreativeDraftIn, _: None = Depends(requir
         },
     }
     return {"item": package}
+
+
+async def creative_style_library_payload():
+    knowledge = await active_knowledge_context()
+    insights = await outcome_insights()
+    style_weights = await fetch_rows(
+        """
+        select id, dimension, key, value, previous_value, reason, source, is_active, created_at
+        from learning_weights
+        where dimension = 'style'
+        order by created_at desc
+        limit 20
+        """
+    )
+    if not style_weights and supabase_rest.configured():
+        style_weights = await supabase_rest.select(
+            "learning_weights",
+            {
+                "select": "id,dimension,key,value,previous_value,reason,source,is_active,created_at",
+                "dimension": "eq.style",
+                "order": "created_at.desc",
+                "limit": "20",
+            },
+        )
+    style_signals = (insights.get("by_dimension") or {}).get("style_key") or []
+    style_signal_by_key = {item.get("key"): item for item in style_signals if item.get("key")}
+    style_weight_by_key = {item.get("key"): item for item in style_weights if item.get("key")}
+    styles = []
+    for style in CREATIVE_STYLE_LIBRARY:
+        signal = style_signal_by_key.get(style["key"])
+        weight = style_weight_by_key.get(style["key"])
+        styles.append(
+            {
+                **style,
+                "current_weight": weight.get("value") if weight else None,
+                "weight_reason": weight.get("reason") if weight else None,
+                "learning_signal": signal,
+                "recommendation": (
+                    signal.get("recommendation")
+                    if signal
+                    else "Use as a controlled style option until enough outcomes are recorded."
+                ),
+            }
+        )
+    return {
+        "brand_tokens": CREATIVE_BRAND_TOKENS,
+        "styles": styles,
+        "style_rules": knowledge.get("style_rules") or [],
+        "safety_rules": knowledge.get("safety_rules") or [],
+        "medical_terms": knowledge.get("medical_terms") or [],
+        "style_weights": style_weights,
+        "style_signals": style_signals,
+        "review_rules": [
+            "Choose a style before drafting so the asset carries a durable style key.",
+            "Keep health claims educational and send flagged assets back to review.",
+            "Use learning signals as guidance, not automatic approval.",
+            "Keep video style decisions manual until the DREC Cut phase is built.",
+        ],
+        "next_step": "Use Create Post or Weekly Plan with a style key, then record outcomes so style learning can compare results.",
+    }
+
+
+@app.get("/creative/style-library")
+async def creative_style_library(_: None = Depends(require_access_token)):
+    return await creative_style_library_payload()
+
+
+@app.get("/creative/style-guide.md")
+async def creative_style_guide(_: None = Depends(require_access_token)):
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    library = await creative_style_library_payload()
+    token_lines = [f"- {key}: `{value}`" for key, value in library.get("brand_tokens", {}).items()]
+    lines = [
+        "# DREC Content OS Creative Style Guide",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this before drafting or approving assets. It is read-only and does not approve or publish content.",
+        "",
+        "## Brand Tokens",
+        "",
+        *token_lines,
+        "",
+        "## Style Library",
+        "",
+    ]
+    for style in library.get("styles", []):
+        signal = style.get("learning_signal") or {}
+        lines.extend(
+            [
+                f"### {style.get('name')} (`{style.get('key')}`)",
+                "",
+                f"- Best for: {style.get('best_for')}",
+                f"- Formats: {', '.join(style.get('formats') or [])}",
+                f"- Palette: {', '.join(style.get('palette') or [])}",
+                f"- Current weight: {style.get('current_weight') if style.get('current_weight') is not None else 'not set'}",
+                f"- Learning: {signal.get('avg_score', 'no outcome data')} avg score across {signal.get('count', 0)} outcome(s)",
+                f"- Recommendation: {style.get('recommendation')}",
+                "- Rules:",
+                *markdown_list(style.get("rules")),
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## Active KB Style Rules",
+            "",
+            *markdown_list(library.get("style_rules")),
+            "",
+            "## Safety Rules",
+            "",
+            *markdown_list(library.get("safety_rules")),
+            "",
+            "## Review Rules",
+            "",
+            *markdown_list(library.get("review_rules")),
+            "",
+            "## Next Step",
+            "",
+            f"- {library.get('next_step')}",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-creative-style-guide.md"'},
+    )
 
 
 def composer_brief(composer: ComposerPostIn, knowledge: dict):

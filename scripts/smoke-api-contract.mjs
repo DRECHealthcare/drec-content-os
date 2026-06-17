@@ -69,6 +69,8 @@ const requiredRoutes = [
   "GET /publish-queue/schedule.csv",
   "GET /briefs/plan.csv",
   "GET /briefs/asset-pack.md",
+  "GET /creative/style-library",
+  "GET /creative/style-guide.md",
   "POST /composer/draft-post",
   "GET /metrics/published-source",
   "POST /metrics/import-csv",
@@ -149,6 +151,21 @@ const requiredSnippets = [
     name: "brief to asset pack review rules",
     file: "main",
     text: "## Review Rules",
+  },
+  {
+    name: "creative style library route",
+    file: "main",
+    text: "creative_style_library",
+  },
+  {
+    name: "creative style guide export",
+    file: "main",
+    text: "drec-creative-style-guide.md",
+  },
+  {
+    name: "creative style library tokens",
+    file: "main",
+    text: "CREATIVE_BRAND_TOKENS",
   },
   {
     name: "composer linked draft route",
@@ -1034,6 +1051,21 @@ const requiredSnippets = [
     name: "web composer linked draft endpoint",
     file: "web",
     text: "/composer/draft-post",
+  },
+  {
+    name: "web creative studio screen",
+    file: "web",
+    text: "Creative Studio",
+  },
+  {
+    name: "web creative style library endpoint",
+    file: "web",
+    text: "/creative/style-library",
+  },
+  {
+    name: "web creative style guide endpoint",
+    file: "web",
+    text: "/creative/style-guide.md",
   },
   {
     name: "web composer target signal",

@@ -61,6 +61,7 @@ Stage 1 is now a working thin-core workflow:
 
 - Generate weekly DREC content briefs
 - Use Create Post for one-off content; it now saves a linked brief and draft asset into the review workflow with style, target signal, media, and compliance evidence attached
+- Use Creative Studio to review the DREC style library, brand tokens, KB style rules, safety rules, and style-learning signals before drafting or approving assets
 - See the next best workflow action, operating counts, and copyable Test Path on the Dashboard, backed by the API, so testing and automation can move from brief to approved asset to queue, handoff, published ID, metrics, and report without guessing
 - Use the Dashboard's live Test Path checklist to see which manual-cycle step is complete and jump to the next screen
 - See launch readiness on the Dashboard, separating manual-use readiness from real Meta automation readiness
@@ -132,6 +133,7 @@ Stage 1 is now a working thin-core workflow:
 - Keep cancelled queue items as history without counting them as active publishing risk
 - Keep review approval separate from scheduling so approved content still needs a real planned time before handoff or Meta workers can use it
 - Keep on-demand composer drafts tied to the same brief-to-asset learning spine as weekly planned content
+- Download a Creative Style Guide for the current style library, brand colors, review rules, and performance-style signals
 - Suggest the next open MYT publishing slot for compliance-clear queue items and schedule them without guessing
 - Filter the scheduler by status/channel and scan the next 7 days of planned posts
 - Download a Schedule Audit before handoff or Meta dry runs to catch duplicate planned slots, near-channel conflicts, missing times, and overdue scheduled items

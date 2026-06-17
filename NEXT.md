@@ -128,6 +128,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added Schedule Audit for duplicate, near-slot, missing-time, and overdue planned posts
 - [x] Added Meta Preflight Audit across credentials, risk, schedule, launch, security, access, and live-switch gates
 - [x] Upgraded Create Post composer to save a linked brief and draft asset for review
+- [x] Added Creative Studio style library with brand tokens, style guide export, and learning signals
 
 ## Next Engineering Tasks
 
@@ -239,6 +240,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add schedule conflict audit before publishing handoff and Meta dry runs
 - [x] Add Meta preflight audit before the first controlled Meta live test
 - [x] Connect Create Post composer to the durable brief-to-asset workflow
+- [x] Add Creative Studio style library before deeper template/video work
 - [ ] Connect Meta Graph API credentials
 - [x] Implement real Facebook publish scheduling behind Meta readiness and enable flags
 - [x] Implement Instagram two-step publish worker behind Meta readiness and enable flags

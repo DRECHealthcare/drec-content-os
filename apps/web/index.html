@@ -16,6 +16,7 @@
       <button class="active" data-screen="dashboard">Dashboard</button>
       <button data-screen="plan">Weekly Plan</button>
       <button data-screen="compose">Create Post</button>
+      <button data-screen="creative">Creative Studio</button>
       <button data-screen="assets">Assets</button>
       <button data-screen="review">Review Queue</button>
       <button data-screen="scheduler">Scheduler</button>
@@ -222,6 +223,20 @@
           </div>
         </form>
         <div id="compose-result" class="draft-panel"></div>
+      </div>
+    </section>
+
+    <section id="creative" class="screen">
+      <div class="card wide">
+        <h2>Creative Studio</h2>
+        <p class="section-note">Review DREC style choices, brand tokens, and learning signals before drafting or approving assets.</p>
+        <div class="form-actions">
+          <button id="refresh-style-library" type="button">Refresh Styles</button>
+          <button id="download-style-guide" type="button">Download Style Guide</button>
+        </div>
+        <div id="creative-message" class="status-note"></div>
+        <div id="brand-token-board" class="learning-grid"></div>
+        <div id="style-library" class="learning-grid"></div>
       </div>
     </section>
 
