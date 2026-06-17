@@ -85,6 +85,7 @@ Stage 1 is now a working thin-core workflow:
 - Use the guarded DREC Nightly Meta Metrics GitHub workflow, defaulting to dry-run and requiring both GitHub and Fly enable switches before live metrics ingestion
 - Generate a Meta OAuth guide with redirect URI, required scopes, setup steps, and a copyable Login dialog URL/template before real credentials are installed
 - Download a Meta Activation Checklist that shows credential gates, live worker switches, first-live-test order, and proof fields before enabling Meta automation
+- Download a Meta Credential Wizard worksheet that explains each required Meta/Supabase value, where to collect it, where to store it, and the hard-stop rules before live setup
 - See the Supabase service-role readiness gate before stricter RLS policies are applied
 - See the current Access Role on the Dashboard and optionally configure separate viewer, reviewer, operator, and admin tokens while the legacy access token remains accepted; scoped routes now protect review, scheduling, metrics, and admin-sensitive actions, with optional actor labels for audit trails
 - Download a protected RLS Hardening Plan and review the prepared strict server-only Supabase migration before applying it

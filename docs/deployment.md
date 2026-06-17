@@ -271,6 +271,9 @@ Keep both jobs in dry-run mode until Meta credentials and permissions are ready.
 The live app also exposes a protected `Meta Setup` checklist and copy-ready
 command template through `/meta/setup-checklist`; paste real secret values only
 into Fly.io or the provider dashboards, never into GitHub or the browser UI.
+Download `/meta/credential-wizard.md` from Meta Setup before installing secrets;
+it explains each required Meta/Supabase value, where to collect it, where to
+store it, and the hard-stop rules before live Meta switches are enabled.
 Download `/meta/credential-intake-pack.md` from Meta Setup before installing
 credentials so the Page ID, IG user ID, token permission check, dry-run evidence,
 and first live-test record are tracked in one place.

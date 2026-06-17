@@ -569,6 +569,171 @@ async def meta_activation_checklist(_: None = Depends(require_access_token)):
     )
 
 
+async def meta_credential_wizard_payload():
+    setup = await meta_setup_checklist(None)
+    readiness = await meta_readiness(None)
+    oauth = setup.get("oauth_guide") or {}
+    env_by_key = {item.get("key"): item for item in readiness.get("env_checks") or []}
+    token_check = readiness.get("token_check") or {}
+    fields = [
+        {
+            "key": "META_APP_ID",
+            "label": "Meta App ID",
+            "status": env_by_key.get("META_APP_ID", {}).get("status", "missing"),
+            "where_to_get": "Meta for Developers > your app > App settings > Basic.",
+            "where_to_store": "Fly secret META_APP_ID.",
+            "safe_note": "This is an identifier, but still keep it in deployment config instead of public notes.",
+        },
+        {
+            "key": "META_APP_SECRET",
+            "label": "Meta App Secret",
+            "status": env_by_key.get("META_APP_SECRET", {}).get("status", "missing"),
+            "where_to_get": "Meta for Developers > your app > App settings > Basic > App secret.",
+            "where_to_store": "Fly secret META_APP_SECRET.",
+            "safe_note": "Secret value. Never paste it into browser chat, GitHub files, docs, or screenshots.",
+        },
+        {
+            "key": "META_PAGE_ID",
+            "label": "Facebook Page ID",
+            "status": env_by_key.get("META_PAGE_ID", {}).get("status", "missing"),
+            "where_to_get": "Facebook Page settings, or Graph API /me/accounts after OAuth.",
+            "where_to_store": "Fly secret META_PAGE_ID.",
+            "safe_note": "Use the Page ID that belongs to the DREC publishing Page.",
+        },
+        {
+            "key": "META_IG_USER_ID",
+            "label": "Instagram Business User ID",
+            "status": env_by_key.get("META_IG_USER_ID", {}).get("status", "missing"),
+            "where_to_get": "Graph API Page connected Instagram business account field.",
+            "where_to_store": "Fly secret META_IG_USER_ID.",
+            "safe_note": "Must be the Instagram Business/Creator account connected to the Facebook Page.",
+        },
+        {
+            "key": "META_PAGE_ACCESS_TOKEN",
+            "label": "Page Access Token",
+            "status": env_by_key.get("META_PAGE_ACCESS_TOKEN", {}).get("status", "missing"),
+            "where_to_get": "Meta OAuth flow with pages_manage_posts, pages_read_engagement, pages_show_list, instagram_basic, and instagram_content_publish.",
+            "where_to_store": "Fly secret META_PAGE_ACCESS_TOKEN.",
+            "safe_note": "Secret value. Store only as a Fly secret and rotate it if exposed.",
+        },
+        {
+            "key": "SUPABASE_SERVICE_ROLE_KEY",
+            "label": "Supabase Service Role Key",
+            "status": "ready" if security_status_payload().get("service_role_key") == "configured" else "missing",
+            "where_to_get": "Supabase project settings > API > service_role key.",
+            "where_to_store": "Fly secret SUPABASE_SERVICE_ROLE_KEY.",
+            "safe_note": "Highly sensitive server-only key. Never put it in Vercel browser env vars.",
+        },
+    ]
+    commands = [
+        f'fly secrets set {field["key"]}="<paste-{field["key"].lower().replace("_", "-")}>"'
+        for field in fields
+    ]
+    commands.extend(["fly deploy", 'DREC_ACCESS_TOKEN="<paste-drec-access-token>" npm run smoke:live'])
+    permission_rows = [
+        {
+            "permission": permission,
+            "status": "ready" if permission in (token_check.get("permissions") or []) else "missing",
+        }
+        for permission in META_REQUIRED_PERMISSIONS
+    ]
+    return {
+        "overall_status": setup.get("overall_status"),
+        "live_ready": setup.get("live_ready"),
+        "fields": fields,
+        "required_permissions": permission_rows,
+        "oauth": {
+            "configured": oauth.get("configured"),
+            "redirect_uri": oauth.get("redirect_uri"),
+            "graph_version": oauth.get("graph_version"),
+            "url_or_template": oauth.get("oauth_dialog_url") or oauth.get("oauth_dialog_url_template"),
+        },
+        "safe_command_template": commands,
+        "after_install_checks": [
+            "Redeploy Fly after setting secrets.",
+            "Open Meta Setup and confirm missing credentials becomes None.",
+            "Confirm Page token permission check is ready.",
+            "Run live smoke while all live Meta switches are still off.",
+            "Save Launch Evidence and Audit Trail before first live Facebook test.",
+        ],
+        "hard_stop_rules": [
+            "Do not enable real publishing until missing credentials and missing permissions are both empty.",
+            "Do not put Meta tokens or Supabase service-role keys into Vercel browser variables.",
+            "Do not enable Instagram live publishing before the Facebook-only test succeeds.",
+            "Do not enable nightly real metrics until a dry run sees a published Meta post ID.",
+        ],
+    }
+
+
+@app.get("/meta/credential-wizard")
+async def meta_credential_wizard(_: None = Depends(require_access_token)):
+    return await meta_credential_wizard_payload()
+
+
+@app.get("/meta/credential-wizard.md")
+async def meta_credential_wizard_markdown(_: None = Depends(require_access_token)):
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    wizard = await meta_credential_wizard_payload()
+    field_lines = [
+        f"| {field.get('key')} | {field.get('status')} | {field.get('where_to_get')} | {field.get('where_to_store')} | {field.get('safe_note')} |"
+        for field in wizard.get("fields", [])
+    ]
+    permission_lines = [
+        f"| {item.get('permission')} | {item.get('status')} |"
+        for item in wizard.get("required_permissions", [])
+    ]
+    command_lines = ["```bash", *wizard.get("safe_command_template", []), "```"]
+    lines = [
+        "# DREC Content OS Meta Credential Wizard",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this worksheet before connecting Meta. It lists what to collect and where to store it, but it must not contain real secret values.",
+        "",
+        "## Current Decision",
+        "",
+        f"- Setup status: {wizard.get('overall_status')}",
+        f"- Live ready: {'yes' if wizard.get('live_ready') else 'no'}",
+        "",
+        "## Credential Fields",
+        "",
+        "| Field | Status | Where To Get It | Where To Store It | Safe Note |",
+        "| --- | --- | --- | --- | --- |",
+        *field_lines,
+        "",
+        "## Required Permissions",
+        "",
+        "| Permission | Status |",
+        "| --- | --- |",
+        *permission_lines,
+        "",
+        "## OAuth",
+        "",
+        f"- Configured: {'yes' if wizard.get('oauth', {}).get('configured') else 'no'}",
+        f"- Redirect URI: {wizard.get('oauth', {}).get('redirect_uri') or ''}",
+        f"- Graph version: {wizard.get('oauth', {}).get('graph_version') or ''}",
+        f"- URL or template: {wizard.get('oauth', {}).get('url_or_template') or ''}",
+        "",
+        "## Safe Command Template",
+        "",
+        *command_lines,
+        "",
+        "## After Install Checks",
+        "",
+        *markdown_list(wizard.get("after_install_checks")),
+        "",
+        "## Hard Stop Rules",
+        "",
+        *markdown_list(wizard.get("hard_stop_rules")),
+        "",
+    ]
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-meta-credential-wizard.md"'},
+    )
+
+
 @app.get("/meta/credential-intake-pack.md")
 async def meta_credential_intake_pack(_: None = Depends(require_access_token)):
     generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")

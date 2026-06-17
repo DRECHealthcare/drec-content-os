@@ -54,6 +54,8 @@ const requiredRoutes = [
   "GET /meta/oauth-guide",
   "GET /meta/setup-checklist",
   "GET /meta/activation-checklist.md",
+  "GET /meta/credential-wizard",
+  "GET /meta/credential-wizard.md",
   "GET /meta/credential-intake-pack.md",
   "GET /kb/export.csv",
   "GET /kb/context",
@@ -683,6 +685,21 @@ const requiredSnippets = [
     text: "meta_credential_intake_pack",
   },
   {
+    name: "meta credential wizard route",
+    file: "main",
+    text: "meta_credential_wizard",
+  },
+  {
+    name: "meta credential wizard worksheet",
+    file: "main",
+    text: "drec-meta-credential-wizard.md",
+  },
+  {
+    name: "meta credential wizard safety",
+    file: "main",
+    text: "must not contain real secret values",
+  },
+  {
     name: "meta credential intake pack safety",
     file: "main",
     text: "It is a checklist and evidence sheet only",
@@ -1261,6 +1278,16 @@ const requiredSnippets = [
     name: "web meta oauth copy action",
     file: "web",
     text: "copy-meta-oauth",
+  },
+  {
+    name: "web meta credential wizard action",
+    file: "web",
+    text: "download-meta-wizard",
+  },
+  {
+    name: "web meta credential wizard endpoint",
+    file: "web",
+    text: "/meta/credential-wizard.md",
   },
   {
     name: "web meta credential pack action",

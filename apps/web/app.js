@@ -2716,6 +2716,16 @@ document.getElementById("copy-meta-oauth").addEventListener("click", async () =>
   }
 });
 
+document.getElementById("download-meta-wizard").addEventListener("click", async () => {
+  const message = document.getElementById("meta-message");
+  try {
+    await downloadProtectedFile("/meta/credential-wizard.md", "drec-meta-credential-wizard.md", "text/markdown");
+    message.textContent = "Meta credential wizard downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download Meta credential wizard.";
+  }
+});
+
 document.getElementById("download-meta-intake").addEventListener("click", async () => {
   const message = document.getElementById("meta-message");
   try {
