@@ -34,6 +34,7 @@ const checks = [
         && text.includes("download-first-cycle-sprint-tracker")
         && text.includes("first-cycle-sprint")
         && text.includes("download-doctor-review-polish")
+        && text.includes("download-doctor-review-bridge")
         && text.includes("download-doctor-reply-inbox")
         && text.includes("doctor-review-polish")
         && text.includes("download-doctor-approval-request")
@@ -67,6 +68,7 @@ const checks = [
     validate: async (res) => {
       const text = await res.text();
       return text.includes("/operations/doctor-decision-worksheet.csv")
+        && text.includes("/operations/doctor-review-bridge.md")
         && text.includes("/operations/doctor-review-polish-pack")
         && text.includes("/operations/doctor-review-polish-pack.md")
         && text.includes("/operations/doctor-reply-inbox-pack.md")
@@ -526,6 +528,19 @@ const checks = [
       return text.includes("# DREC Content OS Doctor Approval Pack")
         && text.includes("## How To Record Decisions")
         && text.includes("Doctor Safety Checklist");
+    },
+  },
+  {
+    name: "Doctor review bridge",
+    url: `${apiBase}/operations/doctor-review-bridge.md`,
+    auth: true,
+    validate: async (res) => {
+      const text = await res.text();
+      return text.includes("# DREC Content OS Doctor Review Bridge")
+        && text.includes("## Copy This To Doctor")
+        && text.includes("## Paste-Back Reply Template")
+        && text.includes("Doctor Reply Text")
+        && text.includes("read-only");
     },
   },
   {

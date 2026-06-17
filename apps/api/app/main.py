@@ -5233,6 +5233,82 @@ async def doctor_reply_inbox_pack_payload():
     }
 
 
+async def doctor_review_bridge_payload():
+    polish = await doctor_review_polish_pack_payload()
+    inbox = await doctor_reply_inbox_pack_payload()
+    items = (polish.get("polish_items") or [])[:5]
+    send_blocks = []
+    reply_blocks = []
+    for index, item in enumerate(items, start=1):
+        send_blocks.append(
+            "\n".join(
+                [
+                    f"{index}. {item.get('topic') or 'Untitled asset'}",
+                    f"Asset ID: {item.get('asset_id') or ''}",
+                    f"Channel / format: {item.get('channel') or ''} / {item.get('format') or ''}",
+                    "",
+                    "Copy to review:",
+                    item.get("suggested_review_copy") or item.get("current_caption") or "No copy available.",
+                    "",
+                    "Please reply using:",
+                    item.get("doctor_reply_template") or "",
+                ]
+            )
+        )
+        if item.get("doctor_reply_template"):
+            reply_blocks.append(item.get("doctor_reply_template"))
+    full_message = "\n\n".join(
+        [
+            "Doctor, please review these DREC Mandarin health-education drafts.",
+            "Approve only if the medical meaning is safe, educational, non-diagnostic, non-guaranteed, and does not advise medication changes.",
+            "For each Asset ID, please reply with Decision, Safety, Use polished copy, and Notes.",
+            "If anything needs edits, mark Decision: needs edits or Safety: needs review / blocked.",
+            "",
+            *send_blocks,
+        ]
+    ).strip()
+    return {
+        "phase": "doctor_review_bridge",
+        "mode": "copy_send_then_preview_import",
+        "ready_for_review": polish.get("ready_for_review", 0),
+        "bridge_item_count": len(items),
+        "full_doctor_message": full_message,
+        "paste_back_template": "\n\n".join(reply_blocks) or inbox.get("reply_paste_template") or "",
+        "bridge_items": [
+            {
+                "asset_id": item.get("asset_id"),
+                "topic": item.get("topic"),
+                "channel": item.get("channel"),
+                "format": item.get("format"),
+                "copy_to_review": item.get("suggested_review_copy") or item.get("current_caption") or "",
+                "reply_template": item.get("doctor_reply_template") or "",
+                "safe_use_rule": "Only import approval when Decision: approve and Safety: clear are explicit.",
+            }
+            for item in items
+        ],
+        "operator_steps": [
+            "Copy the full doctor message and send it to the reviewer.",
+            "Ask the reviewer to keep one reply block per Asset ID.",
+            "Paste the reply into Doctor Reply Text and use Preview Doctor Reply first.",
+            "Import only the preview rows that show the intended approval, safety, and polished-copy decisions.",
+            "After import, use Approval Cockpit and Production Pack; do not queue, schedule, publish, or send Meta from this bridge.",
+        ],
+        "safety": [
+            "This bridge is read-only and does not approve, edit, attach media, queue, schedule, publish, or send Meta requests.",
+            "A doctor reply is not applied until it is previewed and imported through the protected doctor reply workflow.",
+            "Use polished copy only when the doctor explicitly says Use polished copy: yes with Decision: approve and Safety: clear.",
+            "Needs edits, needs review, blocked, or unclear replies must stay out of production.",
+        ],
+        "links": {
+            "doctor_review_polish": "/operations/doctor-review-polish-pack.md",
+            "doctor_reply_inbox": "/operations/doctor-reply-inbox-pack.md",
+            "approval_cockpit": "/operations/approval-cockpit.md",
+            "today_runbook": "/operations/today-runbook.md",
+        },
+        "next_step": "Copy the full doctor message to the reviewer, then paste their reply into Doctor Reply Text and preview before import.",
+    }
+
+
 @app.get("/operations/doctor-review-polish-pack")
 async def operations_doctor_review_polish_pack(_: None = Depends(require_access_token)):
     return await doctor_review_polish_pack_payload()
@@ -5374,6 +5450,97 @@ async def operations_doctor_reply_inbox_pack_markdown(_: None = Depends(require_
         "\n".join(lines),
         media_type="text/markdown",
         headers={"Content-Disposition": 'attachment; filename="drec-doctor-reply-inbox-pack.md"'},
+    )
+
+
+@app.get("/operations/doctor-review-bridge")
+async def operations_doctor_review_bridge(_: None = Depends(require_access_token)):
+    return await doctor_review_bridge_payload()
+
+
+@app.get("/operations/doctor-review-bridge.md")
+async def operations_doctor_review_bridge_markdown(_: None = Depends(require_access_token)):
+    payload = await doctor_review_bridge_payload()
+    generated_at = datetime.now(timezone.utc).isoformat()
+    lines = [
+        "# DREC Content OS Doctor Review Bridge",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this one-page bridge to send the current doctor-review batch and paste the reply back through the protected preview/import flow. It is read-only and does not approve or publish anything.",
+        "",
+        "## Summary",
+        "",
+        f"- Ready for review: {payload.get('ready_for_review')}",
+        f"- Bridge items: {payload.get('bridge_item_count')}",
+        f"- Mode: {payload.get('mode')}",
+        "",
+        "## Operator Steps",
+        "",
+        *markdown_list(payload.get("operator_steps"), "- Copy, send, preview, then import."),
+        "",
+        "## Safety Rules",
+        "",
+        *markdown_list(payload.get("safety"), "- Read-only bridge."),
+        "",
+        "## Copy This To Doctor",
+        "",
+        "```",
+        payload.get("full_doctor_message") or "No doctor-review items are ready yet.",
+        "```",
+        "",
+        "## Paste-Back Reply Template",
+        "",
+        "```",
+        payload.get("paste_back_template") or "No reply template is ready yet.",
+        "```",
+        "",
+        "## Bridge Items",
+        "",
+    ]
+    items = payload.get("bridge_items") or []
+    if not items:
+        lines.extend(["- No doctor-review bridge items are ready yet.", ""])
+    for index, item in enumerate(items, start=1):
+        lines.extend(
+            [
+                f"### {index}. {item.get('topic') or 'Untitled asset'}",
+                "",
+                f"- Asset ID: `{item.get('asset_id')}`",
+                f"- Channel / format: {item.get('channel')} / {item.get('format')}",
+                f"- Safe use rule: {item.get('safe_use_rule')}",
+                "",
+                "Copy to review:",
+                "",
+                item.get("copy_to_review") or "No copy available.",
+                "",
+                "Reply template:",
+                "",
+                "```",
+                item.get("reply_template") or "",
+                "```",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## Related Links",
+            "",
+            *[
+                f"- {label.replace('_', ' ').title()}: `{path}`"
+                for label, path in (payload.get("links") or {}).items()
+            ],
+            "",
+            "## Next Step",
+            "",
+            f"- {payload.get('next_step')}",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-doctor-review-bridge.md"'},
     )
 
 
@@ -6516,7 +6683,7 @@ async def today_runbook_payload():
         immediate_action = {
             "label": "Human approval review",
             "screen": "assets",
-            "action": "Download Doctor Polish, copy the review-ready Mandarin text to the doctor, then import the reply only after the human checklist passes.",
+            "action": "Download Doctor Review Bridge, copy the review-ready Mandarin text to the doctor, then preview/import the reply only after the human checklist passes.",
         }
     else:
         immediate_action = {
@@ -6572,6 +6739,7 @@ async def today_runbook_payload():
     blocked_gates = [gate for gate in gates if gate.get("status") == "blocked"]
     waiting_gates = [gate for gate in gates if gate.get("status") in {"waiting", "needs_content", "stale"}]
     links = {
+        "doctor_review_bridge": "/operations/doctor-review-bridge.md",
         "doctor_review_polish": "/operations/doctor-review-polish-pack.md",
         "doctor_reply_inbox": "/operations/doctor-reply-inbox-pack.md",
         "approval_cockpit": "/operations/approval-cockpit.md",
@@ -6608,7 +6776,7 @@ async def today_runbook_payload():
         },
         "gates": gates,
         "operator_sequence": [
-            "Use the doctor polish pack to send review-ready Mandarin copy to the doctor.",
+            "Use the doctor review bridge or polish pack to send review-ready Mandarin copy to the doctor.",
             "Use the doctor reply inbox pack to paste returned doctor decisions through preview before import.",
             "Review the approval cockpit and approve only human-cleared medical copy.",
             "Use the production pack and media attachment CSV for design/media URLs.",

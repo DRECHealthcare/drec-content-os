@@ -51,6 +51,8 @@ const requiredRoutes = [
   "GET /operations/doctor-approval-request",
   "GET /operations/doctor-approval-request.md",
   "GET /operations/doctor-approval-pack.md",
+  "GET /operations/doctor-review-bridge",
+  "GET /operations/doctor-review-bridge.md",
   "GET /operations/doctor-review-polish-pack",
   "GET /operations/doctor-review-polish-pack.md",
   "GET /operations/doctor-reply-inbox-pack",
@@ -828,6 +830,36 @@ const requiredSnippets = [
     text: "This request is read-only and does not approve, queue, schedule, publish, or send Meta requests.",
   },
   {
+    name: "doctor review bridge route",
+    file: "main",
+    text: "doctor_review_bridge_payload",
+  },
+  {
+    name: "doctor review bridge export",
+    file: "main",
+    text: "drec-doctor-review-bridge.md",
+  },
+  {
+    name: "doctor review bridge send section",
+    file: "main",
+    text: "## Copy This To Doctor",
+  },
+  {
+    name: "doctor review bridge safety",
+    file: "main",
+    text: "This bridge is read-only and does not approve, edit, attach media, queue, schedule, publish, or send Meta requests.",
+  },
+  {
+    name: "doctor review bridge UI action",
+    file: "web",
+    text: "download-doctor-review-bridge",
+  },
+  {
+    name: "doctor review bridge UI endpoint",
+    file: "web",
+    text: "/operations/doctor-review-bridge.md",
+  },
+  {
     name: "doctor reply import route",
     file: "main",
     text: "import_doctor_replies",
@@ -1103,9 +1135,9 @@ const requiredSnippets = [
     text: "\"scheduler_recovery\": \"/operations/scheduler-recovery-pack.md\"",
   },
   {
-    name: "today runbook doctor polish sequence",
+    name: "today runbook doctor bridge sequence",
     file: "main",
-    text: "Use the doctor polish pack to send review-ready Mandarin copy to the doctor.",
+    text: "Use the doctor review bridge or polish pack to send review-ready Mandarin copy to the doctor.",
   },
   {
     name: "today runbook reply inbox sequence",

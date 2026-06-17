@@ -3077,6 +3077,16 @@ document.getElementById("download-doctor-approval-request")?.addEventListener("c
   }
 });
 
+document.getElementById("download-doctor-review-bridge")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/doctor-review-bridge.md", "drec-doctor-review-bridge.md", "text/markdown");
+    message.textContent = "Doctor review bridge downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download doctor review bridge.";
+  }
+});
+
 document.getElementById("download-doctor-review-polish")?.addEventListener("click", async () => {
   const message = document.getElementById("media-message");
   try {
