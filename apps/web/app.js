@@ -1805,6 +1805,7 @@ function renderAssetRewritePack(data) {
   if (!container) return;
   const items = data.rewrite_items || [];
   const rules = data.rules || [];
+  container.dataset.rewriteItems = JSON.stringify(items);
   container.innerHTML = `
     <article class="learning-card">
       <h3>Rewrite Pack</h3>
@@ -1823,7 +1824,7 @@ function renderAssetRewritePack(data) {
     </article>
     <article class="learning-card wide-learning">
       <h3>Suggested Caption Fixes</h3>
-      <ul>${items.length ? items.slice(0, 5).map((item) => `<li><strong>${escapeHtml(item.topic || "Untitled asset")}</strong> · ${escapeHtml(item.before_status || "")} → ${escapeHtml(item.after_status || "")}<br><small>${escapeHtml(item.next_step || "")}</small></li>`).join("") : "<li>No rewrite candidates found.</li>"}</ul>
+      <ul>${items.length ? items.slice(0, 5).map((item) => `<li><strong>${escapeHtml(item.topic || "Untitled asset")}</strong> · ${escapeHtml(item.before_status || "")} → ${escapeHtml(item.after_status || "")}<br><small>${escapeHtml(item.next_step || "")}</small><br><button type="button" data-apply-asset-rewrite="${escapeHtml(item.asset_id || "")}">Apply Rewrite</button></li>`).join("") : "<li>No rewrite candidates found.</li>"}</ul>
     </article>
     <article class="learning-card wide-learning">
       <h3>Rewrite Rules</h3>
@@ -1843,6 +1844,39 @@ async function loadAssetRewritePack() {
     container.innerHTML = '<p class="status-note">Set the access token to load the rewrite pack.</p>';
   }
 }
+
+document.getElementById("asset-rewrite-pack")?.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-apply-asset-rewrite]");
+  if (!button) return;
+  const container = document.getElementById("asset-rewrite-pack");
+  const message = document.getElementById("media-message");
+  const items = JSON.parse(container.dataset.rewriteItems || "[]");
+  const item = items.find((entry) => entry.asset_id === button.dataset.applyAssetRewrite);
+  if (!item?.suggested_caption) {
+    message.textContent = "Rewrite suggestion not found.";
+    return;
+  }
+  const confirmed = window.confirm("Apply this suggested caption to the asset? It will still need human approval before queueing.");
+  if (!confirmed) return;
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = "Applying";
+  try {
+    const data = await fetchJson(`/assets/${button.dataset.applyAssetRewrite}/caption`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        caption: item.suggested_caption,
+        reason: "Applied safe rewrite suggestion; human approval still required.",
+      }),
+    });
+    message.textContent = data.message || "Rewrite applied. Human approval is still required.";
+    await Promise.all([loadAssets(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not apply rewrite.";
+    button.disabled = false;
+    button.textContent = originalText;
+  }
+});
 
 async function runAssetBatchAction(button, path, label) {
   const message = document.getElementById("media-message");

@@ -54,6 +54,11 @@ class AssetComplianceIn(BaseModel):
     reason: Optional[str] = None
 
 
+class AssetRewriteIn(BaseModel):
+    caption: str
+    reason: Optional[str] = None
+
+
 class MediaAssetIn(BaseModel):
     title: str
     source_url: str

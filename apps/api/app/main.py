@@ -26,6 +26,7 @@ from .db import close_db, connect_db, fetch_row, fetch_rows
 from .models import (
     AssetIn,
     AssetComplianceIn,
+    AssetRewriteIn,
     AssetStatusIn,
     ComposerPostIn,
     ComplianceCheckIn,
@@ -426,17 +427,20 @@ async def latest_scheduler_heartbeat():
         """
     )
     if row is None and supabase_rest.configured():
-        rows = await supabase_rest.select(
-            "feedback",
-            {
-                "select": "id,module,ref_type,ref_id,action,reason,tags,created_at",
-                "module": "eq.ops",
-                "ref_type": "eq.scheduler",
-                "action": "eq.heartbeat",
-                "order": "created_at.desc",
-                "limit": "1",
-            },
-        )
+        try:
+            rows = await supabase_rest.select(
+                "feedback",
+                {
+                    "select": "id,module,ref_type,ref_id,action,reason,tags,created_at",
+                    "module": "eq.ops",
+                    "ref_type": "eq.scheduler",
+                    "action": "eq.heartbeat",
+                    "order": "created_at.desc",
+                    "limit": "1",
+                },
+            )
+        except Exception:
+            rows = []
         row = rows[0] if rows else None
     if not row:
         return {
@@ -6860,6 +6864,90 @@ async def update_asset_compliance(
             )
         )
     return {"item": row or {**existing, "compliance_status": update.compliance_status}}
+
+
+@app.patch("/assets/{asset_id}/caption")
+async def update_asset_caption(
+    asset_id: str,
+    update: AssetRewriteIn,
+    session: dict = Depends(require_review_access),
+):
+    existing = await asset_by_id(asset_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Asset not found.")
+    if existing.get("review_status") == "approved":
+        raise HTTPException(status_code=422, detail="Approved assets must return to review before caption rewrites.")
+    caption = (update.caption or "").strip()
+    if not caption:
+        raise HTTPException(status_code=422, detail="Caption rewrite cannot be blank.")
+    compliance = check_text(caption)
+    if compliance["status"] == "flagged":
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "message": "Compliance check blocked this rewrite.",
+                "compliance": compliance,
+            },
+        )
+    compliance_status = "clear" if compliance["status"] == "clear" else "pending"
+    metadata = existing.get("metadata") or {}
+    rewrite_history = list(metadata.get("rewrite_history") or [])
+    rewrite_history.append(
+        {
+            "source": "asset_safe_rewrite_pack",
+            "applied_at": datetime.now(timezone.utc).isoformat(),
+            "actor": session.get("actor") or "unknown",
+            "before_status": check_text(existing.get("caption") or "").get("status"),
+            "after_status": compliance.get("status"),
+            "reason": update.reason or "Safe caption rewrite applied for human review.",
+        }
+    )
+    metadata["rewrite_history"] = rewrite_history[-10:]
+    row = await fetch_row(
+        """
+        update assets
+        set caption = $2,
+            compliance_status = $3,
+            review_status = case when review_status = 'rejected' then 'review' else review_status end,
+            metadata = $4::jsonb,
+            updated_at = now()
+        where id = $1
+        returning id, brief_id, channel, format, caption, media_urls, metadata,
+                  compliance_status, review_status, created_at
+        """,
+        asset_id,
+        caption,
+        compliance_status,
+        json.dumps(metadata),
+    )
+    if row is None and supabase_rest.configured():
+        row = await supabase_rest.update(
+            "assets",
+            {
+                "caption": caption,
+                "compliance_status": compliance_status,
+                "review_status": "review" if existing.get("review_status") == "rejected" else existing.get("review_status"),
+                "metadata": metadata,
+            },
+            {"id": f"eq.{asset_id}"},
+        )
+    await save_feedback(
+        FeedbackIn(
+            module="asset_rewrite",
+            ref_type="asset",
+            ref_id=asset_id,
+            action="edit",
+            reason=update.reason or "Safe caption rewrite applied; human approval still required.",
+            before_text=existing.get("caption"),
+            after_text=caption,
+            tags=["asset_rewrite", compliance_status, *audit_tags(session)],
+        )
+    )
+    return {
+        "item": row or {**existing, "caption": caption, "compliance_status": compliance_status, "metadata": metadata},
+        "compliance": compliance,
+        "message": "Caption rewrite applied. Human approval is still required before queueing.",
+    }
 
 
 async def existing_queue_for_asset(asset_id: str):

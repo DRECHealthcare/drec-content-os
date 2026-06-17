@@ -65,6 +65,7 @@ Stage 1 is now a working thin-core workflow:
 - Use Create Post for one-off content; it now saves a linked brief and draft asset into the review workflow with style, target signal, media, and compliance evidence attached
 - Use the Assets Review Session summary and Markdown pack to run a focused human approval meeting with detector findings, recommended decisions, and next steps
 - Use the Assets Rewrite Pack to prepare safer suggested captions for pending assets without auto-approving or changing saved content
+- Apply a suggested rewrite to a draft asset while keeping human approval, queueing, scheduling, and publishing as separate gates
 - Use Creative Studio to review the DREC style library, brand tokens, KB style rules, safety rules, and style-learning signals before drafting or approving assets
 - Use Template Studio to map static assets to DREC layout templates, render rules, brand tokens, and final QA before artwork handoff
 - Use Video Studio to review reel readiness, approved video media, blockers, manual SOP steps, and the future DREC Cut lock before production handoff
