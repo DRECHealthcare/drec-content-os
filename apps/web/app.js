@@ -31,6 +31,7 @@ document.querySelectorAll("nav button").forEach((button) => {
     document.querySelectorAll(".screen").forEach((item) => item.classList.toggle("active", item.id === screen));
     document.getElementById("title").textContent = titleMap[screen] || screen;
     if (screen === "insights") loadSenseBrief();
+    if (screen === "insights") loadAdsPlanning();
     if (screen === "plan") loadBriefs();
     if (screen === "creative") loadStyleLibrary();
     if (screen === "templates") loadTemplateStudio();
@@ -1119,6 +1120,58 @@ async function loadSenseBrief() {
     if (topics) topics.innerHTML = "";
     if (signals) signals.innerHTML = '<p class="status-note">Set the access token to load Insight Inbox.</p>';
     if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not load Sense Brief.";
+  }
+}
+
+function renderAdsPlanning(data) {
+  const container = document.getElementById("ads-planning");
+  if (!container) return;
+  const candidates = data.candidate_tests || [];
+  const targets = data.cpl_targets || [];
+  const rules = data.budget_rules || [];
+  const handoff = data.media_buyer_handoff || [];
+  container.innerHTML = `
+    <article class="learning-card">
+      <h3>Mode</h3>
+      <p>${escapeHtml(data.mode || "manual_planning_only")}</p>
+      <small>${escapeHtml(data.phase || "ads_planning_pre_meta")}</small>
+    </article>
+    <article class="learning-card">
+      <h3>Tests</h3>
+      <p>${escapeHtml(candidates.length)} candidate(s)</p>
+      <small>Manual Ads Manager only</small>
+    </article>
+    <article class="learning-card">
+      <h3>CPL Targets</h3>
+      <p>${targets.length ? targets.map((target) => escapeHtml(`${target.title}: ${target.target_cpl}`)).join("<br>") : "No CPL target found"}</p>
+      <small>Store targets in Knowledge Base</small>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Candidate Tests</h3>
+      <ul>${candidates.length ? candidates.slice(0, 6).map((item) => `<li><strong>${escapeHtml(item.angle)}</strong><br><small>${escapeHtml(item.audience)} · ${escapeHtml(item.success_metric)}</small></li>`).join("") : "<li>Add audience, competitor, ads, or idea entries to Knowledge Base.</li>"}</ul>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Budget Rules</h3>
+      <ul>${rules.map((rule) => `<li>${escapeHtml(rule)}</li>`).join("")}</ul>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Media Buyer Handoff</h3>
+      <ul>${handoff.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+      <p>${escapeHtml(data.next_step || "")}</p>
+    </article>
+  `;
+}
+
+async function loadAdsPlanning() {
+  const container = document.getElementById("ads-planning");
+  const message = document.getElementById("sense-message");
+  if (!container) return;
+  try {
+    const data = await fetchJson("/insights/ads-planning");
+    renderAdsPlanning(data);
+  } catch (error) {
+    container.innerHTML = '<p class="status-note">Set the access token to load Ads Planning.</p>';
+    if (message && error.message !== "Access token required") message.textContent = "Could not load Ads Planning.";
   }
 }
 
@@ -2443,7 +2496,7 @@ document.getElementById("refresh-sense-brief")?.addEventListener("click", async 
   const button = document.getElementById("refresh-sense-brief");
   button.disabled = true;
   button.textContent = "Refreshing";
-  await loadSenseBrief();
+  await Promise.all([loadSenseBrief(), loadAdsPlanning()]);
   button.disabled = false;
   button.textContent = "Refresh Sense Brief";
 });
@@ -2455,6 +2508,25 @@ document.getElementById("download-sense-brief")?.addEventListener("click", async
     if (message) message.textContent = "Sense Brief downloaded.";
   } catch (error) {
     if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download Sense Brief.";
+  }
+});
+
+document.getElementById("refresh-ads-planning")?.addEventListener("click", async () => {
+  const button = document.getElementById("refresh-ads-planning");
+  button.disabled = true;
+  button.textContent = "Refreshing";
+  await loadAdsPlanning();
+  button.disabled = false;
+  button.textContent = "Refresh Ads Plan";
+});
+
+document.getElementById("download-ads-planning")?.addEventListener("click", async () => {
+  const message = document.getElementById("sense-message");
+  try {
+    await downloadProtectedFile("/insights/ads-planning.md", "drec-ads-planning-pack.md", "text/markdown");
+    if (message) message.textContent = "Ads Planning Pack downloaded.";
+  } catch (error) {
+    if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download Ads Planning Pack.";
   }
 });
 
@@ -3823,4 +3895,5 @@ loadMetaReadiness();
 loadMetaSetupChecklist();
 loadOutcomes();
 loadAccessPolicy();
+loadAdsPlanning();
 updateTokenButton();

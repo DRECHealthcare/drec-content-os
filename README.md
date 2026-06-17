@@ -61,6 +61,7 @@ Stage 1 is now a working thin-core workflow:
 
 - Generate weekly DREC content briefs
 - Use Insight Inbox to turn audience, competitor, ads, observation, idea, and learning signals into a safe Sense Brief before weekly planning
+- Download an Ads Planning Pack from Insight Inbox with manual candidate tests, CPL targets from Knowledge Base, budget rules, and media buyer handoff
 - Use Create Post for one-off content; it now saves a linked brief and draft asset into the review workflow with style, target signal, media, and compliance evidence attached
 - Use Creative Studio to review the DREC style library, brand tokens, KB style rules, safety rules, and style-learning signals before drafting or approving assets
 - Use Template Studio to map static assets to DREC layout templates, render rules, brand tokens, and final QA before artwork handoff

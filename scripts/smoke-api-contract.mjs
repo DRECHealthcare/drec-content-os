@@ -69,6 +69,8 @@ const requiredRoutes = [
   "GET /kb/context",
   "GET /insights/sense-brief",
   "GET /insights/sense-brief.md",
+  "GET /insights/ads-planning",
+  "GET /insights/ads-planning.md",
   "GET /publish-queue/suggest-slot",
   "GET /publish-queue/schedule-audit",
   "GET /publish-queue/schedule-audit.md",
@@ -889,6 +891,21 @@ const requiredSnippets = [
     text: "Competitor and ad signals are inspiration only",
   },
   {
+    name: "ads planning route",
+    file: "main",
+    text: "ads_planning_pre_meta",
+  },
+  {
+    name: "ads planning export",
+    file: "main",
+    text: "drec-ads-planning-pack.md",
+  },
+  {
+    name: "ads no auto spend rule",
+    file: "main",
+    text: "The AI never changes spend or publishes ads.",
+  },
+  {
     name: "web insight inbox screen",
     file: "web",
     text: "Insight Inbox",
@@ -902,6 +919,21 @@ const requiredSnippets = [
     name: "web sense brief download endpoint",
     file: "web",
     text: "/insights/sense-brief.md",
+  },
+  {
+    name: "web ads planning action",
+    file: "web",
+    text: "download-ads-planning",
+  },
+  {
+    name: "web ads planning endpoint",
+    file: "web",
+    text: "/insights/ads-planning",
+  },
+  {
+    name: "web ads planning download endpoint",
+    file: "web",
+    text: "/insights/ads-planning.md",
   },
   {
     name: "weekly plan uses knowledge context",

@@ -135,6 +135,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added Insight Inbox Sense Brief for ads, competitors, audience observations, ideas, and learning inputs
 - [x] Added Quarterly Learning Memo with posting-time heat, outcome signals, weight-change log, and next-quarter actions
 - [x] Added Backup & Recovery Pack for rebuild evidence, required exports, recovery order, and degraded mode
+- [x] Added manual Ads Planning Pack with candidate tests, CPL targets, budget rules, and media buyer handoff
 
 ## Next Engineering Tasks
 
@@ -253,6 +254,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add Insight Inbox for Sense inputs before weekly planning
 - [x] Add Quarterly Learning Memo for posting-time heat and self-review
 - [x] Add Backup & Recovery Pack for weekly backup and rebuild readiness
+- [x] Add manual Ads Planning Pack before Marketing API spend automation
 - [ ] Connect Meta Graph API credentials
 - [x] Implement real Facebook publish scheduling behind Meta readiness and enable flags
 - [x] Implement Instagram two-step publish worker behind Meta readiness and enable flags

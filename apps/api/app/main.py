@@ -5422,6 +5422,199 @@ async def insight_sense_brief_markdown(_: None = Depends(require_access_token)):
     )
 
 
+def cpl_targets_from_kb(entries: list[dict]):
+    targets = []
+    pattern = re.compile(r"(?:cpl|cost per lead|lead cost|每.?条线索|每.?个咨询|咨询成本)[^\d]{0,20}([\d]+(?:\.\d+)?)", re.IGNORECASE)
+    for item in entries:
+        haystack = f"{item.get('title') or ''} {item.get('body') or ''}"
+        match = pattern.search(haystack)
+        if not match:
+            continue
+        targets.append(
+            {
+                "title": item.get("title") or "CPL target",
+                "category": item.get("category") or "kb",
+                "target_cpl": safe_float(match.group(1)),
+                "summary": summarize_knowledge_item(item, 180),
+            }
+        )
+    return targets[:6]
+
+
+def ads_angle_from_signal(signal: dict, category: str):
+    title = signal.get("title") or "DREC signal"
+    if category == "audience":
+        return {
+            "angle": f"Audience objection: {title}",
+            "audience": "Warm education audience with blood sugar or metabolic-health concern",
+            "test": "Question-led carousel or lead-form educational post",
+            "success_metric": "qualified consult interest, saves, comments",
+        }
+    if category == "competitor":
+        return {
+            "angle": f"Market contrast: {title}",
+            "audience": "Cold lookalike or broad interest audience; keep claims conservative",
+            "test": "Myth/truth creative rewritten in DREC voice",
+            "success_metric": "thumb-stop rate, saves, low negative feedback",
+        }
+    if category == "ads":
+        return {
+            "angle": f"Paid signal extension: {title}",
+            "audience": "Retarget engagers first, then test cold only after compliance review",
+            "test": "One control ad vs one educational variant",
+            "success_metric": "CPL against KB target, lead quality, comments",
+        }
+    return {
+        "angle": f"Educational test: {title}",
+        "audience": "Organic warm audience before paid amplification",
+        "test": "Small-budget creative read only; no automatic spend",
+        "success_metric": "saves, shares, qualified questions",
+    }
+
+
+async def ads_planning_payload():
+    entries = await fetch_knowledge_entries(250)
+    sense = await insight_sense_payload()
+    outcomes = await outcome_insights()
+    quarterly = await quarterly_learning_payload()
+    signals_by_category = sense.get("signals_by_category") or {}
+    cpl_targets = cpl_targets_from_kb(entries)
+    candidate_tests = []
+    for category in ["audience", "competitor", "ads", "observation", "idea"]:
+        for signal in (signals_by_category.get(category) or [])[:3]:
+            candidate = ads_angle_from_signal(signal, category)
+            candidate["source_category"] = category
+            candidate["source_title"] = signal.get("title")
+            candidate["guardrail"] = "Rewrite and compliance-check before Ads Manager upload; do not copy competitor claims or visuals."
+            candidate_tests.append(candidate)
+    for topic in sense.get("planning_topics") or []:
+        if len(candidate_tests) >= 8:
+            break
+        candidate_tests.append(
+            {
+                "source_category": "learning_topic",
+                "source_title": topic,
+                "angle": f"Learning-backed education: {topic}",
+                "audience": "Warm retargeting audience first",
+                "test": "Promote only after organic post passes review and has useful engagement.",
+                "success_metric": "saves, consult questions, CPL if lead form is used",
+                "guardrail": "Organic proof first; paid spend remains manual.",
+            }
+        )
+    return {
+        "phase": "ads_planning_pre_meta",
+        "mode": "manual_planning_only",
+        "candidate_tests": candidate_tests[:8],
+        "cpl_targets": cpl_targets,
+        "audience_inputs": signals_by_category.get("audience") or [],
+        "competitor_inputs": signals_by_category.get("competitor") or [],
+        "ads_inputs": signals_by_category.get("ads") or [],
+        "organic_signals": (outcomes.get("top_signals") or [])[:5],
+        "timing_hints": (quarterly.get("top_slots") or [])[:5],
+        "budget_rules": [
+            "The AI never changes spend or publishes ads.",
+            "Use small manual tests only after compliance-clear organic/review approval.",
+            "CPL targets belong in Knowledge Base, not hard-coded in the app.",
+            "Do not use personal attributes, cure promises, fear framing, or before/after claims.",
+        ],
+        "media_buyer_handoff": [
+            "Choose one control and one variant per audience.",
+            "Upload manually in Ads Manager only after human approval.",
+            "Record spend, leads, CPL, and lead quality back into Metrics CSV.",
+            "Roll up ad results into outcomes before using them as learning weights.",
+        ],
+        "next_step": "Add CPL target and audience/competitor/ads KB entries if the candidate list is thin."
+        if len(candidate_tests) < 3 or not cpl_targets
+        else "Pick one low-risk candidate test and route creative through Review before manual Ads Manager setup.",
+    }
+
+
+@app.get("/insights/ads-planning")
+async def ads_planning(_: None = Depends(require_access_token)):
+    return await ads_planning_payload()
+
+
+@app.get("/insights/ads-planning.md")
+async def ads_planning_markdown(_: None = Depends(require_access_token)):
+    payload = await ads_planning_payload()
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    lines = [
+        "# DREC Content OS Ads Planning Pack",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "This pack prepares paid-social planning without connecting Meta spend controls. It is for manual media-buyer execution only.",
+        "",
+        "## Status",
+        "",
+        f"- Phase: {payload.get('phase')}",
+        f"- Mode: {payload.get('mode')}",
+        f"- Candidate tests: {len(payload.get('candidate_tests') or [])}",
+        f"- CPL targets found: {len(payload.get('cpl_targets') or [])}",
+        "",
+        "## Candidate Tests",
+        "",
+    ]
+    for index, item in enumerate(payload.get("candidate_tests") or [], start=1):
+        lines.extend(
+            [
+                f"### Test {index}: {item.get('angle')}",
+                "",
+                f"- Source: {item.get('source_category')} — {item.get('source_title')}",
+                f"- Audience: {item.get('audience')}",
+                f"- Creative test: {item.get('test')}",
+                f"- Success metric: {item.get('success_metric')}",
+                f"- Guardrail: {item.get('guardrail')}",
+                "",
+            ]
+        )
+    if not payload.get("candidate_tests"):
+        lines.extend(["- No candidate tests yet. Add audience, competitor, ads, or idea entries to Knowledge Base.", ""])
+    lines.extend(["## CPL Targets From Knowledge Base", ""])
+    targets = payload.get("cpl_targets") or []
+    if targets:
+        for target in targets:
+            lines.append(f"- {target.get('title')}: target CPL {target.get('target_cpl')} ({target.get('summary')})")
+    else:
+        lines.append("- No CPL target found. Add a KB entry such as `webinar SG CPL target 8` before judging paid tests.")
+    lines.extend(["", "## Organic Signals To Reuse", ""])
+    organic_signals = payload.get("organic_signals") or []
+    if organic_signals:
+        for signal in organic_signals:
+            lines.append(f"- {signal.get('label')}: avg score {signal.get('avg_score')} · {signal.get('recommendation')}")
+    else:
+        lines.append("- No measured organic signals yet.")
+    lines.extend(["", "## Timing Hints", ""])
+    timing_hints = payload.get("timing_hints") or []
+    if timing_hints:
+        for slot in timing_hints:
+            lines.append(f"- {slot.get('slot')}: avg score {slot.get('avg_score', 'n/a')} · confidence {slot.get('confidence')}")
+    else:
+        lines.append("- No paid timing hint yet; start from organic schedule suggestions.")
+    lines.extend(
+        [
+            "",
+            "## Budget Rules",
+            "",
+            *markdown_list(payload.get("budget_rules")),
+            "",
+            "## Media Buyer Handoff",
+            "",
+            *markdown_list(payload.get("media_buyer_handoff")),
+            "",
+            "## Next Step",
+            "",
+            f"- {payload.get('next_step')}",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-ads-planning-pack.md"'},
+    )
+
+
 @app.post("/kb")
 async def create_knowledge_entry(entry: KnowledgeEntryIn, _: None = Depends(require_admin_access)):
     row = await fetch_row(
