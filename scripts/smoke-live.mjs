@@ -1127,7 +1127,13 @@ const checks = [
     auth: true,
     validate: async (res) => {
       const text = await res.text();
-      return text.includes("# DREC Content OS Publishing Run Sheet") && text.includes("## Shift Summary") && text.includes("## Ready To Publish");
+      return text.includes("# DREC Content OS Publishing Run Sheet")
+        && text.includes("## Shift Summary")
+        && text.includes("## Current-Cycle Action Links")
+        && text.includes("Doctor reply inbox")
+        && text.includes("Production reply inbox")
+        && text.includes("Metrics closeout")
+        && text.includes("## Ready To Publish");
     },
   },
   {

@@ -1343,6 +1343,26 @@ const requiredSnippets = [
     text: "## Ready To Publish",
   },
   {
+    name: "publishing run sheet action links",
+    file: "main",
+    text: "## Current-Cycle Action Links",
+  },
+  {
+    name: "publishing run sheet doctor reply inbox link",
+    file: "main",
+    text: "- Doctor reply inbox: `/operations/doctor-reply-inbox-pack.md`",
+  },
+  {
+    name: "publishing run sheet production reply inbox link",
+    file: "main",
+    text: "- Production reply inbox: `/operations/production-reply-inbox-pack.md`",
+  },
+  {
+    name: "publishing run sheet metrics closeout link",
+    file: "main",
+    text: "- Metrics closeout: `/operations/metrics-closeout-pack.md`",
+  },
+  {
     name: "operator pack export",
     file: "main",
     text: "drec-operator-pack.md",
