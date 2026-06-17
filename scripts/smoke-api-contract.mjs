@@ -61,6 +61,8 @@ const requiredRoutes = [
   "GET /operations/approval-cockpit.md",
   "GET /operations/post-approval-production",
   "GET /operations/post-approval-production.md",
+  "GET /operations/production-reply-inbox-pack",
+  "GET /operations/production-reply-inbox-pack.md",
   "GET /operations/production-design-worksheet.csv",
   "GET /operations/pre-schedule-gate",
   "GET /operations/pre-schedule-gate.md",
@@ -809,6 +811,21 @@ const requiredSnippets = [
     name: "post approval production safety",
     file: "main",
     text: "production_prep_only",
+  },
+  {
+    name: "production reply inbox pack route",
+    file: "main",
+    text: "production_reply_inbox_pack_payload",
+  },
+  {
+    name: "production reply inbox pack export",
+    file: "main",
+    text: "drec-production-reply-inbox-pack.md",
+  },
+  {
+    name: "production reply inbox pack safety",
+    file: "main",
+    text: "Production replies attach media/design URLs only after preview/import.",
   },
   {
     name: "production design worksheet route",
@@ -1994,6 +2011,16 @@ const requiredSnippets = [
     name: "web production design worksheet action",
     file: "web",
     text: "download-production-design-worksheet",
+  },
+  {
+    name: "web production reply inbox action",
+    file: "web",
+    text: "download-production-reply-inbox",
+  },
+  {
+    name: "web production reply inbox endpoint",
+    file: "web",
+    text: "/operations/production-reply-inbox-pack.md",
   },
   {
     name: "web production design worksheet preview action",

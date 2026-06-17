@@ -3186,6 +3186,16 @@ document.getElementById("download-post-approval-production")?.addEventListener("
   }
 });
 
+document.getElementById("download-production-reply-inbox")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/production-reply-inbox-pack.md", "drec-production-reply-inbox-pack.md", "text/markdown");
+    message.textContent = "Production reply inbox pack downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download production reply inbox pack.";
+  }
+});
+
 document.getElementById("download-production-design-worksheet")?.addEventListener("click", async () => {
   const message = document.getElementById("media-message");
   try {

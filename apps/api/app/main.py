@@ -5571,6 +5571,62 @@ async def post_approval_production_payload():
     }
 
 
+def production_reply_template(item: dict):
+    return "\n".join(
+        [
+            f"Asset ID: {item.get('asset_id') or ''}",
+            "Media URLs: https://...",
+            "Visual QA: passed / pending / needs_work",
+            "Rights: owned / licensed / approved stock / patient consent",
+            "Producer:",
+            "Notes:",
+        ]
+    )
+
+
+async def production_reply_inbox_pack_payload():
+    production = await post_approval_production_payload()
+    items = production.get("production_items") or []
+    reply_items = [
+        {
+            "asset_id": item.get("asset_id"),
+            "topic": item.get("topic"),
+            "channel": item.get("channel"),
+            "format": item.get("format"),
+            "stage": item.get("stage"),
+            "media_task": item.get("media_task"),
+            "media_gap": item.get("media_gap"),
+            "reply_template": production_reply_template(item),
+            "safe_import_rule": "Preview Production Reply before import; media URLs must be approved and start with http or https.",
+            "queue_rule": "Importing production replies attaches media only; queueing and scheduling still require separate gates.",
+        }
+        for item in items
+    ]
+    return {
+        "phase": "production_reply_inbox_pack",
+        "mode": "preview_before_import",
+        "approved_ready_count": production.get("approved_ready_count", 0),
+        "waiting_approval_count": production.get("waiting_approval_count", 0),
+        "needs_media_count": production.get("needs_media_count", 0),
+        "reply_block_count": len(reply_items),
+        "reply_paste_template": "\n\n".join([item.get("reply_template") or "" for item in reply_items]),
+        "reply_items": reply_items,
+        "preview_steps": [
+            "Paste designer or producer return blocks into Production Reply Text.",
+            "Use Preview Production Reply first and confirm each media/design URL, visual QA status, and rights note.",
+            "Import only rows with approved/usable media and acceptable rights notes.",
+            "After import, run the pre-schedule gate before queueing or scheduling.",
+        ],
+        "safety": [
+            "This pack is read-only and does not attach media, approve, queue, schedule, publish, or send Meta requests.",
+            "Production replies attach media/design URLs only after preview/import.",
+            "Human medical approval and final visual QA remain separate gates.",
+            "Needs_work or missing-rights returns should stay out of scheduling until corrected.",
+        ],
+        "next_step": "Send production tasks to design or paste returned media blocks into Production Reply Text, preview, then import only approved media/design URLs.",
+    }
+
+
 @app.get("/operations/post-approval-production")
 async def operations_post_approval_production(_: None = Depends(require_access_token)):
     return await post_approval_production_payload()
@@ -5633,6 +5689,79 @@ async def operations_post_approval_production_markdown(_: None = Depends(require
         "\n".join(lines),
         media_type="text/markdown",
         headers={"Content-Disposition": 'attachment; filename="drec-post-approval-production-pack.md"'},
+    )
+
+
+@app.get("/operations/production-reply-inbox-pack")
+async def operations_production_reply_inbox_pack(_: None = Depends(require_access_token)):
+    return await production_reply_inbox_pack_payload()
+
+
+@app.get("/operations/production-reply-inbox-pack.md")
+async def operations_production_reply_inbox_pack_markdown(_: None = Depends(require_access_token)):
+    payload = await production_reply_inbox_pack_payload()
+    generated_at = datetime.now(timezone.utc).isoformat()
+    lines = [
+        "# DREC Content OS Production Reply Inbox Pack",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this pack to collect designer or producer media/design returns and paste them back into the Production Reply Text preview flow. It is read-only and does not attach media or publish anything by itself.",
+        "",
+        "## Summary",
+        "",
+        f"- Approved ready for design/queue checks: {payload.get('approved_ready_count')}",
+        f"- Waiting for human approval: {payload.get('waiting_approval_count')}",
+        f"- Needs media/design: {payload.get('needs_media_count')}",
+        f"- Reply blocks: {payload.get('reply_block_count')}",
+        f"- Mode: {payload.get('mode')}",
+        "",
+        "## Preview Steps",
+        "",
+        *markdown_list(payload.get("preview_steps"), "- Preview before import."),
+        "",
+        "## Safety Rules",
+        "",
+        *markdown_list(payload.get("safety"), "- Read-only pack."),
+        "",
+        "## Copy/Paste Production Reply Template",
+        "",
+        "```",
+        payload.get("reply_paste_template") or "No production reply blocks are ready yet.",
+        "```",
+        "",
+        "## Reply Items",
+        "",
+    ]
+    items = payload.get("reply_items") or []
+    if not items:
+        lines.extend(["- No production reply blocks are ready yet.", ""])
+    for index, item in enumerate(items, start=1):
+        lines.extend(
+            [
+                f"### {index}. {item.get('topic') or 'Untitled asset'}",
+                "",
+                f"- Asset ID: `{item.get('asset_id')}`",
+                f"- Stage: {item.get('stage')}",
+                f"- Channel / format: {item.get('channel')} / {item.get('format')}",
+                f"- Media task: {item.get('media_task')}",
+                f"- Media gap: {item.get('media_gap')}",
+                f"- Import rule: {item.get('safe_import_rule')}",
+                f"- Queue rule: {item.get('queue_rule')}",
+                "",
+                "Reply template:",
+                "",
+                "```",
+                item.get("reply_template") or "",
+                "```",
+                "",
+            ]
+        )
+    lines.extend(["## Next Step", "", f"- {payload.get('next_step')}", ""])
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-production-reply-inbox-pack.md"'},
     )
 
 

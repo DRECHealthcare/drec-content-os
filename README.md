@@ -79,6 +79,7 @@ Stage 1 is now a working thin-core workflow:
 - Use the Approval Cockpit to prioritize clear draft assets for human review without auto-approving, queueing, scheduling, or publishing
 - Use the Post-Approval Production Pack to brief design, media, rights checks, and visual QA after human approval without auto-queueing, scheduling, publishing, or sending Meta requests
 - Copy individual or full-batch production design handoff messages from Assets so approved copy can move to design/media work without opening the Markdown pack
+- Download the Production Reply Inbox Pack to collect designer media/design URLs in the exact paste-back format before previewing and importing production replies
 - Download a Production Design Worksheet CSV with canvas specs, safe headlines, image prompts, visual QA, rights notes, and media URL return fields for designer handoff
 - Preview and import completed Production Design Worksheet CSV files so approved media/design URLs can flow back into assets without changing approval, queueing, scheduling, or publishing state
 - Paste production reply text back into Assets to preview/import media/design URLs without converting designer chat replies into CSV

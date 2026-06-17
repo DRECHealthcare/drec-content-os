@@ -46,6 +46,7 @@ const checks = [
         && text.includes("import-production-replies")
         && text.includes("download-doctor-decision-worksheet")
         && text.includes("download-asset-media-attachments")
+        && text.includes("download-production-reply-inbox")
         && text.includes("download-production-design-worksheet")
         && text.includes("preview-production-design-worksheet")
         && text.includes("import-production-design-worksheet")
@@ -87,6 +88,7 @@ const checks = [
         && text.includes("/operations/import-doctor-replies")
         && text.includes("/operations/import-production-replies")
         && text.includes("/operations/import-asset-media-attachments")
+        && text.includes("/operations/production-reply-inbox-pack.md")
         && text.includes("/operations/production-design-worksheet.csv")
         && text.includes("/operations/import-production-design-worksheet")
         && text.includes("/operations/scheduler-health.md")
@@ -612,6 +614,31 @@ const checks = [
       return text.includes("# DREC Content OS Post-Approval Production Pack")
         && text.includes("## Production Items")
         && text.includes("read-only and does not approve");
+    },
+  },
+  {
+    name: "Production reply inbox pack",
+    url: `${apiBase}/operations/production-reply-inbox-pack`,
+    auth: true,
+    validate: async (res) => {
+      const data = await res.json();
+      return data.phase === "production_reply_inbox_pack"
+        && data.mode === "preview_before_import"
+        && Array.isArray(data.reply_items)
+        && Array.isArray(data.safety)
+        && data.safety.some((rule) => rule.includes("attach media/design URLs only"));
+    },
+  },
+  {
+    name: "Production reply inbox markdown",
+    url: `${apiBase}/operations/production-reply-inbox-pack.md`,
+    auth: true,
+    validate: async (res) => {
+      const text = await res.text();
+      return text.includes("# DREC Content OS Production Reply Inbox Pack")
+        && text.includes("## Copy/Paste Production Reply Template")
+        && text.includes("Preview Steps")
+        && text.includes("read-only");
     },
   },
   {
