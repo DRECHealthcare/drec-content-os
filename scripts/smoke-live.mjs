@@ -75,6 +75,7 @@ const checks = [
       const text = await res.text();
       return text.includes("/operations/doctor-decision-worksheet.csv")
         && text.includes("/security/service-role-install-pack.md")
+        && text.includes("/operations/external-setup-board")
         && text.includes("/operations/cycle-command-center.md")
         && text.includes("/operations/cycle-evidence-ledger.csv")
         && text.includes("/operations/external-setup-board.csv")
@@ -308,6 +309,19 @@ const checks = [
   },
   {
     name: "External setup board",
+    url: `${apiBase}/operations/external-setup-board`,
+    auth: true,
+    validate: async (res) => {
+      const data = await res.json();
+      return data.phase === "external_setup_board"
+        && Array.isArray(data.rows)
+        && data.rows.some((row) => row.setup_item === "Doctor approval batch")
+        && data.rows.some((row) => row.setup_item === "Supabase service-role key")
+        && data.rows.some((row) => row.setup_item === "Meta app and Page credentials");
+    },
+  },
+  {
+    name: "External setup board CSV",
     url: `${apiBase}/operations/external-setup-board.csv`,
     auth: true,
     validate: async (res) => {

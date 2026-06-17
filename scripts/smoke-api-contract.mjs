@@ -37,6 +37,7 @@ const requiredRoutes = [
   "GET /operations/cycle-command-center",
   "GET /operations/cycle-command-center.md",
   "GET /operations/cycle-evidence-ledger.csv",
+  "GET /operations/external-setup-board",
   "GET /operations/external-setup-board.csv",
   "GET /operations/manual-cycle-qa.md",
   "GET /operations/daily-ops-checklist.md",
@@ -743,6 +744,16 @@ const requiredSnippets = [
     text: "operations_external_setup_board_csv",
   },
   {
+    name: "external setup board json route",
+    file: "main",
+    text: "operations_external_setup_board",
+  },
+  {
+    name: "external setup board payload",
+    file: "main",
+    text: "external_setup_board_payload",
+  },
+  {
     name: "external setup board export",
     file: "main",
     text: "drec-external-setup-board.csv",
@@ -766,6 +777,16 @@ const requiredSnippets = [
     name: "external setup board UI endpoint",
     file: "web",
     text: "/operations/external-setup-board.csv",
+  },
+  {
+    name: "external setup board UI loader",
+    file: "web",
+    text: "/operations/external-setup-board",
+  },
+  {
+    name: "external setup board UI card",
+    file: "web",
+    text: "External Setup Board",
   },
   {
     name: "manual cycle qa export",

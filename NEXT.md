@@ -121,6 +121,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added Cycle Command Center for live next action, bridge links, evidence fields, and stop rules
 - [x] Added Cycle Evidence Ledger CSV for structured manual-cycle proof across doctor review, production handoff, scheduling, publishing, and learning steps
 - [x] Added External Setup Board CSV for tracking remaining doctor, Supabase, GitHub scheduler, and Meta activation evidence
+- [x] Rendered the External Setup Board directly in Launch Readiness so live blockers are visible without opening the CSV
 - [x] Added Manual Cycle QA export for post-test blockers, risk, handoff, and learning review
 - [x] Added First Cycle Handoff links for doctor reply, production reply, pre-schedule, and scheduler recovery flows
 - [x] Added Manual Cycle QA action links for doctor and production reply inbox flows

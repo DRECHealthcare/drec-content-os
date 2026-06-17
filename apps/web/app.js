@@ -577,6 +577,7 @@ function renderLaunchReadiness(data) {
   document.getElementById("launch-count").textContent = data.overall_status || "Unknown";
   const stages = data.stages || [];
   const blockers = data.external_blockers || [];
+  const setupRows = data.external_setup_rows || [];
   const usability = data.usability || {};
   const safeScope = usability.safe_test_scope || [];
   const notReadyScope = usability.not_ready_scope || [];
@@ -610,6 +611,20 @@ function renderLaunchReadiness(data) {
         ${stages.map((stage) => `<li><strong>${escapeHtml(stage.status)}</strong> ${escapeHtml(stage.label)} · ${escapeHtml(stage.detail)}</li>`).join("")}
       </ul>
     </article>
+    ${setupRows.length ? `
+      <article class="learning-card wide-learning">
+        <h3>External Setup Board</h3>
+        <ul>
+          ${setupRows.map((row) => `
+            <li>
+              <strong>${escapeHtml(row.blocking === "yes" ? "blocked" : "ready")}</strong>
+              ${escapeHtml(row.setup_item || "Setup item")} · ${escapeHtml(row.current_status || "unknown")}
+              <small>${escapeHtml(row.next_action || "")}</small>
+            </li>
+          `).join("")}
+        </ul>
+      </article>
+    ` : ""}
   `;
 }
 
@@ -617,7 +632,11 @@ async function loadLaunchReadiness() {
   const container = document.getElementById("launch-readiness");
   if (!container) return;
   try {
-    const data = await fetchJson("/operations/launch-readiness");
+    const [data, setupBoard] = await Promise.all([
+      fetchJson("/operations/launch-readiness"),
+      fetchJson("/operations/external-setup-board").catch(() => ({ rows: [] })),
+    ]);
+    data.external_setup_rows = setupBoard.rows || [];
     renderLaunchReadiness(data);
   } catch {
     document.getElementById("launch-count").textContent = accessToken() ? "API access failed" : "Set access token";

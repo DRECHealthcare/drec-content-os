@@ -3082,8 +3082,7 @@ async def operations_cycle_evidence_ledger_csv(_: None = Depends(require_access_
     )
 
 
-@app.get("/operations/external-setup-board.csv")
-async def operations_external_setup_board_csv(_: None = Depends(require_access_token)):
+async def external_setup_board_payload():
     launch = await launch_readiness_payload()
     security = security_status_payload()
     meta = await meta_readiness(None)
@@ -3152,6 +3151,39 @@ async def operations_external_setup_board_csv(_: None = Depends(require_access_t
             "evidence_required": "Meta readiness ready; scheduler recent; service-role gate ready; controlled Facebook dry run passes.",
         },
     ]
+    return {
+        "phase": "external_setup_board",
+        "mode": "read_only_external_gate_tracking",
+        "overall_status": "blocked" if any(row.get("blocking") == "yes" for row in rows) else "ready",
+        "blocking_count": sum(1 for row in rows if row.get("blocking") == "yes"),
+        "rows": [
+            {
+                **row,
+                "safe_use_note": "External setup board only. It does not approve content, store secrets, change Fly/GitHub/Supabase/Meta settings, publish, or send Meta requests.",
+            }
+            for row in rows
+        ],
+        "source_links": {
+            "doctor_send_queue": "/operations/doctor-send-queue.csv",
+            "service_role_pack": "/security/service-role-install-pack.md",
+            "scheduler_recovery": "/operations/scheduler-recovery-pack.md",
+            "meta_credential_intake": "/meta/credential-intake-pack.md",
+            "meta_preflight": "/meta/preflight-audit.md",
+            "meta_activation": "/meta/activation-checklist.md",
+        },
+        "next_step": rows[0].get("next_action") if rows else "No external setup items found.",
+    }
+
+
+@app.get("/operations/external-setup-board")
+async def operations_external_setup_board(_: None = Depends(require_access_token)):
+    return await external_setup_board_payload()
+
+
+@app.get("/operations/external-setup-board.csv")
+async def operations_external_setup_board_csv(_: None = Depends(require_access_token)):
+    payload = await external_setup_board_payload()
+    rows = payload.get("rows") or []
     output = StringIO()
     fieldnames = [
         "setup_item",
@@ -3172,12 +3204,18 @@ async def operations_external_setup_board_csv(_: None = Depends(require_access_t
     for row in rows:
         writer.writerow(
             {
-                **row,
+                "setup_item": row.get("setup_item") or "",
+                "gate": row.get("gate") or "",
+                "current_status": row.get("current_status") or "",
+                "blocking": row.get("blocking") or "",
+                "source_link": row.get("source_link") or "",
+                "next_action": row.get("next_action") or "",
                 "owner": "",
+                "evidence_required": row.get("evidence_required") or "",
                 "evidence_value": "",
                 "checked_at": "",
                 "notes": "",
-                "safe_use_note": "External setup board only. It does not approve content, store secrets, change Fly/GitHub/Supabase/Meta settings, publish, or send Meta requests.",
+                "safe_use_note": row.get("safe_use_note") or "",
             }
         )
     return Response(
