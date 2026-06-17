@@ -237,6 +237,36 @@ const requiredSnippets = [
     text: "ROLE_SCOPES",
   },
   {
+    name: "role token scope enforcement helper",
+    file: "auth",
+    text: "require_scope",
+  },
+  {
+    name: "role token enforced scopes payload",
+    file: "auth",
+    text: "enforced_scopes",
+  },
+  {
+    name: "review-scoped route",
+    file: "main",
+    text: "Depends(require_review_access)",
+  },
+  {
+    name: "schedule-scoped route",
+    file: "main",
+    text: "Depends(require_schedule_access)",
+  },
+  {
+    name: "metrics-scoped route",
+    file: "main",
+    text: "Depends(require_metrics_access)",
+  },
+  {
+    name: "admin-scoped route",
+    file: "main",
+    text: "Depends(require_admin_access)",
+  },
+  {
     name: "security rls hardening plan route",
     file: "main",
     text: "rls-hardening-plan.md",

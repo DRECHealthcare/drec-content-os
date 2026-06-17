@@ -120,6 +120,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added guarded GitHub Nightly Meta Metrics workflow with dry-run default and double live-ingestion lock
 - [x] Added Meta Activation Checklist and switchboard for safe first-live-test sequencing
 - [x] Added role-token access policy foundation with Dashboard Access Role visibility
+- [x] Added scope enforcement for review, scheduling, metrics, and admin-sensitive actions
 
 ## Next Engineering Tasks
 
@@ -223,6 +224,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add guarded nightly Meta metrics scheduler workflow that stays dry-run until credentials and enable switches are approved
 - [x] Add Meta activation checklist for live worker switches, dry-run proof, and first-live-test order
 - [x] Add role-token access policy foundation before full role-based web login
+- [x] Enforce role-token scopes on core review, schedule, metrics, and admin routes
 - [ ] Connect Meta Graph API credentials
 - [x] Implement real Facebook publish scheduling behind Meta readiness and enable flags
 - [x] Implement Instagram two-step publish worker behind Meta readiness and enable flags

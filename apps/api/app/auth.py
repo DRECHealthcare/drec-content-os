@@ -1,4 +1,4 @@
-from fastapi import Header, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 
 from .config import settings
 
@@ -44,6 +44,12 @@ def access_policy_payload(current_role="none"):
             for role, scopes in ROLE_SCOPES.items()
         ],
         "setup_env": ["DREC_VIEWER_TOKEN", "DREC_REVIEWER_TOKEN", "DREC_OPERATOR_TOKEN", "DREC_ADMIN_TOKEN"],
+        "enforced_scopes": {
+            "admin": ["security rollout plan", "scheduler heartbeat"],
+            "review": ["content briefs", "creative drafts", "asset/media review", "review feedback"],
+            "schedule": ["queue creation", "scheduling", "publishing handoff", "Meta publishing dry runs"],
+            "metrics": ["raw metrics", "CSV metrics import", "outcomes", "learning weights", "nightly metrics dry runs"],
+        },
         "notes": [
             "Existing DREC_ACCESS_TOKEN remains accepted as admin for backward compatibility.",
             "Use reviewer tokens for asset and queue review handoff.",
@@ -64,3 +70,21 @@ async def require_access_token(x_drec_access_token: str = Header(default="")) ->
             detail="A valid DREC access token is required.",
         )
     return {"role": role, "scopes": ROLE_SCOPES[role], "mode": "role_tokens"}
+
+
+def require_scope(scope: str):
+    async def checker(session: dict = Depends(require_access_token)) -> dict:
+        if scope not in session.get("scopes", []):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"DREC {scope} access is required for this action.",
+            )
+        return session
+
+    return checker
+
+
+require_review_access = require_scope("review")
+require_schedule_access = require_scope("schedule")
+require_metrics_access = require_scope("metrics")
+require_admin_access = require_scope("admin")

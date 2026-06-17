@@ -45,7 +45,11 @@ const checks = [
     auth: true,
     validate: async (res) => {
       const data = await res.json();
-      return Boolean(data.current_role) && Array.isArray(data.recommended_roles) && data.setup_env?.includes("DREC_OPERATOR_TOKEN");
+      return Boolean(data.current_role)
+        && Array.isArray(data.recommended_roles)
+        && data.setup_env?.includes("DREC_OPERATOR_TOKEN")
+        && data.enforced_scopes?.schedule?.some((item) => item.includes("scheduling"))
+        && data.enforced_scopes?.metrics?.some((item) => item.includes("metrics"));
     },
   },
   {

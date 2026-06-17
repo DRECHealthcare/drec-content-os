@@ -12,7 +12,14 @@ from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
-from .auth import access_policy_payload, require_access_token
+from .auth import (
+    access_policy_payload,
+    require_access_token,
+    require_admin_access,
+    require_metrics_access,
+    require_review_access,
+    require_schedule_access,
+)
 from .config import settings
 from .compliance import check_text
 from .db import close_db, connect_db, fetch_row, fetch_rows
@@ -706,7 +713,7 @@ async def security_access_policy(session: dict = Depends(require_access_token)):
 
 
 @app.get("/security/rls-hardening-plan.md")
-async def security_rls_hardening_plan(_: None = Depends(require_access_token)):
+async def security_rls_hardening_plan(_: None = Depends(require_admin_access)):
     security = security_status_payload()
     migration = "supabase/migrations/20260617040906_strict_server_only_rls.sql"
     lines = [
@@ -1275,7 +1282,7 @@ async def operations_test_run_checklist(_: None = Depends(require_access_token))
 async def operations_scheduler_heartbeat(
     workflow: str = "DREC Scheduler Dry Run",
     mode: str = "dry_run",
-    _: None = Depends(require_access_token),
+    _: None = Depends(require_admin_access),
 ):
     safe_workflow = re.sub(r"[^a-zA-Z0-9_. -]", "", workflow)[:80] or "github-actions"
     safe_mode = re.sub(r"[^a-zA-Z0-9_-]", "", mode)[:40] or "dry_run"
@@ -4248,7 +4255,7 @@ async def knowledge_context(_: None = Depends(require_access_token)):
 
 
 @app.post("/kb")
-async def create_knowledge_entry(entry: KnowledgeEntryIn, _: None = Depends(require_access_token)):
+async def create_knowledge_entry(entry: KnowledgeEntryIn, _: None = Depends(require_admin_access)):
     row = await fetch_row(
         """
         insert into kb_entries (category, title, body, tags)
@@ -4749,7 +4756,7 @@ async def content_briefs_asset_pack(_: None = Depends(require_access_token)):
 
 
 @app.post("/briefs")
-async def create_content_brief(brief: ContentBriefIn, _: None = Depends(require_access_token)):
+async def create_content_brief(brief: ContentBriefIn, _: None = Depends(require_review_access)):
     return {"item": await insert_brief(brief)}
 
 
@@ -4785,7 +4792,7 @@ async def content_brief_by_id(brief_id: str):
 async def update_content_brief_status(
     brief_id: str,
     update: ContentBriefStatusIn,
-    _: None = Depends(require_access_token),
+    _: None = Depends(require_review_access),
 ):
     row = await fetch_row(
         """
@@ -4811,7 +4818,7 @@ async def update_content_brief_status(
 
 
 @app.post("/briefs/archive-drafted")
-async def archive_drafted_content_briefs(_: None = Depends(require_access_token)):
+async def archive_drafted_content_briefs(_: None = Depends(require_review_access)):
     rows = await fetch_rows(
         """
         update content_briefs
@@ -4851,7 +4858,7 @@ async def weekly_plan_recommendations(
 
 
 @app.post("/weekly-plan/generate")
-async def generate_weekly_plan(plan: WeeklyPlanIn, _: None = Depends(require_access_token)):
+async def generate_weekly_plan(plan: WeeklyPlanIn, _: None = Depends(require_review_access)):
     count = max(1, min(plan.count, 10))
     requested_topics = [topic.strip() for topic in plan.topics if topic.strip()]
     knowledge = await active_knowledge_context()
@@ -4911,7 +4918,7 @@ async def fetch_asset_list(limit: int = 100):
 
 
 @app.post("/assets")
-async def create_asset(asset: AssetIn, _: None = Depends(require_access_token)):
+async def create_asset(asset: AssetIn, _: None = Depends(require_review_access)):
     payload = asset_payload(asset)
     compliance = check_text(payload["caption"] or "")
     if compliance["status"] == "flagged":
@@ -5004,7 +5011,7 @@ async def existing_asset_for_brief(brief_id: str):
 async def update_asset_status(
     asset_id: str,
     update: AssetStatusIn,
-    _: None = Depends(require_access_token),
+    _: None = Depends(require_review_access),
 ):
     existing = await asset_by_id(asset_id)
     if existing is None:
@@ -5045,7 +5052,7 @@ async def update_asset_status(
 async def update_asset_compliance(
     asset_id: str,
     update: AssetComplianceIn,
-    _: None = Depends(require_access_token),
+    _: None = Depends(require_review_access),
 ):
     existing = await asset_by_id(asset_id)
     if existing is None:
@@ -5111,7 +5118,7 @@ async def existing_queue_for_asset(asset_id: str):
 
 
 @app.post("/assets/{asset_id}/queue")
-async def queue_asset(asset_id: str, _: None = Depends(require_access_token)):
+async def queue_asset(asset_id: str, _: None = Depends(require_schedule_access)):
     asset = await asset_by_id(asset_id)
     if asset is None:
         raise HTTPException(status_code=404, detail="Asset not found.")
@@ -5147,7 +5154,7 @@ async def queue_asset(asset_id: str, _: None = Depends(require_access_token)):
 
 
 @app.post("/assets/approve-clear")
-async def approve_clear_assets(limit: int = 20, _: None = Depends(require_access_token)):
+async def approve_clear_assets(limit: int = 20, _: None = Depends(require_review_access)):
     assets = await fetch_asset_list(limit)
     results = []
     for asset in assets:
@@ -5181,7 +5188,7 @@ async def approve_clear_assets(limit: int = 20, _: None = Depends(require_access
 
 
 @app.post("/assets/queue-ready")
-async def queue_ready_assets(limit: int = 20, _: None = Depends(require_access_token)):
+async def queue_ready_assets(limit: int = 20, _: None = Depends(require_schedule_access)):
     assets = await fetch_asset_list(limit)
     results = []
     for asset in assets:
@@ -5244,7 +5251,7 @@ async def list_media_assets(_: None = Depends(require_access_token)):
 
 
 @app.post("/media-assets")
-async def create_media_asset(media: MediaAssetIn, _: None = Depends(require_access_token)):
+async def create_media_asset(media: MediaAssetIn, _: None = Depends(require_review_access)):
     payload = media_asset_payload(media)
     row = await fetch_row(
         """
@@ -5272,7 +5279,7 @@ async def create_media_asset(media: MediaAssetIn, _: None = Depends(require_acce
 async def update_media_asset_status(
     media_id: str,
     update: MediaAssetStatusIn,
-    _: None = Depends(require_access_token),
+    _: None = Depends(require_review_access),
 ):
     existing = await media_asset_by_id(media_id)
     if existing is None:
@@ -5344,7 +5351,7 @@ async def upload_media_asset(
     approval_status: str = Form("needs_review"),
     notes: str | None = Form(None),
     tags: str | None = Form(None),
-    _: None = Depends(require_access_token),
+    _: None = Depends(require_review_access),
 ):
     allowed_rights = {"owned", "licensed", "patient_consented", "stock", "unknown"}
     allowed_status = {"approved", "needs_review", "blocked"}
@@ -5528,7 +5535,7 @@ def reel_script(draft: CreativeDraftIn):
 
 
 @app.post("/creative/draft")
-async def create_creative_draft(draft: CreativeDraftIn, _: None = Depends(require_access_token)):
+async def create_creative_draft(draft: CreativeDraftIn, _: None = Depends(require_review_access)):
     knowledge = await active_knowledge_context()
     variants = caption_variants(draft)
     primary_caption = variants[0]
@@ -5573,7 +5580,7 @@ def draft_points_from_brief(brief: dict):
 
 
 @app.post("/briefs/{brief_id}/draft-asset")
-async def create_asset_from_brief(brief_id: str, _: None = Depends(require_access_token)):
+async def create_asset_from_brief(brief_id: str, _: None = Depends(require_review_access)):
     brief = await content_brief_by_id(brief_id)
     if brief is None:
         raise HTTPException(status_code=404, detail="Content brief not found.")
@@ -5659,7 +5666,7 @@ async def recent_assetable_briefs(limit: int):
 
 
 @app.post("/briefs/draft-assets")
-async def create_assets_from_recent_briefs(limit: int = 5, _: None = Depends(require_access_token)):
+async def create_assets_from_recent_briefs(limit: int = 5, _: None = Depends(require_review_access)):
     briefs = await recent_assetable_briefs(limit)
     results = []
     for brief in briefs:
@@ -6136,7 +6143,7 @@ async def check_compliance(item: ComplianceCheckIn, _: None = Depends(require_ac
 
 
 @app.post("/publish-queue")
-async def create_publish_queue_item(item: PublishQueueIn, _: None = Depends(require_access_token)):
+async def create_publish_queue_item(item: PublishQueueIn, _: None = Depends(require_schedule_access)):
     compliance = check_text(item.caption)
     if compliance["status"] == "flagged":
         raise HTTPException(
@@ -6180,7 +6187,7 @@ async def create_publish_queue_item(item: PublishQueueIn, _: None = Depends(requ
 
 
 @app.post("/publish-queue/{item_id}/schedule-next")
-async def schedule_publish_queue_next_slot(item_id: str, _: None = Depends(require_access_token)):
+async def schedule_publish_queue_next_slot(item_id: str, _: None = Depends(require_schedule_access)):
     existing = await fetch_row(
         """
         select id, asset_id, channel, format, caption, media_urls, planned_slot, status,
@@ -6237,7 +6244,7 @@ async def schedule_publish_queue_next_slot(item_id: str, _: None = Depends(requi
 
 
 @app.post("/publish-queue/schedule-approved")
-async def schedule_review_approved_queue(limit: int = 20, _: None = Depends(require_access_token)):
+async def schedule_review_approved_queue(limit: int = 20, _: None = Depends(require_schedule_access)):
     items = await fetch_publish_queue_items(limit)
     results = []
     for item in items:
@@ -6276,7 +6283,7 @@ async def schedule_review_approved_queue(limit: int = 20, _: None = Depends(requ
 async def update_publish_queue_item(
     item_id: str,
     update: PublishQueueStatusIn,
-    _: None = Depends(require_access_token),
+    _: None = Depends(require_schedule_access),
 ):
     existing = await fetch_row(
         """
@@ -6824,7 +6831,7 @@ async def meta_publishing_job_result(channel: str, dry_run: bool):
 async def meta_publishing_job(
     channel: str = "all",
     dry_run: bool = True,
-    _: None = Depends(require_access_token),
+    _: None = Depends(require_schedule_access),
 ):
     channels = ["facebook", "instagram"] if channel == "all" else [channel]
     unsupported = [item for item in channels if item not in {"facebook", "instagram"}]
@@ -6856,7 +6863,7 @@ async def meta_publishing_job(
 
 
 @app.post("/publishing/facebook/dispatch")
-async def dispatch_facebook_item(dispatch: MetaDispatchIn, _: None = Depends(require_access_token)):
+async def dispatch_facebook_item(dispatch: MetaDispatchIn, _: None = Depends(require_schedule_access)):
     readiness = await meta_readiness()
     item = await next_facebook_publish_item(dispatch.item_id)
     blockers = facebook_dispatch_blockers(item, readiness)
@@ -6883,7 +6890,7 @@ async def dispatch_facebook_item(dispatch: MetaDispatchIn, _: None = Depends(req
 
 
 @app.post("/publishing/instagram/dispatch")
-async def dispatch_instagram_item(dispatch: MetaDispatchIn, _: None = Depends(require_access_token)):
+async def dispatch_instagram_item(dispatch: MetaDispatchIn, _: None = Depends(require_schedule_access)):
     readiness = await meta_readiness()
     item = await next_instagram_publish_item(dispatch.item_id)
     blockers = instagram_dispatch_blockers(item, readiness)
@@ -6910,7 +6917,7 @@ async def dispatch_instagram_item(dispatch: MetaDispatchIn, _: None = Depends(re
 
 
 @app.post("/metrics")
-async def ingest_metric(metric: MetricIn, _: None = Depends(require_access_token)):
+async def ingest_metric(metric: MetricIn, _: None = Depends(require_metrics_access)):
     row = await fetch_row(
         """
         insert into raw_metrics (source, external_post_id, captured_at, metrics)
@@ -6966,7 +6973,7 @@ async def import_metrics_csv(
     file: UploadFile = File(...),
     rollup: bool = Form(False),
     dry_run: bool = Form(False),
-    _: None = Depends(require_access_token),
+    _: None = Depends(require_metrics_access),
 ):
     csv_text = await decode_metrics_csv(file)
     reader = csv.DictReader(StringIO(csv_text))
@@ -7182,7 +7189,7 @@ async def fetch_meta_insights(item: dict):
 
 
 @app.post("/metrics/meta/ingest")
-async def ingest_meta_metrics(request: MetaMetricsIn, _: None = Depends(require_access_token)):
+async def ingest_meta_metrics(request: MetaMetricsIn, _: None = Depends(require_metrics_access)):
     readiness = await meta_readiness()
     candidates = await meta_metric_candidates(request.item_id, request.limit)
     planned = [
@@ -7244,7 +7251,7 @@ async def nightly_meta_metrics_job(
     dry_run: bool = True,
     limit: int = 25,
     rollup: bool = True,
-    _: None = Depends(require_access_token),
+    _: None = Depends(require_metrics_access),
 ):
     request = MetaMetricsIn(limit=limit, dry_run=dry_run, rollup=rollup)
     if not dry_run and not settings.meta_enable_metrics_job:
@@ -7348,7 +7355,7 @@ async def latest_metric_row(external_post_id: str | None):
 
 
 @app.post("/metrics/rollup")
-async def rollup_metric_to_outcome(rollup: MetricRollupIn, _: None = Depends(require_access_token)):
+async def rollup_metric_to_outcome(rollup: MetricRollupIn, _: None = Depends(require_metrics_access)):
     metric = await latest_metric_row(rollup.external_post_id)
     if metric is None:
         raise HTTPException(status_code=404, detail="No matching raw metric found.")
@@ -7410,7 +7417,7 @@ async def list_outcomes(_: None = Depends(require_access_token)):
 
 
 @app.post("/outcomes")
-async def create_outcome(outcome: OutcomeIn, _: None = Depends(require_access_token)):
+async def create_outcome(outcome: OutcomeIn, _: None = Depends(require_metrics_access)):
     payload = outcome_payload(outcome)
     row = await fetch_row(
         """
@@ -7480,7 +7487,7 @@ async def save_feedback(feedback: FeedbackIn):
 
 
 @app.post("/feedback")
-async def capture_feedback(feedback: FeedbackIn, _: None = Depends(require_access_token)):
+async def capture_feedback(feedback: FeedbackIn, _: None = Depends(require_review_access)):
     return await save_feedback(feedback)
 
 
@@ -7507,7 +7514,7 @@ async def list_learning_weights(_: None = Depends(require_access_token)):
 
 
 @app.post("/learning-weights")
-async def create_learning_weight(weight: LearningWeightIn, _: None = Depends(require_access_token)):
+async def create_learning_weight(weight: LearningWeightIn, _: None = Depends(require_metrics_access)):
     row = await fetch_row(
         """
         insert into learning_weights
@@ -7529,7 +7536,7 @@ async def create_learning_weight(weight: LearningWeightIn, _: None = Depends(req
 
 
 @app.patch("/learning-weights/{weight_id}/revert")
-async def revert_learning_weight(weight_id: str, _: None = Depends(require_access_token)):
+async def revert_learning_weight(weight_id: str, _: None = Depends(require_metrics_access)):
     row = await fetch_row(
         """
         update learning_weights

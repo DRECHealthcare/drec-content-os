@@ -31,7 +31,11 @@ Optional role-token hardening can be added without breaking the existing access
 token. Set `DREC_VIEWER_TOKEN`, `DREC_REVIEWER_TOKEN`, `DREC_OPERATOR_TOKEN`,
 and `DREC_ADMIN_TOKEN` as Fly secrets, then check `/security/access-policy` or
 the Dashboard `Access Role` card. The existing `DREC_ACCESS_TOKEN` remains
-accepted as admin for backward compatibility.
+accepted as admin for backward compatibility. Reviewer tokens can work on
+briefs, creative drafts, assets, media review, and feedback; operator tokens can
+queue, schedule, build handoff, and dry-run publishing; metrics tokens can
+import performance data, roll up outcomes, and run metrics dry runs; admin tokens
+are reserved for security rollout and scheduler heartbeat setup.
 
 The API exposes:
 

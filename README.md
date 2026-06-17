@@ -85,7 +85,7 @@ Stage 1 is now a working thin-core workflow:
 - Generate a Meta OAuth guide with redirect URI, required scopes, setup steps, and a copyable Login dialog URL/template before real credentials are installed
 - Download a Meta Activation Checklist that shows credential gates, live worker switches, first-live-test order, and proof fields before enabling Meta automation
 - See the Supabase service-role readiness gate before stricter RLS policies are applied
-- See the current Access Role on the Dashboard and optionally configure separate viewer, reviewer, operator, and admin tokens while the legacy access token remains accepted
+- See the current Access Role on the Dashboard and optionally configure separate viewer, reviewer, operator, and admin tokens while the legacy access token remains accepted; scoped routes now protect review, scheduling, metrics, and admin-sensitive actions
 - Download a protected RLS Hardening Plan and review the prepared strict server-only Supabase migration before applying it
 - Use safer session-only access-token storage by default, with explicit Remember and Clear controls for shared testing devices
 - Pull learning-informed topic recommendations into the next weekly plan
