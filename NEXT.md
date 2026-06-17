@@ -129,6 +129,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added Meta Preflight Audit across credentials, risk, schedule, launch, security, access, and live-switch gates
 - [x] Upgraded Create Post composer to save a linked brief and draft asset for review
 - [x] Added Creative Studio style library with brand tokens, style guide export, and learning signals
+- [x] Added Template Studio for static render template readiness and QA handoff
 - [x] Added Video Studio readiness with manual reel SOP pack and DREC Cut future-phase guardrails
 
 ## Next Engineering Tasks
@@ -242,6 +243,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add Meta preflight audit before the first controlled Meta live test
 - [x] Connect Create Post composer to the durable brief-to-asset workflow
 - [x] Add Creative Studio style library before deeper template/video work
+- [x] Add Template Studio static render readiness before generated image automation
 - [x] Add Video Studio readiness lane before future DREC Cut automation
 - [ ] Connect Meta Graph API credentials
 - [x] Implement real Facebook publish scheduling behind Meta readiness and enable flags

@@ -12,6 +12,7 @@ const titleMap = {
   plan: "Weekly Plan",
   compose: "Create A Post",
   creative: "Creative Studio",
+  templates: "Template Studio",
   video: "Video Studio",
   assets: "Assets",
   review: "Review Queue",
@@ -30,6 +31,7 @@ document.querySelectorAll("nav button").forEach((button) => {
     document.getElementById("title").textContent = titleMap[screen] || screen;
     if (screen === "plan") loadBriefs();
     if (screen === "creative") loadStyleLibrary();
+    if (screen === "templates") loadTemplateStudio();
     if (screen === "video") loadVideoStudio();
     if (screen === "assets") Promise.all([loadAssets(), loadMediaAssets()]);
     if (screen === "outcomes") loadOutcomes();
@@ -980,6 +982,88 @@ async function loadStyleLibrary() {
     document.getElementById("brand-token-board").innerHTML = "";
     document.getElementById("style-library").innerHTML = '<p class="status-note">Set the access token to load Creative Studio.</p>';
     if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not load Creative Studio.";
+  }
+}
+
+function renderTemplateStudio(data) {
+  const readiness = document.getElementById("template-readiness");
+  const library = document.getElementById("template-library");
+  const jobsContainer = document.getElementById("template-jobs");
+  if (!readiness || !library || !jobsContainer) return;
+  const rules = data.render_rules || [];
+  const checklist = data.qa_checklist || [];
+  readiness.innerHTML = `
+    <article class="learning-card">
+      <h3>Render Ready</h3>
+      <p>${escapeHtml(data.render_ready_count || 0)} / ${escapeHtml(data.static_asset_count || 0)} static assets</p>
+      <small>${escapeHtml(data.render_engine_status || "")}</small>
+    </article>
+    <article class="learning-card">
+      <h3>Templates</h3>
+      <p>${escapeHtml(data.template_count || 0)} layout option(s)</p>
+      <small>${escapeHtml(data.phase || "")}</small>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Render Rules</h3>
+      <ul>${rules.length ? rules.map((rule) => `<li>${escapeHtml(rule)}</li>`).join("") : "<li>Use DREC brand tokens and final human QA.</li>"}</ul>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>QA Checklist</h3>
+      <ul>${checklist.length ? checklist.map((item) => `<li>${escapeHtml(item)}</li>`).join("") : "<li>Check copy, readability, and compliance before scheduling.</li>"}</ul>
+    </article>
+  `;
+  const templates = data.templates || [];
+  library.innerHTML = templates.length
+    ? templates.map((template) => `
+      <article class="learning-card wide-learning">
+        <h3>${escapeHtml(template.name || template.key)}</h3>
+        <p>${escapeHtml(template.best_for || "")}</p>
+        <small>${escapeHtml((template.formats || []).join(" · "))} · ${escapeHtml(template.canvas || "")}</small>
+        <div class="summary-row">
+          ${(template.slots || []).map((slot) => `<span>${escapeHtml(slot.replaceAll("_", " "))}</span>`).join("")}
+        </div>
+        <ul>${(template.rules || []).map((rule) => `<li>${escapeHtml(rule)}</li>`).join("")}</ul>
+      </article>
+    `).join("")
+    : '<p class="status-note">No templates found.</p>';
+  const jobs = data.jobs || [];
+  jobsContainer.innerHTML = jobs.length
+    ? jobs.map((job) => {
+      const blockers = job.blockers || [];
+      return `
+        <article class="queue-item">
+          <div>
+            <strong>${escapeHtml(job.topic || "Static asset")}</strong>
+            <span>${escapeHtml(job.format || "")} · ${escapeHtml(job.template_name || job.template_key || "")}</span>
+          </div>
+          <div class="summary-row">
+            <span>Review: ${escapeHtml(job.review_status || "")}</span>
+            <span>Safety: ${escapeHtml(job.compliance_status || "")}</span>
+            <span>Canvas: ${escapeHtml(job.canvas || "")}</span>
+            <span>Frames: ${escapeHtml(job.frame_count || 0)}</span>
+          </div>
+          <p>${escapeHtml(job.next_step || "")}</p>
+          <ul>${blockers.length ? blockers.map((blocker) => `<li>${escapeHtml(blocker)}</li>`).join("") : "<li>Ready for static template render handoff.</li>"}</ul>
+        </article>
+      `;
+    }).join("")
+    : '<p class="status-note">No static assets yet. Generate or save a carousel, single, or story asset first.</p>';
+}
+
+async function loadTemplateStudio() {
+  const message = document.getElementById("template-message");
+  try {
+    const data = await fetchJson("/templates/library");
+    renderTemplateStudio(data);
+    if (message) message.textContent = data.next_step || "Template Studio loaded.";
+  } catch (error) {
+    const readiness = document.getElementById("template-readiness");
+    const library = document.getElementById("template-library");
+    const jobs = document.getElementById("template-jobs");
+    if (readiness) readiness.innerHTML = "";
+    if (library) library.innerHTML = "";
+    if (jobs) jobs.innerHTML = '<p class="status-note">Set the access token to load Template Studio.</p>';
+    if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not load Template Studio.";
   }
 }
 
@@ -2145,6 +2229,25 @@ document.getElementById("download-style-guide")?.addEventListener("click", async
     if (message) message.textContent = "Creative style guide downloaded.";
   } catch (error) {
     if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download Creative Style Guide.";
+  }
+});
+
+document.getElementById("refresh-template-studio")?.addEventListener("click", async () => {
+  const button = document.getElementById("refresh-template-studio");
+  button.disabled = true;
+  button.textContent = "Refreshing";
+  await loadTemplateStudio();
+  button.disabled = false;
+  button.textContent = "Refresh Templates";
+});
+
+document.getElementById("download-static-render-pack")?.addEventListener("click", async () => {
+  const message = document.getElementById("template-message");
+  try {
+    await downloadProtectedFile("/templates/static-render-pack.md", "drec-static-render-pack.md", "text/markdown");
+    if (message) message.textContent = "Static render pack downloaded.";
+  } catch (error) {
+    if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download Static Render Pack.";
   }
 });
 

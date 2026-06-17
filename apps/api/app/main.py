@@ -145,6 +145,60 @@ CREATIVE_BRAND_TOKENS = {
     "background": "#F1F5F8",
     "ink": "#1D2935",
 }
+STATIC_TEMPLATE_LIBRARY = [
+    {
+        "key": "carousel_mechanism_5",
+        "name": "Mechanism Carousel",
+        "formats": ["carousel"],
+        "best_for": "Five to seven slide mechanism explainers with a calm educational arc.",
+        "canvas": "1080x1350",
+        "slots": ["cover_hook", "mechanism", "example", "measurement", "safe_close"],
+        "rules": [
+            "Keep one message per slide.",
+            "Reserve orange for CTA or one emphasis mark only.",
+            "Do not bake dense medical disclaimers into the artwork.",
+        ],
+    },
+    {
+        "key": "single_doctor_quote",
+        "name": "Doctor Quote Static",
+        "formats": ["single"],
+        "best_for": "Authority reminders, quote cards, and one-concept trust posts.",
+        "canvas": "1080x1350",
+        "slots": ["quote", "doctor_context", "cta"],
+        "rules": [
+            "Use one short quote and leave strong breathing room.",
+            "Keep credentials secondary to the educational point.",
+            "Use high contrast navy/white typography.",
+        ],
+    },
+    {
+        "key": "story_prompt_3",
+        "name": "Story Prompt Set",
+        "formats": ["story"],
+        "best_for": "Three-frame vertical story prompts, polls, and question-led education.",
+        "canvas": "1080x1920",
+        "slots": ["question", "context", "reply_prompt"],
+        "rules": [
+            "Keep text away from platform UI zones.",
+            "Use a single interaction prompt.",
+            "Make each frame readable within two seconds.",
+        ],
+    },
+    {
+        "key": "myth_truth_static",
+        "name": "Myth / Truth Static",
+        "formats": ["carousel", "single"],
+        "best_for": "Belief correction posts that compare a common myth with a safe explanation.",
+        "canvas": "1080x1350",
+        "slots": ["myth", "truth", "safe_next_step"],
+        "rules": [
+            "Avoid shaming language.",
+            "Correct the belief calmly with one observation or mechanism.",
+            "Close with a practical next step, not a promise.",
+        ],
+    },
+]
 MYT = timezone(timedelta(hours=8))
 PUBLISH_SLOT_ROTATION = {
     "facebook": [(9, 30), (20, 30)],
@@ -6216,6 +6270,197 @@ async def creative_style_guide(_: None = Depends(require_access_token)):
         "\n".join(lines),
         media_type="text/markdown",
         headers={"Content-Disposition": 'attachment; filename="drec-creative-style-guide.md"'},
+    )
+
+
+def template_for_asset(asset: dict):
+    metadata = asset.get("metadata") or {}
+    style_key = str(metadata.get("style_key") or "").lower()
+    fmt = asset.get("format")
+    if "myth" in style_key:
+        preferred = "myth_truth_static"
+    elif fmt == "single":
+        preferred = "single_doctor_quote"
+    elif fmt == "story":
+        preferred = "story_prompt_3"
+    else:
+        preferred = "carousel_mechanism_5"
+    for template in STATIC_TEMPLATE_LIBRARY:
+        if template["key"] == preferred and fmt in template["formats"]:
+            return template
+    for template in STATIC_TEMPLATE_LIBRARY:
+        if fmt in template["formats"]:
+            return template
+    return None
+
+
+def static_template_blockers(asset: dict):
+    metadata = asset.get("metadata") or {}
+    fmt = asset.get("format")
+    slides = metadata.get("slides") or []
+    blockers = []
+    if fmt not in {"carousel", "single", "story"}:
+        blockers.append("Only carousel, single, and story assets enter Template Studio.")
+    if not (asset.get("caption") or "").strip():
+        blockers.append("Needs caption copy.")
+    if fmt in {"carousel", "story"} and not slides:
+        blockers.append("Needs slide/frame copy before template rendering.")
+    if asset.get("review_status") != "approved":
+        blockers.append("Needs human asset approval before final render.")
+    if asset.get("compliance_status") != "clear":
+        blockers.append("Needs compliance clear before final render.")
+    return blockers
+
+
+async def template_studio_library_payload():
+    assets = await fetch_asset_list(200)
+    static_assets = [
+        asset
+        for asset in assets
+        if asset.get("format") in {"carousel", "single", "story"} and asset.get("review_status") != "rejected"
+    ]
+    jobs = []
+    for asset in static_assets[:40]:
+        metadata = asset.get("metadata") or {}
+        template = template_for_asset(asset) or {}
+        blockers = static_template_blockers(asset)
+        slides = metadata.get("slides") or []
+        jobs.append(
+            {
+                "asset_id": asset.get("id"),
+                "topic": metadata.get("topic") or asset.get("format") or "Static asset",
+                "channel": asset.get("channel"),
+                "format": asset.get("format"),
+                "review_status": asset.get("review_status"),
+                "compliance_status": asset.get("compliance_status"),
+                "style_key": metadata.get("style_key") or "",
+                "template_key": template.get("key"),
+                "template_name": template.get("name"),
+                "canvas": template.get("canvas"),
+                "frame_count": len(slides) if slides else (1 if asset.get("format") == "single" else 0),
+                "blockers": blockers,
+                "next_step": (
+                    "Ready for static template render handoff."
+                    if not blockers
+                    else blockers[0]
+                ),
+            }
+        )
+    ready_jobs = [job for job in jobs if not job.get("blockers")]
+    return {
+        "phase": "static_template_engineering",
+        "render_engine_status": "handoff_ready_manual_or_playwright",
+        "template_count": len(STATIC_TEMPLATE_LIBRARY),
+        "static_asset_count": len(static_assets),
+        "render_ready_count": len(ready_jobs),
+        "templates": STATIC_TEMPLATE_LIBRARY,
+        "jobs": jobs,
+        "brand_tokens": CREATIVE_BRAND_TOKENS,
+        "render_rules": [
+            "Use HTML/CSS templates or design exports with exact DREC brand tokens.",
+            "Render with Playwright or manual design export only after copy and compliance are clear.",
+            "Keep text editable until final QA; do not bake dense medical text into generated images.",
+            "Export carousel/single as 1080x1350 and stories as 1080x1920.",
+        ],
+        "qa_checklist": [
+            "Chinese typography is readable on mobile.",
+            "No text is clipped or hidden behind platform UI zones.",
+            "One main idea per frame.",
+            "CTA and medical disclaimers remain calm, accurate, and non-promissory.",
+            "Final artwork is attached back to the asset/media library before scheduling.",
+        ],
+        "next_step": (
+            "Render the ready static jobs and attach final artwork to the media library."
+            if ready_jobs
+            else "Approve and compliance-clear at least one static asset before final template rendering."
+        ),
+    }
+
+
+@app.get("/templates/library")
+async def template_studio_library(_: None = Depends(require_access_token)):
+    return await template_studio_library_payload()
+
+
+@app.get("/templates/static-render-pack.md")
+async def template_static_render_pack(_: None = Depends(require_access_token)):
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    payload = await template_studio_library_payload()
+    token_lines = [f"- {key}: `{value}`" for key, value in payload.get("brand_tokens", {}).items()]
+    lines = [
+        "# DREC Content OS Static Render Pack",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this pack to hand approved static assets into HTML/CSS, Playwright, or manual design template rendering.",
+        "",
+        "## Render Status",
+        "",
+        f"- Phase: {payload.get('phase')}",
+        f"- Render engine status: {payload.get('render_engine_status')}",
+        f"- Render-ready jobs: {payload.get('render_ready_count')} / {payload.get('static_asset_count')}",
+        "",
+        "## Brand Tokens",
+        "",
+        *token_lines,
+        "",
+        "## Template Library",
+        "",
+    ]
+    for template in payload.get("templates") or []:
+        lines.extend(
+            [
+                f"### {template.get('name')} (`{template.get('key')}`)",
+                "",
+                f"- Formats: {', '.join(template.get('formats') or [])}",
+                f"- Canvas: {template.get('canvas')}",
+                f"- Best for: {template.get('best_for')}",
+                f"- Slots: {', '.join(template.get('slots') or [])}",
+                "- Rules:",
+                *markdown_list(template.get("rules")),
+                "",
+            ]
+        )
+    lines.extend(["## Static Render Jobs", ""])
+    if not payload.get("jobs"):
+        lines.append("- No static assets are ready for template planning yet.")
+    for job in payload.get("jobs") or []:
+        lines.extend(
+            [
+                f"### {job.get('topic')}",
+                "",
+                f"- Asset ID: {job.get('asset_id')}",
+                f"- Format: {job.get('format')}",
+                f"- Template: {job.get('template_name')} (`{job.get('template_key')}`)",
+                f"- Canvas: {job.get('canvas')}",
+                f"- Frames: {job.get('frame_count')}",
+                f"- Review / safety: {job.get('review_status')} / {job.get('compliance_status')}",
+                f"- Next step: {job.get('next_step')}",
+                "- Blockers:",
+                *markdown_list(job.get("blockers"), "- None. Ready for static template render handoff."),
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## Render Rules",
+            "",
+            *markdown_list(payload.get("render_rules")),
+            "",
+            "## QA Checklist",
+            "",
+            *markdown_list(payload.get("qa_checklist")),
+            "",
+            "## Next Step",
+            "",
+            f"- {payload.get('next_step')}",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-static-render-pack.md"'},
     )
 
 

@@ -17,6 +17,7 @@
       <button data-screen="plan">Weekly Plan</button>
       <button data-screen="compose">Create Post</button>
       <button data-screen="creative">Creative Studio</button>
+      <button data-screen="templates">Template Studio</button>
       <button data-screen="video">Video Studio</button>
       <button data-screen="assets">Assets</button>
       <button data-screen="review">Review Queue</button>
@@ -238,6 +239,23 @@
         <div id="creative-message" class="status-note"></div>
         <div id="brand-token-board" class="learning-grid"></div>
         <div id="style-library" class="learning-grid"></div>
+      </div>
+    </section>
+
+    <section id="templates" class="screen">
+      <div class="card wide">
+        <h2>Template Studio</h2>
+        <p class="section-note">Prepare static carousel, single, and story assets for DREC template rendering with brand tokens, layout rules, and QA gates.</p>
+        <div class="form-actions">
+          <button id="refresh-template-studio" type="button">Refresh Templates</button>
+          <button id="download-static-render-pack" type="button">Download Static Render Pack</button>
+        </div>
+        <div id="template-message" class="status-note"></div>
+        <div id="template-readiness" class="learning-grid"></div>
+        <h3 class="subsection-heading">Template Library</h3>
+        <div id="template-library" class="learning-grid"></div>
+        <h3 class="subsection-heading">Static Render Jobs</h3>
+        <div id="template-jobs" class="queue-list"></div>
       </div>
     </section>
 

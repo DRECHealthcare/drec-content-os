@@ -71,6 +71,8 @@ const requiredRoutes = [
   "GET /briefs/asset-pack.md",
   "GET /creative/style-library",
   "GET /creative/style-guide.md",
+  "GET /templates/library",
+  "GET /templates/static-render-pack.md",
   "GET /video/studio-readiness",
   "GET /video/sop-pack.md",
   "POST /composer/draft-post",
@@ -1068,6 +1070,36 @@ const requiredSnippets = [
     name: "web creative style guide endpoint",
     file: "web",
     text: "/creative/style-guide.md",
+  },
+  {
+    name: "template studio library route",
+    file: "main",
+    text: "template_studio_library",
+  },
+  {
+    name: "template static render pack export",
+    file: "main",
+    text: "drec-static-render-pack.md",
+  },
+  {
+    name: "template render safety rule",
+    file: "main",
+    text: "Keep text editable until final QA",
+  },
+  {
+    name: "web template studio screen",
+    file: "web",
+    text: "Template Studio",
+  },
+  {
+    name: "web template library endpoint",
+    file: "web",
+    text: "/templates/library",
+  },
+  {
+    name: "web static render pack endpoint",
+    file: "web",
+    text: "/templates/static-render-pack.md",
   },
   {
     name: "video studio readiness route",
