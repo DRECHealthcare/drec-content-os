@@ -1947,6 +1947,21 @@ const requiredSnippets = [
     text: "loadPostApprovalProduction",
   },
   {
+    name: "web post approval production design copy",
+    file: "web",
+    text: "data-copy-production-design",
+  },
+  {
+    name: "web post approval production design batch copy",
+    file: "web",
+    text: "data-copy-production-design-all",
+  },
+  {
+    name: "web post approval production batch helper",
+    file: "web",
+    text: "productionBatchText",
+  },
+  {
     name: "web post approval production endpoint",
     file: "web",
     text: "/operations/post-approval-production",

@@ -8,6 +8,7 @@ let latestMetaSetupCommands = [];
 let latestMetaOAuthUrl = "";
 let latestSprintItems = [];
 let latestDoctorPolishItems = [];
+let latestProductionItems = [];
 
 const titleMap = {
   dashboard: "Dashboard",
@@ -1997,11 +1998,51 @@ async function loadApprovalCockpit() {
   }
 }
 
+function productionDesignText(item) {
+  return [
+    item.designer_handoff || `DREC Production Handoff\n\nAsset ID: ${item.asset_id || ""}`,
+    "",
+    "Approved-caption context:",
+    item.caption_preview || "No caption preview available.",
+    "",
+    "Return format:",
+    `Asset ID: ${item.asset_id || ""}`,
+    "Media URLs: https://...",
+    "Visual QA: passed / pending / needs_work",
+    "Rights: owned / licensed / approved stock / patient consent",
+    "Notes:",
+  ].join("\n");
+}
+
+function productionBatchText(items) {
+  return [
+    "DREC Production Design Batch",
+    `Items: ${items.length}`,
+    "Use this only after doctor approval. This text does not approve, attach media, queue, schedule, publish, or send Meta requests.",
+    "",
+    ...items.map((item, index) => [
+      `--- ${index + 1} / ${items.length} ---`,
+      productionDesignText(item),
+    ].join("\n")),
+  ].join("\n\n");
+}
+
 function renderPostApprovalProduction(data) {
   const container = document.getElementById("post-approval-production");
   if (!container) return;
   const items = data.production_items || [];
+  latestProductionItems = items;
   const first = items[0] || {};
+  const itemCards = items.slice(0, 5).map((item, index) => `
+    <article class="learning-card sprint-item-card">
+      <h4>${index + 1}. ${escapeHtml(item.topic || "Untitled asset")}</h4>
+      <small>${escapeHtml(item.stage || "")} · ${escapeHtml(item.channel || "channel")} / ${escapeHtml(item.format || "format")}</small>
+      <p>${escapeHtml(item.media_task || item.media_gap || "")}</p>
+      <div class="learning-actions">
+        <button type="button" data-copy-production-design="${escapeHtml(item.asset_id || "")}">Copy Design</button>
+      </div>
+    </article>
+  `).join("");
   container.innerHTML = `
     <article class="learning-card">
       <h3>Production Pack</h3>
@@ -2020,7 +2061,10 @@ function renderPostApprovalProduction(data) {
     </article>
     <article class="learning-card wide-learning">
       <h3>Design And Media Tasks</h3>
-      <ul>${items.length ? items.slice(0, 5).map((item) => `<li><strong>${escapeHtml(item.topic || "Untitled asset")}</strong> · ${escapeHtml(item.stage || "")}<br><small>${escapeHtml(item.media_task || item.media_gap || "")}</small></li>`).join("") : "<li>Finish human approval first.</li>"}</ul>
+      <div class="learning-actions sprint-bulk-actions">
+        <button type="button" data-copy-production-design-all>Copy All Design</button>
+      </div>
+      <div class="sprint-board">${itemCards || '<p class="status-note">Finish human approval first.</p>'}</div>
     </article>
   `;
 }
@@ -3963,6 +4007,52 @@ document.getElementById("cancel-queue-edit").addEventListener("click", () => {
 });
 
 document.addEventListener("click", async (event) => {
+  const productionAllButton = event.target.closest("[data-copy-production-design-all]");
+  if (productionAllButton) {
+    const message = document.getElementById("media-message") || document.getElementById("asset-message");
+    if (!latestProductionItems.length) {
+      if (message) message.textContent = "No production items to copy yet.";
+      return;
+    }
+    const original = productionAllButton.textContent;
+    productionAllButton.disabled = true;
+    productionAllButton.textContent = "Copying";
+    try {
+      await navigator.clipboard.writeText(productionBatchText(latestProductionItems));
+      if (message) message.textContent = "All production design text copied.";
+    } catch {
+      if (message) message.textContent = "Browser blocked clipboard copy. Download the production pack instead.";
+    } finally {
+      productionAllButton.disabled = false;
+      productionAllButton.textContent = original;
+    }
+    return;
+  }
+
+  const productionDesignButton = event.target.closest("[data-copy-production-design]");
+  if (productionDesignButton) {
+    const assetId = productionDesignButton.dataset.copyProductionDesign || "";
+    const item = latestProductionItems.find((candidate) => candidate.asset_id === assetId);
+    const message = document.getElementById("media-message") || document.getElementById("asset-message");
+    if (!item) {
+      if (message) message.textContent = "Production item not found. Refresh Assets and try again.";
+      return;
+    }
+    const original = productionDesignButton.textContent;
+    productionDesignButton.disabled = true;
+    productionDesignButton.textContent = "Copying";
+    try {
+      await navigator.clipboard.writeText(productionDesignText(item));
+      if (message) message.textContent = "Production design text copied.";
+    } catch {
+      if (message) message.textContent = "Browser blocked clipboard copy. Download the production pack instead.";
+    } finally {
+      productionDesignButton.disabled = false;
+      productionDesignButton.textContent = original;
+    }
+    return;
+  }
+
   const polishButton = event.target.closest("[data-copy-doctor-polish]");
   if (polishButton) {
     const assetId = polishButton.dataset.copyDoctorPolish || "";

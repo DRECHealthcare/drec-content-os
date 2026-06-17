@@ -146,6 +146,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added First Cycle Handoff Pack for the safe rewrite -> approval -> queue -> schedule -> handoff path
 - [x] Added Approval Cockpit for prioritizing clear draft assets before human approval
 - [x] Added Post-Approval Production Pack for design, media, rights, and visual QA handoff after human approval
+- [x] Added copy actions for individual and full-batch production design handoff messages
 - [x] Added Pre-Schedule Gate for queue review, final caption, approved media/design, and visual QA readiness before scheduling
 - [x] Added safe Attach Media action for linking approved design/media URLs back to draft assets without approving, queueing, scheduling, or publishing
 - [x] Added Asset Media Attachment CSV export/import for spreadsheet-style design/media handoff while preserving approval and publishing gates
