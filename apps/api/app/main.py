@@ -1938,6 +1938,174 @@ async def operations_metrics_template(_: None = Depends(require_access_token)):
     )
 
 
+async def recent_raw_metrics(limit: int = 25):
+    bounded_limit = max(1, min(int(limit or 25), 100))
+    rows = await fetch_rows(
+        """
+        select id, source, external_post_id, captured_at, metrics, created_at
+        from raw_metrics
+        order by captured_at desc nulls last, created_at desc
+        limit $1
+        """,
+        bounded_limit,
+    )
+    if not rows and supabase_rest.configured():
+        rows = await supabase_rest.select(
+            "raw_metrics",
+            {
+                "select": "id,source,external_post_id,captured_at,metrics,created_at",
+                "order": "captured_at.desc.nullslast,created_at.desc",
+                "limit": str(bounded_limit),
+            },
+        )
+    return rows
+
+
+async def recent_outcome_rows(limit: int = 25):
+    bounded_limit = max(1, min(int(limit or 25), 100))
+    rows = await fetch_rows(
+        """
+        select id, post_id, format, channel, metric_window, score, shares, saves, cpl, vs_plan_note, created_at
+        from outcomes
+        order by created_at desc
+        limit $1
+        """,
+        bounded_limit,
+    )
+    if not rows and supabase_rest.configured():
+        rows = await supabase_rest.select(
+            "outcomes",
+            {
+                "select": "id,post_id,format,channel,metric_window,score,shares,saves,cpl,vs_plan_note,created_at",
+                "order": "created_at.desc",
+                "limit": str(bounded_limit),
+            },
+        )
+    return rows
+
+
+def closeout_metric_summary(metrics: dict):
+    metrics = metrics or {}
+    keys = ["reach", "impressions", "likes", "comments", "saves", "shares", "leads", "spend"]
+    parts = [f"{key}={metrics.get(key)}" for key in keys if metrics.get(key) not in {None, ""}]
+    return ", ".join(parts) or "No numeric metrics recorded."
+
+
+@app.get("/operations/metrics-closeout-pack.md")
+async def operations_metrics_closeout_pack(_: None = Depends(require_access_token)):
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    candidates = await meta_metric_candidates(None, 50)
+    raw_rows = await recent_raw_metrics(50)
+    outcome_rows = await recent_outcome_rows(50)
+    raw_post_ids = {str(row.get("external_post_id")) for row in raw_rows if row.get("external_post_id")}
+    outcome_post_ids = {str(row.get("post_id")) for row in outcome_rows if row.get("post_id")}
+    waiting_for_metrics = [
+        item
+        for item in candidates
+        if item.get("external_post_id") and str(item.get("external_post_id")) not in raw_post_ids
+    ]
+    waiting_for_rollup = [
+        row
+        for row in raw_rows
+        if row.get("external_post_id") and str(row.get("external_post_id")) not in outcome_post_ids
+    ]
+    completed = [
+        row
+        for row in outcome_rows
+        if row.get("post_id") in raw_post_ids or not raw_rows
+    ]
+    lines = [
+        "# DREC Content OS Metrics Closeout Pack",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this pack after manual publishing to close the learning loop. It is read-only and does not import metrics or create outcomes.",
+        "",
+        "## Closeout Sequence",
+        "",
+        "1. Confirm published posts have a Meta post ID or manual label recorded.",
+        "2. Download the Metrics Template and fill reach, likes, comments, saves, shares, leads, and spend.",
+        "3. Preview the metrics CSV before import.",
+        "4. Import with Roll up enabled when the numbers look correct.",
+        "5. Download Weekly Report and use learning recommendations in the next Weekly Plan.",
+        "",
+        "## Current Counts",
+        "",
+        f"- Published candidates scanned: {len(candidates)}",
+        f"- Waiting for raw metrics: {len(waiting_for_metrics)}",
+        f"- Raw metrics waiting for outcome rollup: {len(waiting_for_rollup)}",
+        f"- Recent outcomes available: {len(outcome_rows)}",
+        "",
+        "## Waiting For Metrics",
+        "",
+    ]
+    if waiting_for_metrics:
+        for index, item in enumerate(waiting_for_metrics[:30], start=1):
+            lines.extend(
+                [
+                    f"### {index}. {item.get('channel')} / {item.get('format')}",
+                    "",
+                    f"- Queue ID: {item.get('id')}",
+                    f"- External post ID: {item.get('external_post_id')}",
+                    f"- Published/updated: {item.get('updated_at') or item.get('created_at') or 'unknown'}",
+                    f"- Action: Add this row to Metrics Template, then Preview CSV.",
+                    f"- Caption preview: {feedback_excerpt(item.get('caption'), 180)}",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["- No published Facebook/Instagram candidates are waiting for raw metrics.", ""])
+    lines.extend(["## Raw Metrics Waiting For Rollup", ""])
+    if waiting_for_rollup:
+        for index, row in enumerate(waiting_for_rollup[:30], start=1):
+            lines.extend(
+                [
+                    f"### {index}. {row.get('external_post_id')}",
+                    "",
+                    f"- Source: {row.get('source')}",
+                    f"- Captured: {row.get('captured_at') or row.get('created_at')}",
+                    f"- Metrics: {closeout_metric_summary(row.get('metrics') or {})}",
+                    f"- Action: Use Save & Roll Up or import CSV with rollup enabled.",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["- No raw metrics are waiting for outcome rollup.", ""])
+    lines.extend(["## Recent Learning Outcomes", ""])
+    if completed:
+        for index, row in enumerate(completed[:30], start=1):
+            lines.extend(
+                [
+                    f"### {index}. {row.get('post_id')}",
+                    "",
+                    f"- Channel / format: {row.get('channel')} / {row.get('format')}",
+                    f"- Window: {row.get('metric_window')}",
+                    f"- Score: {row.get('score')}",
+                    f"- Saves / shares: {row.get('saves')} / {row.get('shares')}",
+                    f"- Note: {row.get('vs_plan_note') or 'No note'}",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["- No recent learning outcomes yet.", ""])
+    lines.extend(
+        [
+            "## Closeout Rules",
+            "",
+            "- Use real post IDs when available; use manual labels only for first-test evidence.",
+            "- Keep spend at 0 for organic/manual posts unless paid spend was used.",
+            "- Roll up only after preview looks correct.",
+            "- Learning recommendations become useful only after outcomes exist.",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-metrics-closeout-pack.md"'},
+    )
+
+
 def snapshot_row(record_type, item_id="", status="", channel="", fmt="", title="", created_at="", detail=""):
     return {
         "record_type": record_type,

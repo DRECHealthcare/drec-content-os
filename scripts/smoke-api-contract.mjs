@@ -37,6 +37,7 @@ const requiredRoutes = [
   "GET /operations/review-to-schedule-pack.md",
   "GET /operations/learning-snapshot.csv",
   "GET /operations/metrics-template.csv",
+  "GET /operations/metrics-closeout-pack.md",
   "GET /operations/weekly-cycle-pack.md",
   "GET /operations/publishing-run-sheet.md",
   "GET /operations/operator-pack.md",
@@ -487,6 +488,16 @@ const requiredSnippets = [
     text: "drec-metrics-template.csv",
   },
   {
+    name: "metrics closeout pack export",
+    file: "main",
+    text: "drec-metrics-closeout-pack.md",
+  },
+  {
+    name: "metrics closeout sequence",
+    file: "main",
+    text: "## Closeout Sequence",
+  },
+  {
     name: "metrics template instructions row",
     file: "main",
     text: "row_type",
@@ -800,6 +811,16 @@ const requiredSnippets = [
     name: "web metrics template action",
     file: "web",
     text: "download-metrics-template",
+  },
+  {
+    name: "web metrics closeout action",
+    file: "web",
+    text: "download-metrics-closeout",
+  },
+  {
+    name: "web metrics closeout endpoint",
+    file: "web",
+    text: "/operations/metrics-closeout-pack.md",
   },
   {
     name: "web metrics template endpoint",

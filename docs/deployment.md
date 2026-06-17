@@ -139,6 +139,11 @@ The Review Queue `Download Review-to-Schedule` action calls
 review-approved draft queue items, handoff-ready scheduled items, and blockers
 in one read-only operating pack.
 
+The Performance `Download Metrics Closeout` action calls
+`/operations/metrics-closeout-pack.md` and exports published candidates waiting
+for metrics, raw metric rows waiting for rollup, recent learning outcomes, and
+closeout rules for the weekly learning loop.
+
 The Dashboard `Run Risk Audit` action calls `/operations/risk-audit` and scans
 automation gates, assets, queue items, and media for blocked or warning-level
 issues before a publishing run.

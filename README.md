@@ -131,6 +131,7 @@ Stage 1 is now a working thin-core workflow:
 - Record the Meta post ID directly from the handoff after manual posting
 - Mark manually published posts with their Meta post ID so metrics ingestion can learn from them later
 - Download a metrics CSV template with current published candidates, sample manual values, and field instructions for cleaner performance entry
+- Download a Metrics Closeout Pack that shows published posts waiting for metrics, raw metrics waiting for rollup, and recent learning outcomes
 - Preview and import the completed metrics CSV back into Performance, with visible importable/skipped row details and optional learning rollup in one pass
 - Dry-run Facebook and Instagram publishing workers before Meta credentials are connected
 - Dry-run the scheduler-ready Meta publishing job against due scheduled posts before real posting is enabled

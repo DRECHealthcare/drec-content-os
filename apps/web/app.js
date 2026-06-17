@@ -2874,6 +2874,16 @@ document.getElementById("download-metrics-template")?.addEventListener("click", 
   }
 });
 
+document.getElementById("download-metrics-closeout")?.addEventListener("click", async () => {
+  const message = document.getElementById("metric-message");
+  try {
+    await downloadProtectedFile("/operations/metrics-closeout-pack.md", "drec-metrics-closeout-pack.md", "text/markdown");
+    message.textContent = "Metrics closeout pack downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download metrics closeout pack.";
+  }
+});
+
 function renderMetricsImportPreview(data) {
   const container = document.getElementById("metrics-import-preview");
   if (!container) return;
