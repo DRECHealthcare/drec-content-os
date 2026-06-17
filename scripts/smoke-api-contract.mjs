@@ -35,6 +35,7 @@ const requiredRoutes = [
   "GET /operations/test-run-tracker.md",
   "GET /operations/cycle-command-center",
   "GET /operations/cycle-command-center.md",
+  "GET /operations/cycle-evidence-ledger.csv",
   "GET /operations/manual-cycle-qa.md",
   "GET /operations/daily-ops-checklist.md",
   "GET /operations/risk-audit",
@@ -682,6 +683,36 @@ const requiredSnippets = [
     name: "cycle command center UI endpoint",
     file: "web",
     text: "/operations/cycle-command-center.md",
+  },
+  {
+    name: "cycle evidence ledger route",
+    file: "main",
+    text: "operations_cycle_evidence_ledger_csv",
+  },
+  {
+    name: "cycle evidence ledger export",
+    file: "main",
+    text: "drec-cycle-evidence-ledger.csv",
+  },
+  {
+    name: "cycle evidence ledger header",
+    file: "main",
+    text: "evidence_item",
+  },
+  {
+    name: "cycle evidence ledger safety note",
+    file: "main",
+    text: "Ledger only. It does not approve, import, attach media, queue, schedule, publish, or send Meta requests.",
+  },
+  {
+    name: "cycle evidence ledger UI action",
+    file: "web",
+    text: "download-cycle-evidence-ledger",
+  },
+  {
+    name: "cycle evidence ledger UI endpoint",
+    file: "web",
+    text: "/operations/cycle-evidence-ledger.csv",
   },
   {
     name: "manual cycle qa export",

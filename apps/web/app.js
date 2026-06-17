@@ -2977,6 +2977,16 @@ document.getElementById("download-cycle-command-center")?.addEventListener("clic
   }
 });
 
+document.getElementById("download-cycle-evidence-ledger")?.addEventListener("click", async () => {
+  const message = document.getElementById("test-path-message");
+  try {
+    await downloadProtectedFile("/operations/cycle-evidence-ledger.csv", "drec-cycle-evidence-ledger.csv", "text/csv");
+    message.textContent = "Cycle evidence ledger downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download cycle evidence ledger.";
+  }
+});
+
 document.getElementById("download-operator-pack")?.addEventListener("click", async () => {
   const message = document.getElementById("test-path-message");
   try {

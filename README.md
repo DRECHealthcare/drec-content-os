@@ -105,6 +105,7 @@ Stage 1 is now a working thin-core workflow:
 - Download a protected First Test Kit with current next action, first-test action links, sample topics, manual metric values, acceptance criteria, and safety notes
 - Download a protected First Test Run Tracker with live step status, evidence source links, evidence fields, and pass rules for the first manual workflow test
 - Download a protected Cycle Command Center with the live next action, bridge links, evidence fields, stop rules, and current manual-cycle gates in one place
+- Download a protected Cycle Evidence Ledger CSV to record doctor review, production handoff, schedule, manual publish, and metrics evidence without approving or publishing anything
 - Download a protected Manual Cycle QA report that summarizes the current test decision, action links, blockers, risk, handoff, and learning gaps
 - Download a protected CSV operations snapshot for audit or backup before rollout changes
 - Download a protected Pipeline Board CSV that shows each topic's next action from brief through asset, queue, publishing, metrics, and learning

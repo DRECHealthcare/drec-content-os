@@ -33,6 +33,7 @@ const checks = [
         && text.includes("download-first-cycle-sprint-pack")
         && text.includes("download-first-cycle-sprint-tracker")
         && text.includes("download-cycle-command-center")
+        && text.includes("download-cycle-evidence-ledger")
         && text.includes("first-cycle-sprint")
         && text.includes("download-doctor-review-polish")
         && text.includes("download-doctor-review-bridge")
@@ -71,6 +72,7 @@ const checks = [
       const text = await res.text();
       return text.includes("/operations/doctor-decision-worksheet.csv")
         && text.includes("/operations/cycle-command-center.md")
+        && text.includes("/operations/cycle-evidence-ledger.csv")
         && text.includes("/operations/doctor-review-bridge.md")
         && text.includes("/operations/doctor-review-polish-pack")
         && text.includes("/operations/doctor-review-polish-pack.md")
@@ -271,6 +273,19 @@ const checks = [
         && text.includes("## Stop Rules")
         && text.includes("Doctor Review Bridge")
         && text.includes("Production Handoff Bridge");
+    },
+  },
+  {
+    name: "Cycle evidence ledger",
+    url: `${apiBase}/operations/cycle-evidence-ledger.csv`,
+    auth: true,
+    validate: async (res) => {
+      const text = await res.text();
+      return text.includes("evidence_item,workflow_stage,current_status,recommended_source,operator_value,operator_name,evidence_time,notes,safe_use_note")
+        && text.includes("Doctor message sent time")
+        && text.includes("Production reply preview result")
+        && text.includes("Current next action")
+        && text.includes("Ledger only");
     },
   },
   {

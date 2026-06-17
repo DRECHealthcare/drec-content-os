@@ -2927,6 +2927,98 @@ async def operations_cycle_command_center_markdown(_: None = Depends(require_acc
     )
 
 
+@app.get("/operations/cycle-evidence-ledger.csv")
+async def operations_cycle_evidence_ledger_csv(_: None = Depends(require_access_token)):
+    payload = await cycle_command_center_payload()
+    summary = payload.get("summary") or {}
+    action = payload.get("immediate_action") or {}
+    output = StringIO()
+    fieldnames = [
+        "evidence_item",
+        "workflow_stage",
+        "current_status",
+        "recommended_source",
+        "operator_value",
+        "operator_name",
+        "evidence_time",
+        "notes",
+        "safe_use_note",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    source_map = {
+        "Doctor message sent time": "/operations/doctor-review-bridge.md",
+        "Doctor reviewer name": "/operations/doctor-review-bridge.md",
+        "Doctor reply preview result": "Assets -> Preview Doctor Reply",
+        "Doctor import result": "Assets -> Import Doctor Reply",
+        "Production message sent time": "/operations/production-handoff-bridge.md",
+        "Production reply preview result": "Assets -> Preview Production Reply",
+        "Media/design import result": "Assets -> Import Production Reply or Import Design",
+        "Pre-schedule gate result": "/operations/pre-schedule-gate.md",
+        "Schedule audit result": "/publish-queue/schedule-audit.md",
+        "Manual publishing post ID": "/publishing-handoff",
+        "Metrics import or rollup result": "/operations/metrics-closeout-pack.md",
+    }
+    stage_map = {
+        "Doctor message sent time": "doctor_review",
+        "Doctor reviewer name": "doctor_review",
+        "Doctor reply preview result": "doctor_reply_preview",
+        "Doctor import result": "doctor_reply_import",
+        "Production message sent time": "production_handoff",
+        "Production reply preview result": "production_reply_preview",
+        "Media/design import result": "media_design_import",
+        "Pre-schedule gate result": "pre_schedule",
+        "Schedule audit result": "schedule_audit",
+        "Manual publishing post ID": "manual_publish",
+        "Metrics import or rollup result": "learning_metrics",
+    }
+    status_map = {
+        "doctor_review": f"{summary.get('assets_ready_for_human_review', 0)} asset(s) ready for human review",
+        "doctor_reply_preview": "waiting for doctor reply",
+        "doctor_reply_import": "waiting for preview-approved doctor reply",
+        "production_handoff": f"{summary.get('production_bridge_items', 0)} production bridge item(s)",
+        "production_reply_preview": "waiting for production reply",
+        "media_design_import": f"{summary.get('production_needs_media', 0)} item(s) need media/design",
+        "pre_schedule": f"{summary.get('ready_to_schedule', 0)} ready to schedule",
+        "schedule_audit": f"{summary.get('schedule_blocks', 0)} schedule block(s)",
+        "manual_publish": f"{summary.get('manual_cycle_status')}",
+        "learning_metrics": f"{summary.get('manual_cycle_done')}/{summary.get('manual_cycle_required')} manual steps done",
+    }
+    for evidence in payload.get("evidence_fields") or []:
+        stage = stage_map.get(evidence, "manual_cycle")
+        writer.writerow(
+            {
+                "evidence_item": evidence,
+                "workflow_stage": stage,
+                "current_status": status_map.get(stage, payload.get("overall_status") or ""),
+                "recommended_source": source_map.get(evidence, "/operations/cycle-command-center.md"),
+                "operator_value": "",
+                "operator_name": "",
+                "evidence_time": "",
+                "notes": "",
+                "safe_use_note": "Ledger only. It does not approve, import, attach media, queue, schedule, publish, or send Meta requests.",
+            }
+        )
+    writer.writerow(
+        {
+            "evidence_item": "Current next action",
+            "workflow_stage": "live_runbook",
+            "current_status": payload.get("overall_status") or "",
+            "recommended_source": "/operations/cycle-command-center.md",
+            "operator_value": action.get("action") or payload.get("next_step") or "",
+            "operator_name": "",
+            "evidence_time": payload.get("generated_at") or "",
+            "notes": action.get("label") or "",
+            "safe_use_note": "Read-only current-state row for orientation.",
+        }
+    )
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-cycle-evidence-ledger.csv"'},
+    )
+
+
 @app.get("/operations/manual-cycle-qa.md")
 async def operations_manual_cycle_qa(_: None = Depends(require_access_token)):
     generated_at = datetime.now(timezone.utc).isoformat()
