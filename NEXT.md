@@ -99,6 +99,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added strict server-only Supabase RLS migration plan and protected rollout export
 - [x] Added API-backed automation readiness gate across workflow, handoff, learning, Meta, and security
 - [x] Added protected CSV operations snapshot export for backup and rollout audit
+- [x] Added protected Pipeline Board CSV for brief-to-learning status tracking
 - [x] Added Meta credential setup checklist and copy-ready Fly secret command template
 - [x] Added protected operator pack export with readiness, setup, handoff, and weekly report sections
 - [x] Added protected content risk audit across automation gates, assets, queue, and media
@@ -197,6 +198,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add strict Supabase RLS hardening migration package and downloadable rollout plan
 - [x] Add unified automation readiness status for safe rollout decisions
 - [x] Add protected operations snapshot export before credential/RLS changes
+- [x] Add downloadable Pipeline Board for brief-to-learning next-action tracking
 - [x] Add copy-ready Meta and Supabase credential setup checklist
 - [x] Add one-click operator pack export for weekly handoff and rollout audit
 - [x] Add one-click scheduler activation pack for GitHub dry-run setup and heartbeat verification

@@ -74,6 +74,7 @@ Stage 1 is now a working thin-core workflow:
 - Download a protected First Test Run Tracker with live step status, evidence fields, and pass rules for the first manual workflow test
 - Download a protected Manual Cycle QA report that summarizes the current test decision, blockers, risk, handoff, and learning gaps
 - Download a protected CSV operations snapshot for audit or backup before rollout changes
+- Download a protected Pipeline Board CSV that shows each topic's next action from brief through asset, queue, publishing, metrics, and learning
 - Download a protected operator pack with readiness status, setup checklist, publishing handoff, and weekly report in one Markdown file
 - See the same "Can I Use It Now" decision in Launch Evidence and Operator Pack, including safe test scope and not-yet-ready automation blockers
 - Use the GitHub Actions dry-run scheduler template to check publishing, metrics, automation, and risk gates without mutating live records

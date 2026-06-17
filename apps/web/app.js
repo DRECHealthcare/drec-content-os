@@ -1782,6 +1782,16 @@ document.getElementById("download-snapshot")?.addEventListener("click", async ()
   }
 });
 
+document.getElementById("download-pipeline-board")?.addEventListener("click", async () => {
+  const message = document.getElementById("test-path-message");
+  try {
+    await downloadProtectedFile("/operations/pipeline-board.csv", "drec-content-pipeline-board.csv", "text/csv");
+    message.textContent = "Pipeline board downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download pipeline board.";
+  }
+});
+
 document.getElementById("download-launch-evidence")?.addEventListener("click", async () => {
   const message = document.getElementById("test-path-message");
   try {

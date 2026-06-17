@@ -2265,6 +2265,220 @@ async def snapshot_select(table: str, sql: str, rest_params: dict):
     return rows
 
 
+def pipeline_id(value):
+    return str(value) if value else ""
+
+
+def pipeline_latest(items, key):
+    latest = {}
+    for item in items:
+        item_key = pipeline_id(item.get(key))
+        if item_key and item_key not in latest:
+            latest[item_key] = item
+    return latest
+
+
+def pipeline_status(brief=None, asset=None, queue_item=None, raw_metric=None, outcome=None):
+    if not asset:
+        return "brief_to_asset", "Save Asset", "Brief has no saved creative asset yet."
+
+    asset_review = str(asset.get("review_status") or "")
+    asset_safety = str(asset.get("compliance_status") or "")
+    if asset_review != "approved" or asset_safety != "clear":
+        return "asset_review", "Run safety review and approve clear asset", f"Asset is {asset_review or 'draft'} / {asset_safety or 'pending'}."
+
+    if not queue_item:
+        return "queue", "Add approved asset to queue", "Approved clear asset is not in the publishing queue."
+
+    queue_status = str(queue_item.get("status") or "")
+    queue_safety = str(queue_item.get("compliance_status") or "")
+    feedback = queue_item.get("latest_feedback") or {}
+    feedback_action = str(feedback.get("action") or "")
+    if queue_safety != "clear" or (queue_status == "draft" and feedback_action != "approve"):
+        return "queue_review", "Approve in Review Queue or request rewrite", f"Queue is {queue_status or 'draft'} / {queue_safety or 'pending'}."
+
+    if queue_status == "draft":
+        return "schedule", "Schedule approved item", "Queue item is approved and ready for a planned slot."
+
+    if queue_status in {"scheduled", "publishing"} and not queue_item.get("external_post_id"):
+        return "manual_handoff", "Build handoff and record post ID", "Scheduled item has no external post ID yet."
+
+    if queue_status == "published" and not raw_metric:
+        return "metrics", "Add or import metrics", "Published item is waiting for performance metrics."
+
+    if raw_metric and not outcome:
+        return "learning_rollup", "Roll up metrics into learning", "Raw metrics exist but no learning outcome is saved yet."
+
+    if outcome:
+        return "complete", "Use learning insight", "Learning outcome is available for future planning."
+
+    return "publish_followup", "Check publishing status", "Queue item needs operator follow-up."
+
+
+def pipeline_row(brief=None, asset=None, queue_item=None, raw_metric=None, outcome=None):
+    stage, next_action, detail = pipeline_status(brief, asset, queue_item, raw_metric, outcome)
+    return {
+        "pipeline_stage": stage,
+        "next_action": next_action,
+        "brief_id": pipeline_id((brief or {}).get("id") or (asset or {}).get("brief_id") or (outcome or {}).get("brief_id")),
+        "topic": (brief or {}).get("topic") or "",
+        "brief_status": (brief or {}).get("status") or "",
+        "asset_id": pipeline_id((asset or {}).get("id") or (queue_item or {}).get("asset_id") or (outcome or {}).get("asset_id")),
+        "asset_review_status": (asset or {}).get("review_status") or "",
+        "asset_safety_status": (asset or {}).get("compliance_status") or "",
+        "queue_id": pipeline_id((queue_item or {}).get("id")),
+        "queue_status": (queue_item or {}).get("status") or "",
+        "queue_safety_status": (queue_item or {}).get("compliance_status") or "",
+        "planned_slot": str((queue_item or {}).get("planned_slot") or ""),
+        "external_post_id": (queue_item or {}).get("external_post_id") or (raw_metric or {}).get("external_post_id") or (outcome or {}).get("post_id") or "",
+        "raw_metric_status": "captured" if raw_metric else "",
+        "outcome_status": "saved" if outcome else "",
+        "score": str((outcome or {}).get("score") or ""),
+        "channel": (queue_item or {}).get("channel") or (asset or {}).get("channel") or (brief or {}).get("channel") or (outcome or {}).get("channel") or "",
+        "format": (queue_item or {}).get("format") or (asset or {}).get("format") or (brief or {}).get("format") or (outcome or {}).get("format") or "",
+        "funnel_stage": (brief or {}).get("funnel_stage") or (outcome or {}).get("funnel_stage") or "",
+        "created_at": str((brief or asset or queue_item or raw_metric or outcome or {}).get("created_at") or ""),
+        "detail": detail,
+    }
+
+
+@app.get("/operations/pipeline-board.csv")
+async def operations_pipeline_board_csv(_: None = Depends(require_access_token)):
+    briefs = await snapshot_select(
+        "content_briefs",
+        """
+        select id, topic, channel, format, status, funnel_stage, created_at
+        from content_briefs
+        order by created_at desc
+        limit 300
+        """,
+        {"select": "id,topic,channel,format,status,funnel_stage,created_at", "order": "created_at.desc", "limit": "300"},
+    )
+    assets = await snapshot_select(
+        "assets",
+        """
+        select id, brief_id, channel, format, compliance_status, review_status, caption, created_at
+        from assets
+        order by created_at desc
+        limit 300
+        """,
+        {"select": "id,brief_id,channel,format,compliance_status,review_status,caption,created_at", "order": "created_at.desc", "limit": "300"},
+    )
+    queue_items = await fetch_publish_queue_items(200)
+    raw_metrics = await snapshot_select(
+        "raw_metrics",
+        """
+        select id, source, external_post_id, captured_at, metrics, created_at
+        from raw_metrics
+        order by captured_at desc
+        limit 300
+        """,
+        {"select": "id,source,external_post_id,captured_at,metrics,created_at", "order": "captured_at.desc", "limit": "300"},
+    )
+    outcomes = await snapshot_select(
+        "outcomes",
+        """
+        select id, brief_id, asset_id, post_id, channel, format, funnel_stage, metric_window, score, saves, shares, created_at
+        from outcomes
+        order by created_at desc
+        limit 300
+        """,
+        {"select": "id,brief_id,asset_id,post_id,channel,format,funnel_stage,metric_window,score,saves,shares,created_at", "order": "created_at.desc", "limit": "300"},
+    )
+
+    asset_by_brief = pipeline_latest(assets, "brief_id")
+    asset_by_id = {pipeline_id(item.get("id")): item for item in assets if item.get("id")}
+    queue_by_asset = pipeline_latest(queue_items, "asset_id")
+    metric_by_post = pipeline_latest(raw_metrics, "external_post_id")
+    outcome_by_asset = pipeline_latest(outcomes, "asset_id")
+    outcome_by_brief = pipeline_latest(outcomes, "brief_id")
+    outcome_by_post = pipeline_latest(outcomes, "post_id")
+
+    rows = []
+    seen_assets = set()
+    seen_queue = set()
+    seen_outcomes = set()
+    for brief in briefs:
+        asset = asset_by_brief.get(pipeline_id(brief.get("id")))
+        queue_item = queue_by_asset.get(pipeline_id((asset or {}).get("id")))
+        raw_metric = metric_by_post.get(pipeline_id((queue_item or {}).get("external_post_id")))
+        outcome = (
+            outcome_by_asset.get(pipeline_id((asset or {}).get("id")))
+            or outcome_by_brief.get(pipeline_id(brief.get("id")))
+            or outcome_by_post.get(pipeline_id((queue_item or {}).get("external_post_id")))
+        )
+        rows.append(pipeline_row(brief, asset, queue_item, raw_metric, outcome))
+        if asset:
+            seen_assets.add(pipeline_id(asset.get("id")))
+        if queue_item:
+            seen_queue.add(pipeline_id(queue_item.get("id")))
+        if outcome:
+            seen_outcomes.add(pipeline_id(outcome.get("id")))
+
+    for asset in assets:
+        asset_id = pipeline_id(asset.get("id"))
+        if asset_id in seen_assets:
+            continue
+        queue_item = queue_by_asset.get(asset_id)
+        raw_metric = metric_by_post.get(pipeline_id((queue_item or {}).get("external_post_id")))
+        outcome = outcome_by_asset.get(asset_id) or outcome_by_brief.get(pipeline_id(asset.get("brief_id"))) or outcome_by_post.get(pipeline_id((queue_item or {}).get("external_post_id")))
+        rows.append(pipeline_row(None, asset, queue_item, raw_metric, outcome))
+        if queue_item:
+            seen_queue.add(pipeline_id(queue_item.get("id")))
+        if outcome:
+            seen_outcomes.add(pipeline_id(outcome.get("id")))
+
+    for queue_item in queue_items:
+        queue_id = pipeline_id(queue_item.get("id"))
+        if queue_id in seen_queue:
+            continue
+        asset = asset_by_id.get(pipeline_id(queue_item.get("asset_id")))
+        raw_metric = metric_by_post.get(pipeline_id(queue_item.get("external_post_id")))
+        outcome = outcome_by_asset.get(pipeline_id((asset or {}).get("id"))) or outcome_by_post.get(pipeline_id(queue_item.get("external_post_id")))
+        rows.append(pipeline_row(None, asset, queue_item, raw_metric, outcome))
+        if outcome:
+            seen_outcomes.add(pipeline_id(outcome.get("id")))
+
+    for outcome in outcomes:
+        outcome_id = pipeline_id(outcome.get("id"))
+        if outcome_id in seen_outcomes:
+            continue
+        rows.append(pipeline_row(None, None, None, None, outcome))
+
+    output = StringIO()
+    fieldnames = [
+        "pipeline_stage",
+        "next_action",
+        "brief_id",
+        "topic",
+        "brief_status",
+        "asset_id",
+        "asset_review_status",
+        "asset_safety_status",
+        "queue_id",
+        "queue_status",
+        "queue_safety_status",
+        "planned_slot",
+        "external_post_id",
+        "raw_metric_status",
+        "outcome_status",
+        "score",
+        "channel",
+        "format",
+        "funnel_stage",
+        "created_at",
+        "detail",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    writer.writerows(rows)
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-content-pipeline-board.csv"'},
+    )
+
+
 @app.get("/operations/snapshot.csv")
 async def operations_snapshot_csv(_: None = Depends(require_access_token)):
     automation = await automation_status_payload()

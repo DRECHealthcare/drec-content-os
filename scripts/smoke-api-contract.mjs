@@ -27,6 +27,7 @@ const requiredRoutes = [
   "GET /operations/daily-ops-checklist.md",
   "GET /operations/risk-audit",
   "GET /operations/snapshot.csv",
+  "GET /operations/pipeline-board.csv",
   "GET /operations/creative-pack.md",
   "GET /operations/media-shot-list.csv",
   "GET /operations/asset-review.csv",
@@ -350,6 +351,16 @@ const requiredSnippets = [
     name: "operations snapshot export",
     file: "main",
     text: "drec-content-os-snapshot.csv",
+  },
+  {
+    name: "pipeline board export",
+    file: "main",
+    text: "drec-content-pipeline-board.csv",
+  },
+  {
+    name: "pipeline board status fields",
+    file: "main",
+    text: "pipeline_stage",
   },
   {
     name: "creative pack export",
@@ -715,6 +726,16 @@ const requiredSnippets = [
     name: "web operations snapshot action",
     file: "web",
     text: "download-snapshot",
+  },
+  {
+    name: "web pipeline board action",
+    file: "web",
+    text: "download-pipeline-board",
+  },
+  {
+    name: "web pipeline board endpoint",
+    file: "web",
+    text: "/operations/pipeline-board.csv",
   },
   {
     name: "web launch evidence action",

@@ -102,6 +102,11 @@ The Dashboard `Download Launch Evidence` action calls
 manual test progress, launch readiness, automation gates, risk items, Meta
 credential status, and safe go-live rules.
 
+The Dashboard `Download Pipeline Board` action calls
+`/operations/pipeline-board.csv` and exports one status board that tracks each
+topic from brief through asset review, queue review, scheduling, publishing,
+metrics, and learning next action.
+
 The Weekly Plan `Download Plan CSV` action calls `/briefs/plan.csv` and exports
 recent briefs for spreadsheet review, including topics, hooks, stages, status,
 and compliance notes.
