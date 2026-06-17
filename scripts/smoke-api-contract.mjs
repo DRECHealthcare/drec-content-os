@@ -28,6 +28,8 @@ const requiredRoutes = [
   "GET /operations/scheduler-activation-pack.md",
   "GET /operations/scheduler-health",
   "GET /operations/scheduler-health.md",
+  "GET /operations/scheduler-recovery-pack",
+  "GET /operations/scheduler-recovery-pack.md",
   "GET /operations/launch-evidence.md",
   "GET /operations/first-test-kit.md",
   "GET /operations/test-run-tracker.md",
@@ -492,6 +494,26 @@ const requiredSnippets = [
     text: "without recording a fake heartbeat",
   },
   {
+    name: "scheduler recovery pack route",
+    file: "main",
+    text: "scheduler_recovery_pack_payload",
+  },
+  {
+    name: "scheduler recovery pack export",
+    file: "main",
+    text: "drec-scheduler-recovery-pack.md",
+  },
+  {
+    name: "scheduler recovery pack links",
+    file: "main",
+    text: "dry_run_workflow_url",
+  },
+  {
+    name: "scheduler recovery no fake heartbeat",
+    file: "main",
+    text: "Run recovery from GitHub Actions, not by faking heartbeat evidence.",
+  },
+  {
     name: "scheduler pack UI action",
     file: "web",
     text: "download-scheduler-pack",
@@ -502,6 +524,11 @@ const requiredSnippets = [
     text: "download-scheduler-health",
   },
   {
+    name: "scheduler recovery UI action",
+    file: "web",
+    text: "download-scheduler-recovery",
+  },
+  {
     name: "scheduler pack UI endpoint",
     file: "web",
     text: "/operations/scheduler-activation-pack.md",
@@ -510,6 +537,11 @@ const requiredSnippets = [
     name: "scheduler health UI endpoint",
     file: "web",
     text: "/operations/scheduler-health.md",
+  },
+  {
+    name: "scheduler recovery UI endpoint",
+    file: "web",
+    text: "/operations/scheduler-recovery-pack.md",
   },
   {
     name: "launch readiness status",

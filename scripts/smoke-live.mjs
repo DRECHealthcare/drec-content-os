@@ -49,6 +49,7 @@ const checks = [
         && text.includes("preview-production-design-worksheet")
         && text.includes("import-production-design-worksheet")
         && text.includes("download-scheduler-health")
+        && text.includes("download-scheduler-recovery")
         && text.includes("download-schedule-worksheet")
         && text.includes("preview-schedule-worksheet")
         && text.includes("import-schedule-worksheet")
@@ -87,6 +88,7 @@ const checks = [
         && text.includes("/operations/production-design-worksheet.csv")
         && text.includes("/operations/import-production-design-worksheet")
         && text.includes("/operations/scheduler-health.md")
+        && text.includes("/operations/scheduler-recovery-pack.md")
         && text.includes("data-copy-production-design")
         && text.includes("data-copy-production-design-all")
         && text.includes("/publish-queue/import-schedule-worksheet")
@@ -277,6 +279,31 @@ const checks = [
       return text.includes("# DREC Content OS Scheduler Health Pack")
         && text.includes("without recording a fake heartbeat")
         && text.includes("admin token or legacy DREC_ACCESS_TOKEN");
+    },
+  },
+  {
+    name: "Scheduler recovery pack",
+    url: `${apiBase}/operations/scheduler-recovery-pack`,
+    auth: true,
+    validate: async (res) => {
+      const data = await res.json();
+      return data.phase === "scheduler_recovery_pack"
+        && data.mode === "operator_recovery_only"
+        && data.links?.dry_run_workflow?.includes("drec-scheduler-dry-run.yml")
+        && Array.isArray(data.manual_recovery_steps)
+        && data.safety?.some((item) => item.includes("does not record a heartbeat"));
+    },
+  },
+  {
+    name: "Scheduler recovery markdown",
+    url: `${apiBase}/operations/scheduler-recovery-pack.md`,
+    auth: true,
+    validate: async (res) => {
+      const text = await res.text();
+      return text.includes("# DREC Content OS Scheduler Recovery Pack")
+        && text.includes("## Manual Recovery Steps")
+        && text.includes("Repository Secrets")
+        && text.includes("not by faking heartbeat evidence");
     },
   },
   {

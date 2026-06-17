@@ -112,6 +112,7 @@ Stage 1 is now a working thin-core workflow:
 - See the GitHub Scheduler Setup steps in Meta Setup and the Operator Pack before turning on recurring dry-run checks
 - Download a Scheduler Activation Pack from Meta Setup with the GitHub secret, optional API variable, first-run check, heartbeat expectation, and dry-run safety rules
 - Download a Scheduler Health Pack from Meta Setup to diagnose missing or stale GitHub dry-run scheduler heartbeats without recording fake heartbeat evidence
+- Download a Scheduler Recovery Pack from Meta Setup with GitHub Actions links, secret/variable checks, manual rerun steps, and verification commands for stale scheduler heartbeats
 - Use Notify Rail in Meta Setup to preview n8n/WhatsApp approval alerts, role routing, and safe no-auto-approval rules before live message sending
 - Use the guarded DREC Nightly Meta Metrics GitHub workflow, defaulting to dry-run and requiring both GitHub and Fly enable switches before live metrics ingestion
 - Generate a Meta OAuth guide with redirect URI, required scopes, setup steps, and a copyable Login dialog URL/template before real credentials are installed

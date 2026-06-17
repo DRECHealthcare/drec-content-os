@@ -2075,6 +2075,137 @@ async def operations_scheduler_health_markdown(_: None = Depends(require_access_
     )
 
 
+async def scheduler_recovery_pack_payload():
+    health = await scheduler_health_payload()
+    repo_url = "https://github.com/DRECHealthcare/drec-content-os"
+    actions_url = f"{repo_url}/actions"
+    dry_run_workflow_url = f"{repo_url}/actions/workflows/drec-scheduler-dry-run.yml"
+    metrics_workflow_url = f"{repo_url}/actions/workflows/drec-nightly-meta-metrics.yml"
+    settings_secrets_url = f"{repo_url}/settings/secrets/actions"
+    settings_variables_url = f"{repo_url}/settings/variables/actions"
+    api_base = health.get("default_api_base_url") or "https://drec-content-os-api.fly.dev"
+    return {
+        "phase": "scheduler_recovery_pack",
+        "mode": "operator_recovery_only",
+        "status": health.get("status"),
+        "heartbeat": health.get("heartbeat"),
+        "links": {
+            "github_actions": actions_url,
+            "dry_run_workflow": dry_run_workflow_url,
+            "nightly_metrics_workflow": metrics_workflow_url,
+            "repository_secrets": settings_secrets_url,
+            "repository_variables": settings_variables_url,
+            "automation_status": f"{api_base}/automation/status",
+            "scheduler_health": f"{api_base}/operations/scheduler-health",
+        },
+        "secret_requirements": [
+            "Repository secret DREC_ACCESS_TOKEN must exist.",
+            "The token must be an admin-scoped DREC app token or the current legacy app token.",
+            "Do not paste the token into repository files, workflow logs, screenshots, or chat.",
+        ],
+        "variable_requirements": [
+            f"Repository variable DREC_API_BASE_URL may be unset, or set to {api_base}.",
+            "Repository variable DREC_ENABLE_REAL_META_METRICS should remain false until Meta credentials and service-role security are ready.",
+        ],
+        "manual_recovery_steps": [
+            "Open Repository Secrets and update DREC_ACCESS_TOKEN if it is missing, expired, or not admin-scoped.",
+            "Open DREC Scheduler Dry Run and confirm the workflow is enabled.",
+            "Run DREC Scheduler Dry Run manually from GitHub Actions.",
+            "Open the latest run and confirm it reaches Record scheduler heartbeat.",
+            "Refresh Automation Status or Scheduler Health in DREC Content OS.",
+            "Keep live Meta metrics disabled until Meta readiness and Supabase service-role gates are green.",
+        ],
+        "expected_success_evidence": [
+            "The GitHub run is green.",
+            "The Record scheduler heartbeat step is green.",
+            "Scheduler Health reports heartbeat status recent.",
+            "Automation Status no longer reports scheduler heartbeat stale.",
+        ],
+        "copyable_checks": [
+            f"curl -H 'X-DREC-Access-Token: ***' {api_base}/automation/status",
+            f"curl -H 'X-DREC-Access-Token: ***' {api_base}/operations/scheduler-health",
+        ],
+        "safety": [
+            "This pack is read-only and does not record a heartbeat.",
+            "Run recovery from GitHub Actions, not by faking heartbeat evidence.",
+            "Dry-run scheduler checks do not publish to Meta.",
+            "Nightly real Meta metrics must stay disabled until credentials and security gates are ready.",
+        ],
+        "next_step": "Update or confirm the GitHub DREC_ACCESS_TOKEN secret, then manually run DREC Scheduler Dry Run once.",
+    }
+
+
+@app.get("/operations/scheduler-recovery-pack")
+async def operations_scheduler_recovery_pack(_: None = Depends(require_access_token)):
+    return await scheduler_recovery_pack_payload()
+
+
+@app.get("/operations/scheduler-recovery-pack.md")
+async def operations_scheduler_recovery_pack_markdown(_: None = Depends(require_access_token)):
+    payload = await scheduler_recovery_pack_payload()
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    heartbeat = payload.get("heartbeat") or {}
+    links = payload.get("links") or {}
+    lines = [
+        "# DREC Content OS Scheduler Recovery Pack",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this pack to restore the GitHub dry-run scheduler when heartbeat evidence is missing or stale. It is read-only and does not record a fake heartbeat.",
+        "",
+        "## Current Status",
+        "",
+        f"- Status: {payload.get('status')}",
+        f"- Heartbeat: {heartbeat.get('status') or 'missing'}",
+        f"- Last seen: {heartbeat.get('last_seen_at') or 'none'}",
+        f"- Detail: {heartbeat.get('detail') or 'No heartbeat detail available.'}",
+        "",
+        "## GitHub Links",
+        "",
+        f"- GitHub Actions: {links.get('github_actions')}",
+        f"- DREC Scheduler Dry Run: {links.get('dry_run_workflow')}",
+        f"- Nightly Meta Metrics: {links.get('nightly_metrics_workflow')}",
+        f"- Repository Secrets: {links.get('repository_secrets')}",
+        f"- Repository Variables: {links.get('repository_variables')}",
+        "",
+        "## Secret Requirements",
+        "",
+        *markdown_list(payload.get("secret_requirements"), "- DREC_ACCESS_TOKEN is required."),
+        "",
+        "## Variable Requirements",
+        "",
+        *markdown_list(payload.get("variable_requirements"), "- Keep live switches disabled."),
+        "",
+        "## Manual Recovery Steps",
+        "",
+        *[f"{index}. {step}" for index, step in enumerate(payload.get("manual_recovery_steps") or [], start=1)],
+        "",
+        "## Expected Success Evidence",
+        "",
+        *markdown_list(payload.get("expected_success_evidence"), "- Heartbeat becomes recent."),
+        "",
+        "## Copyable Verification Commands",
+        "",
+        "```bash",
+        *payload.get("copyable_checks", []),
+        "```",
+        "",
+        "## Safety",
+        "",
+        *markdown_list(payload.get("safety"), "- Read-only recovery pack."),
+        "",
+        "## Next Step",
+        "",
+        f"- {payload.get('next_step')}",
+        "",
+    ]
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-scheduler-recovery-pack.md"'},
+    )
+
+
 def notify_alert_payload(kind: str, role: str, urgency: str, title: str, detail: str, action: str, ref_id: str = "", screen: str = "dashboard"):
     return {
         "kind": kind,

@@ -4500,6 +4500,16 @@ document.getElementById("download-whatsapp-pack")?.addEventListener("click", asy
   }
 });
 
+document.getElementById("download-scheduler-recovery").addEventListener("click", async () => {
+  const message = document.getElementById("meta-message");
+  try {
+    await downloadProtectedFile("/operations/scheduler-recovery-pack.md", "drec-scheduler-recovery-pack.md", "text/markdown");
+    message.textContent = "Scheduler recovery pack downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download scheduler recovery pack.";
+  }
+});
+
 document.getElementById("dry-run-meta-publishing").addEventListener("click", async () => {
   const message = document.getElementById("meta-message");
   message.textContent = "Checking scheduled publishing job...";
