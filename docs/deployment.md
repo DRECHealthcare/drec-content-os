@@ -110,6 +110,11 @@ The Weekly Plan `Download Asset Pack` action calls `/briefs/asset-pack.md` and
 exports a brief-to-asset production handoff with saved asset IDs, review/safety
 state, hooks, target signals, and the next production action for each brief.
 
+The Assets `Download Shot List` action calls `/operations/media-shot-list.csv`
+and exports active draft assets as a visual production sheet with visual
+direction, shot requirements, media gaps, rights checks, and production priority
+for design or filming handoff.
+
 The Assets `Download Asset Review CSV` action calls
 `/operations/asset-review.csv` and exports draft assets plus media-library
 records with readiness, blockers, rights, approval, and source URL fields.

@@ -28,6 +28,7 @@ const requiredRoutes = [
   "GET /operations/risk-audit",
   "GET /operations/snapshot.csv",
   "GET /operations/creative-pack.md",
+  "GET /operations/media-shot-list.csv",
   "GET /operations/asset-review.csv",
   "GET /operations/asset-review-worklist.md",
   "GET /operations/asset-safety-review.md",
@@ -358,6 +359,16 @@ const requiredSnippets = [
     name: "creative pack production rules",
     file: "main",
     text: "## Production Rules",
+  },
+  {
+    name: "media shot list export",
+    file: "main",
+    text: "drec-media-shot-list.csv",
+  },
+  {
+    name: "media shot list rights check",
+    file: "main",
+    text: "Use only owned, licensed, stock-cleared, or patient-consented media",
   },
   {
     name: "asset review csv export",
@@ -903,6 +914,16 @@ const requiredSnippets = [
     name: "web creative pack endpoint",
     file: "web",
     text: "/operations/creative-pack.md",
+  },
+  {
+    name: "web media shot list action",
+    file: "web",
+    text: "download-media-shot-list",
+  },
+  {
+    name: "web media shot list endpoint",
+    file: "web",
+    text: "/operations/media-shot-list.csv",
   },
   {
     name: "web asset review csv action",

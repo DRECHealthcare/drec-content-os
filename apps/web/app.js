@@ -1862,6 +1862,16 @@ document.getElementById("download-creative-pack")?.addEventListener("click", asy
   }
 });
 
+document.getElementById("download-media-shot-list")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/media-shot-list.csv", "drec-media-shot-list.csv", "text/csv");
+    message.textContent = "Media shot list downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download media shot list.";
+  }
+});
+
 document.getElementById("download-asset-review")?.addEventListener("click", async () => {
   const message = document.getElementById("media-message");
   try {

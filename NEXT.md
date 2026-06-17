@@ -75,6 +75,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added one-click draft asset creation from weekly briefs
 - [x] Added batch draft asset creation from current weekly briefs
 - [x] Added saved asset package preview and copy action
+- [x] Added Media Shot List CSV for design, filming, rights check, and visual production handoff
 - [x] Added quick scheduling for compliance-clear queue items
 - [x] Added next-open-slot schedule suggestion for MYT publishing times
 - [x] Added Dashboard next-best-action guidance for moving through the workflow
@@ -170,6 +171,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add one-click draft asset creation from briefs
 - [x] Add batch draft asset creation from weekly briefs
 - [x] Add saved asset package preview/copy
+- [x] Add downloadable media shot list for visual production handoff
 - [x] Add quick queue scheduling
 - [x] Add next-open-slot schedule suggestions
 - [x] Add workflow guidance on the Dashboard

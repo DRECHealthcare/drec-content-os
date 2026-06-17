@@ -2461,6 +2461,104 @@ async def operations_creative_pack(_: None = Depends(require_access_token)):
     )
 
 
+def asset_visual_direction(asset: dict):
+    metadata = asset.get("metadata") or {}
+    slides = metadata.get("slides") or []
+    script = metadata.get("reel_script") or []
+    visual_notes = [slide.get("visual_note") for slide in slides if slide.get("visual_note")]
+    if visual_notes:
+        return " | ".join(visual_notes[:4])
+    if script:
+        beats = [beat.get("beat") or beat.get("line") for beat in script if beat.get("beat") or beat.get("line")]
+        return "Reel beats: " + " | ".join(beats[:4]) if beats else "Short educational talking-head reel with clean subtitle space."
+    if asset.get("format") == "single":
+        return "One clear educational image or clinic-safe visual with room for short headline text."
+    if asset.get("format") == "story":
+        return "Vertical story sequence with question/poll-friendly framing and minimal text."
+    return "DREC navy/teal carousel with clear page hierarchy and no tiny medical text baked into the image."
+
+
+def asset_shot_list(asset: dict):
+    fmt = asset.get("format")
+    metadata = asset.get("metadata") or {}
+    topic = metadata.get("topic") or "metabolic education"
+    if fmt == "reel":
+        return f"1 vertical presenter clip; 1 simple B-roll cutaway for {topic}; optional metric/food/clinic close-up."
+    if fmt in {"carousel", "story"}:
+        slides = metadata.get("slides") or []
+        count = len(slides) or (5 if fmt == "carousel" else 3)
+        return f"{count} visual frame(s): cover, 2-3 explanation frames, final save/consult prompt."
+    return "1 primary visual; optional supporting crop for story repost."
+
+
+def asset_media_gap(asset: dict):
+    media_count = len([url for url in asset.get("media_urls") or [] if url])
+    if media_count:
+        return "Media attached; verify rights, crop, and medical context before publishing."
+    fmt = asset.get("format")
+    if fmt == "reel":
+        return "Needs vertical video or approved clinic/presenter footage."
+    if fmt in {"carousel", "story", "single"}:
+        return "Needs approved image/design export before publishing."
+    return "Confirm whether this format needs an approved visual asset."
+
+
+@app.get("/operations/media-shot-list.csv")
+async def operations_media_shot_list_csv(_: None = Depends(require_access_token)):
+    assets = await fetch_asset_list(200)
+    active_assets = [asset for asset in assets if asset.get("review_status") != "rejected"]
+    output = StringIO()
+    fieldnames = [
+        "asset_id",
+        "topic",
+        "channel",
+        "format",
+        "review_status",
+        "safety_status",
+        "media_count",
+        "production_priority",
+        "visual_direction",
+        "shot_list",
+        "media_gap",
+        "rights_check",
+        "caption_preview",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for asset in active_assets:
+        metadata = asset.get("metadata") or {}
+        media_urls = [url for url in asset.get("media_urls") or [] if url]
+        blockers = asset_review_blockers(asset)
+        if asset.get("review_status") == "approved" and asset.get("compliance_status") == "clear":
+            priority = "ready_for_design_or_queue"
+        elif blockers:
+            priority = "needs_safety_review_before_design"
+        else:
+            priority = "draft_ready_for_visual_planning"
+        writer.writerow(
+            {
+                "asset_id": asset.get("id") or "",
+                "topic": metadata.get("topic") or "",
+                "channel": asset.get("channel") or "",
+                "format": asset.get("format") or "",
+                "review_status": asset.get("review_status") or "",
+                "safety_status": asset.get("compliance_status") or "",
+                "media_count": len(media_urls),
+                "production_priority": priority,
+                "visual_direction": asset_visual_direction(asset),
+                "shot_list": asset_shot_list(asset),
+                "media_gap": asset_media_gap(asset),
+                "rights_check": "Use only owned, licensed, stock-cleared, or patient-consented media. Avoid patient-identifiable content without explicit consent.",
+                "caption_preview": feedback_excerpt(asset.get("caption"), 180),
+            }
+        )
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-media-shot-list.csv"'},
+    )
+
+
 async def fetch_media_asset_list(limit: int = 100):
     bounded_limit = max(1, min(int(limit or 100), 200))
     rows = await fetch_rows(
