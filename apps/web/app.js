@@ -9,6 +9,7 @@ let latestMetaOAuthUrl = "";
 
 const titleMap = {
   dashboard: "Dashboard",
+  insights: "Insight Inbox",
   plan: "Weekly Plan",
   compose: "Create A Post",
   creative: "Creative Studio",
@@ -29,6 +30,7 @@ document.querySelectorAll("nav button").forEach((button) => {
     document.querySelectorAll("nav button").forEach((item) => item.classList.toggle("active", item === button));
     document.querySelectorAll(".screen").forEach((item) => item.classList.toggle("active", item.id === screen));
     document.getElementById("title").textContent = titleMap[screen] || screen;
+    if (screen === "insights") loadSenseBrief();
     if (screen === "plan") loadBriefs();
     if (screen === "creative") loadStyleLibrary();
     if (screen === "templates") loadTemplateStudio();
@@ -1039,6 +1041,81 @@ async function loadStyleLibrary() {
     document.getElementById("brand-token-board").innerHTML = "";
     document.getElementById("style-library").innerHTML = '<p class="status-note">Set the access token to load Creative Studio.</p>';
     if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not load Creative Studio.";
+  }
+}
+
+function renderSenseBrief(data) {
+  const readiness = document.getElementById("sense-readiness");
+  const topicsContainer = document.getElementById("sense-topics");
+  const signalsContainer = document.getElementById("sense-signals");
+  if (!readiness || !topicsContainer || !signalsContainer) return;
+  const missing = data.missing_categories || [];
+  const guardrails = data.guardrails || [];
+  readiness.innerHTML = `
+    <article class="learning-card">
+      <h3>Sense Signals</h3>
+      <p>${Number(data.signal_count || 0)} captured</p>
+      <small>${escapeHtml(data.phase || "")}</small>
+    </article>
+    <article class="learning-card">
+      <h3>Input Gaps</h3>
+      <p>${missing.length ? escapeHtml(missing.join(" · ")) : "Complete"}</p>
+      <small>Ads, competitors, audience, observations, ideas</small>
+    </article>
+    <article class="learning-card">
+      <h3>Learning</h3>
+      <p>${Number(data.outcome_insights?.sample_size || 0)} outcome(s)</p>
+      <small>${escapeHtml(data.outcome_insights?.summary || "")}</small>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Guardrails</h3>
+      <ul>${guardrails.map((rule) => `<li>${escapeHtml(rule)}</li>`).join("")}</ul>
+    </article>
+  `;
+  const topics = data.planning_topics || [];
+  topicsContainer.innerHTML = topics.length
+    ? topics.map((topic, index) => `
+      <article class="learning-card">
+        <h3>Topic ${index + 1}</h3>
+        <p>${escapeHtml(topic)}</p>
+      </article>
+    `).join("")
+    : '<p class="status-note">No planning topics yet. Add audience, competitor, ads, observation, or idea entries to Knowledge Base.</p>';
+  const groups = data.signals_by_category || {};
+  const categoryOrder = data.input_categories || Object.keys(groups);
+  const sections = [];
+  categoryOrder.forEach((category) => {
+    const signals = groups[category] || [];
+    sections.push(`
+      <article class="queue-item">
+        <div>
+          <strong>${escapeHtml(category)}</strong>
+          <span>${signals.length} signal(s)</span>
+        </div>
+        ${signals.length ? signals.slice(0, 6).map((signal) => `
+          <p><strong>${escapeHtml(signal.title || "Signal")}</strong>: ${escapeHtml(signal.summary || "")}</p>
+          <small>${escapeHtml(signal.recommendation || "")}</small>
+        `).join("") : '<p class="status-note">No signals captured yet.</p>'}
+      </article>
+    `);
+  });
+  signalsContainer.innerHTML = sections.join("");
+}
+
+async function loadSenseBrief() {
+  const message = document.getElementById("sense-message");
+  try {
+    const data = await fetchJson("/insights/sense-brief");
+    renderSenseBrief(data);
+    if (message) message.textContent = data.next_step || "Sense Brief loaded.";
+  } catch (error) {
+    const readiness = document.getElementById("sense-readiness");
+    const topics = document.getElementById("sense-topics");
+    const signals = document.getElementById("sense-signals");
+    if (readiness) readiness.innerHTML = "";
+    if (topics) topics.innerHTML = "";
+    if (signals) signals.innerHTML = '<p class="status-note">Set the access token to load Insight Inbox.</p>';
+    if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not load Sense Brief.";
   }
 }
 
@@ -2286,6 +2363,25 @@ document.getElementById("download-style-guide")?.addEventListener("click", async
     if (message) message.textContent = "Creative style guide downloaded.";
   } catch (error) {
     if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download Creative Style Guide.";
+  }
+});
+
+document.getElementById("refresh-sense-brief")?.addEventListener("click", async () => {
+  const button = document.getElementById("refresh-sense-brief");
+  button.disabled = true;
+  button.textContent = "Refreshing";
+  await loadSenseBrief();
+  button.disabled = false;
+  button.textContent = "Refresh Sense Brief";
+});
+
+document.getElementById("download-sense-brief")?.addEventListener("click", async () => {
+  const message = document.getElementById("sense-message");
+  try {
+    await downloadProtectedFile("/insights/sense-brief.md", "drec-sense-brief.md", "text/markdown");
+    if (message) message.textContent = "Sense Brief downloaded.";
+  } catch (error) {
+    if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download Sense Brief.";
   }
 });
 

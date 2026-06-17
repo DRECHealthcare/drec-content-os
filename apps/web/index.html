@@ -14,6 +14,7 @@
     </div>
     <nav>
       <button class="active" data-screen="dashboard">Dashboard</button>
+      <button data-screen="insights">Insight Inbox</button>
       <button data-screen="plan">Weekly Plan</button>
       <button data-screen="compose">Create Post</button>
       <button data-screen="creative">Creative Studio</button>
@@ -117,6 +118,23 @@
         </ol>
         <div id="test-path-message" class="status-note"></div>
         <div id="risk-audit-result" class="learning-grid"></div>
+      </div>
+    </section>
+
+    <section id="insights" class="screen">
+      <div class="card wide">
+        <h2>Insight Inbox</h2>
+        <p class="section-note">Turn audience observations, ads, competitor notes, ideas, and learning outcomes into safe weekly planning inputs.</p>
+        <div class="form-actions">
+          <button id="refresh-sense-brief" type="button">Refresh Sense Brief</button>
+          <button id="download-sense-brief" type="button">Download Sense Brief</button>
+        </div>
+        <div id="sense-message" class="status-note"></div>
+        <div id="sense-readiness" class="learning-grid"></div>
+        <h3 class="subsection-heading">Planning Topics</h3>
+        <div id="sense-topics" class="learning-grid"></div>
+        <h3 class="subsection-heading">Signals</h3>
+        <div id="sense-signals" class="queue-list"></div>
       </div>
     </section>
 
@@ -682,6 +700,11 @@
             <option value="offer">Offer</option>
             <option value="compliance">Compliance</option>
             <option value="medical_dictionary">Medical Dictionary</option>
+            <option value="audience">Audience</option>
+            <option value="competitor">Competitor</option>
+            <option value="ads">Ads</option>
+            <option value="observation">Observation</option>
+            <option value="idea">Idea</option>
           </select>
           <textarea name="body" placeholder="What should the system remember?" required></textarea>
           <button type="submit">Add Entry</button>

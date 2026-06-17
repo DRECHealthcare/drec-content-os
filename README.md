@@ -60,6 +60,7 @@ uvicorn app.main:app --reload --port 8080
 Stage 1 is now a working thin-core workflow:
 
 - Generate weekly DREC content briefs
+- Use Insight Inbox to turn audience, competitor, ads, observation, idea, and learning signals into a safe Sense Brief before weekly planning
 - Use Create Post for one-off content; it now saves a linked brief and draft asset into the review workflow with style, target signal, media, and compliance evidence attached
 - Use Creative Studio to review the DREC style library, brand tokens, KB style rules, safety rules, and style-learning signals before drafting or approving assets
 - Use Template Studio to map static assets to DREC layout templates, render rules, brand tokens, and final QA before artwork handoff

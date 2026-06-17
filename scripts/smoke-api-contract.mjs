@@ -64,6 +64,8 @@ const requiredRoutes = [
   "GET /notifications/whatsapp-approval-pack.md",
   "GET /kb/export.csv",
   "GET /kb/context",
+  "GET /insights/sense-brief",
+  "GET /insights/sense-brief.md",
   "GET /publish-queue/suggest-slot",
   "GET /publish-queue/schedule-audit",
   "GET /publish-queue/schedule-audit.md",
@@ -832,6 +834,36 @@ const requiredSnippets = [
     name: "knowledge context route",
     file: "main",
     text: "active_knowledge_context",
+  },
+  {
+    name: "insight sense brief route",
+    file: "main",
+    text: "insight_sense_brief",
+  },
+  {
+    name: "insight sense brief export",
+    file: "main",
+    text: "drec-sense-brief.md",
+  },
+  {
+    name: "insight competitor guardrail",
+    file: "main",
+    text: "Competitor and ad signals are inspiration only",
+  },
+  {
+    name: "web insight inbox screen",
+    file: "web",
+    text: "Insight Inbox",
+  },
+  {
+    name: "web sense brief endpoint",
+    file: "web",
+    text: "/insights/sense-brief",
+  },
+  {
+    name: "web sense brief download endpoint",
+    file: "web",
+    text: "/insights/sense-brief.md",
   },
   {
     name: "weekly plan uses knowledge context",

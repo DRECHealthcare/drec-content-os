@@ -5076,6 +5076,154 @@ async def knowledge_context(_: None = Depends(require_access_token)):
     return await active_knowledge_context()
 
 
+SENSE_INPUT_CATEGORIES = ["competitor", "ads", "audience", "observation", "idea"]
+
+
+def sense_signal_from_kb(item: dict):
+    category = item.get("category") or "observation"
+    title = item.get("title") or "Untitled signal"
+    body = re.sub(r"\s+", " ", str(item.get("body") or "")).strip()
+    recommendation = "Use as planning context only; do not copy claims or creative directly."
+    if category == "competitor":
+        recommendation = "Extract the audience tension or hook pattern, then rewrite in DREC voice."
+    elif category == "ads":
+        recommendation = "Use as paid/organic signal; validate against DREC compliance before drafting."
+    elif category == "audience":
+        recommendation = "Turn into a patient-language question or objection for the weekly plan."
+    elif category == "observation":
+        recommendation = "Convert into one educational angle and add evidence before approval."
+    elif category == "idea":
+        recommendation = "Score against current learning signals before turning into a brief."
+    return {
+        "id": item.get("id"),
+        "category": category,
+        "title": title,
+        "summary": feedback_excerpt(body, 260),
+        "tags": item.get("tags") or [],
+        "created_at": item.get("created_at"),
+        "recommendation": recommendation,
+    }
+
+
+async def insight_sense_payload():
+    entries = await fetch_knowledge_entries(200)
+    context = await active_knowledge_context()
+    learning_topics = await learning_recommended_topics("zh", 6)
+    outcome_payload = await outcome_insights()
+    sense_entries = [entry for entry in entries if entry.get("category") in SENSE_INPUT_CATEGORIES]
+    by_category = {}
+    for entry in sense_entries:
+        by_category.setdefault(entry.get("category") or "observation", []).append(sense_signal_from_kb(entry))
+    missing_categories = [category for category in SENSE_INPUT_CATEGORIES if not by_category.get(category)]
+    planning_topics = []
+    for category in ["audience", "competitor", "ads", "observation", "idea"]:
+        for signal in by_category.get(category, [])[:2]:
+            if category == "audience":
+                planning_topics.append(f"围绕受众问题「{signal['title']}」做一篇控糖教育内容")
+            elif category == "competitor":
+                planning_topics.append(f"拆解竞品/同行话题「{signal['title']}」并改写成DREC教育角度")
+            elif category == "ads":
+                planning_topics.append(f"把广告/付费信号「{signal['title']}」转成安全的自然内容测试")
+            else:
+                planning_topics.append(f"根据观察「{signal['title']}」生成一个清楚、可保存的教育帖")
+    for topic in learning_topics.get("topics") or []:
+        if topic not in planning_topics:
+            planning_topics.append(topic)
+        if len(planning_topics) >= 8:
+            break
+    return {
+        "phase": "sense_insight_inbox",
+        "input_categories": SENSE_INPUT_CATEGORIES,
+        "signal_count": len(sense_entries),
+        "missing_categories": missing_categories,
+        "signals_by_category": by_category,
+        "learning_topics": learning_topics,
+        "outcome_insights": outcome_payload,
+        "planning_topics": planning_topics[:8],
+        "kb_context": {
+            "entry_count": context.get("entry_count", 0),
+            "categories": context.get("categories", {}),
+        },
+        "guardrails": [
+            "Competitor and ad signals are inspiration only; never copy claims, visuals, or patient stories.",
+            "Audience observations must be rewritten as educational questions, not diagnosis.",
+            "Every suggested topic still goes through DREC compliance and human review.",
+            "Use Sense Brief as planning input, not as automatic publishing approval.",
+        ],
+        "next_step": (
+            "Add missing Sense inputs to Knowledge Base: " + ", ".join(missing_categories)
+            if missing_categories
+            else "Use the planning topics as candidates in Weekly Plan, then review assets before scheduling."
+        ),
+    }
+
+
+@app.get("/insights/sense-brief")
+async def insight_sense_brief(_: None = Depends(require_access_token)):
+    return await insight_sense_payload()
+
+
+@app.get("/insights/sense-brief.md")
+async def insight_sense_brief_markdown(_: None = Depends(require_access_token)):
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    payload = await insight_sense_payload()
+    lines = [
+        "# DREC Content OS Sense Brief",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this brief before weekly planning. It combines ads, competitors, audience observations, ideas, and learning outcomes into safe planning inputs.",
+        "",
+        "## Status",
+        "",
+        f"- Phase: {payload.get('phase')}",
+        f"- Sense signals: {payload.get('signal_count')}",
+        f"- Missing categories: {', '.join(payload.get('missing_categories') or []) or 'none'}",
+        f"- KB entries loaded: {(payload.get('kb_context') or {}).get('entry_count', 0)}",
+        "",
+        "## Signals By Category",
+        "",
+    ]
+    for category in SENSE_INPUT_CATEGORIES:
+        signals = (payload.get("signals_by_category") or {}).get(category) or []
+        lines.extend([f"### {category.title()}", ""])
+        if not signals:
+            lines.append("- No signals captured yet.")
+        for signal in signals[:8]:
+            lines.extend(
+                [
+                    f"- {signal.get('title')}: {signal.get('summary')}",
+                    f"  - Planning use: {signal.get('recommendation')}",
+                ]
+            )
+        lines.append("")
+    lines.extend(["## Planning Topics", ""])
+    lines.extend(markdown_list(payload.get("planning_topics"), "- No planning topics available yet."))
+    lines.extend(
+        [
+            "",
+            "## Learning Context",
+            "",
+            f"- {(payload.get('outcome_insights') or {}).get('summary')}",
+            f"- Learning topic reasons: {len((payload.get('learning_topics') or {}).get('reasons') or [])}",
+            "",
+            "## Guardrails",
+            "",
+            *markdown_list(payload.get("guardrails")),
+            "",
+            "## Next Step",
+            "",
+            f"- {payload.get('next_step')}",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-sense-brief.md"'},
+    )
+
+
 @app.post("/kb")
 async def create_knowledge_entry(entry: KnowledgeEntryIn, _: None = Depends(require_admin_access)):
     row = await fetch_row(

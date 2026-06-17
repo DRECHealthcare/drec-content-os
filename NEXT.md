@@ -132,6 +132,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added Template Studio for static render template readiness and QA handoff
 - [x] Added Video Studio readiness with manual reel SOP pack and DREC Cut future-phase guardrails
 - [x] Added Notify Rail readiness for n8n/WhatsApp approval alerts without live sending
+- [x] Added Insight Inbox Sense Brief for ads, competitors, audience observations, ideas, and learning inputs
 
 ## Next Engineering Tasks
 
@@ -247,6 +248,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add Template Studio static render readiness before generated image automation
 - [x] Add Video Studio readiness lane before future DREC Cut automation
 - [x] Add Notify Rail dry-run pack before live n8n/WhatsApp approval messages
+- [x] Add Insight Inbox for Sense inputs before weekly planning
 - [ ] Connect Meta Graph API credentials
 - [x] Implement real Facebook publish scheduling behind Meta readiness and enable flags
 - [x] Implement Instagram two-step publish worker behind Meta readiness and enable flags
