@@ -79,6 +79,7 @@ Stage 1 is now a working thin-core workflow:
 - Download the First Cycle Sprint Tracker CSV to keep doctor decisions and production delivery notes tied to the same asset IDs before preview/import steps
 - Use the Approval Cockpit to prioritize clear draft assets for human review without auto-approving, queueing, scheduling, or publishing
 - Use the Post-Approval Production Pack to brief design, media, rights checks, and visual QA after human approval without auto-queueing, scheduling, publishing, or sending Meta requests
+- Download the Production Handoff Bridge to copy one send-ready design/media message and matching paste-back production reply template after doctor approval
 - Copy individual or full-batch production design handoff messages from Assets so approved copy can move to design/media work without opening the Markdown pack
 - Download the Production Reply Inbox Pack to collect designer media/design URLs in the exact paste-back format before previewing and importing production replies
 - Download a Production Design Worksheet CSV with canvas specs, safe headlines, image prompts, visual QA, rights notes, and media URL return fields for designer handoff

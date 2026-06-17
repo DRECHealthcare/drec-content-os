@@ -63,6 +63,8 @@ const requiredRoutes = [
   "GET /operations/approval-cockpit.md",
   "GET /operations/post-approval-production",
   "GET /operations/post-approval-production.md",
+  "GET /operations/production-handoff-bridge",
+  "GET /operations/production-handoff-bridge.md",
   "GET /operations/production-reply-inbox-pack",
   "GET /operations/production-reply-inbox-pack.md",
   "GET /operations/production-design-worksheet.csv",
@@ -935,6 +937,36 @@ const requiredSnippets = [
     text: "production_prep_only",
   },
   {
+    name: "production handoff bridge route",
+    file: "main",
+    text: "production_handoff_bridge_payload",
+  },
+  {
+    name: "production handoff bridge export",
+    file: "main",
+    text: "drec-production-handoff-bridge.md",
+  },
+  {
+    name: "production handoff bridge send section",
+    file: "main",
+    text: "## Copy This To Production",
+  },
+  {
+    name: "production handoff bridge safety",
+    file: "main",
+    text: "This bridge is read-only and does not attach media, approve, queue, schedule, publish, or send Meta requests.",
+  },
+  {
+    name: "production handoff bridge UI action",
+    file: "web",
+    text: "download-production-handoff-bridge",
+  },
+  {
+    name: "production handoff bridge UI endpoint",
+    file: "web",
+    text: "/operations/production-handoff-bridge.md",
+  },
+  {
     name: "production reply inbox pack route",
     file: "main",
     text: "production_reply_inbox_pack_payload",
@@ -1130,6 +1162,11 @@ const requiredSnippets = [
     text: "\"production_reply_inbox\": \"/operations/production-reply-inbox-pack.md\"",
   },
   {
+    name: "today runbook production bridge link",
+    file: "main",
+    text: "\"production_handoff_bridge\": \"/operations/production-handoff-bridge.md\"",
+  },
+  {
     name: "today runbook scheduler recovery link",
     file: "main",
     text: "\"scheduler_recovery\": \"/operations/scheduler-recovery-pack.md\"",
@@ -1138,6 +1175,11 @@ const requiredSnippets = [
     name: "today runbook doctor bridge sequence",
     file: "main",
     text: "Use the doctor review bridge or polish pack to send review-ready Mandarin copy to the doctor.",
+  },
+  {
+    name: "today runbook production bridge sequence",
+    file: "main",
+    text: "Use the production handoff bridge, production pack, and media attachment CSV for design/media URLs.",
   },
   {
     name: "today runbook reply inbox sequence",

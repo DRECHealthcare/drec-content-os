@@ -3196,6 +3196,16 @@ document.getElementById("download-post-approval-production")?.addEventListener("
   }
 });
 
+document.getElementById("download-production-handoff-bridge")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/production-handoff-bridge.md", "drec-production-handoff-bridge.md", "text/markdown");
+    message.textContent = "Production handoff bridge downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download production handoff bridge.";
+  }
+});
+
 document.getElementById("download-production-reply-inbox")?.addEventListener("click", async () => {
   const message = document.getElementById("media-message");
   try {

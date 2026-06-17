@@ -5863,6 +5863,102 @@ async def production_reply_inbox_pack_payload():
     }
 
 
+async def production_handoff_bridge_payload():
+    production = await post_approval_production_payload()
+    inbox = await production_reply_inbox_pack_payload()
+    items = (production.get("production_items") or [])[:5]
+    send_blocks = []
+    reply_blocks = []
+    for index, item in enumerate(items, start=1):
+        reply_template = production_reply_template(item)
+        send_blocks.append(
+            "\n".join(
+                [
+                    f"{index}. {item.get('topic') or 'Untitled asset'}",
+                    f"Asset ID: {item.get('asset_id') or ''}",
+                    f"Stage: {item.get('stage') or ''}",
+                    f"Channel / format: {item.get('channel') or ''} / {item.get('format') or ''}",
+                    "",
+                    "Production task:",
+                    item.get("media_task") or "Prepare approved media/design after doctor approval.",
+                    "",
+                    "Visual direction:",
+                    item.get("visual_direction") or "Use safe DREC educational visual treatment.",
+                    "",
+                    "Template:",
+                    item.get("template_suggestion") or "Use the matching Template Studio layout.",
+                    "",
+                    "Rights check:",
+                    item.get("rights_check") or "Use only approved/licensed/owned/patient-consented media.",
+                    "",
+                    "Caption context:",
+                    item.get("caption_preview") or "No caption preview available.",
+                    "",
+                    "Please reply using:",
+                    reply_template,
+                ]
+            )
+        )
+        reply_blocks.append(reply_template)
+    full_message = "\n\n".join(
+        [
+            "DREC production team, please prepare approved media/design for the following review-safe assets.",
+            "Only return media that is owned, licensed, approved stock, partner-approved, or patient-consented.",
+            "Do not treat this as medical approval or publishing approval. Return one reply block per Asset ID.",
+            "If a visual needs work or rights are unclear, mark Visual QA: needs_work or Rights: pending.",
+            "",
+            *send_blocks,
+        ]
+    ).strip()
+    return {
+        "phase": "production_handoff_bridge",
+        "mode": "copy_send_then_preview_import",
+        "approved_ready_count": production.get("approved_ready_count", 0),
+        "waiting_approval_count": production.get("waiting_approval_count", 0),
+        "needs_media_count": production.get("needs_media_count", 0),
+        "bridge_item_count": len(items),
+        "full_production_message": full_message,
+        "paste_back_template": "\n\n".join(reply_blocks) or inbox.get("reply_paste_template") or "",
+        "bridge_items": [
+            {
+                "asset_id": item.get("asset_id"),
+                "topic": item.get("topic"),
+                "channel": item.get("channel"),
+                "format": item.get("format"),
+                "stage": item.get("stage"),
+                "media_task": item.get("media_task"),
+                "visual_direction": item.get("visual_direction"),
+                "template_suggestion": item.get("template_suggestion"),
+                "rights_check": item.get("rights_check"),
+                "reply_template": production_reply_template(item),
+                "safe_use_rule": "Preview/import production replies only; media/design attachment is not medical approval or publishing approval.",
+            }
+            for item in items
+        ],
+        "operator_steps": [
+            "Send this bridge only after doctor/human approval is recorded, or clearly label waiting items as pre-production preparation.",
+            "Copy the full production message to the designer or producer.",
+            "Ask for one reply block per Asset ID with media URLs, visual QA, rights, producer, and notes.",
+            "Paste the reply into Production Reply Text and use Preview Production Reply first.",
+            "Import only rows with approved media/design URLs and acceptable rights notes, then run the pre-schedule gate.",
+        ],
+        "safety": [
+            "This bridge is read-only and does not attach media, approve, queue, schedule, publish, or send Meta requests.",
+            "Production replies are not applied until previewed and imported through the protected production reply workflow.",
+            "Media/design attachment is not medical approval, queue approval, schedule approval, or publishing approval.",
+            "Needs_work, pending rights, private expired links, or unclear media must stay out of scheduling.",
+        ],
+        "links": {
+            "post_approval_production": "/operations/post-approval-production.md",
+            "production_reply_inbox": "/operations/production-reply-inbox-pack.md",
+            "production_design_worksheet": "/operations/production-design-worksheet.csv",
+            "pre_schedule_gate": "/operations/pre-schedule-gate.md",
+            "today_runbook": "/operations/today-runbook.md",
+        },
+        "next_step": "After doctor approval, copy the full production message to design, then paste returned media/design blocks into Production Reply Text and preview before import.",
+    }
+
+
 @app.get("/operations/post-approval-production")
 async def operations_post_approval_production(_: None = Depends(require_access_token)):
     return await post_approval_production_payload()
@@ -5998,6 +6094,100 @@ async def operations_production_reply_inbox_pack_markdown(_: None = Depends(requ
         "\n".join(lines),
         media_type="text/markdown",
         headers={"Content-Disposition": 'attachment; filename="drec-production-reply-inbox-pack.md"'},
+    )
+
+
+@app.get("/operations/production-handoff-bridge")
+async def operations_production_handoff_bridge(_: None = Depends(require_access_token)):
+    return await production_handoff_bridge_payload()
+
+
+@app.get("/operations/production-handoff-bridge.md")
+async def operations_production_handoff_bridge_markdown(_: None = Depends(require_access_token)):
+    payload = await production_handoff_bridge_payload()
+    generated_at = datetime.now(timezone.utc).isoformat()
+    lines = [
+        "# DREC Content OS Production Handoff Bridge",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this one-page bridge to send the current design/media handoff and paste the production reply back through the protected preview/import flow. It is read-only and does not attach media or publish anything by itself.",
+        "",
+        "## Summary",
+        "",
+        f"- Approved ready for design/queue checks: {payload.get('approved_ready_count')}",
+        f"- Waiting for human approval: {payload.get('waiting_approval_count')}",
+        f"- Needs media/design: {payload.get('needs_media_count')}",
+        f"- Bridge items: {payload.get('bridge_item_count')}",
+        f"- Mode: {payload.get('mode')}",
+        "",
+        "## Operator Steps",
+        "",
+        *markdown_list(payload.get("operator_steps"), "- Copy, send, preview, then import."),
+        "",
+        "## Safety Rules",
+        "",
+        *markdown_list(payload.get("safety"), "- Read-only bridge."),
+        "",
+        "## Copy This To Production",
+        "",
+        "```",
+        payload.get("full_production_message") or "No production handoff items are ready yet.",
+        "```",
+        "",
+        "## Paste-Back Production Reply Template",
+        "",
+        "```",
+        payload.get("paste_back_template") or "No production reply template is ready yet.",
+        "```",
+        "",
+        "## Bridge Items",
+        "",
+    ]
+    items = payload.get("bridge_items") or []
+    if not items:
+        lines.extend(["- No production handoff bridge items are ready yet.", ""])
+    for index, item in enumerate(items, start=1):
+        lines.extend(
+            [
+                f"### {index}. {item.get('topic') or 'Untitled asset'}",
+                "",
+                f"- Asset ID: `{item.get('asset_id')}`",
+                f"- Stage: {item.get('stage')}",
+                f"- Channel / format: {item.get('channel')} / {item.get('format')}",
+                f"- Media task: {item.get('media_task')}",
+                f"- Visual direction: {item.get('visual_direction')}",
+                f"- Template: {item.get('template_suggestion')}",
+                f"- Rights check: {item.get('rights_check')}",
+                f"- Safe use rule: {item.get('safe_use_rule')}",
+                "",
+                "Reply template:",
+                "",
+                "```",
+                item.get("reply_template") or "",
+                "```",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## Related Links",
+            "",
+            *[
+                f"- {label.replace('_', ' ').title()}: `{path}`"
+                for label, path in (payload.get("links") or {}).items()
+            ],
+            "",
+            "## Next Step",
+            "",
+            f"- {payload.get('next_step')}",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-production-handoff-bridge.md"'},
     )
 
 
@@ -6745,6 +6935,7 @@ async def today_runbook_payload():
         "approval_cockpit": "/operations/approval-cockpit.md",
         "post_approval_production": "/operations/post-approval-production.md",
         "production_reply_inbox": "/operations/production-reply-inbox-pack.md",
+        "production_handoff_bridge": "/operations/production-handoff-bridge.md",
         "production_design_worksheet": "/operations/production-design-worksheet.csv",
         "asset_media_attachments": "/operations/asset-media-attachments.csv",
         "pre_schedule_gate": "/operations/pre-schedule-gate.md",
@@ -6779,7 +6970,7 @@ async def today_runbook_payload():
             "Use the doctor review bridge or polish pack to send review-ready Mandarin copy to the doctor.",
             "Use the doctor reply inbox pack to paste returned doctor decisions through preview before import.",
             "Review the approval cockpit and approve only human-cleared medical copy.",
-            "Use the production pack and media attachment CSV for design/media URLs.",
+            "Use the production handoff bridge, production pack, and media attachment CSV for design/media URLs.",
             "Use the production reply inbox pack to paste returned media/design URLs through preview before import.",
             "Run the pre-schedule gate before scheduling.",
             "Run schedule audit after planned times are assigned.",
