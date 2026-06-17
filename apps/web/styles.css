@@ -815,6 +815,10 @@ button[type="submit"] {
   gap: 10px;
 }
 
+.sprint-bulk-actions {
+  margin-bottom: 2px;
+}
+
 .sprint-item-card p {
   margin: 0;
   color: var(--muted);

@@ -1783,6 +1783,19 @@ function sprintProductionText(item) {
   ].join("\n");
 }
 
+function sprintBatchText(items, formatter, label) {
+  return [
+    `DREC First Cycle ${label}`,
+    `Items: ${items.length}`,
+    "Use preview/import in DREC Content OS after replies are returned. This text does not approve, attach media, queue, schedule, publish, or send Meta requests.",
+    "",
+    ...items.map((item, index) => [
+      `--- ${index + 1} / ${items.length} ---`,
+      formatter(item),
+    ].join("\n")),
+  ].join("\n\n");
+}
+
 function renderFirstCycleSprintPack(data) {
   const container = document.getElementById("first-cycle-sprint");
   if (!container) return;
@@ -1822,6 +1835,10 @@ function renderFirstCycleSprintPack(data) {
     </article>
     <article class="learning-card wide-learning">
       <h3>Copy Sprint Messages</h3>
+      <div class="learning-actions sprint-bulk-actions">
+        <button type="button" data-copy-sprint-doctor-all>Copy All Doctor</button>
+        <button type="button" data-copy-sprint-production-all>Copy All Production</button>
+      </div>
       <div class="sprint-board">${itemCards || '<p class="status-note">No sprint items are ready yet.</p>'}</div>
     </article>
   `;
@@ -3872,6 +3889,33 @@ document.getElementById("cancel-queue-edit").addEventListener("click", () => {
 });
 
 document.addEventListener("click", async (event) => {
+  const doctorAllButton = event.target.closest("[data-copy-sprint-doctor-all]");
+  const productionAllButton = event.target.closest("[data-copy-sprint-production-all]");
+  if (doctorAllButton || productionAllButton) {
+    const button = doctorAllButton || productionAllButton;
+    const message = document.getElementById("media-message") || document.getElementById("asset-message");
+    if (!latestSprintItems.length) {
+      if (message) message.textContent = "No sprint items to copy yet.";
+      return;
+    }
+    const original = button.textContent;
+    button.disabled = true;
+    button.textContent = "Copying";
+    const text = doctorAllButton
+      ? sprintBatchText(latestSprintItems, sprintDoctorText, "Doctor Review Batch")
+      : sprintBatchText(latestSprintItems, sprintProductionText, "Production Batch");
+    try {
+      await navigator.clipboard.writeText(text);
+      if (message) message.textContent = doctorAllButton ? "All doctor review text copied." : "All production task text copied.";
+    } catch {
+      if (message) message.textContent = "Browser blocked clipboard copy. Download the sprint pack instead.";
+    } finally {
+      button.disabled = false;
+      button.textContent = original;
+    }
+    return;
+  }
+
   const doctorButton = event.target.closest("[data-copy-sprint-doctor]");
   const productionButton = event.target.closest("[data-copy-sprint-production]");
   const button = doctorButton || productionButton;

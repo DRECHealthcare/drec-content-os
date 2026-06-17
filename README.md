@@ -71,7 +71,7 @@ Stage 1 is now a working thin-core workflow:
 - Apply all detector-clear safe rewrites in one reviewed batch while still keeping approval, queueing, scheduling, and publishing locked behind human gates
 - Use the First Cycle Handoff Pack to move from safe rewrites through human approval, queueing, scheduling, manual handoff, and metrics without bypassing safety gates
 - Download the First Cycle Sprint Pack to coordinate doctor review, doctor reply import, production handoff, production reply import, and pre-schedule checks in one read-only package
-- Use the First Cycle Sprint Board inside Assets to copy doctor review and production task messages without opening the Markdown pack or bypassing approval gates
+- Use the First Cycle Sprint Board inside Assets to copy individual or full-batch doctor review and production task messages without opening the Markdown pack or bypassing approval gates
 - Download the First Cycle Sprint Tracker CSV to keep doctor decisions and production delivery notes tied to the same asset IDs before preview/import steps
 - Use the Approval Cockpit to prioritize clear draft assets for human review without auto-approving, queueing, scheduling, or publishing
 - Use the Post-Approval Production Pack to brief design, media, rights checks, and visual QA after human approval without auto-queueing, scheduling, publishing, or sending Meta requests

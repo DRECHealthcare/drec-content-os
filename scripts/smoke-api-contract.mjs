@@ -1963,6 +1963,21 @@ const requiredSnippets = [
     text: "data-copy-sprint-production",
   },
   {
+    name: "web first cycle sprint doctor batch copy",
+    file: "web",
+    text: "data-copy-sprint-doctor-all",
+  },
+  {
+    name: "web first cycle sprint production batch copy",
+    file: "web",
+    text: "data-copy-sprint-production-all",
+  },
+  {
+    name: "web first cycle sprint batch helper",
+    file: "web",
+    text: "sprintBatchText",
+  },
+  {
     name: "web first cycle handoff loader",
     file: "web",
     text: "loadFirstCycleHandoff",
