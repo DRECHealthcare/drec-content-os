@@ -74,12 +74,15 @@ async def update(
 async def count(table: str) -> int:
     if not configured():
         return 0
-    async with httpx.AsyncClient(timeout=20) as client:
-        res = await client.get(
-            table_url(table),
-            headers={**headers(), "prefer": "count=exact"},
-            params={"select": "id", "limit": "0"},
-        )
-        res.raise_for_status()
-        content_range = res.headers.get("content-range", "0-0/0")
-        return int(content_range.rsplit("/", 1)[-1])
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            res = await client.get(
+                table_url(table),
+                headers={**headers(), "prefer": "count=exact"},
+                params={"select": "id", "limit": "0"},
+            )
+            res.raise_for_status()
+            content_range = res.headers.get("content-range", "0-0/0")
+            return int(content_range.rsplit("/", 1)[-1])
+    except (httpx.HTTPError, ValueError):
+        return 0

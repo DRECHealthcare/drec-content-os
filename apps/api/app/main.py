@@ -5225,6 +5225,190 @@ async def operations_asset_review_decisions_csv(_: None = Depends(require_access
     )
 
 
+@app.get("/operations/asset-media-attachments.csv")
+async def operations_asset_media_attachments_csv(_: None = Depends(require_access_token)):
+    assets = await fetch_asset_list(200)
+    active_assets = [asset for asset in assets if asset.get("review_status") != "rejected"]
+    active_assets.sort(
+        key=lambda asset: (
+            asset.get("review_status") != "approved",
+            len([url for url in asset.get("media_urls") or [] if url]) > 0,
+            asset.get("created_at") or "",
+        )
+    )
+    output = StringIO()
+    fieldnames = [
+        "asset_id",
+        "brief_id",
+        "topic",
+        "channel",
+        "format",
+        "review_status",
+        "safety_status",
+        "current_media_urls",
+        "new_media_urls",
+        "visual_qa_status",
+        "rights_note",
+        "producer_name",
+        "production_notes",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for asset in active_assets:
+        metadata = asset.get("metadata") or {}
+        writer.writerow(
+            {
+                "asset_id": asset.get("id") or "",
+                "brief_id": asset.get("brief_id") or "",
+                "topic": metadata.get("topic") or "",
+                "channel": asset.get("channel") or "",
+                "format": asset.get("format") or "",
+                "review_status": asset.get("review_status") or "",
+                "safety_status": asset.get("compliance_status") or "",
+                "current_media_urls": "\n".join([url for url in asset.get("media_urls") or [] if url]),
+                "new_media_urls": "",
+                "visual_qa_status": "pending",
+                "rights_note": "",
+                "producer_name": "",
+                "production_notes": "",
+            }
+        )
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-asset-media-attachments.csv"'},
+    )
+
+
+def normalize_visual_qa_status(value: str | None):
+    text = (value or "").strip().lower().replace("_", " ").replace("-", " ")
+    if not text:
+        return "pending"
+    if text in {"pending", "review", "needs review", "qa pending"}:
+        return "pending"
+    if text in {"passed", "pass", "approved", "clear", "ok", "yes", "y"}:
+        return "passed"
+    if text in {"needs work", "needs edit", "fix", "blocked", "fail", "failed", "no", "n"}:
+        return "needs_work"
+    return "invalid"
+
+
+def parse_media_url_cell(value: str | None):
+    text = value or ""
+    parts = []
+    for chunk in re.split(r"[\n,]+", text):
+        cleaned = chunk.strip()
+        if cleaned:
+            parts.append(cleaned)
+    return parts
+
+
+async def decode_asset_media_attachments_csv(file: UploadFile):
+    raw = await file.read()
+    if len(raw) > 512_000:
+        raise HTTPException(status_code=413, detail="Asset media attachment CSV is too large. Keep imports below 512 KB.")
+    try:
+        return raw.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise HTTPException(status_code=400, detail="Asset media attachment CSV must be UTF-8 text.") from exc
+
+
+@app.post("/operations/import-asset-media-attachments")
+async def import_asset_media_attachments(
+    file: UploadFile = File(...),
+    dry_run: bool = Form(True),
+    session: dict = Depends(require_review_access),
+):
+    csv_text = await decode_asset_media_attachments_csv(file)
+    reader = csv.DictReader(StringIO(csv_text))
+    required = {"asset_id", "new_media_urls"}
+    headers = set(reader.fieldnames or [])
+    if not required.issubset(headers):
+        missing = sorted(required - headers)
+        raise HTTPException(status_code=400, detail={"message": "Asset media attachment CSV is missing required columns.", "missing": missing})
+
+    planned = []
+    imported = []
+    skipped = []
+    for index, row in enumerate(reader, start=2):
+        asset_id = (row.get("asset_id") or "").strip()
+        if not asset_id:
+            skipped.append({"row": index, "reason": "Missing asset_id."})
+            continue
+        media_urls = parse_media_url_cell(row.get("new_media_urls"))
+        if not media_urls:
+            skipped.append({"row": index, "asset_id": asset_id, "reason": "No new_media_urls provided."})
+            continue
+        invalid_urls = [url for url in media_urls if not str(url).startswith("http")]
+        if invalid_urls:
+            skipped.append({"row": index, "asset_id": asset_id, "reason": "Media URLs must start with http or https.", "invalid_urls": invalid_urls})
+            continue
+        visual_qa_status = normalize_visual_qa_status(row.get("visual_qa_status"))
+        if visual_qa_status == "invalid":
+            skipped.append({"row": index, "asset_id": asset_id, "reason": "visual_qa_status must be pending, passed, or needs_work."})
+            continue
+        existing = await asset_by_id(asset_id)
+        if existing is None:
+            skipped.append({"row": index, "asset_id": asset_id, "reason": "Asset not found."})
+            continue
+        producer_name = (row.get("producer_name") or "").strip()
+        rights_note = (row.get("rights_note") or "").strip()
+        notes = (row.get("production_notes") or "").strip()
+        reason_parts = ["CSV media/design attachment import."]
+        if producer_name:
+            reason_parts.append(f"Producer: {producer_name}.")
+        if rights_note:
+            reason_parts.append(f"Rights: {rights_note}.")
+        if notes:
+            reason_parts.append(f"Notes: {notes}")
+        reason = " ".join(reason_parts)
+        plan = {
+            "row": index,
+            "asset_id": asset_id,
+            "topic": row.get("topic") or (existing.get("metadata") or {}).get("topic") or "",
+            "current_media_count": len([url for url in existing.get("media_urls") or [] if url]),
+            "new_media_count": len(media_urls),
+            "visual_qa_status": visual_qa_status,
+            "producer_name": producer_name,
+            "rights_note": rights_note,
+            "production_notes": notes,
+        }
+        if dry_run:
+            planned.append(plan)
+            continue
+        result = await update_asset_media(
+            asset_id,
+            AssetMediaIn(
+                media_urls=media_urls,
+                reason=reason,
+                visual_qa_status=visual_qa_status,
+                rights_note=rights_note or None,
+                sync_draft_queue=True,
+            ),
+            session,
+        )
+        imported.append({**plan, "synced_queue_count": result.get("synced_queue_count", 0)})
+    return {
+        "dry_run": dry_run,
+        "planned_count": len(planned),
+        "imported_count": len(imported),
+        "skipped_count": len(skipped),
+        "planned": planned,
+        "imported": imported,
+        "skipped": skipped,
+        "message": (
+            f"Previewed {len(planned)} asset media attachment(s), {len(skipped)} skipped."
+            if dry_run
+            else f"Imported {len(imported)} asset media attachment(s), {len(skipped)} skipped."
+        ),
+        "safety": [
+            "Importing media/design URLs does not approve assets.",
+            "Importing media/design URLs does not queue, schedule, publish, or send Meta requests.",
+            "Human safety approval and pre-schedule checks still apply.",
+        ],
+    }
+
+
 def normalize_review_safety_decision(value: str | None):
     text = (value or "").strip().lower().replace("_", " ").replace("-", " ")
     if not text:

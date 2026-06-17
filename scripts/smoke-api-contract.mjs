@@ -51,6 +51,8 @@ const requiredRoutes = [
   "GET /operations/asset-rewrite-pack.md",
   "GET /operations/first-cycle-handoff",
   "GET /operations/first-cycle-handoff.md",
+  "GET /operations/asset-media-attachments.csv",
+  "POST /operations/import-asset-media-attachments",
   "GET /operations/asset-review-decisions.csv",
   "POST /operations/import-asset-review-decisions",
   "GET /operations/review-log.md",
@@ -684,6 +686,26 @@ const requiredSnippets = [
     name: "asset media attach safety",
     file: "main",
     text: "Human approval, queueing, scheduling, and publishing remain separate gates.",
+  },
+  {
+    name: "asset media attachment csv export",
+    file: "main",
+    text: "drec-asset-media-attachments.csv",
+  },
+  {
+    name: "asset media attachment import route",
+    file: "main",
+    text: "import_asset_media_attachments",
+  },
+  {
+    name: "asset media attachment import dry run",
+    file: "main",
+    text: "Previewed {len(planned)} asset media attachment(s)",
+  },
+  {
+    name: "asset media attachment import safety",
+    file: "main",
+    text: "Importing media/design URLs does not approve assets.",
   },
   {
     name: "asset rewrite apply audit",
