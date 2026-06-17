@@ -6204,7 +6204,7 @@ async def today_runbook_payload():
         immediate_action = {
             "label": "Human approval review",
             "screen": "assets",
-            "action": "Review the recommended asset, mark Safety Clear and Approve only if the human checklist passes.",
+            "action": "Download Doctor Polish, copy the review-ready Mandarin text to the doctor, then import the reply only after the human checklist passes.",
         }
     else:
         immediate_action = {
@@ -6260,6 +6260,7 @@ async def today_runbook_payload():
     blocked_gates = [gate for gate in gates if gate.get("status") == "blocked"]
     waiting_gates = [gate for gate in gates if gate.get("status") in {"waiting", "needs_content", "stale"}]
     links = {
+        "doctor_review_polish": "/operations/doctor-review-polish-pack.md",
         "approval_cockpit": "/operations/approval-cockpit.md",
         "post_approval_production": "/operations/post-approval-production.md",
         "production_design_worksheet": "/operations/production-design-worksheet.csv",
@@ -6267,6 +6268,7 @@ async def today_runbook_payload():
         "pre_schedule_gate": "/operations/pre-schedule-gate.md",
         "review_to_schedule": "/operations/review-to-schedule-pack.md",
         "schedule_audit": "/publish-queue/schedule-audit.md",
+        "scheduler_recovery": "/operations/scheduler-recovery-pack.md",
         "publishing_handoff": "/publishing-handoff",
         "meta_preflight": "/meta/preflight-audit.md",
         "security_rls": "/security/rls-hardening-plan.md",
@@ -6292,10 +6294,12 @@ async def today_runbook_payload():
         },
         "gates": gates,
         "operator_sequence": [
+            "Use the doctor polish pack to send review-ready Mandarin copy to the doctor.",
             "Review the approval cockpit and approve only human-cleared medical copy.",
             "Use the production pack and media attachment CSV for design/media URLs.",
             "Run the pre-schedule gate before scheduling.",
             "Run schedule audit after planned times are assigned.",
+            "Use the scheduler recovery pack if the GitHub scheduler heartbeat is stale.",
             "Use manual publishing handoff until Meta and security gates are green.",
             "Record external post IDs and metrics after manual posting.",
         ],

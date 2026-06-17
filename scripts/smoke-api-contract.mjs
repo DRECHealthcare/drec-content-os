@@ -929,6 +929,21 @@ const requiredSnippets = [
     text: "read_only_operator_sequence",
   },
   {
+    name: "today runbook doctor polish link",
+    file: "main",
+    text: "\"doctor_review_polish\": \"/operations/doctor-review-polish-pack.md\"",
+  },
+  {
+    name: "today runbook scheduler recovery link",
+    file: "main",
+    text: "\"scheduler_recovery\": \"/operations/scheduler-recovery-pack.md\"",
+  },
+  {
+    name: "today runbook doctor polish sequence",
+    file: "main",
+    text: "Use the doctor polish pack to send review-ready Mandarin copy to the doctor.",
+  },
+  {
     name: "asset rewrite apply route",
     file: "main",
     text: "/assets/{asset_id}/caption",

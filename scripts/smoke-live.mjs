@@ -633,6 +633,8 @@ const checks = [
         && data.mode === "read_only_operator_sequence"
         && data.immediate_action
         && Array.isArray(data.gates)
+        && data.links?.doctor_review_polish === "/operations/doctor-review-polish-pack.md"
+        && data.links?.scheduler_recovery === "/operations/scheduler-recovery-pack.md"
         && data.links?.asset_media_attachments === "/operations/asset-media-attachments.csv";
     },
   },
@@ -645,6 +647,8 @@ const checks = [
       return text.includes("# DREC Content OS Today Runbook")
         && text.includes("## Do Next")
         && text.includes("## Download Links")
+        && text.includes("Doctor Review Polish")
+        && text.includes("Scheduler Recovery")
         && text.includes("read-only");
     },
   },
