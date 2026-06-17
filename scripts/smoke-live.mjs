@@ -320,6 +320,10 @@ const checks = [
     validate: async (res) => {
       const text = await res.text();
       return text.includes("# DREC Content OS Daily Ops Checklist")
+        && text.includes("## Current-Cycle Action Links")
+        && text.includes("Doctor reply inbox")
+        && text.includes("Production reply inbox")
+        && text.includes("Scheduler recovery")
         && text.includes("## Morning Checks")
         && text.includes("Overdue scheduled")
         && text.includes("## Ready To Publish Today")
