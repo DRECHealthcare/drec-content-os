@@ -139,6 +139,11 @@ The Review Queue `Download Review Queue CSV` action calls
 `/operations/review-queue.csv` and exports the current unscheduled draft review
 queue with review state, latest feedback, blockers, captions, and media counts.
 
+The Review Queue `Download Editorial QA` action calls
+`/operations/editorial-qa-pack.md` and exports a read-only editor checklist for
+draft queue items, including hook/structure, CTA, promise-language, caption
+length, compliance, and media gap checks before scheduling.
+
 The Review Queue `Download Review-to-Schedule` action calls
 `/operations/review-to-schedule-pack.md` and exports queue-ready assets,
 review-approved draft queue items, handoff-ready scheduled items, and blockers

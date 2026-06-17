@@ -3270,6 +3270,146 @@ async def operations_review_queue_csv(_: None = Depends(require_access_token)):
     )
 
 
+def editorial_qa_flags(item: dict):
+    caption = re.sub(r"\s+", " ", str(item.get("caption") or "")).strip()
+    lower = caption.lower()
+    flags = []
+    if not caption:
+        flags.append("Missing caption.")
+    if len(caption) > 1800:
+        flags.append("Caption is very long; consider tightening before publishing.")
+    if len(caption) < 80:
+        flags.append("Caption may be too thin for DREC educational value.")
+    if not any(marker in caption for marker in ["？", "?", "：", ":", "✅", "👉"]):
+        flags.append("Hook or structure may be unclear; add a clear opening question or frame.")
+    if not any(term in lower for term in ["保存", "留言", "私讯", "预约", "consult", "comment", "save", "dm"]):
+        flags.append("CTA is weak or missing.")
+    if any(term in lower for term in ["治愈", "保证", "根治", "cure", "guarantee", "guaranteed"]):
+        flags.append("High-risk promise language needs rewrite.")
+    if item.get("format") in {"carousel", "single", "story", "reel"} and not [url for url in item.get("media_urls") or [] if url]:
+        flags.append("No media attached; confirm visual/design production before scheduling.")
+    if item.get("compliance_status") != "clear":
+        flags.append("Compliance is not clear.")
+    return flags
+
+
+def editorial_qa_decision(item: dict, flags: list[str]):
+    feedback = item.get("latest_feedback") or {}
+    if item.get("status") != "draft":
+        return "outside_review_queue"
+    if item.get("compliance_status") != "clear":
+        return "safety_first"
+    if any("High-risk promise" in flag for flag in flags):
+        return "rewrite_before_approval"
+    if feedback.get("action") == "approve" and not flags:
+        return "ready_to_schedule"
+    if feedback.get("action") == "approve":
+        return "approved_but_editorial_check_recommended"
+    if feedback.get("action") == "regen":
+        return "rewrite_requested"
+    if feedback.get("action") == "reject":
+        return "do_not_schedule"
+    return "editor_review_needed"
+
+
+def editorial_qa_item_lines(item: dict, index: int):
+    feedback = item.get("latest_feedback") or {}
+    flags = editorial_qa_flags(item)
+    state, blockers = review_queue_state(item)
+    decision = editorial_qa_decision(item, flags)
+    return [
+        f"### {index}. {item.get('channel')} / {item.get('format')} · {decision}",
+        "",
+        f"- Queue ID: {item.get('id')}",
+        f"- Asset ID: {item.get('asset_id') or 'n/a'}",
+        f"- Review state: {state}",
+        f"- Safety: {item.get('compliance_status')}",
+        f"- Latest feedback: {feedback.get('action') or 'none'}",
+        f"- Latest feedback reason: {feedback.get('reason') or 'none'}",
+        f"- Media count: {len([url for url in item.get('media_urls') or [] if url])}",
+        f"- Blockers: {', '.join(blockers) or 'none'}",
+        f"- Editorial flags: {', '.join(flags) or 'none'}",
+        "",
+        "Caption preview:",
+        "",
+        feedback_excerpt(item.get("caption"), 360) or "No caption.",
+        "",
+    ]
+
+
+@app.get("/operations/editorial-qa-pack.md")
+async def operations_editorial_qa_pack(_: None = Depends(require_access_token)):
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    rows = await fetch_publish_queue_items(200)
+    review_items = [item for item in rows if item.get("status") == "draft"]
+    qa_rows = []
+    for item in review_items:
+        flags = editorial_qa_flags(item)
+        qa_rows.append({**item, "qa_flags": flags, "qa_decision": editorial_qa_decision(item, flags)})
+    ready = [item for item in qa_rows if item.get("qa_decision") in {"ready_to_schedule", "approved_but_editorial_check_recommended"}]
+    rewrite = [item for item in qa_rows if item.get("qa_decision") in {"rewrite_before_approval", "rewrite_requested", "safety_first"}]
+    needs_review = [item for item in qa_rows if item.get("qa_decision") == "editor_review_needed"]
+    lines = [
+        "# DREC Content OS Editorial QA Pack",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this pack before approving or scheduling queued content. It is read-only and does not approve, schedule, queue, or publish records.",
+        "",
+        "## QA Rules",
+        "",
+        "- Safety/compliance beats style. Rewrite anything with high-risk promise language.",
+        "- Keep DREC content educational, specific, and useful for Chinese-speaking adults around 50+.",
+        "- Confirm the hook, body, CTA, and visual/media requirement before approval.",
+        "- Do not schedule content without clear compliance, human approval, and a planned time.",
+        "",
+        "## Current Counts",
+        "",
+        f"- Draft queue items checked: {len(qa_rows)}",
+        f"- Ready or near-ready: {len(ready)}",
+        f"- Rewrite/safety-first: {len(rewrite)}",
+        f"- Needs editor review: {len(needs_review)}",
+        "",
+        "## Ready Or Near-Ready",
+        "",
+    ]
+    if ready:
+        for index, item in enumerate(ready[:40], start=1):
+            lines.extend(editorial_qa_item_lines(item, index))
+    else:
+        lines.extend(["- No draft queue items are editorially ready yet.", ""])
+    lines.extend(["## Rewrite Or Safety-First", ""])
+    if rewrite:
+        for index, item in enumerate(rewrite[:40], start=1):
+            lines.extend(editorial_qa_item_lines(item, index))
+    else:
+        lines.extend(["- No rewrite/safety-first draft items found.", ""])
+    lines.extend(["## Needs Editor Review", ""])
+    if needs_review:
+        for index, item in enumerate(needs_review[:40], start=1):
+            lines.extend(editorial_qa_item_lines(item, index))
+    else:
+        lines.extend(["- No unreviewed editorial draft items found.", ""])
+    lines.extend(
+        [
+            "## Editor Checklist",
+            "",
+            "- [ ] Opening hook is specific and not fear-based.",
+            "- [ ] Caption has one clear idea, not several competing ideas.",
+            "- [ ] Medical wording avoids guaranteed outcomes or cure promises.",
+            "- [ ] CTA asks for save/comment/consult without pressure.",
+            "- [ ] Visual/media requirement is attached or assigned in the shot list.",
+            "- [ ] Latest human feedback supports approval before scheduling.",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-editorial-qa-pack.md"'},
+    )
+
+
 def learning_snapshot_row(record_type, item_id="", dimension="", key="", value="", created_at="", detail=""):
     return {
         "record_type": record_type,

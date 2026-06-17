@@ -2738,6 +2738,16 @@ document.getElementById("download-review-log")?.addEventListener("click", async 
   }
 });
 
+document.getElementById("download-editorial-qa")?.addEventListener("click", async () => {
+  const message = document.getElementById("queue-message");
+  try {
+    await downloadProtectedFile("/operations/editorial-qa-pack.md", "drec-editorial-qa-pack.md", "text/markdown");
+    message.textContent = "Editorial QA pack downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download editorial QA pack.";
+  }
+});
+
 document.getElementById("download-review-schedule-pack")?.addEventListener("click", async () => {
   const message = document.getElementById("queue-message");
   try {

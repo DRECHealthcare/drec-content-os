@@ -61,6 +61,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added calendar export for scheduled publishing reminders
 - [x] Added visible review feedback notes for queued content decisions
 - [x] Filtered Review Queue to unscheduled draft items
+- [x] Added Editorial QA Pack for hook, CTA, length, media, and promise-language checks before scheduling
 - [x] Added asset and media lifecycle review actions
 - [x] Added batch approval for safety-clear assets and batch queueing for ready assets
 - [x] Added Asset Review Worklist for briefs-to-save, review blockers, and queue-ready assets
@@ -157,6 +158,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add downloadable publishing calendar
 - [x] Add visible review feedback notes
 - [x] Keep Review Queue focused on unscheduled draft items
+- [x] Add downloadable Editorial QA Pack before scheduling approved drafts
 - [x] Add asset and media lifecycle review controls
 - [x] Add batch asset approval and queueing controls
 - [x] Add downloadable Asset Review Worklist for first-test asset production and approval

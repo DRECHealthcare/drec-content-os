@@ -35,6 +35,7 @@ const requiredRoutes = [
   "GET /operations/asset-review-decisions.csv",
   "POST /operations/import-asset-review-decisions",
   "GET /operations/review-log.md",
+  "GET /operations/editorial-qa-pack.md",
   "GET /operations/review-queue.csv",
   "GET /operations/review-to-schedule-pack.md",
   "GET /operations/learning-snapshot.csv",
@@ -434,6 +435,16 @@ const requiredSnippets = [
     name: "review log audit trail",
     file: "main",
     text: "## Recent Decisions",
+  },
+  {
+    name: "editorial qa pack export",
+    file: "main",
+    text: "drec-editorial-qa-pack.md",
+  },
+  {
+    name: "editorial qa pack rules",
+    file: "main",
+    text: "## QA Rules",
   },
   {
     name: "review queue csv export",
@@ -1001,6 +1012,11 @@ const requiredSnippets = [
     text: "download-review-log",
   },
   {
+    name: "web editorial qa action",
+    file: "web",
+    text: "download-editorial-qa",
+  },
+  {
     name: "web review to schedule action",
     file: "web",
     text: "download-review-schedule-pack",
@@ -1014,6 +1030,11 @@ const requiredSnippets = [
     name: "web review log endpoint",
     file: "web",
     text: "/operations/review-log.md",
+  },
+  {
+    name: "web editorial qa endpoint",
+    file: "web",
+    text: "/operations/editorial-qa-pack.md",
   },
   {
     name: "web review queue csv action",

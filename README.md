@@ -113,6 +113,7 @@ Stage 1 is now a working thin-core workflow:
 - Reuse an existing active queue item when the same asset is added to queue again
 - Queue and review posts with approval, regen, and rejection feedback trails
 - Download a review log audit trail with recent approval, regeneration, rejection, and safety decisions
+- Download an Editorial QA Pack that checks draft queue captions for hook, length, CTA, promise language, media gaps, and editor-ready decisions
 - Download the current review queue as CSV with review state, latest feedback, blockers, captions, and media counts
 - Download a Review-to-Schedule Pack that connects queue-ready assets, review-approved queue items, scheduled handoff items, and blockers
 - Keep Review Queue focused on unscheduled draft items while Scheduler handles scheduled and published records
