@@ -160,6 +160,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Rendered Doctor Send Queue inside Assets with copy-ready doctor review messages and reply templates
 - [x] Added one-click full doctor message and paste-back template copy actions
 - [x] Added dashboard copy action for the current live next test step
+- [x] Added Assets Next Asset Review card for first pending review copy/jump
 - [x] Rendered Doctor Reply Inbox inside Assets with copy-ready paste-back templates
 - [x] Added full-batch Doctor Polish copy actions for the first ready review set
 - [x] Added Doctor Reply Inbox Pack for exact paste-back doctor decisions before preview/import

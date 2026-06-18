@@ -1696,6 +1696,47 @@ function assetCard(item) {
   `;
 }
 
+function assetNeedsReview(item) {
+  return item.review_status !== "approved" || item.compliance_status !== "clear";
+}
+
+function renderNextAssetReview(items) {
+  const container = document.getElementById("asset-next-review");
+  if (!container) return;
+  const next = (items || []).find(assetNeedsReview);
+  if (!next) {
+    container.innerHTML = `
+      <article class="learning-card wide-learning ready">
+        <h3>Next Asset Review</h3>
+        <p>All draft assets currently visible are approved and safety clear.</p>
+        <small>Use Queue Ready Assets when you are ready to move them into review queue.</small>
+      </article>
+    `;
+    return;
+  }
+  const metadata = next.metadata || {};
+  const topic = metadata.topic || "Untitled asset";
+  const blocker = next.compliance_status !== "clear"
+    ? "Safety must be clear before queueing."
+    : "Approval is required before queueing.";
+  container.innerHTML = `
+    <article class="learning-card wide-learning">
+      <h3>Next Asset Review</h3>
+      <p>${escapeHtml(topic)}</p>
+      <small>${escapeHtml(blocker)} Current: ${escapeHtml(next.compliance_status || "pending")} / ${escapeHtml(next.review_status || "draft")}</small>
+      <div class="learning-actions">
+        <button type="button" data-copy-next-asset-review="${escapeHtml(next.id)}">Copy Review Note</button>
+        <button type="button" data-jump-next-asset-review>Jump To Asset</button>
+      </div>
+    </article>
+  `;
+}
+
+function storedAssetById(assetId) {
+  const items = JSON.parse(document.getElementById("asset-items")?.dataset.assets || "[]");
+  return items.find((item) => item.id === assetId);
+}
+
 function mediaAssetCard(item) {
   const source = item.source_url || "";
   const sourceMarkup = source.startsWith("http")
@@ -1800,6 +1841,32 @@ document.getElementById("queue-ready-assets").addEventListener("click", async (e
   showScreen("review");
 });
 
+document.getElementById("asset-next-review")?.addEventListener("click", async (event) => {
+  const copyButton = event.target.closest("[data-copy-next-asset-review]");
+  const jumpButton = event.target.closest("[data-jump-next-asset-review]");
+  if (!copyButton && !jumpButton) return;
+  const message = document.getElementById("media-message");
+  const assetId = copyButton?.dataset.copyNextAssetReview
+    || document.querySelector("[data-copy-next-asset-review]")?.dataset.copyNextAssetReview;
+  if (!assetId) return;
+  if (jumpButton) {
+    const target = document.querySelector(`[data-copy-asset-review="${CSS.escape(assetId)}"]`);
+    if (target) {
+      target.closest(".queue-item")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (message) message.textContent = "Next asset review item shown.";
+    }
+    return;
+  }
+  const asset = storedAssetById(assetId);
+  if (!asset) return;
+  try {
+    await navigator.clipboard.writeText(assetReviewNoteText(asset));
+    if (message) message.textContent = "Next asset review note copied.";
+  } catch {
+    if (message) message.textContent = "Could not copy review note. Use Download Safety Review instead.";
+  }
+});
+
 async function loadAssets() {
   const container = document.getElementById("asset-items");
   if (!container) return;
@@ -1807,10 +1874,12 @@ async function loadAssets() {
     const data = await fetchJson("/assets");
     const items = data.items || [];
     container.dataset.assets = JSON.stringify(items);
+    renderNextAssetReview(items);
     container.innerHTML = items.length
       ? items.map(assetCard).join("")
       : '<p class="status-note">No saved assets yet. Save one from Create Post.</p>';
   } catch {
+    renderNextAssetReview([]);
     container.innerHTML = '<p class="status-note">Set the access token to load assets.</p>';
   }
 }
@@ -4198,8 +4267,7 @@ document.getElementById("asset-items").addEventListener("click", async (event) =
   const reviewNoteButton = event.target.closest("[data-copy-asset-review]");
   if (reviewNoteButton) {
     const message = document.getElementById("media-message");
-    const items = JSON.parse(document.getElementById("asset-items").dataset.assets || "[]");
-    const asset = items.find((item) => item.id === reviewNoteButton.dataset.copyAssetReview);
+    const asset = storedAssetById(reviewNoteButton.dataset.copyAssetReview);
     if (!asset) return;
     try {
       await navigator.clipboard.writeText(assetReviewNoteText(asset));

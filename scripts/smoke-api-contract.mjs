@@ -2879,6 +2879,26 @@ const requiredSnippets = [
     text: "data-copy-asset-review",
   },
   {
+    name: "web next asset review card",
+    file: "web",
+    text: "asset-next-review",
+  },
+  {
+    name: "web next asset review copy action",
+    file: "web",
+    text: "data-copy-next-asset-review",
+  },
+  {
+    name: "web next asset review jump action",
+    file: "web",
+    text: "data-jump-next-asset-review",
+  },
+  {
+    name: "web next asset review renderer",
+    file: "web",
+    text: "renderNextAssetReview",
+  },
+  {
     name: "web asset media attach action",
     file: "web",
     text: "data-attach-asset-media",
