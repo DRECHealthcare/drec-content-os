@@ -14,6 +14,7 @@ let latestProductionItems = [];
 let latestLearningWeightSuggestions = [];
 let latestDoctorFullMessage = "";
 let latestDoctorPasteBackTemplate = "";
+let latestTestRunChecklist = null;
 
 const titleMap = {
   dashboard: "Dashboard",
@@ -483,10 +484,30 @@ function testPathText() {
   ].join("\n");
 }
 
+function testRunNextStepText() {
+  const data = latestTestRunChecklist || {};
+  const next = data.next_step || data.workflow_next_action || {};
+  const label = next.label || next.title || "Follow the first open step";
+  const detail = next.detail || next.body || "";
+  const screen = next.screen ? `Screen: ${next.screen}` : "";
+  const action = next.action ? `Action: ${next.action}` : "";
+  return [
+    "DREC Content OS Next Test Step",
+    "",
+    `Next: ${label}`,
+    detail,
+    screen,
+    action,
+    "",
+    "Safety: Do not approve, queue, schedule, publish, or connect Meta unless the visible gate says the item is ready.",
+  ].filter(Boolean).join("\n");
+}
+
 function renderTestRunChecklist(data) {
   const list = document.getElementById("test-path-list");
   const message = document.getElementById("test-path-message");
   if (!list || !message) return;
+  latestTestRunChecklist = data;
   const steps = data.steps || [];
   const next = data.next_step || {};
   message.textContent = `${data.overall_status || "manual_cycle_in_progress"} · ${data.done_count || 0}/${data.total_required || 0} required steps done · Next: ${next.label || "Follow the first open step"}`;
@@ -3047,6 +3068,16 @@ document.getElementById("copy-test-path")?.addEventListener("click", async () =>
     message.textContent = "Test path copied.";
   } catch {
     message.textContent = "Could not copy automatically. Use the visible checklist.";
+  }
+});
+
+document.getElementById("copy-next-test-step")?.addEventListener("click", async () => {
+  const message = document.getElementById("test-path-message");
+  try {
+    await navigator.clipboard.writeText(testRunNextStepText());
+    message.textContent = "Next test step copied.";
+  } catch {
+    message.textContent = "Could not copy automatically. Use the visible next step.";
   }
 });
 

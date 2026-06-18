@@ -2114,6 +2114,16 @@ const requiredSnippets = [
     text: "function testPathText()",
   },
   {
+    name: "web live next test helper",
+    file: "web",
+    text: "function testRunNextStepText()",
+  },
+  {
+    name: "web copy live next test step action",
+    file: "web",
+    text: "copy-next-test-step",
+  },
+  {
     name: "web test path published step",
     file: "web",
     text: "Record Published: After manual posting",
