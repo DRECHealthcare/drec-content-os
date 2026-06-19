@@ -161,6 +161,8 @@ const uiZh = {
   "Fill Doctor Reply Template": "填写医生回复模板",
   "Open Asset Review": "打开素材审核",
   "Download Chinese Pack": "下载中文包",
+  "Download Media Pack": "下载媒体制作包",
+  "Download SVG Zip": "下载 SVG 设计包",
   "Success Standard": "成功标准",
   "Copy Queue Decision CSV": "复制队列审核 CSV",
   "Fill Queue Decision CSV": "填入队列审核 CSV",
@@ -386,8 +388,102 @@ const uiZh = {
   "What should the system remember?": "系统应该记住什么？",
 };
 
+Object.assign(uiZh, {
+  "DREC Content OS": "DREC 内容系统",
+  "Content OS": "内容系统",
+  "Week of Mon 15 Jun 2026 · MYT": "2026 年 6 月 15 日这一周 · 马来西亚时间",
+  "SENSE": "洞察",
+  "DECIDE": "判断",
+  "CREATE": "创作",
+  "REVIEW": "审核",
+  "PUBLISH": "发布",
+  "LEARN": "学习",
+  "metrics ready": "数据已准备",
+  "brain next": "下一步判断",
+  "static engine next": "下一步制作静态素材",
+  "human gate": "人工审核门槛",
+  "queue foundation": "发布队列基础",
+  "feedback spine": "反馈学习主线",
+  "Open Weekly Plan and save one brief as an asset.": "打开每周内容计划，把一条简报保存为内容资产。",
+  "Open Assets, mark the asset Safety Clear, then Approve.": "打开素材页，把该内容标记为安全通过，然后批准。",
+  "Add that approved clear asset to the publishing queue.": "把这条已批准、已安全通过的内容加入发布队列。",
+  "Open Review Queue and approve the queue item.": "打开审核队列，批准这条队列项目。",
+  "Open Scheduler, choose a planned time, and save the item.": "打开排程，选择计划发布时间并保存。",
+  "Generate the handoff copy and check it lists one ready item.": "生成发布交接内容，并确认里面列出一条可发布项目。",
+  "After manual posting, paste the Meta post ID from the handoff ready item.": "人工发布后，把 Meta 帖子 ID 粘贴回系统。",
+  "Add metrics under Performance, then save and roll them into learning.": "在表现数据里填入数据，然后保存并汇总到学习系统。",
+  "Open Learning and build the weekly report.": "打开学习复盘，生成周报。",
+  "Send learning recommendations back into Weekly Plan.": "把学习建议送回每周内容计划。",
+  "Keep Meta in dry-run mode until real credentials and permissions are approved.": "在真实凭证和权限确认前，Meta 保持测试模式。",
+  "Turn audience observations, ads, competitor notes, ideas, and learning outcomes into safe weekly planning inputs.": "把受众观察、广告、竞品记录、想法和学习结果，整理成安全的每周计划输入。",
+  "Generate a conservative weekly content plan, then move any brief into drafting.": "生成保守安全的每周内容计划，再把选中的简报移入草稿。",
+  "Draft educational captions from a topic and move safe drafts into the review queue.": "根据主题生成教育型文案草稿，并把安全草稿送入审核队列。",
+  "Number Of Briefs": "简报数量",
+  "Weekly Topics": "本周主题",
+  "TOFU · education": "TOFU · 教育",
+  "MOFU · consideration": "MOFU · 考虑",
+  "BOFU · consult": "BOFU · 咨询",
+  "DREC Navy Education": "DREC 深蓝教育风",
+  "Myth / Truth Pair": "迷思 / 真相对照",
+  "Case Story": "案例故事",
+  "Doctor Quote": "医生金句",
+  "Reel Script": "Reel 脚本",
+  "Target Signal": "目标互动信号",
+  "Topic": "主题",
+  "Key Points": "重点",
+  "Pillar": "内容支柱",
+  "Hook": "开头钩子",
+  "Time Slot": "发布时间段",
+  "CTA": "行动引导",
+  "Audience": "受众",
+  "New Weight": "新权重",
+  "Previous Weight": "原权重",
+  "Brand": "品牌",
+  "Voice": "语气",
+  "Offer": "服务/产品",
+  "Medical Dictionary": "医学词库",
+  "Competitor": "竞品",
+  "Observation": "观察",
+  "Idea": "想法",
+  "7 days": "7 天",
+  "28 days": "28 天",
+  "90 days": "90 天",
+  "Manual": "人工",
+  "One topic per line. Leave blank to use DREC default metabolic education topics.": "每行一个主题。留空会使用 DREC 默认代谢教育主题。",
+  "Example: why fasting glucose can look normal while insulin is high": "例：为什么空腹血糖正常，但胰岛素可能仍然偏高",
+  "One point per line. Keep it educational and specific.": "每行一个重点。保持教育性、具体、保守。",
+  "Optional. One approved image or video URL per line.": "可选。每行一个已批准图片或视频链接。",
+  "saves, shares, comments, watch time": "收藏、分享、评论、观看时长",
+  "Optional": "可选",
+  "Access token": "访问码",
+  "Actor name": "操作者姓名",
+  "Set the access token first.": "请先设置访问码。",
+  "Could not load the live test checklist.": "无法读取实时测试清单。",
+  "Set the access token to load knowledge entries.": "请先设置访问码，才能读取知识库。",
+  "Set the access token to load weekly briefs.": "请先设置访问码，才能读取每周简报。",
+  "Set the access token to check Meta readiness.": "请先设置访问码，才能检查 Meta 准备状态。",
+  "Set the access token to load the setup checklist.": "请先设置访问码，才能读取设置清单。",
+  "Set the access token to load Notify Rail.": "请先设置访问码，才能读取通知轨道。",
+  "Set the access token to load Creative Studio.": "请先设置访问码，才能读取创意工作室。",
+  "Set the access token to load Insight Inbox.": "请先设置访问码，才能读取洞察收件箱。",
+  "Set the access token to load Ads Planning.": "请先设置访问码，才能读取广告计划。",
+  "Set the access token to load Template Studio.": "请先设置访问码，才能读取模板工作室。",
+  "Set the access token to load Video Studio.": "请先设置访问码，才能读取视频工作室。",
+  "Set the access token to load learning signals.": "请先设置访问码，才能读取学习信号。",
+  "Set the access token to load the quarterly memo.": "请先设置访问码，才能读取季度备忘录。",
+  "Set the access token to load media.": "请先设置访问码，才能读取媒体库。",
+  "Set the access token to load assets.": "请先设置访问码，才能读取内容资产。",
+  "Set the access token to load the doctor send queue.": "请先设置访问码，才能读取医生发送队列。",
+  "Set the access token to load the doctor reply inbox.": "请先设置访问码，才能读取医生回复收件箱。",
+  "Set the access token to load doctor polish suggestions.": "请先设置访问码，才能读取医生润色建议。",
+  "Set the access token to load the sprint board.": "请先设置访问码，才能读取冲刺看板。",
+  "Set the access token to load the first cycle handoff.": "请先设置访问码，才能读取首轮交接。",
+  "Set the access token to load the approval cockpit.": "请先设置访问码，才能读取审批控制台。",
+  "Set the access token to load the production pack.": "请先设置访问码，才能读取制作包。",
+});
+
 function currentLanguage() {
-  return localStorage.getItem(languageKey) || "en";
+  return localStorage.getItem(languageKey) || "zh";
 }
 
 function isZh() {
@@ -428,7 +524,21 @@ function translateDirectTextNodes(element) {
   });
 }
 
+function translateTree(root = document) {
+  root.querySelectorAll?.("main h2,main h3,main h4,main p,main span,main strong,main small,main label,main button,main li,main option,aside .loop-note").forEach((element) => {
+    if (element.children.length) {
+      translateDirectTextNodes(element);
+      return;
+    }
+    setTextIfMapped(element);
+  });
+  root.querySelectorAll?.("input[placeholder],textarea[placeholder]").forEach(setPlaceholderIfMapped);
+}
+
+let languageObserverPaused = false;
+
 function applyLanguage() {
+  languageObserverPaused = true;
   document.documentElement.lang = isZh() ? "zh-Hans" : "en";
   document.querySelectorAll("nav button").forEach((button) => {
     const screen = button.dataset.screen;
@@ -436,17 +546,11 @@ function applyLanguage() {
   });
   const active = document.querySelector("nav button.active")?.dataset.screen || "dashboard";
   document.getElementById("title").textContent = (isZh() ? titleMapZh : titleMapEn)[active] || active;
+  translateTree(document);
   const toggle = document.getElementById("language-toggle");
   if (toggle) toggle.textContent = isZh() ? "English" : "中文";
-  document.querySelectorAll("main h2,main h3,main h4,main p,main span,main strong,main small,main label,main button,main li,main option,aside .loop-note").forEach((element) => {
-    if (element.children.length) {
-      translateDirectTextNodes(element);
-      return;
-    }
-    setTextIfMapped(element);
-  });
-  document.querySelectorAll("input[placeholder],textarea[placeholder]").forEach(setPlaceholderIfMapped);
   updateTokenButton();
+  languageObserverPaused = false;
 }
 
 function localizeFirstPublishText(text) {
@@ -612,6 +716,24 @@ document.getElementById("language-toggle")?.addEventListener("click", async () =
   applyLanguage();
   await Promise.all([loadLoopStatus(), loadFirstPublishReadiness()]);
 });
+
+new MutationObserver((mutations) => {
+  if (!isZh() || languageObserverPaused) return;
+  languageObserverPaused = true;
+  for (const mutation of mutations) {
+    mutation.addedNodes.forEach((node) => {
+      if (node.nodeType !== Node.ELEMENT_NODE) return;
+      translateTree(node);
+      if (node.matches?.("main h2,main h3,main h4,main p,main span,main strong,main small,main label,main button,main li,main option,aside .loop-note")) {
+        if (node.children.length) translateDirectTextNodes(node);
+        else setTextIfMapped(node);
+      }
+      if (node.matches?.("input[placeholder],textarea[placeholder]")) setPlaceholderIfMapped(node);
+    });
+  }
+  languageObserverPaused = false;
+}).observe(document.body, { childList: true, subtree: true });
+
 document.getElementById("token-input").addEventListener("keydown", (event) => {
   if (event.key === "Enter") saveAccessTokenFromPanel();
   if (event.key === "Escape") document.getElementById("token-panel").hidden = true;
@@ -1019,6 +1141,8 @@ function renderFirstPublishReadiness(data) {
         ${hasDecisionCsv ? `<button type="button" data-fill-first-asset-decision>${escapeHtml(translateText("Fill Asset Decision CSV"))}</button>` : ""}
         <button type="button" data-open-first-asset-review>${escapeHtml(translateText("Open Asset Review"))}</button>
         <button type="button" data-download-first-publish-zh>${escapeHtml(translateText("Download Chinese Pack"))}</button>
+        <button type="button" data-download-first-media-pack>${escapeHtml(translateText("Download Media Pack"))}</button>
+        <button type="button" data-download-first-carousel-zip>${escapeHtml(translateText("Download SVG Zip"))}</button>
       </div>
       <small><strong>${escapeHtml(translateText("Success Standard"))}:</strong> Safety: clear + Decision: approve. Otherwise keep this item in review.</small>
     </article>
@@ -1064,12 +1188,14 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
   const fillDoctorReplyButton = event.target.closest("[data-fill-first-doctor-reply]");
   const openAssetReviewButton = event.target.closest("[data-open-first-asset-review]");
   const downloadZhButton = event.target.closest("[data-download-first-publish-zh]");
+  const downloadMediaPackButton = event.target.closest("[data-download-first-media-pack]");
+  const downloadCarouselZipButton = event.target.closest("[data-download-first-carousel-zip]");
   const copyButton = event.target.closest("[data-copy-first-asset-decision]");
   const fillButton = event.target.closest("[data-fill-first-asset-decision]");
   const copyQueueButton = event.target.closest("[data-copy-first-queue-decision]");
   const fillQueueButton = event.target.closest("[data-fill-first-queue-decision]");
   const advanceButton = event.target.closest("[data-advance-first-publish]");
-  if (!copyReviewButton && !fillDoctorReplyButton && !openAssetReviewButton && !downloadZhButton && !copyButton && !fillButton && !copyQueueButton && !fillQueueButton && !advanceButton) return;
+  if (!copyReviewButton && !fillDoctorReplyButton && !openAssetReviewButton && !downloadZhButton && !downloadMediaPackButton && !downloadCarouselZipButton && !copyButton && !fillButton && !copyQueueButton && !fillQueueButton && !advanceButton) return;
   const container = document.getElementById("first-publish-readiness");
   const message = document.getElementById("test-path-message");
   if (copyReviewButton) {
@@ -1114,6 +1240,26 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
       if (message) message.textContent = "中文首次发布准备包已下载。";
     } catch (error) {
       if (message) message.textContent = error.message === "Access token required" ? "请先设置访问码。" : "无法下载中文首次发布准备包。";
+    }
+    return;
+  }
+  if (downloadMediaPackButton) {
+    if (message) message.textContent = "Preparing first publish media pack...";
+    try {
+      await downloadProtectedFile("/operations/first-publish-media-pack.md", "drec-first-publish-media-pack.md", "text/markdown");
+      if (message) message.textContent = "First publish media pack downloaded.";
+    } catch (error) {
+      if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download first publish media pack.";
+    }
+    return;
+  }
+  if (downloadCarouselZipButton) {
+    if (message) message.textContent = "Preparing first publish SVG files...";
+    try {
+      await downloadProtectedFile("/operations/first-publish-carousel-assets.zip", "drec-first-publish-carousel-assets.zip", "application/zip");
+      if (message) message.textContent = "First publish SVG design ZIP downloaded.";
+    } catch (error) {
+      if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download first publish SVG ZIP.";
     }
     return;
   }

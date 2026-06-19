@@ -2,9 +2,11 @@ from contextlib import asynccontextmanager
 import asyncio
 import csv
 from datetime import datetime, timedelta, timezone
-from io import StringIO
+import html
+from io import BytesIO, StringIO
 import json
 import re
+import zipfile
 from pathlib import Path
 from urllib.parse import urlencode
 from uuid import UUID, uuid4
@@ -2001,6 +2003,120 @@ def first_publish_media_gate(item: dict | None):
     }
 
 
+def text_chunks(value: str, limit: int):
+    text = re.sub(r"\s+", " ", (value or "").strip())
+    if not text:
+        return []
+    chunks = []
+    current = ""
+    for char in text:
+        current += char
+        if len(current) >= limit:
+            chunks.append(current.strip())
+            current = ""
+    if current.strip():
+        chunks.append(current.strip())
+    return chunks
+
+
+def first_publish_slide_items(asset: dict | None):
+    if not asset:
+        return []
+    metadata = asset.get("metadata") or {}
+    slides = metadata.get("slides") or []
+    if slides:
+        return slides
+    caption = asset.get("caption") or metadata.get("topic") or "DREC educational post"
+    return [
+        {
+            "slide": 1,
+            "title": metadata.get("topic") or "DREC educational post",
+            "body": caption[:260],
+            "visual_note": "Use DREC navy/teal template; keep copy readable on mobile.",
+        }
+    ]
+
+
+def first_publish_media_attachment_csv(asset: dict | None):
+    output = StringIO()
+    fieldnames = [
+        "asset_id",
+        "brief_id",
+        "topic",
+        "channel",
+        "format",
+        "review_status",
+        "safety_status",
+        "current_media_urls",
+        "new_media_urls",
+        "visual_qa_status",
+        "rights_note",
+        "producer_name",
+        "production_notes",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    if asset:
+        metadata = asset.get("metadata") or {}
+        slides = first_publish_slide_items(asset)
+        placeholder_urls = "\n".join(
+            f"https://your-approved-media-host.example/{asset.get('id')}-slide-{index:02d}.png"
+            for index, _ in enumerate(slides, start=1)
+        )
+        writer.writerow(
+            {
+                "asset_id": asset.get("id") or "",
+                "brief_id": asset.get("brief_id") or "",
+                "topic": metadata.get("topic") or "",
+                "channel": asset.get("channel") or "",
+                "format": asset.get("format") or "",
+                "review_status": asset.get("review_status") or "",
+                "safety_status": asset.get("compliance_status") or "",
+                "current_media_urls": "\n".join([url for url in asset.get("media_urls") or [] if url]),
+                "new_media_urls": placeholder_urls,
+                "visual_qa_status": "passed / pending / needs_work",
+                "rights_note": "Owned by DREC / licensed / approved for DREC publishing use",
+                "producer_name": "",
+                "production_notes": "Replace placeholder URLs with final exported PNG/JPG URLs before import.",
+            }
+        )
+    return output.getvalue()
+
+
+def first_publish_slide_svg(asset: dict, slide: dict, index: int, total: int):
+    metadata = asset.get("metadata") or {}
+    topic = metadata.get("topic") or "DREC"
+    title = slide.get("title") or topic
+    body = slide.get("body") or ""
+    note = slide.get("visual_note") or "DREC educational carousel"
+    title_lines = text_chunks(title, 15)[:3]
+    body_lines = text_chunks(body, 22)[:8]
+    safe_note = html.escape(note)
+    title_text = "\n".join(
+        f'<text x="86" y="{270 + line_index * 74}" font-size="56" font-weight="800" fill="#FFFFFF">{html.escape(line)}</text>'
+        for line_index, line in enumerate(title_lines)
+    )
+    body_text = "\n".join(
+        f'<text x="92" y="{575 + line_index * 50}" font-size="34" font-weight="500" fill="#1D2935">{html.escape(line)}</text>'
+        for line_index, line in enumerate(body_lines)
+    )
+    return f'''<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350">
+  <rect width="1080" height="1350" fill="#F1F5F8"/>
+  <rect x="0" y="0" width="1080" height="430" fill="#0F2A4A"/>
+  <rect x="68" y="76" width="186" height="48" rx="24" fill="#1FA9A0"/>
+  <text x="95" y="109" font-size="24" font-weight="800" fill="#FFFFFF">DREC EDUCATION</text>
+  <text x="860" y="109" font-size="28" font-weight="800" fill="#FFFFFF">{index:02d}/{total:02d}</text>
+  {title_text}
+  <rect x="68" y="494" width="944" height="570" rx="28" fill="#FFFFFF"/>
+  <rect x="68" y="494" width="14" height="570" fill="#1FA9A0"/>
+  {body_text}
+  <rect x="88" y="1105" width="904" height="110" rx="18" fill="#0F2A4A"/>
+  <text x="120" y="1168" font-size="30" font-weight="700" fill="#FFFFFF">一般健康教育，不代替个人诊断或治疗建议。</text>
+  <text x="88" y="1260" font-size="24" font-weight="600" fill="#0F2A4A">{html.escape(str(topic))}</text>
+  <text x="88" y="1298" font-size="20" font-weight="500" fill="#64748B">{safe_note}</text>
+</svg>'''
+
+
 ASSET_REVIEW_DECISION_FIELDS = [
     "asset_id",
     "brief_id",
@@ -2765,6 +2881,126 @@ async def operations_first_publish_readiness_markdown_zh(_: None = Depends(requi
         "\n".join(lines),
         media_type="text/markdown",
         headers={"Content-Disposition": 'attachment; filename="drec-first-publish-readiness-zh.md"'},
+    )
+
+
+@app.get("/operations/first-publish-media-pack.md")
+async def operations_first_publish_media_pack(_: None = Depends(require_access_token)):
+    payload = await first_publish_readiness_payload()
+    candidates = payload.get("candidates") or {}
+    action_pack = payload.get("action_pack") or {}
+    asset = candidates.get("next_asset") or candidates.get("approved_clear_asset") or candidates.get("ready_asset")
+    media_gate = action_pack.get("media_gate") or first_publish_media_gate(asset)
+    metadata = (asset or {}).get("metadata") or {}
+    slides = first_publish_slide_items(asset)
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    lines = [
+        "# DREC First Publish Media Pack",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "Use this pack to create approved carousel artwork for the current first-publish asset. It is read-only and does not attach media, approve, queue, schedule, or publish.",
+        "",
+        "## Current First Publish Asset",
+        "",
+        f"- Asset ID: {(asset or {}).get('id') or 'n/a'}",
+        f"- Brief ID: {(asset or {}).get('brief_id') or 'n/a'}",
+        f"- Topic: {metadata.get('topic') or 'n/a'}",
+        f"- Channel / format: {(asset or {}).get('channel') or 'n/a'} / {(asset or {}).get('format') or 'n/a'}",
+        f"- Review / safety: {(asset or {}).get('review_status') or 'n/a'} / {(asset or {}).get('compliance_status') or 'n/a'}",
+        f"- Media required: {media_gate.get('required')}",
+        f"- Media ready: {media_gate.get('ready')}",
+        f"- Current media URL count: {media_gate.get('media_count') or 0}",
+        "",
+        "## Design Files",
+        "",
+        "- Download SVG source files: `/operations/first-publish-carousel-assets.zip`",
+        "- Export each SVG as PNG/JPG at 1080x1350.",
+        "- Upload final PNG/JPG files to approved DREC storage or another approved public media host.",
+        "- Replace the placeholder URLs in the CSV below with final media URLs.",
+        "- Preview import before saving media attachments.",
+        "",
+        "## Slide Plan",
+        "",
+    ]
+    if slides:
+        for slide in slides:
+            lines.extend(
+                [
+                    f"### Slide {slide.get('slide') or ''}: {slide.get('title') or metadata.get('topic') or 'Untitled'}",
+                    "",
+                    slide.get("body") or "",
+                    "",
+                    f"- Visual note: {slide.get('visual_note') or 'Use DREC navy/teal template.'}",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["- No slide plan found on the asset.", ""])
+    lines.extend(
+        [
+            "## Media Attachment CSV Template",
+            "",
+            "Paste this into the asset media attachment preview/import flow after replacing placeholder URLs with final hosted image URLs.",
+            "",
+            "```csv",
+            first_publish_media_attachment_csv(asset).strip(),
+            "```",
+            "",
+            "## Safety",
+            "",
+            "- Do not use unlicensed stock, patient photos, screenshots, or testimonial imagery without documented permission.",
+            "- Keep typography readable on mobile.",
+            "- Keep the medical disclaimer calm and non-promissory.",
+            "- Final media still needs human visual QA before queueing.",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-first-publish-media-pack.md"'},
+    )
+
+
+@app.get("/operations/first-publish-carousel-assets.zip")
+async def operations_first_publish_carousel_assets_zip(_: None = Depends(require_access_token)):
+    payload = await first_publish_readiness_payload()
+    candidates = payload.get("candidates") or {}
+    asset = candidates.get("next_asset") or candidates.get("approved_clear_asset") or candidates.get("ready_asset")
+    if not asset:
+        raise HTTPException(status_code=404, detail="No first-publish asset is available for carousel asset rendering.")
+    slides = first_publish_slide_items(asset)
+    if not slides:
+        raise HTTPException(status_code=404, detail="No slide plan is available for the first-publish asset.")
+    asset_id = asset.get("id") or "first-publish"
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr(
+            "README.md",
+            "\n".join(
+                [
+                    "# DREC First Publish Carousel Assets",
+                    "",
+                    "These SVG files are source artwork for manual review/export. Export to PNG/JPG, upload to approved storage, then attach the final public URLs back to DREC Content OS.",
+                    "",
+                    "This ZIP does not approve, attach, schedule, or publish anything.",
+                    "",
+                    "Recommended export size: 1080x1350.",
+                ]
+            ),
+        )
+        archive.writestr("media-attachments-template.csv", first_publish_media_attachment_csv(asset))
+        for index, slide in enumerate(slides, start=1):
+            archive.writestr(
+                f"slides/{asset_id}-slide-{index:02d}.svg",
+                first_publish_slide_svg(asset, slide, index, len(slides)),
+            )
+    buffer.seek(0)
+    return Response(
+        buffer.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": 'attachment; filename="drec-first-publish-carousel-assets.zip"'},
     )
 
 

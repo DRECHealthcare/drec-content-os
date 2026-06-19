@@ -28,6 +28,8 @@ const requiredRoutes = [
   "GET /operations/first-publish-readiness",
   "GET /operations/first-publish-readiness.md",
   "GET /operations/first-publish-readiness.zh.md",
+  "GET /operations/first-publish-media-pack.md",
+  "GET /operations/first-publish-carousel-assets.zip",
   "GET /operations/chinese-operator-center",
   "GET /operations/chinese-operator-center.md",
   "POST /operations/first-publish-advance",
@@ -1313,6 +1315,31 @@ const requiredSnippets = [
     name: "first publish chinese readiness export",
     file: "main",
     text: "drec-first-publish-readiness-zh.md",
+  },
+  {
+    name: "first publish media pack route",
+    file: "main",
+    text: "operations_first_publish_media_pack",
+  },
+  {
+    name: "first publish carousel zip route",
+    file: "main",
+    text: "operations_first_publish_carousel_assets_zip",
+  },
+  {
+    name: "first publish media csv template",
+    file: "main",
+    text: "first_publish_media_attachment_csv",
+  },
+  {
+    name: "first publish slide svg helper",
+    file: "main",
+    text: "first_publish_slide_svg",
+  },
+  {
+    name: "first publish media pack safety",
+    file: "main",
+    text: "This ZIP does not approve, attach, schedule, or publish anything.",
   },
   {
     name: "first publish chinese markdown route",
@@ -2863,6 +2890,26 @@ const requiredSnippets = [
     name: "web first publish media stage translation",
     file: "web",
     text: "媒体/设计素材已准备好",
+  },
+  {
+    name: "web first publish media pack action",
+    file: "web",
+    text: "data-download-first-media-pack",
+  },
+  {
+    name: "web first publish carousel zip action",
+    file: "web",
+    text: "data-download-first-carousel-zip",
+  },
+  {
+    name: "web first publish media pack endpoint",
+    file: "web",
+    text: "/operations/first-publish-media-pack.md",
+  },
+  {
+    name: "web first publish carousel zip endpoint",
+    file: "web",
+    text: "/operations/first-publish-carousel-assets.zip",
   },
   {
     name: "web first publish readiness loader",
