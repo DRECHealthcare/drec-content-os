@@ -2357,6 +2357,17 @@ def zh_first_publish_action(next_step: dict):
     return "按页面提示处理下一步。"
 
 
+def zh_schedule_audit_summary(payload: dict):
+    schedule_stage = next((stage for stage in payload.get("stages") or [] if stage.get("key") == "schedule"), {})
+    evidence = schedule_stage.get("evidence") or {}
+    status = evidence.get("schedule_audit") or "unknown"
+    return {
+        "clear": "排程规则目前 clear，可以在队列审核通过后安排发布时间。",
+        "review": "排程规则需要人工复核，排程前请先看 Schedule Audit。",
+        "blocked": "排程规则存在阻碍，请先处理 Schedule Audit 中的 blockers。",
+    }.get(status, f"排程审计状态：{status}")
+
+
 @app.get("/operations/first-publish-readiness.zh.md")
 async def operations_first_publish_readiness_markdown_zh(_: None = Depends(require_access_token)):
     payload = await first_publish_readiness_payload()
@@ -2409,6 +2420,15 @@ async def operations_first_publish_readiness_markdown_zh(_: None = Depends(requi
             "```csv",
             (action_pack.get("next_queue_decision_csv") or "暂无待审核队列项目").strip(),
             "```",
+            "",
+            "## 后续自动推进步骤",
+            "",
+            f"- 排程检查：{zh_schedule_audit_summary(payload)}",
+            "- 当素材审核通过后，回到 Dashboard 点击「推进安全步骤」；系统会把已批准且安全通过的素材加入发布队列。",
+            "- 队列审核通过后，再点「推进安全步骤」；系统会安排一个合规发布时间。",
+            "- 如果需要查看发布时间，可以下载 Calendar 或 Schedule Audit。",
+            "- 已排程且到时间后，再点「推进安全步骤」或 Meta Setup 里的 dry run；系统只会做 Meta dry run，不会绕过正式发布锁。",
+            "- 正式发布需要额外打开 META_ENABLE_PUBLISHING 和相关 job 开关；未打开前只会测试，不会自动发正式帖。",
             "",
             "## Meta 状态",
             "",

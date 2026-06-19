@@ -1218,6 +1218,16 @@ const requiredSnippets = [
     text: "下一条队列审核 CSV 模板",
   },
   {
+    name: "first publish chinese schedule guidance",
+    file: "main",
+    text: "后续自动推进步骤",
+  },
+  {
+    name: "first publish chinese meta live lock",
+    file: "main",
+    text: "正式发布需要额外打开 META_ENABLE_PUBLISHING",
+  },
+  {
     name: "first publish readiness read only safety",
     file: "main",
     text: "This readiness pack is read-only.",
@@ -2531,6 +2541,16 @@ const requiredSnippets = [
     name: "web chinese first publish translation",
     file: "web",
     text: "首次发布准备",
+  },
+  {
+    name: "web chinese schedule approved translation",
+    file: "web",
+    text: "排程已审核内容",
+  },
+  {
+    name: "web chinese meta dry run translation",
+    file: "web",
+    text: "测试自动发布任务",
   },
   {
     name: "web published metrics helper",
