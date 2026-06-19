@@ -2553,6 +2553,26 @@ const requiredSnippets = [
     text: "测试自动发布任务",
   },
   {
+    name: "web chinese form label translation",
+    file: "web",
+    text: "translateDirectTextNodes",
+  },
+  {
+    name: "web chinese placeholder translation",
+    file: "web",
+    text: "setPlaceholderIfMapped",
+  },
+  {
+    name: "web chinese doctor workflow translation",
+    file: "web",
+    text: "下载医生审批包",
+  },
+  {
+    name: "web chinese metrics workflow translation",
+    file: "web",
+    text: "保存原始数据",
+  },
+  {
     name: "web published metrics helper",
     file: "web",
     text: "load-published-post",
