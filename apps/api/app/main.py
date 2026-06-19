@@ -12599,6 +12599,8 @@ def notion_carousel_source_payload():
         **NOTION_CAROUSEL_SOURCE,
         "intake_template": "/notion/carousel-intake-template.csv",
         "image_workflow_pack": "/notion/carousel-image-workflow.md",
+        "monthly_refresh_workbench": "/notion/monthly-refresh-workbench",
+        "monthly_refresh_workbench_zh": "/notion/monthly-refresh-workbench.zh.md",
         "import_endpoint": "/notion/carousel-row/import",
         "sample_row": {
             "topic_id": "DC001",
@@ -12611,6 +12613,158 @@ def notion_carousel_source_payload():
         },
         "operator_note": "Codex can read and update this Notion database through the Notion connector. The deployed app keeps a protected import/sync contract so generated assets always preserve Topic ID and Notion status rules.",
     }
+
+
+def notion_monthly_refresh_workbench_payload():
+    now_myt = datetime.now(timezone(timedelta(hours=8)))
+    refresh_day = int(NOTION_CAROUSEL_SOURCE["monthly_refresh_day"])
+    refresh_this_month = now_myt.replace(day=refresh_day, hour=0, minute=0, second=0, microsecond=0)
+    if now_myt.day >= refresh_day:
+        active_refresh = refresh_this_month
+        if now_myt.month == 12:
+            next_refresh = now_myt.replace(year=now_myt.year + 1, month=1, day=refresh_day, hour=0, minute=0, second=0, microsecond=0)
+        else:
+            next_refresh = now_myt.replace(month=now_myt.month + 1, day=refresh_day, hour=0, minute=0, second=0, microsecond=0)
+    else:
+        if now_myt.month == 1:
+            active_refresh = now_myt.replace(year=now_myt.year - 1, month=12, day=refresh_day, hour=0, minute=0, second=0, microsecond=0)
+        else:
+            active_refresh = now_myt.replace(month=now_myt.month - 1, day=refresh_day, hour=0, minute=0, second=0, microsecond=0)
+        next_refresh = refresh_this_month
+    due_today = now_myt.day == refresh_day
+    return {
+        "source": notion_carousel_source_payload(),
+        "generated_at_myt": now_myt.isoformat(),
+        "refresh_day": refresh_day,
+        "active_cycle_start": active_refresh.date().isoformat(),
+        "next_refresh_date": next_refresh.date().isoformat(),
+        "status": "refresh_due_today" if due_today else "active_monthly_cycle",
+        "cycle_label": f"{active_refresh.strftime('%Y-%m-%d')} monthly Notion cycle",
+        "notion_filters": [
+            {
+                "purpose": "image_ai_work_queue",
+                "rules": [
+                    "Overall Status is not Published",
+                    "Carousel Image Status equals Not Started",
+                    "Carousel Slide Plan is not empty",
+                    "Topic ID is present",
+                ],
+                "required_fields": NOTION_CAROUSEL_SOURCE["fields"],
+            },
+            {
+                "purpose": "caption_ai_work_queue",
+                "rules": [
+                    "Overall Status is not Published",
+                    "Caption Status equals Not Started",
+                    "Carousel Slide Plan is not empty",
+                    "Topic ID is present",
+                ],
+                "required_fields": NOTION_CAROUSEL_SOURCE["fields"],
+            },
+        ],
+        "operator_checklist": [
+            "Open the Notion master database after the monthly 19th refresh.",
+            "Confirm the current month rows have unique Topic ID values.",
+            "Skip rows where Overall Status = Published.",
+            "For image work, select only rows where Carousel Image Status = Not Started.",
+            "Before image generation starts, set Carousel Image Status = In Progress in Notion.",
+            "Import or sync the existing Notion row into DREC Content OS using Topic ID.",
+            "Generate slides from Carousel Slide Plan without rewriting the educational structure.",
+            "After image files are ready, set Carousel Image Status = Ready for Review in Notion.",
+            "Do not touch Caption Status unless this run is specifically for caption AI.",
+        ],
+        "stop_rules": [
+            "Do not create new Notion rows from DREC Content OS.",
+            "Do not generate duplicate topics if the Topic ID already exists locally.",
+            "Do not work on Published rows.",
+            "Do not use miracle-cure, guaranteed reversal, fear-based, or course-selling language.",
+            "Do not make Slide 1 an explanation slide; Slide 1 is the cover hook only.",
+        ],
+        "next_action": "Run the Notion image queue check, update selected rows to In Progress, then import/sync rows by Topic ID.",
+    }
+
+
+def notion_monthly_refresh_workbench_zh_markdown(payload: dict):
+    source = payload["source"]
+    lines = [
+        "# DREC Notion 每月 19 号刷新工作台",
+        "",
+        f"资料库：{source['name']}",
+        f"Notion URL：{source['database_url']}",
+        f"资料源：`{source['data_source_url']}`",
+        f"本轮周期开始：{payload['active_cycle_start']}",
+        f"下一次刷新：{payload['next_refresh_date']}",
+        f"状态：{payload['status']}",
+        "",
+        "## 核心规则",
+        "",
+        f"- 每个月 {payload['refresh_day']} 号，Notion database 会刷新为新的月度内容计划。",
+        "- DREC Content OS 只从这个 Notion database 的既有行读取资料。",
+        "- `Topic ID` 是唯一识别码；同一个 `Topic ID` 不可以重复生成。",
+        "- 如果 `Overall Status = Published`，跳过，不再处理。",
+        "- 做图片时，只处理 `Carousel Image Status = Not Started` 的行。",
+        "- 开始做图片前，先把 Notion 里的 `Carousel Image Status` 改成 `In Progress`。",
+        "- 图片完成后，把 `Carousel Image Status` 改成 `Ready for Review`。",
+        "- 除非这次是 caption AI 工作，否则不要改 `Caption Status`。",
+        "",
+        "## 图片 AI 工作队列",
+        "",
+        "- 过滤条件：`Overall Status != Published`。",
+        "- 过滤条件：`Carousel Image Status = Not Started`。",
+        "- 必须有 `Topic ID` 与 `Carousel Slide Plan`。",
+        "- 直接读取 `Carousel Slide Plan` 来做每一页，不重写教育结构。",
+        "",
+        "## 轮播图结构",
+        "",
+        "- Slide 1 只做封面 hook：Big Title/Hook + Visual Element。",
+        "- Slide 1 不放解释正文。",
+        "- Slide 2 起必须保留 Big Title、Explanation Text、Highlighted Keywords、Visual Element、Bottom Takeaway/Teaser。",
+        "- 中文为主，给 50 岁左右华语糖尿病/代谢健康受众看得懂。",
+        "- 使用 DREC 蓝、绿、青绿色的专业医疗风格。",
+        "- 避免卡通、幼稚、恐吓、夸张装饰、奇迹疗法、保证逆转、直接卖课语言。",
+        "",
+        "## 每月 19 号操作清单",
+        "",
+        *markdown_list(payload["operator_checklist"]),
+        "",
+        "## 停止规则",
+        "",
+        *markdown_list(payload["stop_rules"]),
+        "",
+        "## 下一步",
+        "",
+        payload["next_action"],
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def notion_monthly_refresh_workbench_en_markdown(payload: dict):
+    source = payload["source"]
+    lines = [
+        "# DREC Notion Monthly Refresh Workbench",
+        "",
+        f"Source database: {source['name']}",
+        f"Database URL: {source['database_url']}",
+        f"Data source: `{source['data_source_url']}`",
+        f"Active cycle start: {payload['active_cycle_start']}",
+        f"Next refresh date: {payload['next_refresh_date']}",
+        f"Status: {payload['status']}",
+        "",
+        "## Operator Checklist",
+        "",
+        *markdown_list(payload["operator_checklist"]),
+        "",
+        "## Stop Rules",
+        "",
+        *markdown_list(payload["stop_rules"]),
+        "",
+        "## Next Action",
+        "",
+        payload["next_action"],
+        "",
+    ]
+    return "\n".join(lines)
 
 
 def extract_notion_cover_hook(slide_plan: str, fallback: str):
@@ -12842,6 +12996,31 @@ async def notion_carousel_image_workflow(_: None = Depends(require_access_token)
         "\n".join(lines),
         media_type="text/markdown",
         headers={"Content-Disposition": 'attachment; filename="drec-notion-carousel-image-workflow.md"'},
+    )
+
+
+@app.get("/notion/monthly-refresh-workbench")
+async def notion_monthly_refresh_workbench(_: None = Depends(require_access_token)):
+    return notion_monthly_refresh_workbench_payload()
+
+
+@app.get("/notion/monthly-refresh-workbench.md")
+async def notion_monthly_refresh_workbench_md(_: None = Depends(require_access_token)):
+    payload = notion_monthly_refresh_workbench_payload()
+    return Response(
+        notion_monthly_refresh_workbench_en_markdown(payload),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-notion-monthly-refresh-workbench.md"'},
+    )
+
+
+@app.get("/notion/monthly-refresh-workbench.zh.md")
+async def notion_monthly_refresh_workbench_zh_md(_: None = Depends(require_access_token)):
+    payload = notion_monthly_refresh_workbench_payload()
+    return Response(
+        notion_monthly_refresh_workbench_zh_markdown(payload),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-notion-monthly-refresh-workbench.zh.md"'},
     )
 
 

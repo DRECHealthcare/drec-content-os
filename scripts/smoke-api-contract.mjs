@@ -40,6 +40,9 @@ const requiredRoutes = [
   "GET /notion/carousel-source",
   "GET /notion/carousel-intake-template.csv",
   "GET /notion/carousel-image-workflow.md",
+  "GET /notion/monthly-refresh-workbench",
+  "GET /notion/monthly-refresh-workbench.md",
+  "GET /notion/monthly-refresh-workbench.zh.md",
   "POST /notion/carousel-row/import",
   "POST /operations/first-publish-advance",
   "POST /operations/first-publish-attach-generated-media",
@@ -644,6 +647,21 @@ const requiredSnippets = [
     name: "notion carousel monthly refresh rule",
     file: "main",
     text: "monthly_refresh_day",
+  },
+  {
+    name: "notion carousel monthly refresh workbench payload",
+    file: "main",
+    text: "notion_monthly_refresh_workbench_payload",
+  },
+  {
+    name: "notion carousel monthly refresh zh export",
+    file: "main",
+    text: "/notion/monthly-refresh-workbench.zh.md",
+  },
+  {
+    name: "notion carousel monthly refresh operator checklist",
+    file: "main",
+    text: "operator_checklist",
   },
   {
     name: "notion carousel source route",
@@ -2659,6 +2677,16 @@ const requiredSnippets = [
     name: "web notion carousel source action",
     file: "web",
     text: "refresh-notion-carousel-source",
+  },
+  {
+    name: "web notion monthly refresh action",
+    file: "web",
+    text: "download-notion-monthly-refresh",
+  },
+  {
+    name: "web notion monthly refresh endpoint",
+    file: "web",
+    text: "/notion/monthly-refresh-workbench.zh.md",
   },
   {
     name: "web notion carousel workflow endpoint",

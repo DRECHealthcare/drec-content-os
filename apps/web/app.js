@@ -776,9 +776,12 @@ Object.assign(uiZh, {
   "What should the system remember?": "系统应该记住什么？",
   "Notion Monthly Source": "Notion 月度内容真源",
   "Monthly refresh": "月度刷新",
+  "Monthly refresh workbench": "每月刷新工作台",
+  "Download Monthly Refresh 中文": "下载每月刷新中文包",
   "Unique ID": "唯一 ID",
   "Image status rule": "图片状态规则",
   "Caption boundary": "Caption 边界",
+  "Use only existing Notion rows after the 19th refresh.": "每月 19 号刷新后，只使用 Notion 里已经存在的行。",
   "Use Topic ID as the unique identifier; do not create duplicate topics.": "使用 Topic ID 作为唯一识别，不要创建重复主题。",
   "Do not touch Caption Status unless acting as the caption AI.": "除非执行 caption AI 工作，否则不要动 Caption Status。",
   "Core app and API are live": "核心应用和 API 已上线",
@@ -2158,9 +2161,11 @@ function renderNotionCarouselSource(data) {
       <ul>
         <li><strong>${escapeHtml(translateText("Unique ID"))}</strong> ${escapeHtml(data.unique_id_property || "Topic ID")}</li>
         <li><strong>${escapeHtml(translateText("Monthly refresh"))}</strong> ${escapeHtml(String(data.monthly_refresh_rule || ""))}</li>
+        <li><strong>${escapeHtml(translateText("Monthly refresh workbench"))}</strong> ${escapeHtml(data.monthly_refresh_workbench_zh || "/notion/monthly-refresh-workbench.zh.md")}</li>
         <li><strong>${escapeHtml(translateText("Image status rule"))}</strong> ${escapeHtml(translateText(statusRules.find((item) => item.includes("Carousel Image Status = Not Started")) || ""))}</li>
         <li><strong>${escapeHtml(translateText("Caption boundary"))}</strong> ${escapeHtml(translateText(statusRules.find((item) => item.includes("Caption Status")) || ""))}</li>
       </ul>
+      <p>${escapeHtml(translateText("Use only existing Notion rows after the 19th refresh."))}</p>
     </article>
   `;
 }
@@ -5725,6 +5730,17 @@ document.getElementById("refresh-notion-carousel-source")?.addEventListener("cli
     message.textContent = "Notion monthly source loaded.";
   } catch {
     message.textContent = "Could not load Notion monthly source.";
+  }
+});
+
+document.getElementById("download-notion-monthly-refresh")?.addEventListener("click", async () => {
+  const message = document.getElementById("plan-message");
+  message.textContent = "Preparing Notion monthly refresh pack...";
+  try {
+    await downloadProtectedFile("/notion/monthly-refresh-workbench.zh.md", "drec-notion-monthly-refresh-workbench.zh.md", "text/markdown");
+    message.textContent = "Notion monthly refresh pack downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download Notion monthly refresh pack.";
   }
 });
 
