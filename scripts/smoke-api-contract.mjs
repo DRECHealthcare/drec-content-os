@@ -1201,6 +1201,16 @@ const requiredSnippets = [
     text: "This readiness pack is read-only.",
   },
   {
+    name: "first publish next asset decision csv",
+    file: "main",
+    text: "next_asset_decision_csv",
+  },
+  {
+    name: "first publish decision csv shared fields",
+    file: "main",
+    text: "ASSET_REVIEW_DECISION_FIELDS",
+  },
+  {
     name: "first publish readiness meta blockers",
     file: "main",
     text: "facebook_blockers",
@@ -2419,6 +2429,16 @@ const requiredSnippets = [
     name: "web first publish readiness endpoint",
     file: "web",
     text: "/operations/first-publish-readiness",
+  },
+  {
+    name: "web first publish decision csv copy",
+    file: "web",
+    text: "data-copy-first-asset-decision",
+  },
+  {
+    name: "web first publish decision csv fill",
+    file: "web",
+    text: "data-fill-first-asset-decision",
   },
   {
     name: "web published metrics helper",

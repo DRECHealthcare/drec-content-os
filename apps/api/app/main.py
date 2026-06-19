@@ -1955,6 +1955,66 @@ def assets_ready_for_queue(items: list[dict]):
     ]
 
 
+ASSET_REVIEW_DECISION_FIELDS = [
+    "asset_id",
+    "brief_id",
+    "topic",
+    "channel",
+    "format",
+    "current_safety",
+    "current_review",
+    "detector_status",
+    "detector_findings",
+    "media_count",
+    "target_signal",
+    "caption",
+    "recommended_action",
+    "reviewer_safety_decision",
+    "reviewer_review_decision",
+    "reviewer_name",
+    "review_notes",
+]
+
+
+def asset_review_decision_row(asset: dict):
+    metadata = asset.get("metadata") or {}
+    caption = asset.get("caption") or ""
+    detector = check_text(caption)
+    finding_text = []
+    for finding in detector.get("findings", []):
+        matches = "|".join(finding.get("matches") or [])
+        finding_text.append(f"{finding.get('severity')}:{finding.get('rule_id')}({matches})")
+    is_ready = asset.get("review_status") == "approved" and asset.get("compliance_status") == "clear"
+    return {
+        "asset_id": asset.get("id") or "",
+        "brief_id": asset.get("brief_id") or "",
+        "topic": metadata.get("topic") or "",
+        "channel": asset.get("channel") or "",
+        "format": asset.get("format") or "",
+        "current_safety": asset.get("compliance_status") or "",
+        "current_review": asset.get("review_status") or "",
+        "detector_status": detector.get("status") or "",
+        "detector_findings": "; ".join(finding_text) or "none",
+        "media_count": len([url for url in asset.get("media_urls") or [] if url]),
+        "target_signal": metadata.get("target_signal") or "",
+        "caption": caption,
+        "recommended_action": "Ready to queue" if is_ready else "Human review: mark Safety Clear + Approve only if reviewer agrees",
+        "reviewer_safety_decision": "",
+        "reviewer_review_decision": "",
+        "reviewer_name": "",
+        "review_notes": "",
+    }
+
+
+def asset_review_decision_csv_text(asset: dict | None):
+    output = StringIO()
+    writer = csv.DictWriter(output, fieldnames=ASSET_REVIEW_DECISION_FIELDS)
+    writer.writeheader()
+    if asset:
+        writer.writerow(asset_review_decision_row(asset))
+    return output.getvalue()
+
+
 async def first_publish_readiness_payload():
     checklist = await test_run_checklist_payload()
     assets = await fetch_asset_list(200)
@@ -2044,6 +2104,17 @@ async def first_publish_readiness_payload():
             "scheduled_queue": scheduled_queue[0] if scheduled_queue else None,
             "facebook_dispatch_item": fb_item,
             "instagram_dispatch_item": ig_item,
+        },
+        "action_pack": {
+            "next_asset_decision_csv": asset_review_decision_csv_text(next_asset) if next_asset else "",
+            "next_asset_review_pack": "/operations/asset-review-session.md",
+            "asset_decision_import": "/operations/import-asset-review-decisions",
+            "instructions": [
+                "Copy or fill the one-row CSV template for the next asset.",
+                "A human reviewer must fill reviewer_safety_decision and reviewer_review_decision.",
+                "Use clear + approve only when the safety checklist is truly passed.",
+                "Importing the worksheet does not queue, schedule, or publish by itself.",
+            ],
         },
         "meta": {
             "overall_status": meta.get("overall_status"),
@@ -7823,57 +7894,10 @@ async def operations_asset_review_decisions_csv(_: None = Depends(require_access
         )
     )
     output = StringIO()
-    fieldnames = [
-        "asset_id",
-        "brief_id",
-        "topic",
-        "channel",
-        "format",
-        "current_safety",
-        "current_review",
-        "detector_status",
-        "detector_findings",
-        "media_count",
-        "target_signal",
-        "caption",
-        "recommended_action",
-        "reviewer_safety_decision",
-        "reviewer_review_decision",
-        "reviewer_name",
-        "review_notes",
-    ]
-    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer = csv.DictWriter(output, fieldnames=ASSET_REVIEW_DECISION_FIELDS)
     writer.writeheader()
     for asset in active_assets:
-        metadata = asset.get("metadata") or {}
-        caption = asset.get("caption") or ""
-        detector = check_text(caption)
-        finding_text = []
-        for finding in detector.get("findings", []):
-            matches = "|".join(finding.get("matches") or [])
-            finding_text.append(f"{finding.get('severity')}:{finding.get('rule_id')}({matches})")
-        is_ready = asset.get("review_status") == "approved" and asset.get("compliance_status") == "clear"
-        writer.writerow(
-            {
-                "asset_id": asset.get("id") or "",
-                "brief_id": asset.get("brief_id") or "",
-                "topic": metadata.get("topic") or "",
-                "channel": asset.get("channel") or "",
-                "format": asset.get("format") or "",
-                "current_safety": asset.get("compliance_status") or "",
-                "current_review": asset.get("review_status") or "",
-                "detector_status": detector.get("status") or "",
-                "detector_findings": "; ".join(finding_text) or "none",
-                "media_count": len([url for url in asset.get("media_urls") or [] if url]),
-                "target_signal": metadata.get("target_signal") or "",
-                "caption": caption,
-                "recommended_action": "Ready to queue" if is_ready else "Human review: mark Safety Clear + Approve only if reviewer agrees",
-                "reviewer_safety_decision": "",
-                "reviewer_review_decision": "",
-                "reviewer_name": "",
-                "review_notes": "",
-            }
-        )
+        writer.writerow(asset_review_decision_row(asset))
     return Response(
         output.getvalue(),
         media_type="text/csv",

@@ -540,6 +540,9 @@ function renderFirstPublishReadiness(data) {
   const next = data.next_step || {};
   const stages = data.stages || [];
   const meta = data.meta || {};
+  const actionPack = data.action_pack || {};
+  container.dataset.nextAssetDecisionCsv = actionPack.next_asset_decision_csv || "";
+  const hasDecisionCsv = Boolean(actionPack.next_asset_decision_csv);
   container.innerHTML = `
     <article class="learning-card wide-learning ${escapeHtml(next.status || "open")}">
       <h3>First Publish Readiness</h3>
@@ -547,6 +550,8 @@ function renderFirstPublishReadiness(data) {
       <small>${escapeHtml(next.detail || data.overall_status || "")}</small>
       <div class="learning-actions">
         <button type="button" data-workflow-screen="${escapeHtml(next.screen || "assets")}">${escapeHtml(next.action || "Open Next Step")}</button>
+        ${hasDecisionCsv ? '<button type="button" data-copy-first-asset-decision>Copy Asset Decision CSV</button>' : ""}
+        ${hasDecisionCsv ? '<button type="button" data-fill-first-asset-decision>Fill Asset Decision CSV</button>' : ""}
       </div>
     </article>
     <article class="learning-card wide-learning">
@@ -571,6 +576,36 @@ async function loadFirstPublishReadiness() {
     container.innerHTML = "";
   }
 }
+
+document.getElementById("first-publish-readiness")?.addEventListener("click", async (event) => {
+  const copyButton = event.target.closest("[data-copy-first-asset-decision]");
+  const fillButton = event.target.closest("[data-fill-first-asset-decision]");
+  if (!copyButton && !fillButton) return;
+  const container = document.getElementById("first-publish-readiness");
+  const message = document.getElementById("test-path-message");
+  const csvText = container?.dataset.nextAssetDecisionCsv || "";
+  if (!csvText) {
+    if (message) message.textContent = "No first asset decision template is available yet.";
+    return;
+  }
+  if (fillButton) {
+    showScreen("assets");
+    const textInput = document.getElementById("asset-review-decisions-text");
+    if (textInput) {
+      textInput.value = csvText;
+      textInput.focus();
+      textInput.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (message) message.textContent = "First asset decision CSV filled. Add reviewer decisions before import.";
+    }
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(csvText);
+    if (message) message.textContent = "First asset decision CSV copied.";
+  } catch {
+    if (message) message.textContent = "Could not copy the decision CSV. Use Fill Asset Decision CSV instead.";
+  }
+});
 
 function renderWorkflowNext(data) {
   const container = document.getElementById("workflow-next");
