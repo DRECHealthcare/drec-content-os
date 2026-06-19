@@ -91,6 +91,7 @@ const uiZh = {
   "Download Daily Ops": "下载每日运营包",
   "Download First Publish Readiness": "下载首次发布准备包",
   "下载中文首次发布准备包": "下载中文首次发布准备包",
+  "下载中文操作中心": "下载中文操作中心",
   "Download Command Center": "下载指挥中心",
   "Download Evidence Ledger": "下载证据记录",
   "Download Setup Board": "下载设置清单",
@@ -3924,6 +3925,16 @@ document.getElementById("download-first-publish-readiness-zh")?.addEventListener
     message.textContent = "中文首次发布准备包已下载。";
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "请先设置访问 token。" : "无法下载中文首次发布准备包。";
+  }
+});
+
+document.getElementById("download-chinese-operator-center")?.addEventListener("click", async () => {
+  const message = document.getElementById("test-path-message");
+  try {
+    await downloadProtectedFile("/operations/chinese-operator-center.md", "drec-chinese-operator-center.md", "text/markdown");
+    message.textContent = "中文操作中心已下载。";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "请先设置访问 token。" : "无法下载中文操作中心。";
   }
 });
 

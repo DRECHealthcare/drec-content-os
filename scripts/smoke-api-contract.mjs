@@ -28,6 +28,8 @@ const requiredRoutes = [
   "GET /operations/first-publish-readiness",
   "GET /operations/first-publish-readiness.md",
   "GET /operations/first-publish-readiness.zh.md",
+  "GET /operations/chinese-operator-center",
+  "GET /operations/chinese-operator-center.md",
   "POST /operations/first-publish-advance",
   "POST /operations/scheduler-heartbeat",
   "GET /operations/scheduler-activation-pack.md",
@@ -1240,6 +1242,41 @@ const requiredSnippets = [
     name: "first publish chinese meta live lock",
     file: "main",
     text: "正式发布需要额外打开 META_ENABLE_PUBLISHING",
+  },
+  {
+    name: "chinese operator center payload",
+    file: "main",
+    text: "chinese_operator_center_payload",
+  },
+  {
+    name: "chinese operator center export",
+    file: "main",
+    text: "drec-chinese-operator-center.md",
+  },
+  {
+    name: "chinese operator center read only safety",
+    file: "main",
+    text: "本中心只读，不会自动批准、排程、发布或修改 Meta 设置",
+  },
+  {
+    name: "chinese operator center asset review link",
+    file: "main",
+    text: "/operations/asset-review-session.zh.md",
+  },
+  {
+    name: "chinese operator center schedule link",
+    file: "main",
+    text: "/operations/review-to-schedule-pack.zh.md",
+  },
+  {
+    name: "chinese operator center publishing link",
+    file: "main",
+    text: "/operations/publishing-handoff.zh.md",
+  },
+  {
+    name: "chinese operator center metrics link",
+    file: "main",
+    text: "/operations/metrics-closeout-pack.zh.md",
   },
   {
     name: "first publish readiness read only safety",
@@ -2540,6 +2577,16 @@ const requiredSnippets = [
     name: "web first publish chinese readiness endpoint",
     file: "web",
     text: "/operations/first-publish-readiness.zh.md",
+  },
+  {
+    name: "web chinese operator center action",
+    file: "web",
+    text: "download-chinese-operator-center",
+  },
+  {
+    name: "web chinese operator center endpoint",
+    file: "web",
+    text: "/operations/chinese-operator-center.md",
   },
   {
     name: "web first publish readiness endpoint",

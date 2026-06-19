@@ -2268,6 +2268,146 @@ async def operations_first_publish_readiness(_: None = Depends(require_access_to
     return await first_publish_readiness_payload()
 
 
+async def chinese_operator_center_payload():
+    readiness = await first_publish_readiness_payload()
+    next_step = readiness.get("next_step") or {}
+    candidates = readiness.get("candidates") or {}
+    next_asset = candidates.get("next_asset") or {}
+    stages = readiness.get("stages") or []
+    meta = readiness.get("meta") or {}
+    stage_lookup = {stage.get("key"): stage for stage in stages}
+    packs = [
+        {
+            "stage": "首次发布准备",
+            "status": readiness.get("overall_status"),
+            "link": "/operations/first-publish-readiness.zh.md",
+            "purpose": "查看第一条内容从审核到 Meta dry run 的整体状态。",
+        },
+        {
+            "stage": "素材审核",
+            "status": (stage_lookup.get("asset_review") or {}).get("status"),
+            "link": "/operations/asset-review-session.zh.md",
+            "purpose": "给真人/医生审核使用，确认医疗安全、素材授权和发布批准。",
+        },
+        {
+            "stage": "审核到排程",
+            "status": (stage_lookup.get("review_queue") or stage_lookup.get("schedule") or {}).get("status"),
+            "link": "/operations/review-to-schedule-pack.zh.md",
+            "purpose": "队列审核通过后，用来进入排程，不跳过人工审批。",
+        },
+        {
+            "stage": "发布交接",
+            "status": (stage_lookup.get("meta_dry_run") or {}).get("status"),
+            "link": "/operations/publishing-handoff.zh.md",
+            "purpose": "正式发布前检查 Meta dry run、handoff 文案和 ready item。",
+        },
+        {
+            "stage": "数据结算",
+            "status": "waiting_for_published_post",
+            "link": "/operations/metrics-closeout-pack.zh.md",
+            "purpose": "发布后导入表现数据，回流到学习和下一周内容计划。",
+        },
+    ]
+    return {
+        "generated_at": datetime.utcnow().isoformat() + "Z",
+        "title": "DREC 中文操作中心",
+        "overall_status": readiness.get("overall_status"),
+        "current_next_step": {
+            "key": next_step.get("key"),
+            "stage": zh_first_publish_stage_label(next_step.get("key")),
+            "detail": zh_first_publish_stage_detail(next_step),
+            "action": zh_first_publish_action(next_step),
+        },
+        "current_asset": {
+            "id": next_asset.get("id"),
+            "channel": next_asset.get("channel"),
+            "format": next_asset.get("format"),
+            "title": next_asset.get("title") or next_asset.get("brief_title"),
+        },
+        "packs": packs,
+        "meta": {
+            "overall_status": meta.get("overall_status"),
+            "permission_proof_status": meta.get("permission_proof_status"),
+            "facebook_blockers": meta.get("facebook_blockers") or [],
+            "instagram_blockers": meta.get("instagram_blockers") or [],
+            "dry_run_note": "Meta 目前仍以 dry run 和开关保护为主，正式发布需要额外打开 live publishing 设置。",
+        },
+        "links": {
+            "首次发布准备": "/operations/first-publish-readiness.zh.md",
+            "素材审核": "/operations/asset-review-session.zh.md",
+            "审核到排程": "/operations/review-to-schedule-pack.zh.md",
+            "发布交接": "/operations/publishing-handoff.zh.md",
+            "数据结算": "/operations/metrics-closeout-pack.zh.md",
+            "Meta 上线前检查": "/meta/preflight-audit.md",
+            "Meta 启用检查表": "/meta/activation-checklist.md",
+        },
+        "safety": [
+            "本中心只读，不会自动批准、排程、发布或修改 Meta 设置。",
+            "所有医疗内容仍需要人工/医生审核。",
+            "只有真人确认安全后，才可以把素材标记为 clear 和 approved。",
+            "正式 Meta 发布仍需额外开启 META_ENABLE_PUBLISHING 和 META_ENABLE_PUBLISHING_JOB。",
+        ],
+    }
+
+
+@app.get("/operations/chinese-operator-center")
+async def operations_chinese_operator_center(_: None = Depends(require_access_token)):
+    return await chinese_operator_center_payload()
+
+
+@app.get("/operations/chinese-operator-center.md")
+async def operations_chinese_operator_center_markdown(_: None = Depends(require_access_token)):
+    payload = await chinese_operator_center_payload()
+    next_step = payload.get("current_next_step") or {}
+    current_asset = payload.get("current_asset") or {}
+    meta = payload.get("meta") or {}
+    lines = [
+        "# DREC 中文操作中心",
+        "",
+        f"- 生成时间：{payload.get('generated_at')}",
+        f"- 当前总状态：{payload.get('overall_status')}",
+        f"- 当前下一步：{next_step.get('stage')}",
+        f"- 说明：{next_step.get('detail')}",
+        "",
+        "## 现在要做什么",
+        "",
+        f"- {next_step.get('action')}",
+        f"- 当前素材 ID：`{current_asset.get('id') or '暂无'}`",
+        f"- 当前频道 / 格式：{current_asset.get('channel') or '暂无'} / {current_asset.get('format') or '暂无'}",
+        "",
+        "## 中文阶段包",
+        "",
+    ]
+    for pack in payload.get("packs") or []:
+        lines.append(f"- {pack.get('stage')}（{pack.get('status') or 'unknown'}）：`{pack.get('link')}` - {pack.get('purpose')}")
+    lines.extend(
+        [
+            "",
+            "## Meta 状态",
+            "",
+            f"- Meta 总状态：{meta.get('overall_status')}",
+            f"- 权限证明：{meta.get('permission_proof_status')}",
+            f"- Facebook 阻碍：{'；'.join(meta.get('facebook_blockers') or []) or '暂无'}",
+            f"- Instagram 阻碍：{'；'.join(meta.get('instagram_blockers') or []) or '暂无'}",
+            f"- 说明：{meta.get('dry_run_note')}",
+            "",
+            "## 重要安全线",
+            "",
+            *markdown_list(payload.get("safety"), "- 本中心只读，不会自动批准、排程、发布或修改 Meta 设置。"),
+            "",
+            "## 快速链接",
+            "",
+            *[f"- {label}：`{url}`" for label, url in (payload.get("links") or {}).items()],
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-chinese-operator-center.md"'},
+    )
+
+
 @app.get("/operations/first-publish-readiness.md")
 async def operations_first_publish_readiness_markdown(_: None = Depends(require_access_token)):
     payload = await first_publish_readiness_payload()
