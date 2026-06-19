@@ -3137,6 +3137,16 @@ const requiredSnippets = [
     text: "/operations/first-publish-doctor-review-sheet.zh.md",
   },
   {
+    name: "web first publish approval workbench card",
+    file: "web",
+    text: "data-first-publish-approval-workbench",
+  },
+  {
+    name: "web first publish approval workbench safety",
+    file: "web",
+    text: "Do not approve, queue, schedule, or publish without explicit human safety clearance.",
+  },
+  {
     name: "web chinese operator center action",
     file: "web",
     text: "download-chinese-operator-center",

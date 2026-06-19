@@ -148,6 +148,11 @@ const uiZh = {
   "Use Topics": "使用推荐主题",
   "First Publish Readiness": "首次发布准备",
   "First Publish Next Action": "首次发布下一步",
+  "First Publish Approval Workbench": "首发审批工作台",
+  "Current Blocker": "当前卡点",
+  "Doctor Reply Needed": "需要医生回复",
+  "Media Gate": "媒体门槛",
+  "Do Not Bypass": "不要绕过",
   "First Publish Image Preview": "首发图片预览",
   "Meta Dry Run": "Meta 测试运行",
   "Publish Path": "发布路径",
@@ -173,6 +178,9 @@ const uiZh = {
   "Download PNG Zip": "下载 PNG 图片包",
   "Download SVG Zip": "下载 SVG 设计包",
   "Attach Generated Media": "挂载生成图片链接",
+  "Ask the doctor or human reviewer to reply with Decision and Safety before approval.": "批准前，请医生或人工审核者明确回复 Decision 和 Safety。",
+  "Media/design must be approved and attached before this visual post enters queue review.": "这类视觉内容进入队列审核前，必须先挂载已批准的媒体/设计链接。",
+  "Do not approve, queue, schedule, or publish without explicit human safety clearance.": "没有明确人工安全确认时，不要批准、入队列、排程或发布。",
   "Preview only. Approval, media attachment, queueing, scheduling, and publishing are still separate gates.": "仅供预览。批准、挂载媒体、加入队列、排程和发布仍然是独立关卡。",
   "Loading preview images...": "正在载入预览图片...",
   "Could not load preview images.": "无法载入预览图片。",
@@ -1395,6 +1403,10 @@ function renderFirstPublishReadiness(data) {
   const hasDecisionCsv = Boolean(actionPack.next_asset_decision_csv);
   const hasQueueDecisionCsv = Boolean(actionPack.next_queue_decision_csv);
   const slideCount = (nextAssetMetadata.slides || []).length || (nextAsset.id ? 1 : 0);
+  const mediaGate = actionPack.media_gate || {};
+  const mediaGateStatus = mediaGate.required
+    ? `${mediaGate.ready ? "ready" : "not ready"} · ${mediaGate.media_count || 0} URL(s)`
+    : "not required";
   container.innerHTML = `
     <article class="learning-card wide-learning ${escapeHtml(next.status || "open")}">
       <h3>${escapeHtml(translateText("First Publish Next Action"))}</h3>
@@ -1415,6 +1427,23 @@ function renderFirstPublishReadiness(data) {
         ${nextAsset.id ? `<button type="button" data-attach-first-generated-media>${escapeHtml(translateText("Attach Generated Media"))}</button>` : ""}
       </div>
       <small><strong>${escapeHtml(translateText("Success Standard"))}:</strong> Safety: clear + Decision: approve. Otherwise keep this item in review.</small>
+    </article>
+    <article class="learning-card wide-learning ${escapeHtml(next.status || "open")}" data-first-publish-approval-workbench>
+      <h3>${escapeHtml(translateText("First Publish Approval Workbench"))}</h3>
+      <ul>
+        <li><strong>${escapeHtml(translateText("Current Blocker"))}:</strong> ${escapeHtml(localizeFirstPublishText(next.detail || next.label || ""))}</li>
+        <li><strong>${escapeHtml(translateText("Doctor Reply Needed"))}:</strong> ${escapeHtml(translateText("Ask the doctor or human reviewer to reply with Decision and Safety before approval."))}</li>
+        <li><strong>${escapeHtml(translateText("Media Gate"))}:</strong> ${escapeHtml(localizeFirstPublishText(mediaGate.detail || mediaGateStatus))}</li>
+        <li><strong>${escapeHtml(translateText("Do Not Bypass"))}:</strong> ${escapeHtml(translateText("Do not approve, queue, schedule, or publish without explicit human safety clearance."))}</li>
+      </ul>
+      <div class="learning-actions">
+        ${nextAsset.id ? `<button type="button" data-download-first-doctor-review-sheet>${escapeHtml(translateText("Download Doctor Review Sheet"))}</button>` : ""}
+        ${nextAsset.id ? `<button type="button" data-copy-first-asset-review>${escapeHtml(translateText("Copy Doctor Review"))}</button>` : ""}
+        ${nextAsset.id ? `<button type="button" data-fill-first-doctor-reply>${escapeHtml(translateText("Fill Doctor Reply Template"))}</button>` : ""}
+        ${hasDecisionCsv ? `<button type="button" data-fill-first-asset-decision>${escapeHtml(translateText("Fill Asset Decision CSV"))}</button>` : ""}
+        ${nextAsset.id ? `<button type="button" data-attach-first-generated-media>${escapeHtml(translateText("Attach Generated Media"))}</button>` : ""}
+      </div>
+      <small>${escapeHtml(translateText("Media/design must be approved and attached before this visual post enters queue review."))}</small>
     </article>
     <article class="learning-card wide-learning ${escapeHtml(next.status || "open")}">
       <h3>${escapeHtml(translateText("First Publish Readiness"))}</h3>
