@@ -149,6 +149,7 @@ const uiZh = {
   "First Publish Readiness": "首次发布准备",
   "First Publish Next Action": "首次发布下一步",
   "First Publish Approval Workbench": "首发审批工作台",
+  "After Approval Route": "批准后路线图",
   "Current Blocker": "当前卡点",
   "Doctor Reply Needed": "需要医生回复",
   "Media Gate": "媒体门槛",
@@ -173,6 +174,18 @@ const uiZh = {
   "Approve Current Queue Item": "批准当前队列项目",
   "Approval phrase missing.": "缺少批准确认语。",
   "Type or paste the doctor's approval reply first.": "请先输入或粘贴医生批准回复。",
+  "Confirm doctor approval phrase": "确认医生批准语句",
+  "Attach approved generated media": "挂载已批准生成媒体",
+  "Move asset into review queue": "把素材加入审核队列",
+  "Approve queue item": "批准队列项目",
+  "Schedule and build handoff": "排程并生成交接",
+  "Record metrics and roll up learning": "记录数据并汇总学习",
+  "Require Decision: approve and Safety: clear before approving the first-publish asset.": "批准首发素材前，必须有 Decision: approve 和 Safety: clear。",
+  "Attach approved public media/design URLs before queueing visual content.": "视觉内容进入队列前，先挂载已批准的公开媒体/设计链接。",
+  "Use Advance Safe Step or Queue Ready Assets after approval and media readiness.": "审批和媒体准备完成后，使用“推进安全步骤”或“把可发布素材加入队列”。",
+  "Require reviewer_action=approve before scheduling.": "排程前必须有 reviewer_action=approve。",
+  "Schedule only review-approved, compliance-clear items; then build the manual publishing handoff.": "只排程已审核批准且安全通过的项目，然后生成手动发布交接。",
+  "After manual publishing, record the Meta post ID and first metrics, then roll them into learning.": "人工发布后，记录 Meta 帖子 ID 和第一批数据，再汇总进学习系统。",
   "Open Asset Review": "打开素材审核",
   "Download Chinese Pack": "下载中文包",
   "Download Doctor Review Sheet": "下载首发医生审核单",
@@ -1391,6 +1404,7 @@ function renderFirstPublishReadiness(data) {
   const candidates = data.candidates || {};
   const nextAsset = candidates.next_asset || {};
   const currentQueueItem = candidates.review_needed_queue || candidates.review_approved_queue || {};
+  const afterApprovalPlan = data.after_approval_plan || [];
   const nextAssetMetadata = nextAsset.metadata || {};
   const nextAssetTopic = nextAssetMetadata.topic || nextAsset.title || nextAsset.brief_title || "No asset selected";
   const nextAssetStatus = [
@@ -1446,6 +1460,18 @@ function renderFirstPublishReadiness(data) {
         ${nextAsset.id ? `<button type="button" data-attach-first-generated-media>${escapeHtml(translateText("Attach Generated Media"))}</button>` : ""}
       </div>
       <small>${escapeHtml(translateText("Media/design must be approved and attached before this visual post enters queue review."))}</small>
+    </article>
+    <article class="learning-card wide-learning" data-first-publish-after-approval-route>
+      <h3>${escapeHtml(translateText("After Approval Route"))}</h3>
+      <ul>
+        ${afterApprovalPlan.map((item) => `
+          <li>
+            <strong>${escapeHtml(translateText(item.label || ""))}</strong>
+            <span>${escapeHtml(translateText(item.status || ""))}</span>
+            <small>${escapeHtml(translateText(item.detail || ""))}</small>
+          </li>
+        `).join("") || `<li>${escapeHtml(translateText("Waiting for API"))}</li>`}
+      </ul>
     </article>
     <article class="learning-card wide-learning ${escapeHtml(next.status || "open")}">
       <h3>${escapeHtml(translateText("First Publish Readiness"))}</h3>

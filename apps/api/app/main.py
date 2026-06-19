@@ -2451,6 +2451,56 @@ async def first_publish_readiness_payload():
         ),
     ]
     next_stage = next((stage for stage in stages if stage["status"] in {"open", "locked"}), stages[-1])
+    after_approval_plan = [
+        {
+            "key": "confirm_human_approval",
+            "status": "open" if not ready_assets else "done",
+            "label": "Confirm doctor approval phrase",
+            "detail": "Require Decision: approve and Safety: clear before approving the first-publish asset.",
+            "screen": "assets",
+            "action": "Approve Current First Publish",
+        },
+        {
+            "key": "attach_generated_media",
+            "status": "done" if media_gate.get("ready") else "open" if ready_assets else "locked",
+            "label": "Attach approved generated media",
+            "detail": media_gate.get("detail") or "Attach approved public media/design URLs before queueing visual content.",
+            "screen": "assets",
+            "action": "Attach Generated Media",
+        },
+        {
+            "key": "queue_first_asset",
+            "status": "done" if queue else "open" if publish_ready_assets else "locked",
+            "label": "Move asset into review queue",
+            "detail": "Use Advance Safe Step or Queue Ready Assets after approval and media readiness.",
+            "screen": "assets",
+            "action": "Advance Safe Step",
+        },
+        {
+            "key": "approve_queue_item",
+            "status": "done" if review_approved_queue or scheduled_queue else "open" if review_needed_queue else "locked",
+            "label": "Approve queue item",
+            "detail": "Require reviewer_action=approve before scheduling.",
+            "screen": "review",
+            "action": "Approve Current Queue Item",
+        },
+        {
+            "key": "schedule_and_handoff",
+            "status": "done" if scheduled_queue else "open" if review_approved_queue else "locked",
+            "label": "Schedule and build handoff",
+            "detail": "Schedule only review-approved, compliance-clear items; then build the manual publishing handoff.",
+            "screen": "scheduler",
+            "action": "Schedule Approved",
+        },
+        {
+            "key": "measure_and_learn",
+            "status": "open" if scheduled_queue else "locked",
+            "label": "Record metrics and roll up learning",
+            "detail": "After manual publishing, record the Meta post ID and first metrics, then roll them into learning.",
+            "screen": "outcomes",
+            "action": "Open Performance",
+        },
+    ]
     return {
         "overall_status": "ready_for_meta_dry_run" if next_stage["key"] == "meta_dry_run" and next_stage["status"] == "open" else "building_first_publish_item",
         "generated_at": datetime.utcnow().isoformat() + "Z",
@@ -2461,6 +2511,7 @@ async def first_publish_readiness_payload():
             "checklist_next_step": checklist.get("next_step"),
         },
         "stages": stages,
+        "after_approval_plan": after_approval_plan,
         "candidates": {
             "next_asset": next_asset,
             "ready_asset": publish_ready_assets[0] if publish_ready_assets else None,
@@ -3290,6 +3341,24 @@ async def operations_first_publish_readiness_markdown_zh(_: None = Depends(requi
             "- 已排程且到时间后，再点「推进安全步骤」或 Meta Setup 里的 dry run；系统只会做 Meta dry run，不会绕过正式发布锁。",
             "- 正式发布需要额外打开 META_ENABLE_PUBLISHING 和相关 job 开关；未打开前只会测试，不会自动发正式帖。",
             "",
+            "## 批准后路线图",
+            "",
+        ]
+    )
+    for item in payload.get("after_approval_plan") or []:
+        lines.extend(
+            [
+                f"### {item.get('label')}",
+                "",
+                f"- 状态：{item.get('status')}",
+                f"- 说明：{item.get('detail')}",
+                f"- 页面：{item.get('screen')}",
+                f"- 动作：{item.get('action')}",
+                "",
+            ]
+        )
+    lines.extend(
+        [
             "## Meta 状态",
             "",
             f"- Meta 总状态：{meta.get('overall_status')}",

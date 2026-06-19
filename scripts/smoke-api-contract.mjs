@@ -1307,6 +1307,16 @@ const requiredSnippets = [
     text: "drec-first-publish-readiness.md",
   },
   {
+    name: "first publish after approval plan payload",
+    file: "main",
+    text: "after_approval_plan",
+  },
+  {
+    name: "first publish after approval plan safety",
+    file: "main",
+    text: "Require Decision: approve and Safety: clear before approving the first-publish asset.",
+  },
+  {
     name: "first publish media gate helper",
     file: "main",
     text: "first_publish_media_gate",
@@ -3150,6 +3160,16 @@ const requiredSnippets = [
     name: "web first publish approval workbench safety",
     file: "web",
     text: "Do not approve, queue, schedule, or publish without explicit human safety clearance.",
+  },
+  {
+    name: "web first publish after approval route",
+    file: "web",
+    text: "data-first-publish-after-approval-route",
+  },
+  {
+    name: "web first publish after approval route title",
+    file: "web",
+    text: "After Approval Route",
   },
   {
     name: "web chinese operator center action",
