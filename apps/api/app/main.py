@@ -1955,6 +1955,52 @@ def assets_ready_for_queue(items: list[dict]):
     ]
 
 
+def media_url_count(item: dict | None):
+    if not item:
+        return 0
+    return len([url for url in item.get("media_urls") or [] if url])
+
+
+def first_publish_media_required(item: dict | None):
+    if not item:
+        return False
+    channel = str(item.get("channel") or "").lower()
+    fmt = str(item.get("format") or "").lower()
+    if channel == "instagram":
+        return True
+    return any(token in fmt for token in ["carousel", "reel", "story", "image", "photo", "video"])
+
+
+def first_publish_media_ready(item: dict | None):
+    return bool(item) and (not first_publish_media_required(item) or media_url_count(item) > 0)
+
+
+def first_publish_media_gate(item: dict | None):
+    required = first_publish_media_required(item)
+    count = media_url_count(item)
+    ready = bool(item) and (not required or count > 0)
+    return {
+        "asset_id": item.get("id") if item else None,
+        "required": required,
+        "ready": ready,
+        "media_count": count,
+        "detail": (
+            "Media/design URL is required before queueing this first publish item."
+            if required and count == 0
+            else "Media/design is ready for the first publish item."
+            if required
+            else "This format can proceed without media/design URLs."
+        ),
+        "action": (
+            "Attach approved media/design URL before queueing."
+            if required and count == 0
+            else "Confirm visual QA and rights notes before publishing."
+            if required
+            else "No media action required for this format."
+        ),
+    }
+
+
 ASSET_REVIEW_DECISION_FIELDS = [
     "asset_id",
     "brief_id",
@@ -2064,6 +2110,9 @@ async def first_publish_readiness_payload():
     schedule_audit = await schedule_audit_payload()
     ready_assets = assets_ready_for_queue(assets)
     next_asset = next((item for item in assets if item not in ready_assets), assets[0] if assets else None)
+    media_gate_asset = ready_assets[0] if ready_assets else next_asset
+    media_gate = first_publish_media_gate(media_gate_asset)
+    publish_ready_assets = [item for item in ready_assets if first_publish_media_ready(item)]
     review_approved_queue = [
         item
         for item in queue
@@ -2098,10 +2147,19 @@ async def first_publish_readiness_payload():
             {"asset_count": len(assets), "ready_assets": len(ready_assets), "next_asset_id": next_asset.get("id") if next_asset else None},
         ),
         first_publish_stage(
+            "media_ready",
+            "Media/design ready when required",
+            "done" if queue or publish_ready_assets or (ready_assets and not media_gate.get("required")) else "open" if ready_assets else "locked",
+            media_gate.get("detail") if ready_assets or next_asset else "Generate and save one asset first.",
+            "Attach Media",
+            "assets",
+            media_gate,
+        ),
+        first_publish_stage(
             "queue",
             "Queue item created",
-            "done" if queue else "open" if ready_assets else "locked",
-            f"{len(queue)} queue item(s) exist." if queue else "Queue one approved clear asset.",
+            "done" if queue else "open" if publish_ready_assets else "locked",
+            f"{len(queue)} queue item(s) exist." if queue else "Queue one approved clear asset with required media/design ready.",
             "Queue Ready Asset",
             "assets",
             {"queue_total": len(queue)},
@@ -2147,7 +2205,8 @@ async def first_publish_readiness_payload():
         "stages": stages,
         "candidates": {
             "next_asset": next_asset,
-            "ready_asset": ready_assets[0] if ready_assets else None,
+            "ready_asset": publish_ready_assets[0] if publish_ready_assets else None,
+            "approved_clear_asset": ready_assets[0] if ready_assets else None,
             "review_needed_queue": review_needed_queue[0] if review_needed_queue else None,
             "review_approved_queue": review_approved_queue[0] if review_approved_queue else None,
             "scheduled_queue": scheduled_queue[0] if scheduled_queue else None,
@@ -2160,10 +2219,14 @@ async def first_publish_readiness_payload():
             "next_asset_review_pack": "/operations/asset-review-session.md",
             "asset_decision_import": "/operations/import-asset-review-decisions",
             "queue_decision_import": "/operations/import-review-queue-decisions",
+            "media_gate": media_gate,
+            "production_handoff": "/operations/production-handoff-bridge.zh.md",
+            "production_reply_import": "/operations/import-production-replies",
             "instructions": [
                 "Copy or fill the one-row CSV template for the next asset.",
                 "A human reviewer must fill reviewer_safety_decision and reviewer_review_decision.",
                 "Use clear + approve only when the safety checklist is truly passed.",
+                "If media/design is required, attach approved media URLs before queueing.",
                 "Importing the worksheet does not queue, schedule, or publish by itself.",
             ],
         },
@@ -2215,6 +2278,11 @@ async def operations_first_publish_advance(dry_run: bool = True, _: None = Depen
     if next_step.get("key") == "asset_review":
         result["action"] = "needs_asset_review"
         result["message"] = "Human asset safety and approval decisions are required before auto-advance can continue."
+        result["action_pack"] = payload.get("action_pack")
+        return result
+    if next_step.get("key") == "media_ready":
+        result["action"] = "needs_media_design"
+        result["message"] = "Approved media/design URLs are required before this first publish item can be queued."
         result["action_pack"] = payload.get("action_pack")
         return result
     if next_step.get("key") == "queue":
@@ -2489,6 +2557,7 @@ async def operations_chinese_operator_center_markdown(_: None = Depends(require_
 async def operations_first_publish_readiness_markdown(_: None = Depends(require_access_token)):
     payload = await first_publish_readiness_payload()
     next_step = payload.get("next_step") or {}
+    media_gate = (payload.get("action_pack") or {}).get("media_gate") or {}
     lines = [
         "# DREC First Publish Readiness",
         "",
@@ -2517,6 +2586,14 @@ async def operations_first_publish_readiness_markdown(_: None = Depends(require_
             "",
             *[f"- {key.replace('_', ' ').title()}: `{value}`" for key, value in (payload.get("links") or {}).items()],
             "",
+            "## Media/Design Gate",
+            "",
+            f"- Required: {media_gate.get('required')}",
+            f"- Ready: {media_gate.get('ready')}",
+            f"- Media URL count: {media_gate.get('media_count') or 0}",
+            f"- Detail: {media_gate.get('detail') or 'n/a'}",
+            f"- Action: {media_gate.get('action') or 'n/a'}",
+            "",
             "## Safety",
             "",
             *markdown_list(payload.get("safety"), "- Read-only readiness pack."),
@@ -2533,6 +2610,7 @@ async def operations_first_publish_readiness_markdown(_: None = Depends(require_
 def zh_first_publish_stage_label(key: str | None):
     return {
         "asset_review": "内容资产已安全通过并批准",
+        "media_ready": "媒体/设计素材已准备好",
         "queue": "已创建发布队列项目",
         "review_queue": "队列项目已审核批准",
         "schedule": "队列项目已排程",
@@ -2547,6 +2625,12 @@ def zh_first_publish_stage_detail(stage: dict):
         ready = evidence.get("ready_assets") or 0
         total = evidence.get("asset_count") or 0
         return f"目前有 {total} 条内容资产，{ready} 条已同时满足安全通过和批准。"
+    if key == "media_ready":
+        if evidence.get("required") and not evidence.get("ready"):
+            return f"这条内容需要媒体/设计素材，目前有 {evidence.get('media_count') or 0} 个媒体 URL；请先补上已批准素材。"
+        if evidence.get("required"):
+            return f"这条内容需要媒体/设计素材，目前有 {evidence.get('media_count') or 0} 个媒体 URL。"
+        return "这个格式不强制需要媒体/设计 URL。"
     if key == "queue":
         return f"目前有 {evidence.get('queue_total') or 0} 条发布队列项目。"
     if key == "review_queue":
@@ -2563,6 +2647,8 @@ def zh_first_publish_action(next_step: dict):
     key = next_step.get("key")
     if key == "asset_review":
         return "在 Dashboard 点击「填入素材审核 CSV」，进入素材页后填写 reviewer_safety_decision=clear 和 reviewer_review_decision=approved；只有真人确认安全后才可以这样填。"
+    if key == "media_ready":
+        return "进入 Assets，点击当前素材的 Attach Media，贴上已批准的图片/设计/视频 URL，并填写版权或 visual QA 备注。"
     if key == "queue":
         return "点击「推进安全步骤」，系统会把已批准且安全通过的内容资产加入发布队列。"
     if key == "review_queue":
@@ -2592,6 +2678,7 @@ async def operations_first_publish_readiness_markdown_zh(_: None = Depends(requi
     candidates = payload.get("candidates") or {}
     action_pack = payload.get("action_pack") or {}
     next_asset = candidates.get("next_asset") or {}
+    media_gate = action_pack.get("media_gate") or {}
     meta = payload.get("meta") or {}
     lines = [
         "# DREC 首次发布准备包",
@@ -2606,6 +2693,7 @@ async def operations_first_publish_readiness_markdown_zh(_: None = Depends(requi
         f"- {zh_first_publish_action(next_step)}",
         f"- 下一条内容资产 ID：`{next_asset.get('id') or '暂无'}`",
         f"- 当前频道 / 格式：{next_asset.get('channel') or '暂无'} / {next_asset.get('format') or '暂无'}",
+        f"- 媒体/设计需求：{'需要' if media_gate.get('required') else '不强制'}；当前媒体 URL 数量：{media_gate.get('media_count') or 0}",
         "",
         "## 发布路径状态",
         "",
@@ -2622,6 +2710,15 @@ async def operations_first_publish_readiness_markdown_zh(_: None = Depends(requi
             "- 批准内容：`reviewer_review_decision` 填 `approved`。",
             "- 如果不确定，请不要填 clear / approved；保持 pending、flagged 或 review。",
             "- 导入审核表只会更新审核状态，不会自动排程或发布。",
+            "",
+            "## 媒体/设计准备",
+            "",
+            f"- 状态：{'ready' if media_gate.get('ready') else 'not ready'}",
+            f"- 说明：{media_gate.get('detail') or '暂无'}",
+            f"- 动作：{media_gate.get('action') or '暂无'}",
+            "- 如果是 carousel、图片、视频、Reel 或 Instagram 内容，必须先有已批准媒体/设计 URL。",
+            "- 在 Assets 里使用 Attach Media，或通过制作回复收件箱导入媒体链接。",
+            "- 媒体链接必须有版权/授权/visual QA 备注，不能用未授权素材。",
             "",
             "## 下一条素材审核 CSV 模板",
             "",

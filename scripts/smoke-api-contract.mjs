@@ -1295,6 +1295,21 @@ const requiredSnippets = [
     text: "drec-first-publish-readiness.md",
   },
   {
+    name: "first publish media gate helper",
+    file: "main",
+    text: "first_publish_media_gate",
+  },
+  {
+    name: "first publish media ready stage",
+    file: "main",
+    text: "\"media_ready\"",
+  },
+  {
+    name: "first publish media design gate export",
+    file: "main",
+    text: "## Media/Design Gate",
+  },
+  {
     name: "first publish chinese readiness export",
     file: "main",
     text: "drec-first-publish-readiness-zh.md",
@@ -1318,6 +1333,16 @@ const requiredSnippets = [
     name: "first publish chinese schedule guidance",
     file: "main",
     text: "后续自动推进步骤",
+  },
+  {
+    name: "first publish chinese media design section",
+    file: "main",
+    text: "## 媒体/设计准备",
+  },
+  {
+    name: "first publish media blocks queue action",
+    file: "main",
+    text: "needs_media_design",
   },
   {
     name: "first publish chinese meta live lock",
@@ -2833,6 +2858,11 @@ const requiredSnippets = [
     name: "web first publish success standard",
     file: "web",
     text: "Safety: clear + Decision: approve",
+  },
+  {
+    name: "web first publish media stage translation",
+    file: "web",
+    text: "媒体/设计素材已准备好",
   },
   {
     name: "web first publish readiness loader",
