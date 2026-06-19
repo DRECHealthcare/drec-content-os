@@ -1655,6 +1655,55 @@ function assetReviewNoteText(asset) {
   ].join("\n");
 }
 
+function csvCell(value) {
+  const text = String(value ?? "");
+  return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
+function assetReviewDecisionCsvText(asset) {
+  const metadata = asset.metadata || {};
+  const media = Array.isArray(asset.media_urls) ? asset.media_urls.filter(Boolean) : [];
+  const header = [
+    "asset_id",
+    "brief_id",
+    "topic",
+    "channel",
+    "format",
+    "current_safety",
+    "current_review",
+    "detector_status",
+    "detector_findings",
+    "media_count",
+    "target_signal",
+    "caption",
+    "recommended_action",
+    "reviewer_safety_decision",
+    "reviewer_review_decision",
+    "reviewer_name",
+    "review_notes",
+  ];
+  const row = [
+    asset.id || "",
+    asset.brief_id || "",
+    metadata.topic || "",
+    asset.channel || "",
+    asset.format || "",
+    asset.compliance_status || "",
+    asset.review_status || "",
+    "review_required",
+    "use reviewer judgment",
+    media.length,
+    metadata.target_signal || "",
+    asset.caption || "",
+    asset.compliance_status === "clear" ? "Reviewer may approve only after human agreement" : "Set safety decision before approval",
+    "",
+    "",
+    "",
+    "",
+  ];
+  return `${header.join(",")}\n${row.map(csvCell).join(",")}`;
+}
+
 function assetCard(item) {
   const mediaCount = Array.isArray(item.media_urls) ? item.media_urls.length : 0;
   const canQueue = item.review_status === "approved" && item.compliance_status === "clear";
@@ -1726,6 +1775,7 @@ function renderNextAssetReview(items) {
       <small>${escapeHtml(blocker)} Current: ${escapeHtml(next.compliance_status || "pending")} / ${escapeHtml(next.review_status || "draft")}</small>
       <div class="learning-actions">
         <button type="button" data-copy-next-asset-review="${escapeHtml(next.id)}">Copy Review Note</button>
+        <button type="button" data-copy-next-asset-decision="${escapeHtml(next.id)}">Copy Decision CSV</button>
         <button type="button" data-jump-next-asset-review>Jump To Asset</button>
       </div>
     </article>
@@ -1843,10 +1893,12 @@ document.getElementById("queue-ready-assets").addEventListener("click", async (e
 
 document.getElementById("asset-next-review")?.addEventListener("click", async (event) => {
   const copyButton = event.target.closest("[data-copy-next-asset-review]");
+  const decisionButton = event.target.closest("[data-copy-next-asset-decision]");
   const jumpButton = event.target.closest("[data-jump-next-asset-review]");
-  if (!copyButton && !jumpButton) return;
+  if (!copyButton && !decisionButton && !jumpButton) return;
   const message = document.getElementById("media-message");
   const assetId = copyButton?.dataset.copyNextAssetReview
+    || decisionButton?.dataset.copyNextAssetDecision
     || document.querySelector("[data-copy-next-asset-review]")?.dataset.copyNextAssetReview;
   if (!assetId) return;
   if (jumpButton) {
@@ -1860,10 +1912,10 @@ document.getElementById("asset-next-review")?.addEventListener("click", async (e
   const asset = storedAssetById(assetId);
   if (!asset) return;
   try {
-    await navigator.clipboard.writeText(assetReviewNoteText(asset));
-    if (message) message.textContent = "Next asset review note copied.";
+    await navigator.clipboard.writeText(decisionButton ? assetReviewDecisionCsvText(asset) : assetReviewNoteText(asset));
+    if (message) message.textContent = decisionButton ? "Next asset decision CSV copied." : "Next asset review note copied.";
   } catch {
-    if (message) message.textContent = "Could not copy review note. Use Download Safety Review instead.";
+    if (message) message.textContent = "Could not copy review content. Use Download Safety Review or Review Decisions instead.";
   }
 });
 

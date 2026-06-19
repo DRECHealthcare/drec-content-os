@@ -2889,6 +2889,16 @@ const requiredSnippets = [
     text: "data-copy-next-asset-review",
   },
   {
+    name: "web next asset review decision csv action",
+    file: "web",
+    text: "data-copy-next-asset-decision",
+  },
+  {
+    name: "web asset review decision csv helper",
+    file: "web",
+    text: "assetReviewDecisionCsvText",
+  },
+  {
     name: "web next asset review jump action",
     file: "web",
     text: "data-jump-next-asset-review",
