@@ -332,12 +332,15 @@ const uiZh = {
   "Log Learning": "记录学习",
   "Build Weekly Report": "生成周报",
   "Download Weekly Report": "下载周报",
+  "Download Chinese Weekly Report": "下载中文周报",
   "Download Cycle Pack": "下载循环包",
+  "Download Chinese Cycle Pack": "下载中文循环包",
   "Copy Report": "复制报告",
   "Use Topics In Weekly Plan": "把主题放入每周计划",
   "Download Learning Snapshot": "下载学习快照",
   "Refresh Quarterly Memo": "刷新季度备忘录",
   "Download Quarterly Memo": "下载季度备忘录",
+  "Download Chinese Quarterly Memo": "下载中文季度复盘",
   "Download KB CSV": "下载知识库 CSV",
   "Add Entry": "新增记录",
   "Set access": "设置访问",
@@ -6132,6 +6135,16 @@ document.getElementById("download-weekly-report")?.addEventListener("click", asy
   }
 });
 
+document.getElementById("download-weekly-report-zh")?.addEventListener("click", async () => {
+  const message = document.getElementById("weight-message");
+  try {
+    await downloadProtectedFile("/weekly-report.zh.md", "drec-weekly-report-zh.md", "text/markdown");
+    message.textContent = "中文周报已下载。";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "请先设置访问码。" : "无法下载中文周报。";
+  }
+});
+
 document.getElementById("download-weekly-cycle-pack")?.addEventListener("click", async () => {
   const message = document.getElementById("weight-message");
   try {
@@ -6139,6 +6152,16 @@ document.getElementById("download-weekly-cycle-pack")?.addEventListener("click",
     message.textContent = "Weekly cycle pack downloaded.";
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download cycle pack.";
+  }
+});
+
+document.getElementById("download-weekly-cycle-pack-zh")?.addEventListener("click", async () => {
+  const message = document.getElementById("weight-message");
+  try {
+    await downloadProtectedFile("/operations/weekly-cycle-pack.zh.md", "drec-weekly-cycle-pack-zh.md", "text/markdown");
+    message.textContent = "中文每周循环包已下载。";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "请先设置访问码。" : "无法下载中文每周循环包。";
   }
 });
 
@@ -6170,6 +6193,16 @@ document.getElementById("download-quarterly-memo")?.addEventListener("click", as
     message.textContent = "Quarterly memo downloaded.";
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download quarterly memo.";
+  }
+});
+
+document.getElementById("download-quarterly-memo-zh")?.addEventListener("click", async () => {
+  const message = document.getElementById("weight-message");
+  try {
+    await downloadProtectedFile("/learning/quarterly-memo.zh.md", "drec-quarterly-learning-memo-zh.md", "text/markdown");
+    message.textContent = "中文季度复盘已下载。";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "请先设置访问码。" : "无法下载中文季度复盘。";
   }
 });
 

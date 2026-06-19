@@ -117,13 +117,16 @@ const requiredRoutes = [
   "GET /operations/learning-snapshot.csv",
   "GET /learning/quarterly-memo",
   "GET /learning/quarterly-memo.md",
+  "GET /learning/quarterly-memo.zh.md",
   "GET /operations/metrics-template.csv",
   "GET /operations/metrics-closeout-pack.md",
   "GET /operations/metrics-closeout-pack.zh.md",
   "GET /operations/weekly-cycle-pack.md",
+  "GET /operations/weekly-cycle-pack.zh.md",
   "GET /operations/publishing-run-sheet.md",
   "GET /operations/operator-pack.md",
   "GET /weekly-report.md",
+  "GET /weekly-report.zh.md",
   "GET /meta/readiness",
   "GET /meta/oauth-guide",
   "GET /meta/setup-checklist",
@@ -1397,6 +1400,21 @@ const requiredSnippets = [
     text: "/operations/metrics-closeout-pack.zh.md",
   },
   {
+    name: "chinese operator center weekly cycle link",
+    file: "main",
+    text: "/operations/weekly-cycle-pack.zh.md",
+  },
+  {
+    name: "chinese operator center weekly report link",
+    file: "main",
+    text: "/weekly-report.zh.md",
+  },
+  {
+    name: "chinese operator center quarterly memo link",
+    file: "main",
+    text: "/learning/quarterly-memo.zh.md",
+  },
+  {
     name: "first publish readiness read only safety",
     file: "main",
     text: "This readiness pack is read-only.",
@@ -1832,9 +1850,24 @@ const requiredSnippets = [
     text: "drec-quarterly-learning-memo.md",
   },
   {
+    name: "chinese quarterly memo export",
+    file: "main",
+    text: "drec-quarterly-learning-memo-zh.md",
+  },
+  {
+    name: "chinese quarterly memo title",
+    file: "main",
+    text: "# DREC 中文季度学习备忘录",
+  },
+  {
     name: "quarterly memo posting heat",
     file: "main",
     text: "## Posting-Time Heat",
+  },
+  {
+    name: "chinese quarterly memo posting heat",
+    file: "main",
+    text: "## 发布时间热度",
   },
   {
     name: "weekly cycle pack route",
@@ -1845,6 +1878,21 @@ const requiredSnippets = [
     name: "weekly cycle pack export",
     file: "main",
     text: "drec-weekly-cycle-pack.md",
+  },
+  {
+    name: "chinese weekly cycle pack export",
+    file: "main",
+    text: "drec-weekly-cycle-pack-zh.md",
+  },
+  {
+    name: "chinese weekly cycle pack title",
+    file: "main",
+    text: "# DREC 中文每周循环包",
+  },
+  {
+    name: "chinese weekly cycle pack closeout rule",
+    file: "main",
+    text: "## 每周收尾规则",
   },
   {
     name: "weekly cycle pack closeout rule",
@@ -1880,6 +1928,16 @@ const requiredSnippets = [
     name: "web weekly cycle pack endpoint",
     file: "web",
     text: "/operations/weekly-cycle-pack.md",
+  },
+  {
+    name: "web chinese weekly cycle pack action",
+    file: "web",
+    text: "download-weekly-cycle-pack-zh",
+  },
+  {
+    name: "web chinese weekly cycle pack endpoint",
+    file: "web",
+    text: "/operations/weekly-cycle-pack.zh.md",
   },
   {
     name: "metrics template export",
@@ -1950,6 +2008,26 @@ const requiredSnippets = [
     name: "weekly report outcome insights",
     file: "main",
     text: "## Outcome Insights",
+  },
+  {
+    name: "chinese weekly report export",
+    file: "main",
+    text: "drec-weekly-report-zh.md",
+  },
+  {
+    name: "chinese weekly report title",
+    file: "main",
+    text: "# DREC 中文每周运营报告",
+  },
+  {
+    name: "chinese weekly report read only rule",
+    file: "main",
+    text: "本报告只读，不会改变学习权重、创建内容或触发发布。",
+  },
+  {
+    name: "chinese weekly report next topics",
+    file: "main",
+    text: "## 推荐下一周内容主题",
   },
   {
     name: "publishing run sheet export",
@@ -2602,6 +2680,16 @@ const requiredSnippets = [
     text: "/weekly-report.md",
   },
   {
+    name: "web chinese weekly report download action",
+    file: "web",
+    text: "download-weekly-report-zh",
+  },
+  {
+    name: "web chinese weekly report endpoint",
+    file: "web",
+    text: "/weekly-report.zh.md",
+  },
+  {
     name: "web learning snapshot action",
     file: "web",
     text: "download-learning-snapshot",
@@ -2620,6 +2708,16 @@ const requiredSnippets = [
     name: "web quarterly memo endpoint",
     file: "web",
     text: "/learning/quarterly-memo.md",
+  },
+  {
+    name: "web chinese quarterly memo action",
+    file: "web",
+    text: "download-quarterly-memo-zh",
+  },
+  {
+    name: "web chinese quarterly memo endpoint",
+    file: "web",
+    text: "/learning/quarterly-memo.zh.md",
   },
   {
     name: "web quarterly memo loader",

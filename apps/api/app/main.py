@@ -2355,6 +2355,24 @@ async def chinese_operator_center_payload():
             "link": "/operations/metrics-closeout-pack.zh.md",
             "purpose": "发布后导入表现数据，回流到学习和下一周内容计划。",
         },
+        {
+            "stage": "每周循环包",
+            "status": "weekly_learning_ready",
+            "link": "/operations/weekly-cycle-pack.zh.md",
+            "purpose": "每周把计划、审核、发布交接、数据学习收在同一份中文文件里。",
+        },
+        {
+            "stage": "每周运营报告",
+            "status": "weekly_learning_ready",
+            "link": "/weekly-report.zh.md",
+            "purpose": "用中文查看当前系统状态、学习结果和下一周建议主题。",
+        },
+        {
+            "stage": "季度学习备忘录",
+            "status": "quarterly_learning_ready",
+            "link": "/learning/quarterly-memo.zh.md",
+            "purpose": "每季度总结表现数据、学习权重变化和下一季方向。",
+        },
     ]
     return {
         "generated_at": datetime.utcnow().isoformat() + "Z",
@@ -2394,6 +2412,9 @@ async def chinese_operator_center_payload():
             "审核到排程": "/operations/review-to-schedule-pack.zh.md",
             "发布交接": "/operations/publishing-handoff.zh.md",
             "数据结算": "/operations/metrics-closeout-pack.zh.md",
+            "每周循环包": "/operations/weekly-cycle-pack.zh.md",
+            "每周运营报告": "/weekly-report.zh.md",
+            "季度学习备忘录": "/learning/quarterly-memo.zh.md",
             "Meta 上线前检查": "/meta/preflight-audit.md",
             "Meta 启用检查表": "/meta/activation-checklist.md",
         },
@@ -4444,6 +4465,186 @@ async def operations_weekly_cycle_pack(_: None = Depends(require_access_token)):
         "\n".join(lines),
         media_type="text/markdown",
         headers={"Content-Disposition": 'attachment; filename="drec-weekly-cycle-pack.md"'},
+    )
+
+
+@app.get("/operations/weekly-cycle-pack.zh.md")
+async def operations_weekly_cycle_pack_zh(_: None = Depends(require_access_token)):
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    launch = await launch_readiness_payload()
+    checklist = await test_run_checklist_payload()
+    workflow = await workflow_status(None)
+    risk = await content_risk_audit_payload()
+    learning = await learning_summary(None)
+    handoff = await publishing_handoff(None)
+    briefs = await snapshot_select(
+        "content_briefs",
+        """
+        select id, topic, channel, format, status, funnel_stage, awareness_stage, hook_primary, compliance_notes, created_at
+        from content_briefs
+        order by created_at desc
+        limit 12
+        """,
+        {
+            "select": "id,topic,channel,format,status,funnel_stage,awareness_stage,hook_primary,compliance_notes,created_at",
+            "order": "created_at.desc",
+            "limit": "12",
+        },
+    )
+    assets = await snapshot_select(
+        "assets",
+        """
+        select id, channel, format, review_status, compliance_status, media_urls, caption, created_at
+        from assets
+        order by created_at desc
+        limit 12
+        """,
+        {
+            "select": "id,channel,format,review_status,compliance_status,media_urls,caption,created_at",
+            "order": "created_at.desc",
+            "limit": "12",
+        },
+    )
+    queue = await snapshot_select(
+        "publish_queue",
+        """
+        select id, channel, format, status, compliance_status, planned_slot, external_post_id, caption, created_at
+        from publish_queue
+        order by planned_slot nulls last, created_at desc
+        limit 12
+        """,
+        {
+            "select": "id,channel,format,status,compliance_status,planned_slot,external_post_id,caption,created_at",
+            "order": "planned_slot.asc.nullslast,created_at.desc",
+            "limit": "12",
+        },
+    )
+    summary = checklist.get("summary") or {}
+    next_action = (workflow.get("workflow") or {}).get("next_action") or workflow.get("next_action") or {}
+    plan_topics = learning.get("plan_recommendations", {}).get("topics", [])
+    insights = learning.get("outcome_insights") or {}
+    top_signals = insights.get("top_signals") or []
+    risk_items = risk.get("items") or []
+    ready_items = handoff.get("ready_items") or []
+    blocked_items = handoff.get("blocked_items") or handoff.get("needs_review") or []
+    launch_lines = usability_markdown_lines(launch)
+    brief_lines = report_lines(
+        briefs,
+        lambda item: f"{item.get('status', 'draft')} · {item.get('channel', 'channel')}/{item.get('format', 'format')} · {item.get('topic')} · 开头：{item.get('hook_primary') or '暂无'}",
+        "暂无本周草稿。请先生成 Weekly Plan。",
+    )
+    asset_lines = report_lines(
+        assets,
+        lambda item: f"{item.get('review_status', 'review')} / {item.get('compliance_status', 'safety')} · {item.get('channel', 'channel')}/{item.get('format', 'format')} · 素材 {len(item.get('media_urls') or [])} 个 · {(item.get('caption') or '')[:120]}",
+        "暂无可审核素材。请先把草稿保存为素材。",
+    )
+    queue_lines = report_lines(
+        queue,
+        lambda item: f"{item.get('status', 'status')} / {item.get('compliance_status', 'safety')} · {item.get('channel', 'channel')}/{item.get('format', 'format')} · 排程 {item.get('planned_slot') or '未设置'} · 外部帖 ID {item.get('external_post_id') or '未发布'}",
+        "暂无队列内容。请先把已批准素材加入队列。",
+    )
+    ready_lines = report_lines(
+        ready_items,
+        lambda item: f"{item.get('channel', 'channel')}/{item.get('format', 'format')} · 排程 {item.get('planned_slot') or '未设置'} · 队列 {item.get('id')}",
+        "目前没有可交接发布的内容。",
+    )
+    blocked_lines = report_lines(
+        blocked_items,
+        lambda item: f"{item.get('channel', 'channel')}/{item.get('format', 'format')} · {', '.join(item.get('handoff_blockers') or ['仍需审核'])}",
+        "目前没有发现被卡住的发布交接项。",
+    )
+    topic_lines = [f"- {topic}" for topic in plan_topics] or ["- 暂无学习建议主题。先记录发布结果，或使用默认每周主题。"]
+    insight_lines = report_lines(
+        top_signals,
+        lambda item: f"{item.get('label')} · 平均分 {item.get('avg_score')} · 收藏 {item.get('saves_total')} · {item.get('recommendation')}",
+        "暂无结果洞察。",
+    )
+    risk_lines = [
+        f"- [{item.get('severity')}] {item.get('kind')} {item.get('id')}: {item.get('title')} - {item.get('action')}"
+        for item in risk_items[:12]
+    ] or ["- 暂无当前风险项。"]
+    lines = [
+        "# DREC 中文每周循环包",
+        "",
+        f"生成时间：{generated_at}",
+        "",
+        "用途：每周用这一份文件完成“计划 → 审核 → 制作 → 排程 → 发布交接 → 数据学习”的闭环。",
+        "",
+        *launch_lines,
+        "## 当前循环状态",
+        "",
+        f"- 人工循环：{checklist.get('overall_status')}（已完成 {checklist.get('done_count', 0)}/{checklist.get('total_required', 0)} 个必要步骤）",
+        f"- 下一步：{next_action.get('title') or '打开 Dashboard'} - {next_action.get('body') or checklist.get('next_step', {}).get('detail') or '执行第一个未完成步骤。'}",
+        f"- 内容计划：{summary.get('brief_count', 0)}",
+        f"- 已准备素材：{summary.get('ready_assets', 0)}",
+        f"- 队列总数：{summary.get('queue_total', 0)}",
+        f"- 已排程队列：{summary.get('scheduled_queue', 0)}",
+        f"- 可交接发布：{handoff.get('ready_count', 0)}",
+        f"- 已发布队列：{summary.get('published_queue', 0)}",
+        f"- 已记录结果：{summary.get('outcome_count', 0)}",
+        f"- 风险：{risk.get('overall_status')}（阻断 {risk.get('block_count', 0)} / 提醒 {risk.get('warn_count', 0)}）",
+        "",
+        "## 1. 计划输入",
+        "",
+        "建议下一周内容主题：",
+        "",
+        *topic_lines,
+        "",
+        "最近内容草稿：",
+        "",
+        *brief_lines,
+        "",
+        "## 中文交接链接",
+        "",
+        "- 医生审核桥接：`/operations/doctor-review-bridge.zh.md`",
+        "- 医生回复收件箱：`/operations/doctor-reply-inbox-pack.zh.md`",
+        "- 审批控制台：`/operations/approval-cockpit.zh.md`",
+        "- 制作交接：`/operations/production-handoff-bridge.zh.md`",
+        "- 制作回复收件箱：`/operations/production-reply-inbox-pack.zh.md`",
+        "- 审核到排程：`/operations/review-to-schedule-pack.zh.md`",
+        "- 发布交接：`/operations/publishing-handoff.zh.md`",
+        "- 数据结算：`/operations/metrics-closeout-pack.zh.md`",
+        "",
+        "## 2. 制作与审核",
+        "",
+        *asset_lines,
+        "",
+        "## 3. 排程与发布交接",
+        "",
+        "队列快照：",
+        "",
+        *queue_lines,
+        "",
+        "可人工发布：",
+        "",
+        *ready_lines,
+        "",
+        "被卡住的交接项：",
+        "",
+        *blocked_lines,
+        "",
+        "## 4. 学习结算",
+        "",
+        f"- 学习建议：{learning.get('recommendation')}",
+        f"- 结果摘要：{insights.get('summary') or '暂无结果摘要。'}",
+        "",
+        *insight_lines,
+        "",
+        "## 5. 风险与安全",
+        "",
+        *risk_lines,
+        "",
+        "## 每周收尾规则",
+        "",
+        "- 不要从这份文件开启真实 Meta 自动发布；Meta 上线必须走 Setup 和 Launch Evidence。",
+        "- 本周结束前，已发布内容必须有外部帖 ID、表现数据，并把下一周主题送回 Weekly Plan。",
+        "- 草稿变成素材后，及时归档旧草稿，让下一周计划保持干净。",
+        "",
+    ]
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-weekly-cycle-pack-zh.md"'},
     )
 
 
@@ -16898,6 +17099,82 @@ async def learning_quarterly_memo_md(_: None = Depends(require_access_token)):
     )
 
 
+@app.get("/learning/quarterly-memo.zh.md")
+async def learning_quarterly_memo_zh(_: None = Depends(require_access_token)):
+    payload = await quarterly_learning_payload()
+    summary = payload.get("summary") or {}
+    heatmap = payload.get("posting_time_heatmap") or []
+    top_signals = (payload.get("outcome_insights") or {}).get("top_signals") or []
+    weights = payload.get("learning_weights") or []
+    feedback = payload.get("feedback") or []
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    heatmap_lines = report_lines(
+        heatmap[:12],
+        lambda item: f"{item.get('slot')} · 内容 {item.get('post_count')} · 已发布 {item.get('published_count')} · 平均分 {item.get('avg_score', 'n/a')} · 信心 {item.get('confidence')}",
+        "暂无排程或已发布时段数据。",
+    )
+    signal_lines = report_lines(
+        top_signals[:8],
+        lambda item: f"{item.get('label')} · 平均分 {item.get('avg_score')} · 收藏 {item.get('saves_total')} · 分享 {item.get('shares_total')} · {item.get('recommendation')}",
+        "暂无可衡量的结果信号。",
+    )
+    weight_lines = report_lines(
+        weights[:12],
+        lambda item: f"{item.get('dimension')}={item.get('key')} · {item.get('previous_value', 'base')} -> {item.get('value')} · 生效={item.get('is_active')} · {item.get('reason') or item.get('source')}",
+        "本季度暂无学习权重变化。",
+    )
+    feedback_lines = report_lines(
+        feedback,
+        lambda item: f"{item.get('action')}: {item.get('count')}",
+        "本季度暂无审核反馈事件。",
+    )
+    action_lines = [report_bullet(item) for item in payload.get("next_actions") or []]
+    lines = [
+        "# DREC 中文季度学习备忘录",
+        "",
+        f"周期：{payload.get('period')}",
+        f"生成时间：{generated_at}",
+        "",
+        "## 循环证据",
+        "",
+        report_bullet(f"已排程或已起草内容：{summary.get('scheduled_or_drafted_posts', 0)}"),
+        report_bullet(f"已有外部帖 ID/标签的已发布内容：{summary.get('published_posts', 0)}"),
+        report_bullet(f"表现结果：{summary.get('outcomes', 0)}"),
+        report_bullet(f"学习权重变化：{summary.get('learning_weights', 0)}"),
+        report_bullet(f"反馈事件：{summary.get('feedback_events', 0)}"),
+        "",
+        "## 发布时间热度",
+        "",
+        *heatmap_lines,
+        "",
+        "## 结果信号",
+        "",
+        *signal_lines,
+        "",
+        "## 学习权重变化记录",
+        "",
+        *weight_lines,
+        "",
+        "## 审核反馈",
+        "",
+        *feedback_lines,
+        "",
+        "## 下季度动作",
+        "",
+        *action_lines,
+        "",
+        "## 安全规则",
+        "",
+        "- 季度结果只能作为内容计划参考，不能写成医疗承诺。",
+        "- 在多个安全、已审核的循环稳定前，人工/医生审批继续保持必需。",
+    ]
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-quarterly-learning-memo-zh.md"'},
+    )
+
+
 def count_label(rows: list[dict], key: str):
     if not rows:
         return "none"
@@ -17055,6 +17332,152 @@ async def weekly_report(_: None = Depends(require_access_token)):
         "\n".join(lines) + "\n",
         media_type="text/markdown",
         headers={"Content-Disposition": 'inline; filename="drec-weekly-report.md"'},
+    )
+
+
+@app.get("/weekly-report.zh.md")
+async def weekly_report_zh(_: None = Depends(require_access_token)):
+    summary = await learning_summary()
+    loop = await loop_status()
+    workflow = build_workflow_guidance(loop)
+    media_assets = await fetch_rows(
+        """
+        select title, media_type, rights_status, approval_status, created_at
+        from media_assets
+        order by created_at desc
+        limit 10
+        """
+    )
+    assets = await fetch_rows(
+        """
+        select channel, format, compliance_status, review_status, created_at
+        from assets
+        order by created_at desc
+        limit 10
+        """
+    )
+    if not media_assets and supabase_rest.configured():
+        media_assets = await supabase_rest.select(
+            "media_assets",
+            {
+                "select": "title,media_type,rights_status,approval_status,created_at",
+                "order": "created_at.desc",
+                "limit": "10",
+            },
+        )
+    if not assets and supabase_rest.configured():
+        assets = await supabase_rest.select(
+            "assets",
+            {
+                "select": "channel,format,compliance_status,review_status,created_at",
+                "order": "created_at.desc",
+                "limit": "10",
+            },
+        )
+    queue_total = sum(item.get("count", 0) for item in summary.get("queue", []))
+    feedback_total = sum(item.get("count", 0) for item in summary.get("feedback", []))
+    recent_briefs = summary.get("recent_briefs", [])
+    recent_outcomes = summary.get("recent_outcomes", [])
+    weights = summary.get("weights", [])
+    plan_topics = summary.get("plan_recommendations", {}).get("topics", [])
+    insights = summary.get("outcome_insights", {})
+    top_signals = insights.get("top_signals", [])
+    next_action = workflow.get("next_action", {})
+    workflow_summary = workflow.get("summary", {})
+    workflow_lines = report_lines(
+        workflow.get("steps", []),
+        lambda step: f"{step.get('state')} · {step.get('title')} · {step.get('body')}",
+        "暂无流程建议。",
+    )
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    brief_lines = report_lines(
+        recent_briefs,
+        lambda brief: f"{brief.get('format', 'brief')} · {brief.get('funnel_stage') or 'stage'} · {brief.get('topic')}",
+        "暂无最近内容草稿。",
+    )
+    asset_lines = report_lines(
+        assets,
+        lambda asset: f"素材 {asset.get('channel')}/{asset.get('format')} · 合规 {asset.get('compliance_status')} · 审核 {asset.get('review_status')}",
+        "暂无草稿素材。",
+    )
+    media_lines = report_lines(
+        media_assets,
+        lambda media: f"媒体 {media.get('title')} · {media.get('media_type')} · 版权 {media.get('rights_status')} · 批准 {media.get('approval_status')}",
+        "暂无媒体素材。",
+    )
+    outcome_lines = report_lines(
+        recent_outcomes,
+        lambda outcome: f"{outcome.get('post_id')} · {outcome.get('channel')}/{outcome.get('format')} · 分数 {outcome.get('score', 'n/a')} · 收藏 {outcome.get('saves', 0)} · {outcome.get('vs_plan_note') or '暂无备注'}",
+        "暂无表现结果。",
+    )
+    weight_lines = report_lines(
+        weights,
+        lambda weight: f"{weight.get('dimension')}={weight.get('key')} · {weight.get('previous_value', 'base')} -> {weight.get('value')} · {weight.get('reason') or weight.get('source')}",
+        "暂无生效中的学习权重。",
+    )
+    topic_lines = [report_bullet(topic) for topic in plan_topics] if plan_topics else ["- 暂无推荐主题。"]
+    insight_lines = report_lines(
+        top_signals,
+        lambda insight: f"{insight.get('label')} · 平均分 {insight.get('avg_score')} · 收藏 {insight.get('saves_total')} · 分享 {insight.get('shares_total')} · {insight.get('recommendation')}",
+        "暂无结果洞察。",
+    )
+    lines = [
+        "# DREC 中文每周运营报告",
+        "",
+        f"生成时间：{generated_at}",
+        "",
+        "本报告只读，不会改变学习权重、创建内容或触发发布。",
+        "",
+        "## 总结",
+        "",
+        report_bullet(f"下一步最佳动作：{summary.get('recommendation')}"),
+        report_bullet(f"流程下一步：{next_action.get('title')} - {next_action.get('body')}"),
+        report_bullet(f"当前循环阶段：{loop.get('stage')}"),
+        report_bullet(f"队列总数：{queue_total}（{count_label(summary.get('queue', []), 'status')}）"),
+        report_bullet(f"可进入队列素材：{workflow_summary.get('queue_ready_asset_count', 0)} / {workflow_summary.get('asset_count', 0)}"),
+        report_bullet(f"反馈总数：{feedback_total}（{count_label(summary.get('feedback', []), 'action')}）"),
+        report_bullet(f"草稿：{loop.get('brief_count', 0)} · 素材：{loop.get('asset_count', 0)} · 媒体：{loop.get('media_count', 0)} · 结果：{loop.get('outcome_count', 0)}"),
+        "",
+        "## 流程准备度",
+        "",
+        *workflow_lines,
+        "",
+        "## 最近内容草稿",
+        "",
+        *brief_lines,
+        "",
+        "## 素材与媒体审核",
+        "",
+        *asset_lines,
+        *media_lines,
+        "",
+        "## 最近结果",
+        "",
+        *outcome_lines,
+        "",
+        "## 结果洞察",
+        "",
+        report_bullet(insights.get("summary")),
+        *insight_lines,
+        "",
+        "## 当前学习权重",
+        "",
+        *weight_lines,
+        "",
+        "## 推荐下一周内容主题",
+        "",
+        *topic_lines,
+        "",
+        "## 人工操作备注",
+        "",
+        "- Meta 正式发布保持人工交接模式，直到 Meta readiness 完全通过。",
+        "- 只排程合规 clear 且真人审核通过的内容。",
+        "- 人工发布后，把 Meta post ID 贴回 Scheduler，并记录 7 天表现数据。",
+    ]
+    return Response(
+        "\n".join(lines) + "\n",
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'inline; filename="drec-weekly-report-zh.md"'},
     )
 
 
