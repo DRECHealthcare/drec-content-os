@@ -193,8 +193,10 @@ const uiZh = {
   "Download Send Queue": "下载发送队列",
   "Download Doctor Polish": "下载医生润色包",
   "Download Reply Inbox": "下载回复收件箱",
+  "下载中文医生回复收件箱": "下载中文医生回复收件箱",
   "Download Doctor Worksheet": "下载医生工作表",
   "Download Approval Cockpit": "下载审批驾驶舱",
+  "下载中文审批控制台": "下载中文审批控制台",
   "Download Rewrite Pack": "下载改写包",
   "Download Sprint Pack": "下载冲刺包",
   "Download Sprint Tracker": "下载冲刺追踪表",
@@ -204,6 +206,7 @@ const uiZh = {
   "Download Production Bridge": "下载制作交接桥",
   "下载中文制作交接桥接包": "下载中文制作交接桥接包",
   "Download Production Inbox": "下载制作回复箱",
+  "下载中文制作回复收件箱": "下载中文制作回复收件箱",
   "Download Design Worksheet": "下载设计工作表",
   "Design CSV": "设计 CSV",
   "Review CSV": "审核 CSV",
@@ -4140,6 +4143,16 @@ document.getElementById("download-doctor-reply-inbox")?.addEventListener("click"
   }
 });
 
+document.getElementById("download-doctor-reply-inbox-zh")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/doctor-reply-inbox-pack.zh.md", "drec-doctor-reply-inbox-pack-zh.md", "text/markdown");
+    message.textContent = "中文医生回复收件箱已下载。";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "请先设置访问 token。" : "无法下载中文医生回复收件箱。";
+  }
+});
+
 document.getElementById("download-doctor-decision-worksheet")?.addEventListener("click", async () => {
   const message = document.getElementById("media-message");
   try {
@@ -4157,6 +4170,16 @@ document.getElementById("download-approval-cockpit")?.addEventListener("click", 
     message.textContent = "Approval cockpit downloaded.";
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download approval cockpit.";
+  }
+});
+
+document.getElementById("download-approval-cockpit-zh")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/approval-cockpit.zh.md", "drec-approval-cockpit-zh.md", "text/markdown");
+    message.textContent = "中文审批控制台已下载。";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "请先设置访问 token。" : "无法下载中文审批控制台。";
   }
 });
 
@@ -4256,6 +4279,16 @@ document.getElementById("download-production-reply-inbox")?.addEventListener("cl
     message.textContent = "Production reply inbox pack downloaded.";
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download production reply inbox pack.";
+  }
+});
+
+document.getElementById("download-production-reply-inbox-zh")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/production-reply-inbox-pack.zh.md", "drec-production-reply-inbox-pack-zh.md", "text/markdown");
+    message.textContent = "中文制作回复收件箱已下载。";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "请先设置访问 token。" : "无法下载中文制作回复收件箱。";
   }
 });
 

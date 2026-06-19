@@ -2296,10 +2296,28 @@ async def chinese_operator_center_payload():
             "purpose": "把待审核中文内容发给医生，并用固定格式收回医生决定。",
         },
         {
+            "stage": "医生回复收件箱",
+            "status": (stage_lookup.get("asset_review") or {}).get("status"),
+            "link": "/operations/doctor-reply-inbox-pack.zh.md",
+            "purpose": "收到医生回复后，按固定模板贴回系统并先预览再导入。",
+        },
+        {
+            "stage": "审批控制台",
+            "status": (stage_lookup.get("asset_review") or {}).get("status"),
+            "link": "/operations/approval-cockpit.zh.md",
+            "purpose": "用中文查看哪些内容最适合先做人工审批。",
+        },
+        {
             "stage": "制作交接",
             "status": "waiting_for_doctor_approval",
             "link": "/operations/production-handoff-bridge.zh.md",
             "purpose": "医生/人工审核通过后，把内容交给设计制作并收回素材链接。",
+        },
+        {
+            "stage": "制作回复收件箱",
+            "status": "waiting_for_doctor_approval",
+            "link": "/operations/production-reply-inbox-pack.zh.md",
+            "purpose": "收到设计/制作回复后，检查链接、版权、QA，再预览导入。",
         },
         {
             "stage": "审核到排程",
@@ -2348,7 +2366,10 @@ async def chinese_operator_center_payload():
             "首次发布准备": "/operations/first-publish-readiness.zh.md",
             "素材审核": "/operations/asset-review-session.zh.md",
             "医生审核桥接": "/operations/doctor-review-bridge.zh.md",
+            "医生回复收件箱": "/operations/doctor-reply-inbox-pack.zh.md",
+            "审批控制台": "/operations/approval-cockpit.zh.md",
             "制作交接": "/operations/production-handoff-bridge.zh.md",
+            "制作回复收件箱": "/operations/production-reply-inbox-pack.zh.md",
             "审核到排程": "/operations/review-to-schedule-pack.zh.md",
             "发布交接": "/operations/publishing-handoff.zh.md",
             "数据结算": "/operations/metrics-closeout-pack.zh.md",
@@ -6418,6 +6439,66 @@ async def operations_approval_cockpit_markdown(_: None = Depends(require_access_
     )
 
 
+@app.get("/operations/approval-cockpit.zh.md")
+async def operations_approval_cockpit_markdown_zh(_: None = Depends(require_access_token)):
+    payload = await approval_cockpit_payload()
+    generated_at = datetime.now(timezone.utc).isoformat()
+    first = payload.get("recommended_first_asset") or {}
+    lines = [
+        "# DREC 审批控制台",
+        "",
+        f"- 生成时间：{generated_at}",
+        f"- 可人工审核：{payload.get('ready_count')}",
+        f"- 仍有阻碍：{payload.get('blocked_count')}",
+        f"- 建议优先审核：{first.get('topic') or '暂无'}",
+        "",
+        "这个控制台用于帮真人决定哪一条内容先审核。它只读，不会批准、进队列、排程、发布或发送 Meta 请求。",
+        "",
+        "## 审批规则",
+        "",
+        "- 检测器 clear 只是必要条件，不等于可以发布。",
+        "- 真人必须确认医学意思、语气、品牌适配和素材授权。",
+        "- 如果不确定，就保持 draft / needs review，不要标记 approved。",
+        "- 素材/设计可以后补，但医疗安全和发布批准不能跳过。",
+        "",
+        "## 审批候选清单",
+        "",
+    ]
+    for index, item in enumerate(payload.get("approval_items") or [], start=1):
+        blockers = item.get("blockers") or ["无"]
+        lines.extend(
+            [
+                f"### {index}. {item.get('topic') or '未命名内容'}",
+                "",
+                f"- Asset ID：`{item.get('asset_id')}`",
+                f"- 分数：{item.get('approval_score')}",
+                f"- 审批状态：{item.get('approval_status')}",
+                f"- 频道 / 格式：{item.get('channel')} / {item.get('format')}",
+                f"- 安全 / 审核：{item.get('compliance_status')} / {item.get('review_status')}",
+                f"- 素材：{item.get('media_count')}（{item.get('media_gap') or '暂无素材缺口说明'}）",
+                f"- 阻碍：{'；'.join(blockers)}",
+                f"- 下一步：{item.get('next_step')}",
+                "",
+                "审核提示：",
+                "",
+                "```",
+                item.get("reviewer_prompt") or "",
+                "```",
+                "",
+                "文案预览：",
+                "",
+                item.get("caption_preview") or "暂无文案。",
+                "",
+            ]
+        )
+    lines.extend(["## 下一步", "", "- 先审核建议优先项；只有真人确认医学安全和品牌合适时，才批准。", ""])
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-approval-cockpit-zh.md"'},
+    )
+
+
 def doctor_approval_item_lines(item: dict, index: int):
     blockers = item.get("blockers") or []
     return [
@@ -6900,6 +6981,72 @@ async def operations_doctor_reply_inbox_pack_markdown(_: None = Depends(require_
         "\n".join(lines),
         media_type="text/markdown",
         headers={"Content-Disposition": 'attachment; filename="drec-doctor-reply-inbox-pack.md"'},
+    )
+
+
+@app.get("/operations/doctor-reply-inbox-pack.zh.md")
+async def operations_doctor_reply_inbox_pack_markdown_zh(_: None = Depends(require_access_token)):
+    payload = await doctor_reply_inbox_pack_payload()
+    generated_at = datetime.now(timezone.utc).isoformat()
+    lines = [
+        "# DREC 医生回复收件箱",
+        "",
+        f"- 生成时间：{generated_at}",
+        f"- 可送医生审核：{payload.get('ready_for_review')}",
+        f"- 回复模板数量：{payload.get('reply_block_count')}",
+        f"- 模式：{payload.get('mode')}",
+        "",
+        "这个包用于收集医生回复，并把回复贴回页面的 Doctor Reply Text。它只读，不会导入、批准、进入制作、排程、发布或发送 Meta 请求。",
+        "",
+        "## 使用步骤",
+        "",
+        "- 从医生那里拿到按 Asset ID 分段的回复。",
+        "- 把回复原文贴到 Doctor Reply Text。",
+        "- 先点 Preview Doctor Reply，确认每条 Asset ID、Decision、Safety、Use polished copy 都解析正确。",
+        "- 确认无误后才 Import Doctor Reply。",
+        "- 只有 Decision: approve 且 Safety: clear 才能推进；其他状态留在审核中。",
+        "",
+        "## 安全线",
+        "",
+        "- 医生回复模糊、缺 Asset ID、缺 Safety、缺 Decision，都不要导入为批准。",
+        "- Use polished copy 只有医生明确写 yes，且 approve + clear 时才可以套用。",
+        "- 导入医生回复不等于自动发布；后面还要制作、队列审核、排程和 Meta dry run。",
+        "",
+        "## 可复制回复模板",
+        "",
+        "```",
+        payload.get("reply_paste_template") or "目前没有可用医生回复模板。",
+        "```",
+        "",
+        "## 回复项目",
+        "",
+    ]
+    items = payload.get("reply_items") or []
+    if not items:
+        lines.extend(["- 目前没有医生回复项目。", ""])
+    for index, item in enumerate(items, start=1):
+        lines.extend(
+            [
+                f"### {index}. {item.get('topic') or '未命名内容'}",
+                "",
+                f"- Asset ID：`{item.get('asset_id')}`",
+                f"- 频道 / 格式：{item.get('channel')} / {item.get('format')}",
+                f"- 批准规则：{item.get('safe_approval_rule')}",
+                f"- 润色文案规则：{item.get('polished_copy_rule')}",
+                "",
+                "回复模板：",
+                "",
+                "```",
+                item.get("reply_template") or "",
+                "```",
+                "",
+            ]
+        )
+    lines.extend(["## 下一步", "", "- 收到医生回复后，先预览，再导入；不清楚的回复保持人工复核。", ""])
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-doctor-reply-inbox-pack-zh.md"'},
     )
 
 
@@ -7684,6 +7831,77 @@ async def operations_production_reply_inbox_pack_markdown(_: None = Depends(requ
         "\n".join(lines),
         media_type="text/markdown",
         headers={"Content-Disposition": 'attachment; filename="drec-production-reply-inbox-pack.md"'},
+    )
+
+
+@app.get("/operations/production-reply-inbox-pack.zh.md")
+async def operations_production_reply_inbox_pack_markdown_zh(_: None = Depends(require_access_token)):
+    payload = await production_reply_inbox_pack_payload()
+    generated_at = datetime.now(timezone.utc).isoformat()
+    lines = [
+        "# DREC 制作回复收件箱",
+        "",
+        f"- 生成时间：{generated_at}",
+        f"- 已批准、可做制作检查：{payload.get('approved_ready_count')}",
+        f"- 等待人工批准：{payload.get('waiting_approval_count')}",
+        f"- 需要素材/设计：{payload.get('needs_media_count')}",
+        f"- 回复模板数量：{payload.get('reply_block_count')}",
+        f"- 模式：{payload.get('mode')}",
+        "",
+        "这个包用于收集设计/制作同事返回的媒体链接、版权说明和视觉 QA 状态，并把回复贴回 Production Reply Text。它只读，不会自动加素材、批准、排程、发布或发送 Meta 请求。",
+        "",
+        "## 使用步骤",
+        "",
+        "- 从设计/制作那里拿到每个 Asset ID 的回复块。",
+        "- 确认每条都有 Media URLs、Visual QA、Rights、Producer 和 Notes。",
+        "- 把回复贴到 Production Reply Text。",
+        "- 先点 Preview Production Reply，确认链接、版权、QA 状态解析正确。",
+        "- 确认无误后才 Import Production Reply，然后再跑排程前检查。",
+        "",
+        "## 安全线",
+        "",
+        "- 制作回复只代表素材/设计完成，不代表医疗内容批准。",
+        "- Visual QA 是 pending / needs_work、版权不清楚、链接无法访问，都不能进入排程。",
+        "- 导入制作回复后，仍需要队列审核、排程检查和 Meta dry run。",
+        "",
+        "## 可复制制作回复模板",
+        "",
+        "```",
+        payload.get("reply_paste_template") or "目前没有可用制作回复模板。",
+        "```",
+        "",
+        "## 回复项目",
+        "",
+    ]
+    items = payload.get("reply_items") or []
+    if not items:
+        lines.extend(["- 目前没有制作回复项目。", ""])
+    for index, item in enumerate(items, start=1):
+        lines.extend(
+            [
+                f"### {index}. {item.get('topic') or '未命名内容'}",
+                "",
+                f"- Asset ID：`{item.get('asset_id')}`",
+                f"- 阶段：{item.get('stage')}",
+                f"- 频道 / 格式：{item.get('channel')} / {item.get('format')}",
+                f"- 素材任务：{item.get('media_task')}",
+                f"- 素材缺口：{item.get('media_gap')}",
+                f"- 导入规则：{item.get('safe_import_rule')}",
+                f"- 进队列规则：{item.get('queue_rule')}",
+                "",
+                "回复模板：",
+                "",
+                "```",
+                item.get("reply_template") or "",
+                "```",
+                "",
+            ]
+        )
+    lines.extend(["## 下一步", "", "- 收到制作回复后，先预览，再导入；导入后继续排程前检查。", ""])
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-production-reply-inbox-pack-zh.md"'},
     )
 
 

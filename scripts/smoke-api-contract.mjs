@@ -72,10 +72,12 @@ const requiredRoutes = [
   "GET /operations/doctor-review-polish-pack.md",
   "GET /operations/doctor-reply-inbox-pack",
   "GET /operations/doctor-reply-inbox-pack.md",
+  "GET /operations/doctor-reply-inbox-pack.zh.md",
   "GET /operations/doctor-decision-worksheet.csv",
   "POST /operations/import-doctor-replies",
   "GET /operations/approval-cockpit",
   "GET /operations/approval-cockpit.md",
+  "GET /operations/approval-cockpit.zh.md",
   "GET /operations/post-approval-production",
   "GET /operations/post-approval-production.md",
   "GET /operations/production-handoff-bridge",
@@ -83,6 +85,7 @@ const requiredRoutes = [
   "GET /operations/production-handoff-bridge.zh.md",
   "GET /operations/production-reply-inbox-pack",
   "GET /operations/production-reply-inbox-pack.md",
+  "GET /operations/production-reply-inbox-pack.zh.md",
   "GET /operations/production-design-worksheet.csv",
   "GET /operations/pre-schedule-gate",
   "GET /operations/pre-schedule-gate.md",
@@ -1101,6 +1104,16 @@ const requiredSnippets = [
     text: "can apply polished copy only when the doctor explicitly says yes with Decision: approve and Safety: clear.",
   },
   {
+    name: "doctor reply inbox chinese export",
+    file: "main",
+    text: "drec-doctor-reply-inbox-pack-zh.md",
+  },
+  {
+    name: "doctor reply inbox chinese safety",
+    file: "main",
+    text: "导入医生回复不等于自动发布",
+  },
+  {
     name: "doctor approval pack safety",
     file: "main",
     text: "human_medical_review_only",
@@ -1124,6 +1137,16 @@ const requiredSnippets = [
     name: "approval cockpit export",
     file: "main",
     text: "drec-approval-cockpit.md",
+  },
+  {
+    name: "approval cockpit chinese export",
+    file: "main",
+    text: "drec-approval-cockpit-zh.md",
+  },
+  {
+    name: "approval cockpit chinese safety",
+    file: "main",
+    text: "它只读，不会批准、进队列、排程、发布或发送 Meta 请求。",
   },
   {
     name: "approval cockpit safety",
@@ -1204,6 +1227,16 @@ const requiredSnippets = [
     name: "production reply inbox pack export",
     file: "main",
     text: "drec-production-reply-inbox-pack.md",
+  },
+  {
+    name: "production reply inbox chinese export",
+    file: "main",
+    text: "drec-production-reply-inbox-pack-zh.md",
+  },
+  {
+    name: "production reply inbox chinese safety",
+    file: "main",
+    text: "导入制作回复后，仍需要队列审核、排程检查和 Meta dry run。",
   },
   {
     name: "production reply inbox pack safety",
@@ -1311,9 +1344,24 @@ const requiredSnippets = [
     text: "/operations/doctor-review-bridge.zh.md",
   },
   {
+    name: "chinese operator center doctor inbox link",
+    file: "main",
+    text: "/operations/doctor-reply-inbox-pack.zh.md",
+  },
+  {
+    name: "chinese operator center approval cockpit link",
+    file: "main",
+    text: "/operations/approval-cockpit.zh.md",
+  },
+  {
     name: "chinese operator center production bridge link",
     file: "main",
     text: "/operations/production-handoff-bridge.zh.md",
+  },
+  {
+    name: "chinese operator center production inbox link",
+    file: "main",
+    text: "/operations/production-reply-inbox-pack.zh.md",
   },
   {
     name: "chinese operator center schedule link",
@@ -2881,6 +2929,16 @@ const requiredSnippets = [
     text: "/operations/approval-cockpit",
   },
   {
+    name: "web approval cockpit chinese action",
+    file: "web",
+    text: "download-approval-cockpit-zh",
+  },
+  {
+    name: "web approval cockpit chinese endpoint",
+    file: "web",
+    text: "/operations/approval-cockpit.zh.md",
+  },
+  {
     name: "web post approval production action",
     file: "web",
     text: "download-post-approval-production",
@@ -2899,6 +2957,16 @@ const requiredSnippets = [
     name: "web production reply inbox endpoint",
     file: "web",
     text: "/operations/production-reply-inbox-pack.md",
+  },
+  {
+    name: "web production reply inbox chinese action",
+    file: "web",
+    text: "download-production-reply-inbox-zh",
+  },
+  {
+    name: "web production reply inbox chinese endpoint",
+    file: "web",
+    text: "/operations/production-reply-inbox-pack.zh.md",
   },
   {
     name: "web production design worksheet preview action",
@@ -2979,6 +3047,16 @@ const requiredSnippets = [
     name: "web doctor reply inbox endpoint",
     file: "web",
     text: "/operations/doctor-reply-inbox-pack.md",
+  },
+  {
+    name: "web doctor reply inbox chinese action",
+    file: "web",
+    text: "download-doctor-reply-inbox-zh",
+  },
+  {
+    name: "web doctor reply inbox chinese endpoint",
+    file: "web",
+    text: "/operations/doctor-reply-inbox-pack.zh.md",
   },
   {
     name: "web doctor reply inbox board",
