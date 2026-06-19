@@ -66,6 +66,7 @@ const requiredRoutes = [
   "GET /operations/doctor-approval-pack.md",
   "GET /operations/doctor-review-bridge",
   "GET /operations/doctor-review-bridge.md",
+  "GET /operations/doctor-review-bridge.zh.md",
   "GET /operations/doctor-send-queue.csv",
   "GET /operations/doctor-review-polish-pack",
   "GET /operations/doctor-review-polish-pack.md",
@@ -79,6 +80,7 @@ const requiredRoutes = [
   "GET /operations/post-approval-production.md",
   "GET /operations/production-handoff-bridge",
   "GET /operations/production-handoff-bridge.md",
+  "GET /operations/production-handoff-bridge.zh.md",
   "GET /operations/production-reply-inbox-pack",
   "GET /operations/production-reply-inbox-pack.md",
   "GET /operations/production-design-worksheet.csv",
@@ -999,6 +1001,16 @@ const requiredSnippets = [
     text: "drec-doctor-review-bridge.md",
   },
   {
+    name: "doctor review bridge chinese export",
+    file: "main",
+    text: "drec-doctor-review-bridge-zh.md",
+  },
+  {
+    name: "doctor review bridge chinese safety",
+    file: "main",
+    text: "这个桥接包不会自动批准医疗内容，也不会触发发布。",
+  },
+  {
     name: "doctor review bridge send section",
     file: "main",
     text: "## Copy This To Doctor",
@@ -1017,6 +1029,16 @@ const requiredSnippets = [
     name: "doctor review bridge UI endpoint",
     file: "web",
     text: "/operations/doctor-review-bridge.md",
+  },
+  {
+    name: "doctor review bridge chinese UI action",
+    file: "web",
+    text: "download-doctor-review-bridge-zh",
+  },
+  {
+    name: "doctor review bridge chinese UI endpoint",
+    file: "web",
+    text: "/operations/doctor-review-bridge.zh.md",
   },
   {
     name: "doctor send queue route",
@@ -1134,6 +1156,16 @@ const requiredSnippets = [
     text: "drec-production-handoff-bridge.md",
   },
   {
+    name: "production handoff bridge chinese export",
+    file: "main",
+    text: "drec-production-handoff-bridge-zh.md",
+  },
+  {
+    name: "production handoff bridge chinese safety",
+    file: "main",
+    text: "这个桥接包不会自动触发发布。",
+  },
+  {
     name: "production handoff bridge send section",
     file: "main",
     text: "## Copy This To Production",
@@ -1152,6 +1184,16 @@ const requiredSnippets = [
     name: "production handoff bridge UI endpoint",
     file: "web",
     text: "/operations/production-handoff-bridge.md",
+  },
+  {
+    name: "production handoff bridge chinese UI action",
+    file: "web",
+    text: "download-production-handoff-bridge-zh",
+  },
+  {
+    name: "production handoff bridge chinese UI endpoint",
+    file: "web",
+    text: "/operations/production-handoff-bridge.zh.md",
   },
   {
     name: "production reply inbox pack route",
@@ -1262,6 +1304,16 @@ const requiredSnippets = [
     name: "chinese operator center asset review link",
     file: "main",
     text: "/operations/asset-review-session.zh.md",
+  },
+  {
+    name: "chinese operator center doctor bridge link",
+    file: "main",
+    text: "/operations/doctor-review-bridge.zh.md",
+  },
+  {
+    name: "chinese operator center production bridge link",
+    file: "main",
+    text: "/operations/production-handoff-bridge.zh.md",
   },
   {
     name: "chinese operator center schedule link",

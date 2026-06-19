@@ -2290,6 +2290,18 @@ async def chinese_operator_center_payload():
             "purpose": "给真人/医生审核使用，确认医疗安全、素材授权和发布批准。",
         },
         {
+            "stage": "医生审核桥接",
+            "status": (stage_lookup.get("asset_review") or {}).get("status"),
+            "link": "/operations/doctor-review-bridge.zh.md",
+            "purpose": "把待审核中文内容发给医生，并用固定格式收回医生决定。",
+        },
+        {
+            "stage": "制作交接",
+            "status": "waiting_for_doctor_approval",
+            "link": "/operations/production-handoff-bridge.zh.md",
+            "purpose": "医生/人工审核通过后，把内容交给设计制作并收回素材链接。",
+        },
+        {
             "stage": "审核到排程",
             "status": (stage_lookup.get("review_queue") or stage_lookup.get("schedule") or {}).get("status"),
             "link": "/operations/review-to-schedule-pack.zh.md",
@@ -2335,6 +2347,8 @@ async def chinese_operator_center_payload():
         "links": {
             "首次发布准备": "/operations/first-publish-readiness.zh.md",
             "素材审核": "/operations/asset-review-session.zh.md",
+            "医生审核桥接": "/operations/doctor-review-bridge.zh.md",
+            "制作交接": "/operations/production-handoff-bridge.zh.md",
             "审核到排程": "/operations/review-to-schedule-pack.zh.md",
             "发布交接": "/operations/publishing-handoff.zh.md",
             "数据结算": "/operations/metrics-closeout-pack.zh.md",
@@ -6980,6 +6994,94 @@ async def operations_doctor_review_bridge_markdown(_: None = Depends(require_acc
     )
 
 
+@app.get("/operations/doctor-review-bridge.zh.md")
+async def operations_doctor_review_bridge_markdown_zh(_: None = Depends(require_access_token)):
+    payload = await doctor_review_bridge_payload()
+    generated_at = datetime.now(timezone.utc).isoformat()
+    lines = [
+        "# DREC 医生审核桥接包",
+        "",
+        f"- 生成时间：{generated_at}",
+        f"- 可送医生审核：{payload.get('ready_for_review')}",
+        f"- 审核项目数：{payload.get('bridge_item_count')}",
+        f"- 模式：{payload.get('mode')}",
+        "",
+        "这个包用于把当前内容发给医生/医学审核人，并把医生回复贴回系统预览后再导入。它是只读的，不会批准、修改、加素材、进队列、排程、发布或发送 Meta 请求。",
+        "",
+        "## 操作步骤",
+        "",
+        "- 复制「发给医生的内容」，用 WhatsApp、Email 或内部沟通方式发给医生。",
+        "- 请医生每条内容保留一个 Asset ID，并按照回复模板填写。",
+        "- 收到回复后，回到页面的 Doctor Reply Text，把回复贴进去。",
+        "- 先点 Preview Doctor Reply 预览；确认解析正确后才 Import Doctor Reply。",
+        "- 只有医生明确写 Decision: approve 且 Safety: clear，系统才可以把内容推进到制作/排程前阶段。",
+        "",
+        "## 安全线",
+        "",
+        "- 医生回复不清楚、写 needs edits、needs review、blocked，或没有 clear，都不能进入制作和排程。",
+        "- 如果医生没有明确同意 Use polished copy: yes，不要套用润色版文案。",
+        "- 这个桥接包不会自动批准医疗内容，也不会触发发布。",
+        "",
+        "## 发给医生的内容",
+        "",
+        "```",
+        payload.get("full_doctor_message") or "目前没有可发给医生审核的内容。",
+        "```",
+        "",
+        "## 医生回复模板",
+        "",
+        "```",
+        payload.get("paste_back_template") or "目前没有可用回复模板。",
+        "```",
+        "",
+        "## 审核项目",
+        "",
+    ]
+    items = payload.get("bridge_items") or []
+    if not items:
+        lines.extend(["- 目前没有可送医生审核的项目。", ""])
+    for index, item in enumerate(items, start=1):
+        lines.extend(
+            [
+                f"### {index}. {item.get('topic') or '未命名内容'}",
+                "",
+                f"- Asset ID：`{item.get('asset_id')}`",
+                f"- 频道 / 格式：{item.get('channel')} / {item.get('format')}",
+                f"- 使用规则：{item.get('safe_use_rule')}",
+                "",
+                "待审核文案：",
+                "",
+                item.get("copy_to_review") or "暂无文案。",
+                "",
+                "回复模板：",
+                "",
+                "```",
+                item.get("reply_template") or "",
+                "```",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## 相关链接",
+            "",
+            "- 医生回复收件箱：`/operations/doctor-reply-inbox-pack.md`",
+            "- 审批控制台：`/operations/approval-cockpit.md`",
+            "- 今日执行手册：`/operations/today-runbook.md`",
+            "",
+            "## 下一步",
+            "",
+            "- 把上面的医生审核内容发出；收到回复后，先预览再导入。",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-doctor-review-bridge-zh.md"'},
+    )
+
+
 @app.get("/operations/doctor-send-queue.csv")
 async def operations_doctor_send_queue_csv(_: None = Depends(require_access_token)):
     payload = await doctor_review_bridge_payload()
@@ -7676,6 +7778,98 @@ async def operations_production_handoff_bridge_markdown(_: None = Depends(requir
         "\n".join(lines),
         media_type="text/markdown",
         headers={"Content-Disposition": 'attachment; filename="drec-production-handoff-bridge.md"'},
+    )
+
+
+@app.get("/operations/production-handoff-bridge.zh.md")
+async def operations_production_handoff_bridge_markdown_zh(_: None = Depends(require_access_token)):
+    payload = await production_handoff_bridge_payload()
+    generated_at = datetime.now(timezone.utc).isoformat()
+    lines = [
+        "# DREC 制作交接桥接包",
+        "",
+        f"- 生成时间：{generated_at}",
+        f"- 已批准、可进入制作检查：{payload.get('approved_ready_count')}",
+        f"- 等待人工批准：{payload.get('waiting_approval_count')}",
+        f"- 需要素材/设计：{payload.get('needs_media_count')}",
+        f"- 交接项目数：{payload.get('bridge_item_count')}",
+        f"- 模式：{payload.get('mode')}",
+        "",
+        "这个包用于把已通过医生/人工审核的内容交给设计或制作同事，收回图片/视频/设计链接后，再通过系统预览导入。它是只读的，不会自动加素材、批准、进队列、排程、发布或发送 Meta 请求。",
+        "",
+        "## 操作步骤",
+        "",
+        "- 只有内容已经通过医生/人工审核后，才把这里的制作交接发给设计/制作。",
+        "- 设计/制作返回时，必须提供可访问的 media/design URL、版权/授权说明和视觉 QA 状态。",
+        "- 收到回复后，回到 Production Reply Text，把回复贴进去。",
+        "- 先点 Preview Production Reply 预览；确认链接、版权和 QA 状态正确后才 Import Production Reply。",
+        "- 导入素材后，还要经过排程前检查、队列审核和 Meta dry run；不能直接发布。",
+        "",
+        "## 安全线",
+        "",
+        "- 制作回复只处理媒体/设计，不等于医疗批准。",
+        "- rights 不清楚、链接过期、Visual QA 为 needs_work 或 pending，都不能进入排程。",
+        "- 这个桥接包不会自动触发发布。",
+        "",
+        "## 发给制作的内容",
+        "",
+        "```",
+        payload.get("full_production_message") or "目前没有可交接给制作的内容。",
+        "```",
+        "",
+        "## 制作回复模板",
+        "",
+        "```",
+        payload.get("paste_back_template") or "目前没有可用制作回复模板。",
+        "```",
+        "",
+        "## 交接项目",
+        "",
+    ]
+    items = payload.get("bridge_items") or []
+    if not items:
+        lines.extend(["- 目前没有可交接给制作的项目。先完成医生/人工审核。", ""])
+    for index, item in enumerate(items, start=1):
+        lines.extend(
+            [
+                f"### {index}. {item.get('topic') or '未命名内容'}",
+                "",
+                f"- Asset ID：`{item.get('asset_id')}`",
+                f"- 阶段：{item.get('stage')}",
+                f"- 频道 / 格式：{item.get('channel')} / {item.get('format')}",
+                f"- 素材任务：{item.get('media_task')}",
+                f"- 视觉方向：{item.get('visual_direction')}",
+                f"- 模板建议：{item.get('template_suggestion')}",
+                f"- 授权检查：{item.get('rights_check')}",
+                f"- 使用规则：{item.get('safe_use_rule')}",
+                "",
+                "回复模板：",
+                "",
+                "```",
+                item.get("reply_template") or "",
+                "```",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## 相关链接",
+            "",
+            "- 制作包：`/operations/post-approval-production.md`",
+            "- 制作回复收件箱：`/operations/production-reply-inbox-pack.md`",
+            "- 制作设计表：`/operations/production-design-worksheet.csv`",
+            "- 排程前检查：`/operations/pre-schedule-gate.md`",
+            "",
+            "## 下一步",
+            "",
+            "- 完成人工/医生审核后，把制作交接发给设计；收到回复后，先预览再导入。",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-production-handoff-bridge-zh.md"'},
     )
 
 

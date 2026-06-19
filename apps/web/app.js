@@ -189,6 +189,7 @@ const uiZh = {
   "Download Doctor Approval": "下载医生审批包",
   "Download Doctor Request": "下载医生请求",
   "Download Doctor Bridge": "下载医生沟通桥",
+  "下载中文医生审核桥接包": "下载中文医生审核桥接包",
   "Download Send Queue": "下载发送队列",
   "Download Doctor Polish": "下载医生润色包",
   "Download Reply Inbox": "下载回复收件箱",
@@ -201,6 +202,7 @@ const uiZh = {
   "Download First Cycle Handoff": "下载首轮交接包",
   "Download Production Pack": "下载制作包",
   "Download Production Bridge": "下载制作交接桥",
+  "下载中文制作交接桥接包": "下载中文制作交接桥接包",
   "Download Production Inbox": "下载制作回复箱",
   "Download Design Worksheet": "下载设计工作表",
   "Design CSV": "设计 CSV",
@@ -4098,6 +4100,16 @@ document.getElementById("download-doctor-review-bridge")?.addEventListener("clic
   }
 });
 
+document.getElementById("download-doctor-review-bridge-zh")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/doctor-review-bridge.zh.md", "drec-doctor-review-bridge-zh.md", "text/markdown");
+    message.textContent = "中文医生审核桥接包已下载。";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "请先设置访问 token。" : "无法下载中文医生审核桥接包。";
+  }
+});
+
 document.getElementById("download-doctor-send-queue")?.addEventListener("click", async () => {
   const message = document.getElementById("media-message");
   try {
@@ -4224,6 +4236,16 @@ document.getElementById("download-production-handoff-bridge")?.addEventListener(
     message.textContent = "Production handoff bridge downloaded.";
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download production handoff bridge.";
+  }
+});
+
+document.getElementById("download-production-handoff-bridge-zh")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/production-handoff-bridge.zh.md", "drec-production-handoff-bridge-zh.md", "text/markdown");
+    message.textContent = "中文制作交接桥接包已下载。";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "请先设置访问 token。" : "无法下载中文制作交接桥接包。";
   }
 });
 
