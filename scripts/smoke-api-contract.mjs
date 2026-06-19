@@ -3002,9 +3002,9 @@ const requiredSnippets = [
     text: "/operations/first-publish-approve-current-asset?dry_run=false",
   },
   {
-    name: "web first publish approve current asset confirm",
+    name: "web first publish approve current asset phrase gate",
     file: "web",
-    text: "你已经看过首发图片预览和文案",
+    text: "Decision: approve",
   },
   {
     name: "web first publish approve current queue action",
@@ -3017,9 +3017,14 @@ const requiredSnippets = [
     text: "/operations/first-publish-approve-current-queue?dry_run=false",
   },
   {
-    name: "web first publish approve current queue confirm",
+    name: "web first publish approve current queue phrase gate",
     file: "web",
-    text: "你已经看过当前首发队列项目的文案、媒体和排程适配",
+    text: "reviewer_action=approve",
+  },
+  {
+    name: "web first publish approval phrase helper",
+    file: "web",
+    text: "requireFirstPublishPhrase",
   },
   {
     name: "web first publish doctor reply template",

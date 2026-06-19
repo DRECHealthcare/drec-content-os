@@ -171,6 +171,8 @@ const uiZh = {
   "Fill Doctor Reply Template": "填写医生回复模板",
   "Approve Current First Publish": "批准当前首发素材",
   "Approve Current Queue Item": "批准当前队列项目",
+  "Approval phrase missing.": "缺少批准确认语。",
+  "Type or paste the doctor's approval reply first.": "请先输入或粘贴医生批准回复。",
   "Open Asset Review": "打开素材审核",
   "Download Chinese Pack": "下载中文包",
   "Download Doctor Review Sheet": "下载首发医生审核单",
@@ -1575,8 +1577,11 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
     return;
   }
   if (approveCurrentFirstAssetButton) {
-    const confirmed = window.confirm("请确认：你已经看过首发图片预览和文案，并同意把当前首发素材标记为“安全通过 + 批准”。系统不会自动发布。");
-    if (!confirmed) return;
+    const asset = (latestFirstPublishReadiness?.candidates || {}).next_asset || {};
+    if (!requireFirstPublishPhrase("asset", asset.id || "")) {
+      if (message) message.textContent = "Approval phrase missing.";
+      return;
+    }
     const originalText = approveCurrentFirstAssetButton.textContent;
     approveCurrentFirstAssetButton.disabled = true;
     approveCurrentFirstAssetButton.textContent = "Working";
@@ -1594,8 +1599,10 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
     return;
   }
   if (approveCurrentFirstQueueButton) {
-    const confirmed = window.confirm("请确认：你已经看过当前首发队列项目的文案、媒体和排程适配，并同意把它标记为“队列审核批准”。系统不会自动排程或发布。");
-    if (!confirmed) return;
+    if (!requireFirstPublishPhrase("queue")) {
+      if (message) message.textContent = "Approval phrase missing.";
+      return;
+    }
     const originalText = approveCurrentFirstQueueButton.textContent;
     approveCurrentFirstQueueButton.disabled = true;
     approveCurrentFirstQueueButton.textContent = "Working";
@@ -2914,6 +2921,30 @@ function firstPublishDoctorReplyTemplate(asset) {
     "Use polished copy: no",
     "Notes:",
   ].join("\n");
+}
+
+function requireFirstPublishPhrase(kind, assetId = "") {
+  const promptText = kind === "asset"
+    ? [
+        "请粘贴医生/人工审核回复，必须同时包含：",
+        "Decision: approve",
+        "Safety: clear",
+        assetId ? `Asset ID: ${assetId}` : "",
+        "",
+        "没有这两个明确结果，系统不会批准首发素材。",
+      ].filter(Boolean).join("\n")
+    : [
+        "请确认队列审核结果。",
+        "输入 approve，或粘贴包含 reviewer_action=approve 的队列审核结果。",
+        "系统不会自动排程或发布。",
+      ].join("\n");
+  const value = window.prompt(promptText, "");
+  if (value === null) return false;
+  const normalized = value.toLowerCase();
+  if (kind === "asset") {
+    return normalized.includes("decision: approve") && normalized.includes("safety: clear");
+  }
+  return /\breviewer_action\s*=\s*approve\b/.test(normalized) || /\bapprove\b/.test(normalized);
 }
 
 function csvCell(value) {
