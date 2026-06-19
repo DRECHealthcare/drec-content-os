@@ -16,6 +16,7 @@ let latestLearningWeightSuggestions = [];
 let latestDoctorFullMessage = "";
 let latestDoctorPasteBackTemplate = "";
 let latestTestRunChecklist = null;
+let latestFirstPublishReadiness = null;
 
 const titleMapEn = {
   dashboard: "Dashboard",
@@ -143,6 +144,7 @@ const uiZh = {
   "Build Report": "生成报告",
   "Use Topics": "使用推荐主题",
   "First Publish Readiness": "首次发布准备",
+  "First Publish Next Action": "首次发布下一步",
   "Meta Dry Run": "Meta 测试运行",
   "Publish Path": "发布路径",
   "Open Assets": "打开素材页",
@@ -154,6 +156,10 @@ const uiZh = {
   "Advance Safe Step": "推进安全步骤",
   "Copy Asset Decision CSV": "复制素材审核 CSV",
   "Fill Asset Decision CSV": "填入素材审核 CSV",
+  "Copy Doctor Review": "复制医生审核文本",
+  "Open Asset Review": "打开素材审核",
+  "Download Chinese Pack": "下载中文包",
+  "Success Standard": "成功标准",
   "Copy Queue Decision CSV": "复制队列审核 CSV",
   "Fill Queue Decision CSV": "填入队列审核 CSV",
   "Preview Pasted Queue Decisions": "预览粘贴的队列审核",
@@ -976,15 +982,38 @@ async function loadTestRunChecklist() {
 function renderFirstPublishReadiness(data) {
   const container = document.getElementById("first-publish-readiness");
   if (!container) return;
+  latestFirstPublishReadiness = data;
   const next = data.next_step || {};
   const stages = data.stages || [];
   const meta = data.meta || {};
+  const candidates = data.candidates || {};
+  const nextAsset = candidates.next_asset || {};
+  const nextAssetMetadata = nextAsset.metadata || {};
+  const nextAssetTopic = nextAssetMetadata.topic || nextAsset.title || nextAsset.brief_title || "No asset selected";
+  const nextAssetStatus = [
+    nextAsset.channel || "channel",
+    nextAsset.format || "format",
+    nextAsset.compliance_status || "pending",
+    nextAsset.review_status || "draft",
+  ].join(" / ");
   const actionPack = data.action_pack || {};
   container.dataset.nextAssetDecisionCsv = actionPack.next_asset_decision_csv || "";
   container.dataset.nextQueueDecisionCsv = actionPack.next_queue_decision_csv || "";
   const hasDecisionCsv = Boolean(actionPack.next_asset_decision_csv);
   const hasQueueDecisionCsv = Boolean(actionPack.next_queue_decision_csv);
   container.innerHTML = `
+    <article class="learning-card wide-learning ${escapeHtml(next.status || "open")}">
+      <h3>${escapeHtml(translateText("First Publish Next Action"))}</h3>
+      <p>${escapeHtml(localizeFirstPublishText(next.label || "Checking first publish path"))}</p>
+      <small>${escapeHtml(nextAssetTopic)} · ${escapeHtml(nextAssetStatus)}</small>
+      <div class="learning-actions">
+        ${nextAsset.id ? `<button type="button" data-copy-first-asset-review>${escapeHtml(translateText("Copy Doctor Review"))}</button>` : ""}
+        ${hasDecisionCsv ? `<button type="button" data-fill-first-asset-decision>${escapeHtml(translateText("Fill Asset Decision CSV"))}</button>` : ""}
+        <button type="button" data-open-first-asset-review>${escapeHtml(translateText("Open Asset Review"))}</button>
+        <button type="button" data-download-first-publish-zh>${escapeHtml(translateText("Download Chinese Pack"))}</button>
+      </div>
+      <small><strong>${escapeHtml(translateText("Success Standard"))}:</strong> Safety: clear + Decision: approve. Otherwise keep this item in review.</small>
+    </article>
     <article class="learning-card wide-learning ${escapeHtml(next.status || "open")}">
       <h3>${escapeHtml(translateText("First Publish Readiness"))}</h3>
       <p>${escapeHtml(localizeFirstPublishText(next.label || "Checking first publish path"))}</p>
@@ -1023,14 +1052,46 @@ async function loadFirstPublishReadiness() {
 }
 
 document.getElementById("first-publish-readiness")?.addEventListener("click", async (event) => {
+  const copyReviewButton = event.target.closest("[data-copy-first-asset-review]");
+  const openAssetReviewButton = event.target.closest("[data-open-first-asset-review]");
+  const downloadZhButton = event.target.closest("[data-download-first-publish-zh]");
   const copyButton = event.target.closest("[data-copy-first-asset-decision]");
   const fillButton = event.target.closest("[data-fill-first-asset-decision]");
   const copyQueueButton = event.target.closest("[data-copy-first-queue-decision]");
   const fillQueueButton = event.target.closest("[data-fill-first-queue-decision]");
   const advanceButton = event.target.closest("[data-advance-first-publish]");
-  if (!copyButton && !fillButton && !copyQueueButton && !fillQueueButton && !advanceButton) return;
+  if (!copyReviewButton && !openAssetReviewButton && !downloadZhButton && !copyButton && !fillButton && !copyQueueButton && !fillQueueButton && !advanceButton) return;
   const container = document.getElementById("first-publish-readiness");
   const message = document.getElementById("test-path-message");
+  if (copyReviewButton) {
+    const asset = (latestFirstPublishReadiness?.candidates || {}).next_asset;
+    if (!asset?.id) {
+      if (message) message.textContent = "No first asset is available for doctor review yet.";
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(firstPublishDoctorReviewText(asset));
+      if (message) message.textContent = "中文医生审核文本已复制。";
+    } catch {
+      if (message) message.textContent = "无法自动复制，请下载中文首次发布准备包。";
+    }
+    return;
+  }
+  if (openAssetReviewButton) {
+    showScreen("assets");
+    if (message) message.textContent = "已打开素材审核页。请选择当前首发素材继续审核。";
+    return;
+  }
+  if (downloadZhButton) {
+    if (message) message.textContent = "正在下载中文首次发布准备包...";
+    try {
+      await downloadProtectedFile("/operations/first-publish-readiness.zh.md", "drec-first-publish-readiness-zh.md", "text/markdown");
+      if (message) message.textContent = "中文首次发布准备包已下载。";
+    } catch (error) {
+      if (message) message.textContent = error.message === "Access token required" ? "请先设置访问码。" : "无法下载中文首次发布准备包。";
+    }
+    return;
+  }
   if (advanceButton) {
     const originalText = advanceButton.textContent;
     advanceButton.disabled = true;
@@ -2218,6 +2279,38 @@ function assetReviewNoteText(asset) {
     "[ ] Approve",
     "[ ] Keep Pending / Rewrite",
     "[ ] Flag",
+  ].join("\n");
+}
+
+function firstPublishDoctorReviewText(asset) {
+  const metadata = asset?.metadata || {};
+  const media = Array.isArray(asset?.media_urls) ? asset.media_urls.filter(Boolean) : [];
+  return [
+    "DREC 首次发布医生/人工审核请求",
+    "",
+    `Asset ID: ${asset?.id || ""}`,
+    `Brief ID: ${asset?.brief_id || ""}`,
+    `主题: ${metadata.topic || "未命名主题"}`,
+    `平台 / 格式: ${asset?.channel || "facebook"} / ${asset?.format || "post"}`,
+    `当前安全 / 审核状态: ${asset?.compliance_status || "pending"} / ${asset?.review_status || "draft"}`,
+    `媒体素材数量: ${media.length}`,
+    "",
+    "请帮忙确认：",
+    "- 是否只是一般健康教育，没有诊断、处方、个人治疗建议。",
+    "- 是否没有承诺逆转、治愈、减重、检验数值改善或保证结果。",
+    "- 是否没有暗示读者本人一定有某个疾病或问题。",
+    "- 如果有图片/视频，版权或授权是否安全。",
+    "- 如果不确定，请不要 approve，请标记 needs edits 或 blocked。",
+    "",
+    "待审核文案：",
+    asset?.caption || "",
+    "",
+    "请按这个格式回复，系统可以直接预览/导入：",
+    `Asset ID: ${asset?.id || ""}`,
+    "Decision: approve / needs edits / reject",
+    "Safety: clear / needs review / blocked",
+    "Use polished copy: yes / no",
+    "Notes:",
   ].join("\n");
 }
 

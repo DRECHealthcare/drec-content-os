@@ -2805,6 +2805,26 @@ const requiredSnippets = [
     text: "first-publish-readiness",
   },
   {
+    name: "web first publish next action card",
+    file: "web",
+    text: "First Publish Next Action",
+  },
+  {
+    name: "web first publish doctor review copy",
+    file: "web",
+    text: "data-copy-first-asset-review",
+  },
+  {
+    name: "web first publish chinese doctor review text",
+    file: "web",
+    text: "DREC 首次发布医生/人工审核请求",
+  },
+  {
+    name: "web first publish success standard",
+    file: "web",
+    text: "Safety: clear + Decision: approve",
+  },
+  {
     name: "web first publish readiness loader",
     file: "web",
     text: "loadFirstPublishReadiness",
