@@ -2015,6 +2015,47 @@ def asset_review_decision_csv_text(asset: dict | None):
     return output.getvalue()
 
 
+REVIEW_QUEUE_DECISION_FIELDS = [
+    "queue_id",
+    "asset_id",
+    "channel",
+    "format",
+    "review_state",
+    "compliance_status",
+    "media_count",
+    "caption",
+    "reviewer_action",
+    "reviewer_name",
+    "review_notes",
+]
+
+
+def review_queue_decision_row(item: dict):
+    state, _ = review_queue_state(item)
+    return {
+        "queue_id": item.get("id") or "",
+        "asset_id": item.get("asset_id") or "",
+        "channel": item.get("channel") or "",
+        "format": item.get("format") or "",
+        "review_state": state,
+        "compliance_status": item.get("compliance_status") or "",
+        "media_count": len([url for url in item.get("media_urls") or [] if url]),
+        "caption": item.get("caption") or "",
+        "reviewer_action": "",
+        "reviewer_name": "",
+        "review_notes": "",
+    }
+
+
+def review_queue_decision_csv_text(item: dict | None):
+    output = StringIO()
+    writer = csv.DictWriter(output, fieldnames=REVIEW_QUEUE_DECISION_FIELDS)
+    writer.writeheader()
+    if item:
+        writer.writerow(review_queue_decision_row(item))
+    return output.getvalue()
+
+
 async def first_publish_readiness_payload():
     checklist = await test_run_checklist_payload()
     assets = await fetch_asset_list(200)
@@ -2029,6 +2070,13 @@ async def first_publish_readiness_payload():
         if item.get("status") == "draft"
         and item.get("compliance_status") == "clear"
         and (item.get("latest_feedback") or {}).get("action") == "approve"
+    ]
+    review_needed_queue = [
+        item
+        for item in queue
+        if item.get("status") == "draft"
+        and item.get("compliance_status") == "clear"
+        and (item.get("latest_feedback") or {}).get("action") != "approve"
     ]
     scheduled_queue = [
         item
@@ -2100,6 +2148,7 @@ async def first_publish_readiness_payload():
         "candidates": {
             "next_asset": next_asset,
             "ready_asset": ready_assets[0] if ready_assets else None,
+            "review_needed_queue": review_needed_queue[0] if review_needed_queue else None,
             "review_approved_queue": review_approved_queue[0] if review_approved_queue else None,
             "scheduled_queue": scheduled_queue[0] if scheduled_queue else None,
             "facebook_dispatch_item": fb_item,
@@ -2107,8 +2156,10 @@ async def first_publish_readiness_payload():
         },
         "action_pack": {
             "next_asset_decision_csv": asset_review_decision_csv_text(next_asset) if next_asset else "",
+            "next_queue_decision_csv": review_queue_decision_csv_text(review_needed_queue[0]) if review_needed_queue else "",
             "next_asset_review_pack": "/operations/asset-review-session.md",
             "asset_decision_import": "/operations/import-asset-review-decisions",
+            "queue_decision_import": "/operations/import-review-queue-decisions",
             "instructions": [
                 "Copy or fill the one-row CSV template for the next asset.",
                 "A human reviewer must fill reviewer_safety_decision and reviewer_review_decision.",
@@ -2140,6 +2191,76 @@ async def first_publish_readiness_payload():
             "Keep live Meta switches off until dry runs and setup gates are green.",
         ],
     }
+
+
+@app.post("/operations/first-publish-advance")
+async def operations_first_publish_advance(dry_run: bool = True, _: None = Depends(require_schedule_access)):
+    payload = await first_publish_readiness_payload()
+    candidates = payload.get("candidates") or {}
+    next_step = payload.get("next_step") or {}
+    result = {
+        "dry_run": dry_run,
+        "before_status": payload.get("overall_status"),
+        "next_step": next_step,
+        "advanced": False,
+        "action": "blocked",
+        "message": next_step.get("detail") or "First publish path is not ready to advance.",
+        "result": None,
+        "safety": [
+            "This endpoint never approves assets or queue items.",
+            "It only queues already approved clear assets, schedules review-approved queue items, or runs Meta dry-run checks.",
+            "Live Meta publishing remains locked behind existing Meta enable flags.",
+        ],
+    }
+    if next_step.get("key") == "asset_review":
+        result["action"] = "needs_asset_review"
+        result["message"] = "Human asset safety and approval decisions are required before auto-advance can continue."
+        result["action_pack"] = payload.get("action_pack")
+        return result
+    if next_step.get("key") == "queue":
+        asset = candidates.get("ready_asset")
+        if not asset:
+            result["action"] = "needs_ready_asset"
+            result["message"] = "No approved compliance-clear asset is available to queue."
+            return result
+        result["action"] = "queue_ready_asset"
+        result["message"] = f"Ready asset {asset.get('id')} can be queued."
+        if dry_run:
+            result["planned"] = {"asset_id": asset.get("id"), "channel": asset.get("channel"), "format": asset.get("format")}
+            return result
+        queued = await queue_asset(str(asset.get("id")))
+        result.update({"advanced": True, "result": queued, "message": "Queued the first approved clear asset."})
+        result["after"] = await first_publish_readiness_payload()
+        return result
+    if next_step.get("key") == "review_queue":
+        result["action"] = "needs_queue_review"
+        result["message"] = "Human queue review approval is required before scheduling."
+        result["action_pack"] = payload.get("action_pack")
+        return result
+    if next_step.get("key") == "schedule":
+        item = candidates.get("review_approved_queue")
+        if not item:
+            result["action"] = "needs_review_approved_queue"
+            result["message"] = "No review-approved queue item is available to schedule."
+            return result
+        result["action"] = "schedule_review_approved"
+        result["message"] = f"Review-approved queue item {item.get('id')} can be scheduled."
+        if dry_run:
+            result["planned"] = {"queue_id": item.get("id"), "channel": item.get("channel"), "format": item.get("format")}
+            return result
+        scheduled = await schedule_publish_queue_next_slot(str(item.get("id")))
+        result.update({"advanced": True, "result": scheduled, "message": "Scheduled the first review-approved queue item."})
+        result["after"] = await first_publish_readiness_payload()
+        return result
+    if next_step.get("key") == "meta_dry_run":
+        result["action"] = "meta_dry_run"
+        result["message"] = "Running Meta publishing dry run for due scheduled items."
+        dry_run_result = await meta_publishing_job(channel="all", dry_run=True)
+        result.update({"advanced": bool(dry_run_result.get("ready_count")), "result": dry_run_result})
+        return result
+    result["action"] = "complete_or_unknown"
+    result["message"] = "No automatic first publish action is available."
+    return result
 
 
 @app.get("/operations/first-publish-readiness")
@@ -8818,38 +8939,10 @@ async def operations_review_queue_decisions_csv(_: None = Depends(require_access
     rows = await fetch_publish_queue_items(200)
     review_items = [item for item in rows if item.get("status") == "draft"]
     output = StringIO()
-    fieldnames = [
-        "queue_id",
-        "asset_id",
-        "channel",
-        "format",
-        "review_state",
-        "compliance_status",
-        "media_count",
-        "caption",
-        "reviewer_action",
-        "reviewer_name",
-        "review_notes",
-    ]
-    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer = csv.DictWriter(output, fieldnames=REVIEW_QUEUE_DECISION_FIELDS)
     writer.writeheader()
     for item in review_items:
-        state, _ = review_queue_state(item)
-        writer.writerow(
-            {
-                "queue_id": item.get("id") or "",
-                "asset_id": item.get("asset_id") or "",
-                "channel": item.get("channel") or "",
-                "format": item.get("format") or "",
-                "review_state": state,
-                "compliance_status": item.get("compliance_status") or "",
-                "media_count": len([url for url in item.get("media_urls") or [] if url]),
-                "caption": item.get("caption") or "",
-                "reviewer_action": "",
-                "reviewer_name": "",
-                "review_notes": "",
-            }
-        )
+        writer.writerow(review_queue_decision_row(item))
     return Response(
         output.getvalue(),
         media_type="text/csv",

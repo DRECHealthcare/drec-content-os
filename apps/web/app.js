@@ -2,6 +2,7 @@ const apiBase = window.DREC_API_BASE_URL || localStorage.getItem("DREC_API_BASE_
 const tokenKey = "DREC_ACCESS_TOKEN";
 const actorKey = "DREC_ACTOR";
 const rememberTokenKey = "DREC_REMEMBER_ACCESS_TOKEN";
+const languageKey = "DREC_UI_LANGUAGE";
 let currentDraft = null;
 let editingQueueItem = null;
 let latestMetaSetupCommands = [];
@@ -16,7 +17,7 @@ let latestDoctorFullMessage = "";
 let latestDoctorPasteBackTemplate = "";
 let latestTestRunChecklist = null;
 
-const titleMap = {
+const titleMapEn = {
   dashboard: "Dashboard",
   insights: "Insight Inbox",
   plan: "Weekly Plan",
@@ -33,12 +34,175 @@ const titleMap = {
   kb: "Knowledge Base",
 };
 
+const titleMapZh = {
+  dashboard: "总览",
+  insights: "洞察收件箱",
+  plan: "每周内容计划",
+  compose: "创建帖子",
+  creative: "创意工作室",
+  templates: "模板工作室",
+  video: "视频工作室",
+  assets: "素材与内容资产",
+  review: "审核队列",
+  scheduler: "排程",
+  meta: "Meta 设置",
+  outcomes: "表现数据",
+  learning: "学习复盘",
+  kb: "知识库",
+};
+
+const uiZh = {
+  "Dashboard": "总览",
+  "Insight Inbox": "洞察收件箱",
+  "Weekly Plan": "每周内容计划",
+  "Create Post": "创建帖子",
+  "Create A Post": "创建帖子",
+  "Creative Studio": "创意工作室",
+  "Template Studio": "模板工作室",
+  "Video Studio": "视频工作室",
+  "Assets": "素材与内容资产",
+  "Review Queue": "审核队列",
+  "Scheduler": "排程",
+  "Meta Setup": "Meta 设置",
+  "Performance": "表现数据",
+  "Learning": "学习复盘",
+  "Insights & Learning": "洞察与学习",
+  "Knowledge Base": "知识库",
+  "Stage 1: Thin Core + Publish/Sense rails": "第 1 阶段：核心流程 + 发布/洞察轨道",
+  "This Week Through The Loop": "本周内容循环",
+  "Publish Queue": "发布队列",
+  "Content Briefs": "内容简报",
+  "Ready Assets": "可发布素材",
+  "Media Library": "媒体库",
+  "Learning Loop": "学习循环",
+  "Launch Readiness": "上线准备",
+  "Security Gate": "安全门槛",
+  "Access Role": "访问权限",
+  "Automation Gate": "自动化门槛",
+  "Next Best Action": "下一步最佳动作",
+  "Follow the first open step to move one post through the full system.": "按第一个未完成步骤，把一条内容走完整个系统。",
+  "Refresh": "刷新",
+  "Waiting for API": "等待系统连接",
+  "Test Path": "测试路径",
+  "Use this once to confirm the full manual workflow is working end to end.": "先用一次，确认完整人工流程可以从头跑到尾。",
+  "Copy Next Step": "复制下一步",
+  "Copy Test Path": "复制测试路径",
+  "Run Risk Audit": "运行风险检查",
+  "Download Daily Ops": "下载每日运营包",
+  "Download First Publish Readiness": "下载首次发布准备包",
+  "Download Command Center": "下载指挥中心",
+  "Download Evidence Ledger": "下载证据记录",
+  "Download Setup Board": "下载设置清单",
+  "Download First Test Kit": "下载首次测试包",
+  "Download Test Tracker": "下载测试追踪表",
+  "Download Manual QA": "下载人工 QA 包",
+  "Download Access Pack": "下载访问权限包",
+  "Download Service Role Pack": "下载服务角色包",
+  "Download RLS Plan": "下载 RLS 计划",
+  "Download Snapshot": "下载快照",
+  "Download Backup Pack": "下载备份包",
+  "Download Pipeline Board": "下载流程看板",
+  "Download Audit Trail": "下载审计记录",
+  "Download Launch Evidence": "下载上线证据",
+  "Download Operator Pack": "下载操作员包",
+  "Save Asset": "保存内容资产",
+  "Safety Clear": "安全通过",
+  "Add To Queue": "加入队列",
+  "Review Approve": "审核批准",
+  "Schedule": "排程",
+  "Build Handoff": "生成交接内容",
+  "Record Published": "记录已发布",
+  "Save & Roll Up": "保存并汇总",
+  "Build Report": "生成报告",
+  "Use Topics": "使用推荐主题",
+  "First Publish Readiness": "首次发布准备",
+  "Meta Dry Run": "Meta 测试运行",
+  "Publish Path": "发布路径",
+  "Open Assets": "打开素材页",
+  "Queue Ready Asset": "把可发布素材加入队列",
+  "Open Review Queue": "打开审核队列",
+  "Open Scheduler": "打开排程",
+  "Dry Run Meta Publishing": "运行 Meta 发布测试",
+  "Open Next Step": "打开下一步",
+  "Advance Safe Step": "推进安全步骤",
+  "Copy Asset Decision CSV": "复制素材审核 CSV",
+  "Fill Asset Decision CSV": "填入素材审核 CSV",
+  "Set access": "设置访问",
+  "Access set": "已设置访问",
+  "Access": "访问",
+  "Save": "保存",
+  "Clear": "清除",
+  "Remember": "记住",
+};
+
+function currentLanguage() {
+  return localStorage.getItem(languageKey) || "en";
+}
+
+function isZh() {
+  return currentLanguage() === "zh";
+}
+
+function translateText(text) {
+  if (!isZh()) return text;
+  return uiZh[text] || text;
+}
+
+function setTextIfMapped(element) {
+  const original = element.dataset.i18nSource || element.textContent.trim();
+  if (!element.dataset.i18nSource) element.dataset.i18nSource = original;
+  const translated = translateText(original);
+  if (translated !== element.textContent.trim()) element.textContent = translated;
+}
+
+function applyLanguage() {
+  document.documentElement.lang = isZh() ? "zh-Hans" : "en";
+  document.querySelectorAll("nav button").forEach((button) => {
+    const screen = button.dataset.screen;
+    button.textContent = (isZh() ? titleMapZh : titleMapEn)[screen] || button.textContent;
+  });
+  const active = document.querySelector("nav button.active")?.dataset.screen || "dashboard";
+  document.getElementById("title").textContent = (isZh() ? titleMapZh : titleMapEn)[active] || active;
+  const toggle = document.getElementById("language-toggle");
+  if (toggle) toggle.textContent = isZh() ? "English" : "中文";
+  document.querySelectorAll("main h2,main h3,main h4,main p,main span,main strong,main small,main label,main button,main li,aside .loop-note").forEach((element) => {
+    if (element.children.length) return;
+    setTextIfMapped(element);
+  });
+  updateTokenButton();
+}
+
+function localizeFirstPublishText(text) {
+  if (!isZh()) return text || "";
+  if (!text) return "";
+  if (/asset\(s\) exist; approve one with explicit safety clear/.test(text)) {
+    const count = text.match(/\d+/)?.[0] || "0";
+    return `已有 ${count} 条内容资产；请选择 1 条并明确标记安全通过与批准。`;
+  }
+  if (/ready asset\(s\)/.test(text)) {
+    const count = text.match(/\d+/)?.[0] || "0";
+    return `已有 ${count} 条可进入队列的内容资产。`;
+  }
+  return uiZh[text] || {
+    "Asset approved and safety clear": "内容资产已批准并安全通过",
+    "Queue item created": "已创建发布队列项目",
+    "Queue item review-approved": "队列项目已审核批准",
+    "Queue item scheduled": "队列项目已排程",
+    "Meta worker dry run": "Meta 发布任务测试运行",
+    "Generate and save one asset first.": "请先生成并保存一条内容资产。",
+    "Queue one approved clear asset.": "把 1 条已批准且安全通过的内容资产加入队列。",
+    "Approve one queue item before scheduling.": "排程前需要先批准 1 条队列项目。",
+    "Suggest or import one planned slot after queue review approval.": "队列审核通过后，建议或导入一个发布时间。",
+    "Dry run is waiting for a scheduled compliance-clear item.": "Meta 测试运行正在等待已排程且安全通过的项目。",
+  }[text] || text;
+}
+
 document.querySelectorAll("nav button").forEach((button) => {
   button.addEventListener("click", () => {
     const screen = button.dataset.screen;
     document.querySelectorAll("nav button").forEach((item) => item.classList.toggle("active", item === button));
     document.querySelectorAll(".screen").forEach((item) => item.classList.toggle("active", item.id === screen));
-    document.getElementById("title").textContent = titleMap[screen] || screen;
+    document.getElementById("title").textContent = (isZh() ? titleMapZh : titleMapEn)[screen] || screen;
     if (screen === "insights") loadSenseBrief();
     if (screen === "insights") loadAdsPlanning();
     if (screen === "plan") loadBriefs();
@@ -53,6 +217,7 @@ document.querySelectorAll("nav button").forEach((button) => {
     }
     if (screen === "scheduler" || screen === "review") Promise.all([loadPublishQueue(), loadPreScheduleGate()]);
     if (screen === "meta") Promise.all([loadMetaReadiness(), loadMetaSetupChecklist(), loadNotifyRail()]);
+    applyLanguage();
   });
 });
 
@@ -92,7 +257,7 @@ function storeAccessTokenFromUrl() {
 
 function updateTokenButton() {
   const button = document.getElementById("token-button");
-  button.textContent = accessToken() ? "Access set" : "Set access";
+  button.textContent = translateText(accessToken() ? "Access set" : "Set access");
 }
 
 function refreshProtectedData() {
@@ -160,6 +325,11 @@ function clearAccessToken() {
 document.getElementById("token-button").addEventListener("click", showTokenPanel);
 document.getElementById("token-save").addEventListener("click", saveAccessTokenFromPanel);
 document.getElementById("token-clear").addEventListener("click", clearAccessToken);
+document.getElementById("language-toggle")?.addEventListener("click", async () => {
+  localStorage.setItem(languageKey, isZh() ? "en" : "zh");
+  applyLanguage();
+  await Promise.all([loadLoopStatus(), loadFirstPublishReadiness()]);
+});
 document.getElementById("token-input").addEventListener("keydown", (event) => {
   if (event.key === "Enter") saveAccessTokenFromPanel();
   if (event.key === "Escape") document.getElementById("token-panel").hidden = true;
@@ -545,25 +715,27 @@ function renderFirstPublishReadiness(data) {
   const hasDecisionCsv = Boolean(actionPack.next_asset_decision_csv);
   container.innerHTML = `
     <article class="learning-card wide-learning ${escapeHtml(next.status || "open")}">
-      <h3>First Publish Readiness</h3>
-      <p>${escapeHtml(next.label || "Checking first publish path")}</p>
-      <small>${escapeHtml(next.detail || data.overall_status || "")}</small>
+      <h3>${escapeHtml(translateText("First Publish Readiness"))}</h3>
+      <p>${escapeHtml(localizeFirstPublishText(next.label || "Checking first publish path"))}</p>
+      <small>${escapeHtml(localizeFirstPublishText(next.detail || data.overall_status || ""))}</small>
       <div class="learning-actions">
-        <button type="button" data-workflow-screen="${escapeHtml(next.screen || "assets")}">${escapeHtml(next.action || "Open Next Step")}</button>
-        ${hasDecisionCsv ? '<button type="button" data-copy-first-asset-decision>Copy Asset Decision CSV</button>' : ""}
-        ${hasDecisionCsv ? '<button type="button" data-fill-first-asset-decision>Fill Asset Decision CSV</button>' : ""}
+        <button type="button" data-workflow-screen="${escapeHtml(next.screen || "assets")}">${escapeHtml(translateText(next.action || "Open Next Step"))}</button>
+        <button type="button" data-advance-first-publish>${escapeHtml(translateText("Advance Safe Step"))}</button>
+        ${hasDecisionCsv ? `<button type="button" data-copy-first-asset-decision>${escapeHtml(translateText("Copy Asset Decision CSV"))}</button>` : ""}
+        ${hasDecisionCsv ? `<button type="button" data-fill-first-asset-decision>${escapeHtml(translateText("Fill Asset Decision CSV"))}</button>` : ""}
       </div>
     </article>
     <article class="learning-card wide-learning">
-      <h3>Meta Dry Run</h3>
+      <h3>${escapeHtml(translateText("Meta Dry Run"))}</h3>
       <p>${escapeHtml(meta.overall_status || "unknown")}</p>
       <small>FB: ${escapeHtml((meta.facebook_blockers || [])[0] || "ready")} · IG: ${escapeHtml((meta.instagram_blockers || [])[0] || "ready")}</small>
     </article>
     <article class="learning-card wide-learning">
-      <h3>Publish Path</h3>
-      <ul>${stages.map((stage) => `<li><strong>${escapeHtml(stage.status || "")}</strong> ${escapeHtml(stage.label || "")} · ${escapeHtml(stage.detail || "")}</li>`).join("")}</ul>
+      <h3>${escapeHtml(translateText("Publish Path"))}</h3>
+      <ul>${stages.map((stage) => `<li><strong>${escapeHtml(stage.status || "")}</strong> ${escapeHtml(localizeFirstPublishText(stage.label || ""))} · ${escapeHtml(localizeFirstPublishText(stage.detail || ""))}</li>`).join("")}</ul>
     </article>
   `;
+  applyLanguage();
 }
 
 async function loadFirstPublishReadiness() {
@@ -580,9 +752,29 @@ async function loadFirstPublishReadiness() {
 document.getElementById("first-publish-readiness")?.addEventListener("click", async (event) => {
   const copyButton = event.target.closest("[data-copy-first-asset-decision]");
   const fillButton = event.target.closest("[data-fill-first-asset-decision]");
-  if (!copyButton && !fillButton) return;
+  const advanceButton = event.target.closest("[data-advance-first-publish]");
+  if (!copyButton && !fillButton && !advanceButton) return;
   const container = document.getElementById("first-publish-readiness");
   const message = document.getElementById("test-path-message");
+  if (advanceButton) {
+    const originalText = advanceButton.textContent;
+    advanceButton.disabled = true;
+    advanceButton.textContent = "Advancing";
+    if (message) message.textContent = "Checking the next safe first-publish step...";
+    try {
+      const data = await fetchJson("/operations/first-publish-advance?dry_run=false", { method: "POST" });
+      if (message) message.textContent = data.advanced ? data.message || "First publish path advanced." : data.message || "First publish path needs a manual step.";
+      await Promise.all([loadFirstPublishReadiness(), loadLoopStatus(), loadAssets(), loadPublishQueue(), loadPreScheduleGate()]);
+      if (data.action === "queue_ready_asset") showScreen("review");
+      if (data.action === "schedule_review_approved" || data.action === "meta_dry_run") showScreen("scheduler");
+    } catch (error) {
+      if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not advance the first publish path.";
+    } finally {
+      advanceButton.disabled = false;
+      advanceButton.textContent = originalText;
+    }
+    return;
+  }
   const csvText = container?.dataset.nextAssetDecisionCsv || "";
   if (!csvText) {
     if (message) message.textContent = "No first asset decision template is available yet.";
@@ -5823,4 +6015,4 @@ loadMetaSetupChecklist();
 loadOutcomes();
 loadAccessPolicy();
 loadAdsPlanning();
-updateTokenButton();
+applyLanguage();

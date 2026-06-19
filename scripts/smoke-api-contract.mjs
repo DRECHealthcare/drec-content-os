@@ -27,6 +27,7 @@ const requiredRoutes = [
   "GET /operations/test-run-checklist",
   "GET /operations/first-publish-readiness",
   "GET /operations/first-publish-readiness.md",
+  "POST /operations/first-publish-advance",
   "POST /operations/scheduler-heartbeat",
   "GET /operations/scheduler-activation-pack.md",
   "GET /operations/scheduler-health",
@@ -1206,9 +1207,29 @@ const requiredSnippets = [
     text: "next_asset_decision_csv",
   },
   {
+    name: "first publish next queue decision csv",
+    file: "main",
+    text: "next_queue_decision_csv",
+  },
+  {
     name: "first publish decision csv shared fields",
     file: "main",
     text: "ASSET_REVIEW_DECISION_FIELDS",
+  },
+  {
+    name: "first publish queue csv shared fields",
+    file: "main",
+    text: "REVIEW_QUEUE_DECISION_FIELDS",
+  },
+  {
+    name: "first publish advance route",
+    file: "main",
+    text: "operations_first_publish_advance",
+  },
+  {
+    name: "first publish advance no auto approve",
+    file: "main",
+    text: "This endpoint never approves assets or queue items.",
   },
   {
     name: "first publish readiness meta blockers",
@@ -2439,6 +2460,36 @@ const requiredSnippets = [
     name: "web first publish decision csv fill",
     file: "web",
     text: "data-fill-first-asset-decision",
+  },
+  {
+    name: "web first publish advance action",
+    file: "web",
+    text: "data-advance-first-publish",
+  },
+  {
+    name: "web first publish advance endpoint",
+    file: "web",
+    text: "/operations/first-publish-advance",
+  },
+  {
+    name: "web chinese language toggle",
+    file: "web",
+    text: "language-toggle",
+  },
+  {
+    name: "web chinese language storage",
+    file: "web",
+    text: "DREC_UI_LANGUAGE",
+  },
+  {
+    name: "web chinese title map",
+    file: "web",
+    text: "titleMapZh",
+  },
+  {
+    name: "web chinese first publish translation",
+    file: "web",
+    text: "首次发布准备",
   },
   {
     name: "web published metrics helper",
