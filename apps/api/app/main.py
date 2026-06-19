@@ -12622,6 +12622,67 @@ def extract_notion_cover_hook(slide_plan: str, fallback: str):
     return re.sub(r"\s+", " ", html.unescape(match.group(1))).strip() or fallback
 
 
+def clean_notion_slide_text(value: str | None):
+    text = html.unescape(value or "")
+    text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
+    text = re.sub(r"<[^>]+>", "", text)
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    lines = [re.sub(r"\s+", " ", line).strip() for line in text.split("\n")]
+    return "\n".join([line for line in lines if line])
+
+
+def notion_field(block: str, label: str, stop_labels: list[str]):
+    stop_pattern = "|".join(re.escape(item) for item in stop_labels)
+    pattern = rf"{re.escape(label)}\s*(.*?)(?=\n(?:{stop_pattern})\s*|$)"
+    match = re.search(pattern, block, flags=re.IGNORECASE | re.DOTALL)
+    if not match:
+        return ""
+    return re.sub(r"\n{2,}", "\n", match.group(1)).strip()
+
+
+def parse_notion_carousel_slide_plan(slide_plan: str):
+    clean = clean_notion_slide_text(slide_plan)
+    if not clean:
+        return []
+    matches = list(re.finditer(r"(?im)^Slide\s+(\d+)\b", clean))
+    slides = []
+    labels = [
+        "Big Title/Hook:",
+        "Big Title:",
+        "Explanation Text:",
+        "Highlighted Keywords:",
+        "Visual Element:",
+        "Bottom Takeaway/Teaser:",
+    ]
+    for index, match in enumerate(matches):
+        slide_number = int(match.group(1))
+        start = match.end()
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(clean)
+        block = clean[start:end].strip()
+        title = notion_field(block, "Big Title/Hook:", labels) if slide_number == 1 else ""
+        if not title:
+            title = notion_field(block, "Big Title:", labels)
+        explanation = "" if slide_number == 1 else notion_field(block, "Explanation Text:", labels)
+        keywords_text = notion_field(block, "Highlighted Keywords:", labels)
+        visual = notion_field(block, "Visual Element:", labels)
+        takeaway = "" if slide_number == 1 else notion_field(block, "Bottom Takeaway/Teaser:", labels)
+        keywords = [item.strip() for item in re.split(r"[,，、]", keywords_text) if item.strip()]
+        if not title and not explanation and not visual:
+            continue
+        slides.append(
+            {
+                "slide": slide_number,
+                "title": title,
+                "body": explanation,
+                "highlighted_keywords": keywords[:4],
+                "visual_note": visual,
+                "bottom_takeaway": takeaway,
+                "source": "notion_carousel_slide_plan",
+            }
+        )
+    return slides
+
+
 async def find_existing_notion_brief(topic_id: str):
     for brief in await fetch_content_brief_list(200):
         beats = brief.get("structure_beats") or {}
@@ -12653,6 +12714,7 @@ async def find_existing_notion_asset(topic_id: str):
 def notion_row_to_brief(row: NotionCarouselRowIn):
     topic = row.mandarin_topic_title.strip()
     hook = extract_notion_cover_hook(row.carousel_slide_plan, topic)
+    slides = parse_notion_carousel_slide_plan(row.carousel_slide_plan)
     return ContentBriefIn(
         channel="organic",
         format="carousel",
@@ -12677,6 +12739,7 @@ def notion_row_to_brief(row: NotionCarouselRowIn):
                 "day": row.day,
             },
             "carousel_slide_plan": row.carousel_slide_plan,
+            "slides": slides,
             "slide_rules": NOTION_CAROUSEL_SOURCE["slide_rules"],
             "image_workflow_rules": NOTION_CAROUSEL_SOURCE["status_rules"],
         },
@@ -12816,6 +12879,7 @@ async def import_notion_carousel_row(row: NotionCarouselRowIn, _: None = Depends
         if existing_asset:
             asset = existing_asset
         else:
+            slides = parse_notion_carousel_slide_plan(row.carousel_slide_plan)
             caption = f"{extract_notion_cover_hook(row.carousel_slide_plan, row.mandarin_topic_title)}\n\n{row.carousel_slide_plan}"
             asset = await create_asset(
                 AssetIn(
@@ -12828,6 +12892,7 @@ async def import_notion_carousel_row(row: NotionCarouselRowIn, _: None = Depends
                         "topic": row.mandarin_topic_title,
                         "slides_source": "notion_carousel_slide_plan",
                         "carousel_slide_plan": row.carousel_slide_plan,
+                        "slides": slides,
                         "notion_source": {
                             "topic_id": topic_id,
                             "database_url": NOTION_CAROUSEL_SOURCE["database_url"],
@@ -15132,6 +15197,27 @@ def draft_points_from_brief(brief: dict):
     return [str(point) for point in points if point]
 
 
+def brief_structure_beats(brief: dict):
+    beats = brief.get("structure_beats") or {}
+    if isinstance(beats, str):
+        try:
+            return json.loads(beats)
+        except json.JSONDecodeError:
+            return {}
+    return beats if isinstance(beats, dict) else {}
+
+
+def notion_slides_from_brief(brief: dict):
+    beats = brief_structure_beats(brief)
+    slides = beats.get("slides") or []
+    if slides:
+        return slides
+    plan = beats.get("carousel_slide_plan")
+    if plan:
+        return parse_notion_carousel_slide_plan(str(plan))
+    return []
+
+
 @app.post("/briefs/{brief_id}/draft-asset")
 async def create_asset_from_brief(brief_id: str, _: None = Depends(require_review_access)):
     brief = await content_brief_by_id(brief_id)
@@ -15166,6 +15252,11 @@ async def create_asset_from_brief(brief_id: str, _: None = Depends(require_revie
                 "compliance": compliance,
             },
         )
+    beats = brief_structure_beats(brief)
+    notion_slides = notion_slides_from_brief(brief)
+    notion_source = beats.get("notion_source") or {}
+    slides = notion_slides or creative.get("slides") or []
+    asset_source = "notion_master_content_plan" if notion_source else "brief_draft_asset"
     asset = AssetIn(
         brief_id=brief_id,
         channel="facebook",
@@ -15175,9 +15266,12 @@ async def create_asset_from_brief(brief_id: str, _: None = Depends(require_revie
         metadata={
             "topic": brief.get("topic"),
             "stage": draft.stage,
-            "source": "brief_draft_asset",
+            "source": asset_source,
+            "notion_source": notion_source,
+            "carousel_slide_plan": beats.get("carousel_slide_plan"),
             "caption_variants": creative.get("caption_variants") or [],
-            "slides": creative.get("slides") or [],
+            "slides": slides,
+            "slides_source": "notion_carousel_slide_plan" if notion_slides else "creative_draft",
             "reel_script": creative.get("reel_script") or [],
             "creative": creative.get("metadata") or {},
             "target_signal": creative.get("target_signal"),

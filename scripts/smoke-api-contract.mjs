@@ -656,6 +656,26 @@ const requiredSnippets = [
     text: "/notion/carousel-row/import",
   },
   {
+    name: "notion carousel slide plan parser",
+    file: "main",
+    text: "parse_notion_carousel_slide_plan",
+  },
+  {
+    name: "notion carousel slide one body guard",
+    file: "main",
+    text: "explanation = \"\" if slide_number == 1",
+  },
+  {
+    name: "notion carousel imported asset slides",
+    file: "main",
+    text: "\"slides\": slides",
+  },
+  {
+    name: "notion carousel save asset slide reuse",
+    file: "main",
+    text: "notion_slides_from_brief",
+  },
+  {
     name: "test run checklist route",
     file: "main",
     text: "test_run_checklist_payload",
