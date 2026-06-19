@@ -3136,6 +3136,7 @@ async def operations_first_publish_media_pack(_: None = Depends(require_access_t
         "",
         "## Design Files",
         "",
+        "- Preview individual PNG slides inside the web UI or via `/operations/first-publish-carousel-preview/{slide_number}.png` with an access token.",
         "- Download ready-to-review PNG files: `/operations/first-publish-carousel-png-assets.zip`",
         "- Download SVG source files: `/operations/first-publish-carousel-assets.zip`",
         "- Use PNG files for visual review first. Use SVG files only if manual edits are needed.",
@@ -3224,6 +3225,27 @@ async def operations_first_publish_carousel_assets_zip(_: None = Depends(require
         buffer.getvalue(),
         media_type="application/zip",
         headers={"Content-Disposition": 'attachment; filename="drec-first-publish-carousel-assets.zip"'},
+    )
+
+
+@app.get("/operations/first-publish-carousel-preview/{slide_number}.png")
+async def operations_first_publish_carousel_preview_png(slide_number: int, _: None = Depends(require_access_token)):
+    payload = await first_publish_readiness_payload()
+    candidates = payload.get("candidates") or {}
+    asset = candidates.get("next_asset") or candidates.get("approved_clear_asset") or candidates.get("ready_asset")
+    if not asset:
+        raise HTTPException(status_code=404, detail="No first-publish asset is available for PNG preview.")
+    slides = first_publish_slide_items(asset)
+    if slide_number < 1 or slide_number > len(slides):
+        raise HTTPException(status_code=404, detail="Slide not found.")
+    data = first_publish_slide_png(asset, slides[slide_number - 1], slide_number, len(slides))
+    return Response(
+        content=data,
+        media_type="image/png",
+        headers={
+            "Cache-Control": "no-store",
+            "X-DREC-Safety": "Preview only. This does not approve, attach, schedule, or publish.",
+        },
     )
 
 

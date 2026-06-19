@@ -8,6 +8,7 @@ const files = {
   dockerfile: "apps/api/Dockerfile",
   schema: "supabase/schema.sql",
   web: "apps/web/app.js",
+  styles: "apps/web/styles.css",
   schedulerWorkflow: ".github/workflows/drec-scheduler-dry-run.yml",
   realMetricsWorkflow: ".github/workflows/drec-nightly-meta-metrics.yml",
   strictRlsMigration: "supabase/migrations/20260617040906_strict_server_only_rls.sql",
@@ -29,6 +30,7 @@ const requiredRoutes = [
   "GET /operations/first-publish-readiness.md",
   "GET /operations/first-publish-readiness.zh.md",
   "GET /operations/first-publish-media-pack.md",
+  "GET /operations/first-publish-carousel-preview/{slide_number}.png",
   "GET /operations/first-publish-carousel-assets.zip",
   "GET /operations/first-publish-carousel-png-assets.zip",
   "GET /public/first-publish-assets/{asset_id}/slides/{slide_number}.png",
@@ -1333,6 +1335,21 @@ const requiredSnippets = [
     name: "first publish carousel png zip route",
     file: "main",
     text: "operations_first_publish_carousel_png_assets_zip",
+  },
+  {
+    name: "first publish protected png preview route",
+    file: "main",
+    text: "operations_first_publish_carousel_preview_png",
+  },
+  {
+    name: "first publish protected png preview safety",
+    file: "main",
+    text: "Preview only. This does not approve, attach, schedule, or publish.",
+  },
+  {
+    name: "first publish media pack preview link",
+    file: "main",
+    text: "/operations/first-publish-carousel-preview/{slide_number}.png",
   },
   {
     name: "first publish media csv template",
@@ -2953,6 +2970,26 @@ const requiredSnippets = [
     name: "web first publish attach generated media chinese",
     file: "web",
     text: "挂载生成图片链接",
+  },
+  {
+    name: "web first publish preview card",
+    file: "web",
+    text: "First Publish Image Preview",
+  },
+  {
+    name: "web first publish preview endpoint",
+    file: "web",
+    text: "/operations/first-publish-carousel-preview/",
+  },
+  {
+    name: "web first publish preview blob auth",
+    file: "web",
+    text: "URL.createObjectURL(await response.blob())",
+  },
+  {
+    name: "web first publish preview styling",
+    file: "styles",
+    text: "first-publish-preview-grid",
   },
   {
     name: "web first publish media pack endpoint",

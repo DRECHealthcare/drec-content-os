@@ -17,6 +17,7 @@ let latestDoctorFullMessage = "";
 let latestDoctorPasteBackTemplate = "";
 let latestTestRunChecklist = null;
 let latestFirstPublishReadiness = null;
+let latestFirstPublishPreviewUrls = [];
 
 const titleMapEn = {
   dashboard: "Dashboard",
@@ -145,6 +146,7 @@ const uiZh = {
   "Use Topics": "使用推荐主题",
   "First Publish Readiness": "首次发布准备",
   "First Publish Next Action": "首次发布下一步",
+  "First Publish Image Preview": "首发图片预览",
   "Meta Dry Run": "Meta 测试运行",
   "Publish Path": "发布路径",
   "Media/design ready when required": "媒体/设计素材已准备好",
@@ -165,6 +167,9 @@ const uiZh = {
   "Download PNG Zip": "下载 PNG 图片包",
   "Download SVG Zip": "下载 SVG 设计包",
   "Attach Generated Media": "挂载生成图片链接",
+  "Preview only. Approval, media attachment, queueing, scheduling, and publishing are still separate gates.": "仅供预览。批准、挂载媒体、加入队列、排程和发布仍然是独立关卡。",
+  "Loading preview images...": "正在载入预览图片...",
+  "Could not load preview images.": "无法载入预览图片。",
   "Success Standard": "成功标准",
   "Copy Queue Decision CSV": "复制队列审核 CSV",
   "Fill Queue Decision CSV": "填入队列审核 CSV",
@@ -1229,6 +1234,7 @@ function renderFirstPublishReadiness(data) {
   container.dataset.nextQueueDecisionCsv = actionPack.next_queue_decision_csv || "";
   const hasDecisionCsv = Boolean(actionPack.next_asset_decision_csv);
   const hasQueueDecisionCsv = Boolean(actionPack.next_queue_decision_csv);
+  const slideCount = (nextAssetMetadata.slides || []).length || (nextAsset.id ? 1 : 0);
   container.innerHTML = `
     <article class="learning-card wide-learning ${escapeHtml(next.status || "open")}">
       <h3>${escapeHtml(translateText("First Publish Next Action"))}</h3>
@@ -1260,6 +1266,15 @@ function renderFirstPublishReadiness(data) {
         ${hasQueueDecisionCsv ? `<button type="button" data-fill-first-queue-decision>${escapeHtml(translateText("Fill Queue Decision CSV"))}</button>` : ""}
       </div>
     </article>
+    ${nextAsset.id ? `
+      <article class="learning-card wide-learning">
+        <h3>${escapeHtml(translateText("First Publish Image Preview"))}</h3>
+        <p>${escapeHtml(translateText("Preview only. Approval, media attachment, queueing, scheduling, and publishing are still separate gates."))}</p>
+        <div id="first-publish-preview-images" class="first-publish-preview-grid" data-slide-count="${escapeHtml(slideCount)}">
+          <small>${escapeHtml(translateText("Loading preview images..."))}</small>
+        </div>
+      </article>
+    ` : ""}
     <article class="learning-card wide-learning">
       <h3>${escapeHtml(translateText("Meta Dry Run"))}</h3>
       <p>${escapeHtml(meta.overall_status || "unknown")}</p>
@@ -1270,7 +1285,40 @@ function renderFirstPublishReadiness(data) {
       <ul>${stages.map((stage) => `<li><strong>${escapeHtml(stage.status || "")}</strong> ${escapeHtml(localizeFirstPublishText(stage.label || ""))} · ${escapeHtml(localizeFirstPublishText(stage.detail || ""))}</li>`).join("")}</ul>
     </article>
   `;
+  loadFirstPublishPreviewImages();
   applyLanguage();
+}
+
+async function loadFirstPublishPreviewImages() {
+  const container = document.getElementById("first-publish-preview-images");
+  if (!container) return;
+  latestFirstPublishPreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+  latestFirstPublishPreviewUrls = [];
+  const slideCount = Number(container.dataset.slideCount || 0);
+  if (!slideCount) {
+    container.innerHTML = `<small>${escapeHtml(translateText("No slide plan found on the asset."))}</small>`;
+    return;
+  }
+  try {
+    const images = [];
+    for (let index = 1; index <= slideCount; index += 1) {
+      const response = await fetch(`${apiBase}/operations/first-publish-carousel-preview/${index}.png`, {
+        headers: authHeaders(true),
+      });
+      if (!response.ok) throw new Error(`Preview ${index} failed`);
+      const url = URL.createObjectURL(await response.blob());
+      latestFirstPublishPreviewUrls.push(url);
+      images.push(`
+        <figure class="first-publish-preview-item">
+          <img src="${escapeHtml(url)}" alt="${escapeHtml(`First publish slide ${index}`)}">
+          <figcaption>${escapeHtml(`${index}/${slideCount}`)}</figcaption>
+        </figure>
+      `);
+    }
+    container.innerHTML = images.join("");
+  } catch {
+    container.innerHTML = `<small>${escapeHtml(translateText("Could not load preview images."))}</small>`;
+  }
 }
 
 async function loadFirstPublishReadiness() {

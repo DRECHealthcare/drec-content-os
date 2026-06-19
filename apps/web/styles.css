@@ -809,6 +809,33 @@ button[type="submit"] {
   cursor: pointer;
 }
 
+.first-publish-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.first-publish-preview-item {
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.first-publish-preview-item img {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #FFF;
+}
+
+.first-publish-preview-item figcaption {
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
 .sprint-board {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
