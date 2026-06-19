@@ -2819,6 +2819,21 @@ const requiredSnippets = [
     text: "preview-asset-review-decisions",
   },
   {
+    name: "web asset review decisions paste input",
+    file: "web",
+    text: "asset-review-decisions-text",
+  },
+  {
+    name: "web asset review decisions paste preview action",
+    file: "web",
+    text: "preview-asset-review-decisions-text",
+  },
+  {
+    name: "web asset review decisions paste import action",
+    file: "web",
+    text: "import-asset-review-decisions-text",
+  },
+  {
     name: "web asset review decisions import action",
     file: "web",
     text: "import-asset-review-decisions",

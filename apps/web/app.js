@@ -3803,18 +3803,22 @@ function renderAssetMediaAttachmentPreview(data) {
 async function uploadAssetReviewDecisions({ dryRun }) {
   const message = document.getElementById("media-message");
   const fileInput = document.getElementById("asset-review-decisions-file");
+  const textInput = document.getElementById("asset-review-decisions-text");
   const file = fileInput?.files?.[0];
-  if (!file) {
-    message.textContent = "Choose a review decision CSV first.";
+  const pastedCsv = textInput?.value?.trim() || "";
+  if (!file && !pastedCsv) {
+    message.textContent = "Choose a review decision CSV or paste decision CSV text first.";
     return;
   }
   const body = new FormData();
-  body.append("file", file);
+  const uploadFile = file || new File([pastedCsv], "pasted-asset-review-decisions.csv", { type: "text/csv" });
+  body.append("file", uploadFile);
   body.append("dry_run", dryRun ? "true" : "false");
   message.textContent = dryRun ? "Previewing review decisions..." : "Importing review decisions...";
   try {
     const data = await fetchForm("/operations/import-asset-review-decisions", body);
     if (!dryRun) fileInput.value = "";
+    if (!dryRun && !file && textInput) textInput.value = "";
     message.textContent = data.message || (dryRun ? "Review decisions previewed." : "Review decisions imported.");
     renderAssetReviewDecisionPreview(data);
     if (!dryRun) await Promise.all([loadAssets(), loadDoctorSendQueue(), loadDoctorReplyInboxPack(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
@@ -3930,6 +3934,14 @@ document.getElementById("preview-asset-review-decisions")?.addEventListener("cli
 });
 
 document.getElementById("import-asset-review-decisions")?.addEventListener("click", async () => {
+  await uploadAssetReviewDecisions({ dryRun: false });
+});
+
+document.getElementById("preview-asset-review-decisions-text")?.addEventListener("click", async () => {
+  await uploadAssetReviewDecisions({ dryRun: true });
+});
+
+document.getElementById("import-asset-review-decisions-text")?.addEventListener("click", async () => {
   await uploadAssetReviewDecisions({ dryRun: false });
 });
 
