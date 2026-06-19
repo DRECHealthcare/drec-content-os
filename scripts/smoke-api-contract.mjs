@@ -130,6 +130,8 @@ const requiredRoutes = [
   "GET /operations/metrics-template.csv",
   "GET /operations/metrics-closeout-pack.md",
   "GET /operations/metrics-closeout-pack.zh.md",
+  "GET /operations/publishing-closeout",
+  "GET /operations/publishing-closeout.zh.md",
   "GET /operations/weekly-cycle-pack.md",
   "GET /operations/weekly-cycle-pack.zh.md",
   "GET /operations/publishing-run-sheet.md",
@@ -2912,6 +2914,21 @@ const requiredSnippets = [
     name: "web metrics closeout chinese endpoint",
     file: "web",
     text: "/operations/metrics-closeout-pack.zh.md",
+  },
+  {
+    name: "web publishing closeout action",
+    file: "web",
+    text: "download-publishing-closeout-zh",
+  },
+  {
+    name: "web publishing closeout endpoint",
+    file: "web",
+    text: "/operations/publishing-closeout",
+  },
+  {
+    name: "web publishing closeout renderer",
+    file: "web",
+    text: "renderPublishingCloseout",
   },
   {
     name: "web metrics template endpoint",

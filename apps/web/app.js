@@ -155,6 +155,7 @@ const uiZh = {
   "Queue Ready Asset": "把可发布素材加入队列",
   "Open Review Queue": "打开审核队列",
   "Open Scheduler": "打开排程",
+  "Open Learning": "打开学习复盘",
   "Dry Run Meta Publishing": "运行 Meta 发布测试",
   "Open Next Step": "打开下一步",
   "Advance Safe Step": "推进安全步骤",
@@ -318,6 +319,7 @@ const uiZh = {
   "Download Metrics Template": "下载数据模板",
   "Download Metrics Closeout": "下载数据结算包",
   "Download Metrics Closeout 中文": "下载中文数据结算包",
+  "Download Publishing Closeout 中文": "下载中文发布后收尾包",
   "Import CSV": "导入 CSV",
   "Roll up imported rows": "汇总导入的数据行",
   "Preview CSV": "预览 CSV",
@@ -653,6 +655,24 @@ Object.assign(uiZh, {
   "No alerts waiting right now.": "目前没有等待处理的提醒。",
   "Set the access token to load the setup checklist.": "请先设置访问码，才能读取设置清单。",
   "Set the access token to load Notify Rail.": "请先设置访问码，才能读取通知轨道。",
+  "Publishing Closeout": "发布后收尾",
+  "Next Closeout Step": "下一步收尾动作",
+  "Scheduled Ready": "已排程可发布",
+  "Missing Post ID": "缺帖子 ID",
+  "Needs Metrics": "缺表现数据",
+  "Needs Learning Rollup": "缺学习汇总",
+  "Complete": "已完成",
+  "Posts Waiting For Metrics": "等待录数据的帖子",
+  "No published posts are waiting for metrics.": "目前没有已发布但等待录数据的帖子。",
+  "Build handoff and publish manually": "生成交接包并人工发布",
+  "Publish manually, then record the Meta post ID": "人工发布后记录 Meta 帖子 ID",
+  "Record missing Meta post ID": "补录 Meta 帖子 ID",
+  "Record performance metrics": "记录表现数据",
+  "Roll metrics into learning": "把数据汇总进学习系统",
+  "Build the weekly learning report": "生成每周学习报告",
+  "Could not load publishing closeout.": "无法读取发布后收尾工作台。",
+  "Publishing closeout pack downloaded.": "发布后收尾包已下载。",
+  "Could not download publishing closeout pack.": "无法下载发布后收尾包。",
 });
 
 function currentLanguage() {
@@ -3837,7 +3857,7 @@ async function recordPublishedItem(itemId, button, options = {}) {
       method: "PATCH",
       body: JSON.stringify({ status: "published", external_post_id: postId.trim() }),
     });
-    await Promise.all([loadPublishQueue(), loadLoopStatus(), loadMetaReadiness()]);
+    await Promise.all([loadPublishQueue(), loadLoopStatus(), loadMetaReadiness(), loadPublishingCloseout()]);
     if (options.refreshHandoff) {
       const data = await fetchJson("/publishing-handoff");
       renderHandoff(data);
@@ -4023,6 +4043,7 @@ async function loadOutcomes() {
   const container = document.getElementById("outcome-items");
   if (!container) return;
   try {
+    await loadPublishingCloseout();
     const data = await fetchJson("/outcomes");
     const items = data.items || [];
     container.innerHTML = items.length
@@ -4030,6 +4051,68 @@ async function loadOutcomes() {
       : '<p class="status-note">No performance records yet.</p>';
   } catch {
     container.innerHTML = '<p class="status-note">Set the access token to load performance records.</p>';
+  }
+}
+
+function renderPublishingCloseout(data) {
+  const container = document.getElementById("publishing-closeout");
+  if (!container) return;
+  const counts = data.counts || {};
+  const next = data.next_action || {};
+  const waiting = data.waiting_for_metrics || [];
+  container.innerHTML = `
+    <article class="learning-card wide-learning">
+      <h3>${escapeHtml(translateText("Next Closeout Step"))}</h3>
+      <p>${escapeHtml(translateText(next.label || "Build handoff and publish manually"))}</p>
+      <small>${escapeHtml(next.detail || "")}</small>
+      <div class="learning-actions">
+        <button type="button" data-workflow-screen="${escapeHtml(next.screen || "scheduler")}">${escapeHtml(translateText(next.screen === "learning" ? "Open Learning" : next.screen === "outcomes" ? "Open Performance" : "Open Scheduler"))}</button>
+      </div>
+    </article>
+    <article class="learning-card">
+      <h3>${escapeHtml(translateText("Scheduled Ready"))}</h3>
+      <p>${Number(counts.scheduled_ready || 0)}</p>
+    </article>
+    <article class="learning-card">
+      <h3>${escapeHtml(translateText("Missing Post ID"))}</h3>
+      <p>${Number(counts.waiting_for_post_id || 0)}</p>
+    </article>
+    <article class="learning-card">
+      <h3>${escapeHtml(translateText("Needs Metrics"))}</h3>
+      <p>${Number(counts.waiting_for_metrics || 0)}</p>
+    </article>
+    <article class="learning-card">
+      <h3>${escapeHtml(translateText("Needs Learning Rollup"))}</h3>
+      <p>${Number(counts.waiting_for_rollup || 0)}</p>
+    </article>
+    <article class="learning-card">
+      <h3>${escapeHtml(translateText("Complete"))}</h3>
+      <p>${Number(counts.complete || 0)}</p>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>${escapeHtml(translateText("Posts Waiting For Metrics"))}</h3>
+      ${waiting.length ? `
+        <ul>${waiting.slice(0, 6).map((item) => `
+          <li>
+            <strong>${escapeHtml(item.external_post_id || item.id || "")}</strong>
+            ${escapeHtml(item.channel || "")} / ${escapeHtml(item.format || "")}
+            <br><small>${escapeHtml((item.caption || "").slice(0, 120))}</small>
+          </li>
+        `).join("")}</ul>
+      ` : `<p class="status-note">${escapeHtml(translateText("No published posts are waiting for metrics."))}</p>`}
+    </article>
+  `;
+  applyLanguage();
+}
+
+async function loadPublishingCloseout() {
+  const container = document.getElementById("publishing-closeout");
+  if (!container) return;
+  try {
+    const data = await fetchJson("/operations/publishing-closeout");
+    renderPublishingCloseout(data);
+  } catch (error) {
+    container.innerHTML = `<p class="status-note">${escapeHtml(error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not load publishing closeout."))}</p>`;
   }
 }
 
@@ -6860,6 +6943,16 @@ document.getElementById("download-metrics-closeout-zh")?.addEventListener("click
   }
 });
 
+document.getElementById("download-publishing-closeout-zh")?.addEventListener("click", async () => {
+  const message = document.getElementById("metric-message");
+  try {
+    await downloadProtectedFile("/operations/publishing-closeout.zh.md", "drec-publishing-closeout-zh.md", "text/markdown");
+    message.textContent = translateText("Publishing closeout pack downloaded.");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "请先设置访问码。" : translateText("Could not download publishing closeout pack.");
+  }
+});
+
 function renderMetricsImportPreview(data) {
   const container = document.getElementById("metrics-import-preview");
   if (!container) return;
@@ -7028,7 +7121,7 @@ document.getElementById("metric-form").addEventListener("submit", async (event) 
   try {
     await saveRawMetricFromCurrentForm();
     message.textContent = "Raw metrics saved.";
-    await loadLoopStatus();
+    await Promise.all([loadPublishingCloseout(), loadLoopStatus()]);
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not save raw metrics.";
   }

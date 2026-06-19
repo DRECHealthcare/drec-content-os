@@ -17109,6 +17109,190 @@ async def meta_metric_candidates(item_id: str | None = None, limit: int = 10):
     return rows
 
 
+async def publishing_closeout_payload(limit: int = 50):
+    bounded_limit = max(1, min(int(limit or 50), 100))
+    queue_items = await fetch_publish_queue_items(bounded_limit)
+    raw_rows = await recent_raw_metrics(100)
+    outcome_rows = await recent_outcome_rows(100)
+    raw_by_post = {str(row.get("external_post_id")): row for row in raw_rows if row.get("external_post_id")}
+    outcome_by_post = {str(row.get("post_id")): row for row in outcome_rows if row.get("post_id")}
+    scheduled_ready = []
+    waiting_for_post_id = []
+    waiting_for_metrics = []
+    waiting_for_rollup = []
+    complete = []
+    for item in queue_items:
+        status = item.get("status")
+        external_id = str(item.get("external_post_id") or "")
+        if status == "scheduled" and item.get("compliance_status") == "clear":
+            scheduled_ready.append(item)
+            continue
+        if status == "published" and not external_id:
+            waiting_for_post_id.append(item)
+            continue
+        if status != "published" or not external_id:
+            continue
+        raw_metric = raw_by_post.get(external_id)
+        outcome = outcome_by_post.get(external_id)
+        enriched = {**item, "raw_metric": raw_metric, "outcome": outcome}
+        if not raw_metric:
+            waiting_for_metrics.append(enriched)
+        elif not outcome:
+            waiting_for_rollup.append(enriched)
+        else:
+            complete.append(enriched)
+    next_action = {
+        "key": "build_handoff",
+        "label": "Build handoff and publish manually",
+        "screen": "scheduler",
+        "detail": "No scheduled published item is waiting; continue the review and schedule flow.",
+    }
+    if scheduled_ready:
+        next_action = {
+            "key": "manual_publish",
+            "label": "Publish manually, then record the Meta post ID",
+            "screen": "scheduler",
+            "detail": f"{len(scheduled_ready)} scheduled compliance-clear item(s) are ready for handoff.",
+        }
+    elif waiting_for_post_id:
+        next_action = {
+            "key": "record_post_id",
+            "label": "Record missing Meta post ID",
+            "screen": "scheduler",
+            "detail": f"{len(waiting_for_post_id)} published item(s) still need an external post ID.",
+        }
+    elif waiting_for_metrics:
+        next_action = {
+            "key": "record_metrics",
+            "label": "Record performance metrics",
+            "screen": "outcomes",
+            "detail": f"{len(waiting_for_metrics)} published post(s) need reach, saves, shares, comments, leads, and spend.",
+        }
+    elif waiting_for_rollup:
+        next_action = {
+            "key": "rollup_metrics",
+            "label": "Roll metrics into learning",
+            "screen": "outcomes",
+            "detail": f"{len(waiting_for_rollup)} metric row(s) need outcome rollup.",
+        }
+    elif complete:
+        next_action = {
+            "key": "build_report",
+            "label": "Build the weekly learning report",
+            "screen": "learning",
+            "detail": f"{len(complete)} published post(s) have metrics and learning outcomes.",
+        }
+    return {
+        "mode": "read_only",
+        "overall_status": next_action["key"],
+        "next_action": next_action,
+        "counts": {
+            "scheduled_ready": len(scheduled_ready),
+            "waiting_for_post_id": len(waiting_for_post_id),
+            "waiting_for_metrics": len(waiting_for_metrics),
+            "waiting_for_rollup": len(waiting_for_rollup),
+            "complete": len(complete),
+        },
+        "scheduled_ready": scheduled_ready[:10],
+        "waiting_for_post_id": waiting_for_post_id[:10],
+        "waiting_for_metrics": waiting_for_metrics[:10],
+        "waiting_for_rollup": waiting_for_rollup[:10],
+        "complete": complete[:10],
+        "safety": [
+            "This workbench is read-only.",
+            "It does not publish, import metrics, roll up outcomes, or approve content.",
+            "Use it after manual publishing to keep the learning loop from going quiet.",
+        ],
+    }
+
+
+@app.get("/operations/publishing-closeout")
+async def operations_publishing_closeout(limit: int = 50, _: None = Depends(require_access_token)):
+    return await publishing_closeout_payload(limit)
+
+
+@app.get("/operations/publishing-closeout.zh.md")
+async def operations_publishing_closeout_zh(_: None = Depends(require_access_token)):
+    payload = await publishing_closeout_payload(100)
+    counts = payload["counts"]
+    next_action = payload["next_action"]
+    action_labels_zh = {
+        "build_handoff": "生成发布交接包并人工发布",
+        "manual_publish": "人工发布后记录 Meta 帖子 ID",
+        "record_post_id": "补录 Meta 帖子 ID",
+        "record_metrics": "记录表现数据",
+        "rollup_metrics": "把表现数据汇总进学习系统",
+        "build_report": "生成每周学习报告",
+    }
+    action_details_zh = {
+        "build_handoff": "目前没有等待发布后收尾的已排程项目；请继续完成审核与排程流程。",
+        "manual_publish": f"{counts.get('scheduled_ready', 0)} 条已排程且安全通过的内容可进入人工发布交接。",
+        "record_post_id": f"{counts.get('waiting_for_post_id', 0)} 条已发布内容还需要补外部帖子 ID。",
+        "record_metrics": f"{counts.get('waiting_for_metrics', 0)} 条已发布帖子需要录入触达、收藏、分享、评论、线索和花费。",
+        "rollup_metrics": f"{counts.get('waiting_for_rollup', 0)} 条表现数据需要汇总成学习结果。",
+        "build_report": f"{counts.get('complete', 0)} 条已发布帖子已经有表现数据和学习结果，可以生成周报。",
+    }
+    action_key = next_action.get("key")
+    lines = [
+        "# DREC 发布后收尾工作台",
+        "",
+        f"生成时间：{datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}",
+        "",
+        "这个文件只读，不会发布、不导入数据、不汇总学习结果。",
+        "",
+        "## 下一步",
+        "",
+        f"- 动作：{action_labels_zh.get(action_key, next_action.get('label'))}",
+        f"- 页面：{next_action.get('screen')}",
+        f"- 说明：{action_details_zh.get(action_key, next_action.get('detail'))}",
+        "",
+        "## 当前数量",
+        "",
+        f"- 已排程、可人工发布：{counts.get('scheduled_ready', 0)}",
+        f"- 已标记发布但缺外部帖 ID：{counts.get('waiting_for_post_id', 0)}",
+        f"- 已发布但缺表现数据：{counts.get('waiting_for_metrics', 0)}",
+        f"- 已录表现数据但未汇总学习：{counts.get('waiting_for_rollup', 0)}",
+        f"- 已完成数据与学习闭环：{counts.get('complete', 0)}",
+        "",
+        "## 收尾顺序",
+        "",
+        "1. 在发布交接包里确认文案、媒体和计划时间。",
+        "2. 人工发布到 Facebook 或 Instagram。",
+        "3. 回到排程页，把 Meta 帖子 ID 或人工标签记录到对应项目。",
+        "4. 在表现数据页录入触达、点赞、评论、收藏、分享、线索和花费。",
+        "5. 保存并汇总，让学习复盘能够生成下一轮建议。",
+        "",
+        "## 等待录数据的帖子",
+        "",
+    ]
+    waiting_for_metrics = payload.get("waiting_for_metrics") or []
+    if waiting_for_metrics:
+        for item in waiting_for_metrics:
+            lines.extend([
+                f"### {item.get('external_post_id')}",
+                f"- 频道：{item.get('channel')}",
+                f"- 格式：{item.get('format')}",
+                f"- 队列 ID：{item.get('id')}",
+                f"- 文案预览：{(item.get('caption') or '')[:160]}",
+                "",
+            ])
+    else:
+        lines.extend(["目前没有已发布但缺表现数据的帖子。", ""])
+    lines.extend([
+        "## 安全边界",
+        "",
+        "- 这个工作台不会自动发布到 Meta。",
+        "- 这个工作台不会替医生或人工审核做批准。",
+        "- 正式 Meta 自动化继续保持受控开关。",
+        "",
+    ])
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="drec-publishing-closeout-zh.md"'},
+    )
+
+
 def meta_insights_metrics(channel: str, fmt: str | None):
     if channel == "instagram":
         if fmt == "reel":
