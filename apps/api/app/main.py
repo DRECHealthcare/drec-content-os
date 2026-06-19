@@ -13145,7 +13145,7 @@ async def import_notion_carousel_row(row: NotionCarouselRowIn, _: None = Depends
             asset = existing_asset
         else:
             slides = parse_notion_carousel_slide_plan(row.carousel_slide_plan)
-            caption = f"{extract_notion_cover_hook(row.carousel_slide_plan, row.mandarin_topic_title)}\n\n{row.carousel_slide_plan}"
+            caption = safe_notion_asset_caption(row.mandarin_topic_title, slides)
             asset = await create_asset(
                 AssetIn(
                     brief_id=brief.get("id") if isinstance(brief, dict) else None,
@@ -15483,6 +15483,53 @@ def notion_slides_from_brief(brief: dict):
     return []
 
 
+def safer_metabolic_caption_text(text: str):
+    cleaned = str(text or "")
+    replacements = [
+        ("糖尿病逆转", "血糖管理与代谢改善"),
+        ("逆转医学", "代谢健康教育"),
+        ("逆转", "改善"),
+        ("永久治愈", "长期管理"),
+        ("治愈", "改善"),
+        ("保证", "可能帮助"),
+        ("一定", "可能"),
+        ("治疗方案", "健康管理方向"),
+        ("诊断", "医学判断"),
+    ]
+    for old, new in replacements:
+        cleaned = cleaned.replace(old, new)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    return cleaned
+
+
+def safe_notion_asset_caption(topic: str, slides: list[dict] | None = None):
+    safe_topic = safer_metabolic_caption_text(topic)
+    points = []
+    for slide in (slides or [])[1:5]:
+        title = safer_metabolic_caption_text(slide.get("title") or "")
+        body = safer_metabolic_caption_text(slide.get("body") or "")
+        if title and body:
+            points.append(f"- {title}：{body}")
+        elif title:
+            points.append(f"- {title}")
+    if not points:
+        points = [
+            "- 用更完整的角度看血糖、生活习惯与代谢风险。",
+            "- 记录数据、复诊讨论，比单靠一个指标更稳妥。",
+        ]
+    return "\n".join(
+        [
+            f"关于「{safe_topic}」，可以先用健康教育的角度理解：",
+            "",
+            *points[:4],
+            "",
+            "以上是一般健康教育，不代替个人诊断、处方或治疗建议。",
+            "如有长期血糖异常、正在用药或准备调整生活方式，请和合格医生讨论。",
+            "可以收藏，复诊前和医生一起看。",
+        ]
+    )
+
+
 @app.post("/briefs/{brief_id}/draft-asset")
 async def create_asset_from_brief(brief_id: str, _: None = Depends(require_review_access)):
     brief = await content_brief_by_id(brief_id)
@@ -15508,7 +15555,11 @@ async def create_asset_from_brief(brief_id: str, _: None = Depends(require_revie
         target_signal=brief.get("target_signal"),
     )
     creative = (await create_creative_draft(draft)).get("item", {})
-    compliance = creative.get("compliance") or check_text(creative.get("primary_caption") or "")
+    beats = brief_structure_beats(brief)
+    notion_slides = notion_slides_from_brief(brief)
+    notion_source = beats.get("notion_source") or {}
+    primary_caption = safe_notion_asset_caption(brief.get("topic") or "DREC education", notion_slides) if notion_source else creative.get("primary_caption")
+    compliance = check_text(primary_caption or "")
     if compliance.get("status") == "flagged":
         raise HTTPException(
             status_code=422,
@@ -15517,16 +15568,13 @@ async def create_asset_from_brief(brief_id: str, _: None = Depends(require_revie
                 "compliance": compliance,
             },
         )
-    beats = brief_structure_beats(brief)
-    notion_slides = notion_slides_from_brief(brief)
-    notion_source = beats.get("notion_source") or {}
     slides = notion_slides or creative.get("slides") or []
     asset_source = "notion_master_content_plan" if notion_source else "brief_draft_asset"
     asset = AssetIn(
         brief_id=brief_id,
         channel="facebook",
         format=draft.format,
-        caption=creative.get("primary_caption"),
+        caption=primary_caption,
         media_urls=[],
         metadata={
             "topic": brief.get("topic"),

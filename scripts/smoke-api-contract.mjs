@@ -712,6 +712,16 @@ const requiredSnippets = [
     text: "notion_slides_from_brief",
   },
   {
+    name: "notion carousel safe caption helper",
+    file: "main",
+    text: "safe_notion_asset_caption",
+  },
+  {
+    name: "notion carousel risky wording rewrite",
+    file: "main",
+    text: "(\"糖尿病逆转\", \"血糖管理与代谢改善\")",
+  },
+  {
     name: "test run checklist route",
     file: "main",
     text: "test_run_checklist_payload",
