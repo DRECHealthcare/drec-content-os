@@ -162,6 +162,7 @@ const uiZh = {
   "Open Asset Review": "打开素材审核",
   "Download Chinese Pack": "下载中文包",
   "Download Media Pack": "下载媒体制作包",
+  "Download PNG Zip": "下载 PNG 图片包",
   "Download SVG Zip": "下载 SVG 设计包",
   "Success Standard": "成功标准",
   "Copy Queue Decision CSV": "复制队列审核 CSV",
@@ -1142,6 +1143,7 @@ function renderFirstPublishReadiness(data) {
         <button type="button" data-open-first-asset-review>${escapeHtml(translateText("Open Asset Review"))}</button>
         <button type="button" data-download-first-publish-zh>${escapeHtml(translateText("Download Chinese Pack"))}</button>
         <button type="button" data-download-first-media-pack>${escapeHtml(translateText("Download Media Pack"))}</button>
+        <button type="button" data-download-first-carousel-png-zip>${escapeHtml(translateText("Download PNG Zip"))}</button>
         <button type="button" data-download-first-carousel-zip>${escapeHtml(translateText("Download SVG Zip"))}</button>
       </div>
       <small><strong>${escapeHtml(translateText("Success Standard"))}:</strong> Safety: clear + Decision: approve. Otherwise keep this item in review.</small>
@@ -1189,13 +1191,14 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
   const openAssetReviewButton = event.target.closest("[data-open-first-asset-review]");
   const downloadZhButton = event.target.closest("[data-download-first-publish-zh]");
   const downloadMediaPackButton = event.target.closest("[data-download-first-media-pack]");
+  const downloadCarouselPngZipButton = event.target.closest("[data-download-first-carousel-png-zip]");
   const downloadCarouselZipButton = event.target.closest("[data-download-first-carousel-zip]");
   const copyButton = event.target.closest("[data-copy-first-asset-decision]");
   const fillButton = event.target.closest("[data-fill-first-asset-decision]");
   const copyQueueButton = event.target.closest("[data-copy-first-queue-decision]");
   const fillQueueButton = event.target.closest("[data-fill-first-queue-decision]");
   const advanceButton = event.target.closest("[data-advance-first-publish]");
-  if (!copyReviewButton && !fillDoctorReplyButton && !openAssetReviewButton && !downloadZhButton && !downloadMediaPackButton && !downloadCarouselZipButton && !copyButton && !fillButton && !copyQueueButton && !fillQueueButton && !advanceButton) return;
+  if (!copyReviewButton && !fillDoctorReplyButton && !openAssetReviewButton && !downloadZhButton && !downloadMediaPackButton && !downloadCarouselPngZipButton && !downloadCarouselZipButton && !copyButton && !fillButton && !copyQueueButton && !fillQueueButton && !advanceButton) return;
   const container = document.getElementById("first-publish-readiness");
   const message = document.getElementById("test-path-message");
   if (copyReviewButton) {
@@ -1250,6 +1253,16 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
       if (message) message.textContent = "First publish media pack downloaded.";
     } catch (error) {
       if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download first publish media pack.";
+    }
+    return;
+  }
+  if (downloadCarouselPngZipButton) {
+    if (message) message.textContent = "Preparing first publish PNG files...";
+    try {
+      await downloadProtectedFile("/operations/first-publish-carousel-png-assets.zip", "drec-first-publish-carousel-png-assets.zip", "application/zip");
+      if (message) message.textContent = "First publish PNG design ZIP downloaded.";
+    } catch (error) {
+      if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download first publish PNG ZIP.";
     }
     return;
   }

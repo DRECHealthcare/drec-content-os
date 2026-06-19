@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from contextlib import asynccontextmanager
 import asyncio
 import csv
@@ -12,6 +14,7 @@ from urllib.parse import urlencode
 from uuid import UUID, uuid4
 
 import httpx
+from PIL import Image, ImageDraw, ImageFont
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
@@ -2117,6 +2120,104 @@ def first_publish_slide_svg(asset: dict, slide: dict, index: int, total: int):
 </svg>'''
 
 
+def first_publish_font(size: int, bold: bool = False):
+    candidates = [
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc" if bold else "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+        "/System/Library/Fonts/STHeiti Medium.ttc",
+        "/System/Library/Fonts/PingFang.ttc",
+        "/Library/Fonts/Arial Unicode.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    ]
+    for path in candidates:
+        if path and Path(path).exists():
+            try:
+                return ImageFont.truetype(path, size=size)
+            except OSError:
+                continue
+    return ImageFont.load_default(size=size)
+
+
+def wrap_draw_text(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont, max_width: int, max_lines: int):
+    clean = re.sub(r"\s+", " ", (text or "").strip())
+    if not clean:
+        return []
+    lines = []
+    current = ""
+    for char in clean:
+        trial = f"{current}{char}"
+        if draw.textlength(trial, font=font) <= max_width:
+            current = trial
+            continue
+        if current:
+            lines.append(current.strip())
+        current = char
+        if len(lines) >= max_lines:
+            break
+    if current and len(lines) < max_lines:
+        lines.append(current.strip())
+    if len(lines) == max_lines and draw.textlength(lines[-1], font=font) > max_width - 28:
+        while lines[-1] and draw.textlength(f"{lines[-1]}...", font=font) > max_width:
+            lines[-1] = lines[-1][:-1]
+        lines[-1] = f"{lines[-1]}..."
+    return lines
+
+
+def first_publish_slide_png(asset: dict, slide: dict, index: int, total: int):
+    metadata = asset.get("metadata") or {}
+    topic = metadata.get("topic") or "DREC"
+    title = slide.get("title") or topic
+    body = slide.get("body") or ""
+    note = slide.get("visual_note") or "DREC educational carousel"
+
+    navy = "#0F2A4A"
+    teal = "#1FA9A0"
+    orange = "#F58220"
+    slate = "#1D2935"
+    muted = "#64748B"
+    bg = "#F1F5F8"
+
+    image = Image.new("RGB", (1080, 1350), bg)
+    draw = ImageDraw.Draw(image)
+    title_font = first_publish_font(60, bold=True)
+    body_font = first_publish_font(36)
+    small_font = first_publish_font(24)
+    badge_font = first_publish_font(24, bold=True)
+    footer_font = first_publish_font(30, bold=True)
+
+    draw.rectangle((0, 0, 1080, 430), fill=navy)
+    draw.rounded_rectangle((68, 76, 284, 124), radius=24, fill=teal)
+    draw.text((96, 90), "DREC EDUCATION", font=badge_font, fill="white")
+    draw.text((858, 88), f"{index:02d}/{total:02d}", font=first_publish_font(30, bold=True), fill="white")
+    draw.rectangle((68, 392, 1012, 430), fill=orange)
+
+    y = 214
+    for line in wrap_draw_text(draw, title, title_font, 900, 3):
+        draw.text((86, y), line, font=title_font, fill="white")
+        y += 76
+
+    draw.rounded_rectangle((68, 494, 1012, 1064), radius=28, fill="white")
+    draw.rectangle((68, 494, 84, 1064), fill=teal)
+    y = 572
+    for line in wrap_draw_text(draw, body, body_font, 820, 8):
+        draw.text((112, y), line, font=body_font, fill=slate)
+        y += 52
+
+    draw.rounded_rectangle((88, 1105, 992, 1215), radius=18, fill=navy)
+    draw.text((120, 1160), "一般健康教育，不代替个人诊断或治疗建议。", font=footer_font, fill="white")
+
+    topic_lines = wrap_draw_text(draw, str(topic), small_font, 880, 1)
+    note_lines = wrap_draw_text(draw, str(note), first_publish_font(20), 880, 1)
+    if topic_lines:
+        draw.text((88, 1260), topic_lines[0], font=small_font, fill=navy)
+    if note_lines:
+        draw.text((88, 1298), note_lines[0], font=first_publish_font(20), fill=muted)
+
+    output = BytesIO()
+    image.save(output, format="PNG", optimize=True)
+    return output.getvalue()
+
+
 ASSET_REVIEW_DECISION_FIELDS = [
     "asset_id",
     "brief_id",
@@ -2914,8 +3015,9 @@ async def operations_first_publish_media_pack(_: None = Depends(require_access_t
         "",
         "## Design Files",
         "",
+        "- Download ready-to-review PNG files: `/operations/first-publish-carousel-png-assets.zip`",
         "- Download SVG source files: `/operations/first-publish-carousel-assets.zip`",
-        "- Export each SVG as PNG/JPG at 1080x1350.",
+        "- Use PNG files for visual review first. Use SVG files only if manual edits are needed.",
         "- Upload final PNG/JPG files to approved DREC storage or another approved public media host.",
         "- Replace the placeholder URLs in the CSV below with final media URLs.",
         "- Preview import before saving media attachments.",
@@ -3001,6 +3103,48 @@ async def operations_first_publish_carousel_assets_zip(_: None = Depends(require
         buffer.getvalue(),
         media_type="application/zip",
         headers={"Content-Disposition": 'attachment; filename="drec-first-publish-carousel-assets.zip"'},
+    )
+
+
+@app.get("/operations/first-publish-carousel-png-assets.zip")
+async def operations_first_publish_carousel_png_assets_zip(_: None = Depends(require_access_token)):
+    payload = await first_publish_readiness_payload()
+    candidates = payload.get("candidates") or {}
+    asset = candidates.get("next_asset") or candidates.get("approved_clear_asset") or candidates.get("ready_asset")
+    if not asset:
+        raise HTTPException(status_code=404, detail="No first-publish asset is available for PNG rendering.")
+    slides = first_publish_slide_items(asset)
+    if not slides:
+        raise HTTPException(status_code=404, detail="No slide plan is available for the first-publish asset.")
+    asset_id = asset.get("id") or "first-publish"
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr(
+            "README.md",
+            "\n".join(
+                [
+                    "# DREC First Publish PNG Assets",
+                    "",
+                    "These PNG files are generated for human visual QA before media attachment import.",
+                    "",
+                    "This ZIP does not approve, attach, schedule, or publish anything.",
+                    "",
+                    "Image size: 1080x1350.",
+                    "After review, upload the final approved PNG files to approved public media storage and replace placeholder URLs in the CSV.",
+                ]
+            ),
+        )
+        archive.writestr("media-attachments-template.csv", first_publish_media_attachment_csv(asset))
+        for index, slide in enumerate(slides, start=1):
+            archive.writestr(
+                f"slides/{asset_id}-slide-{index:02d}.png",
+                first_publish_slide_png(asset, slide, index, len(slides)),
+            )
+    buffer.seek(0)
+    return Response(
+        buffer.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": 'attachment; filename="drec-first-publish-carousel-png-assets.zip"'},
     )
 
 

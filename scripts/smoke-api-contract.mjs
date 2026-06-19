@@ -30,6 +30,7 @@ const requiredRoutes = [
   "GET /operations/first-publish-readiness.zh.md",
   "GET /operations/first-publish-media-pack.md",
   "GET /operations/first-publish-carousel-assets.zip",
+  "GET /operations/first-publish-carousel-png-assets.zip",
   "GET /operations/chinese-operator-center",
   "GET /operations/chinese-operator-center.md",
   "POST /operations/first-publish-advance",
@@ -1327,6 +1328,11 @@ const requiredSnippets = [
     text: "operations_first_publish_carousel_assets_zip",
   },
   {
+    name: "first publish carousel png zip route",
+    file: "main",
+    text: "operations_first_publish_carousel_png_assets_zip",
+  },
+  {
     name: "first publish media csv template",
     file: "main",
     text: "first_publish_media_attachment_csv",
@@ -1335,6 +1341,11 @@ const requiredSnippets = [
     name: "first publish slide svg helper",
     file: "main",
     text: "first_publish_slide_svg",
+  },
+  {
+    name: "first publish slide png helper",
+    file: "main",
+    text: "first_publish_slide_png",
   },
   {
     name: "first publish media pack safety",
@@ -2902,6 +2913,11 @@ const requiredSnippets = [
     text: "data-download-first-carousel-zip",
   },
   {
+    name: "web first publish carousel png zip action",
+    file: "web",
+    text: "data-download-first-carousel-png-zip",
+  },
+  {
     name: "web first publish media pack endpoint",
     file: "web",
     text: "/operations/first-publish-media-pack.md",
@@ -2910,6 +2926,11 @@ const requiredSnippets = [
     name: "web first publish carousel zip endpoint",
     file: "web",
     text: "/operations/first-publish-carousel-assets.zip",
+  },
+  {
+    name: "web first publish carousel png zip endpoint",
+    file: "web",
+    text: "/operations/first-publish-carousel-png-assets.zip",
   },
   {
     name: "web first publish readiness loader",
