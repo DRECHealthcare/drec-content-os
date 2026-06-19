@@ -2284,6 +2284,92 @@ def first_publish_generated_media_urls(request: Request, asset: dict):
     ]
 
 
+def asset_carousel_zip(asset: dict, kind: str):
+    slides = first_publish_slide_items(asset)
+    if not slides:
+        raise HTTPException(status_code=404, detail="No slide plan is available for this asset.")
+    asset_id = asset.get("id") or "asset"
+    metadata = asset.get("metadata") or {}
+    topic = metadata.get("topic") or asset.get("format") or "DREC carousel"
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr(
+            "README.md",
+            "\n".join(
+                [
+                    f"# DREC Carousel {kind.upper()} Assets",
+                    "",
+                    f"Asset ID: {asset_id}",
+                    f"Topic: {topic}",
+                    f"Review / safety: {asset.get('review_status') or 'n/a'} / {asset.get('compliance_status') or 'n/a'}",
+                    "",
+                    "These files are for human visual QA and Notion image review.",
+                    "This ZIP does not approve, attach, schedule, or publish anything.",
+                    "Use approved DREC storage before attaching media URLs for publishing.",
+                    "",
+                    "Image size: 1080x1350.",
+                ]
+            ),
+        )
+        archive.writestr("media-attachments-template.csv", first_publish_media_attachment_csv(asset))
+        for index, slide in enumerate(slides, start=1):
+            if kind == "png":
+                archive.writestr(
+                    f"slides/{asset_id}-slide-{index:02d}.png",
+                    first_publish_slide_png(asset, slide, index, len(slides)),
+                )
+            else:
+                archive.writestr(
+                    f"slides/{asset_id}-slide-{index:02d}.svg",
+                    first_publish_slide_svg(asset, slide, index, len(slides)),
+                )
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
+@app.get("/assets/{asset_id}/carousel-preview/{slide_number}.png")
+async def asset_carousel_preview_png(asset_id: str, slide_number: int, _: None = Depends(require_access_token)):
+    asset = await asset_by_id(asset_id)
+    if not asset:
+        raise HTTPException(status_code=404, detail="Asset not found.")
+    slides = first_publish_slide_items(asset)
+    if slide_number < 1 or slide_number > len(slides):
+        raise HTTPException(status_code=404, detail="Slide not found.")
+    data = first_publish_slide_png(asset, slides[slide_number - 1], slide_number, len(slides))
+    return Response(
+        content=data,
+        media_type="image/png",
+        headers={
+            "Cache-Control": "no-store",
+            "X-DREC-Safety": "Preview only. This does not approve, attach, schedule, or publish.",
+        },
+    )
+
+
+@app.get("/assets/{asset_id}/carousel-png-assets.zip")
+async def asset_carousel_png_assets_zip(asset_id: str, _: None = Depends(require_access_token)):
+    asset = await asset_by_id(asset_id)
+    if not asset:
+        raise HTTPException(status_code=404, detail="Asset not found.")
+    return Response(
+        asset_carousel_zip(asset, "png"),
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="drec-carousel-png-assets-{asset_id}.zip"'},
+    )
+
+
+@app.get("/assets/{asset_id}/carousel-assets.zip")
+async def asset_carousel_assets_zip(asset_id: str, _: None = Depends(require_access_token)):
+    asset = await asset_by_id(asset_id)
+    if not asset:
+        raise HTTPException(status_code=404, detail="Asset not found.")
+    return Response(
+        asset_carousel_zip(asset, "svg"),
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="drec-carousel-svg-assets-{asset_id}.zip"'},
+    )
+
+
 @app.get("/public/first-publish-assets/{asset_id}/slides/{slide_number}.png")
 async def public_first_publish_generated_slide_png(asset_id: str, slide_number: int):
     asset = await asset_by_id(asset_id)

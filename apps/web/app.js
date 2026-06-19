@@ -778,6 +778,8 @@ Object.assign(uiZh, {
   "Monthly refresh": "月度刷新",
   "Monthly refresh workbench": "每月刷新工作台",
   "Download Monthly Refresh 中文": "下载每月刷新中文包",
+  "Download PNG ZIP": "下载 PNG 图包",
+  "Download SVG ZIP": "下载 SVG 源文件",
   "Unique ID": "唯一 ID",
   "Image status rule": "图片状态规则",
   "Caption boundary": "Caption 边界",
@@ -3195,6 +3197,7 @@ function assetCard(item) {
   const mediaCount = Array.isArray(item.media_urls) ? item.media_urls.length : 0;
   const canQueue = item.review_status === "approved" && item.compliance_status === "clear";
   const metadata = item.metadata || {};
+  const hasSlides = Array.isArray(metadata.slides) && metadata.slides.length > 0;
   const queueNote = canQueue
     ? "Ready for queue."
     : item.compliance_status !== "clear"
@@ -3224,6 +3227,8 @@ function assetCard(item) {
         <button type="button" data-asset-status="review" data-id="${escapeHtml(item.id)}">Needs Work</button>
         <button type="button" data-asset-status="rejected" data-id="${escapeHtml(item.id)}">Reject</button>
         <button type="button" data-attach-asset-media="${escapeHtml(item.id)}">Attach Media</button>
+        ${hasSlides ? `<button type="button" data-download-asset-carousel-png="${escapeHtml(item.id)}">${escapeHtml(translateText("Download PNG ZIP"))}</button>` : ""}
+        ${hasSlides ? `<button type="button" data-download-asset-carousel-svg="${escapeHtml(item.id)}">${escapeHtml(translateText("Download SVG ZIP"))}</button>` : ""}
         <button type="button" data-copy-asset-review="${escapeHtml(item.id)}">Copy Review Note</button>
         <button type="button" data-copy-asset="${escapeHtml(item.id)}">Copy Package</button>
         <button type="button" data-queue-asset="${escapeHtml(item.id)}" ${canQueue ? "" : "disabled"}>Add To Queue</button>
@@ -6017,6 +6022,42 @@ document.getElementById("queue-draft").addEventListener("click", async () => {
 });
 
 document.getElementById("asset-items").addEventListener("click", async (event) => {
+  const downloadAssetPngButton = event.target.closest("[data-download-asset-carousel-png]");
+  if (downloadAssetPngButton) {
+    const assetId = downloadAssetPngButton.dataset.downloadAssetCarouselPng;
+    const message = document.getElementById("media-message");
+    downloadAssetPngButton.disabled = true;
+    const originalText = downloadAssetPngButton.textContent;
+    downloadAssetPngButton.textContent = "Preparing";
+    try {
+      await downloadProtectedFile(`/assets/${assetId}/carousel-png-assets.zip`, `drec-carousel-png-assets-${assetId}.zip`, "application/zip");
+      message.textContent = "Carousel PNG ZIP downloaded.";
+    } catch (error) {
+      message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download carousel PNG ZIP.";
+    } finally {
+      downloadAssetPngButton.disabled = false;
+      downloadAssetPngButton.textContent = originalText;
+    }
+    return;
+  }
+  const downloadAssetSvgButton = event.target.closest("[data-download-asset-carousel-svg]");
+  if (downloadAssetSvgButton) {
+    const assetId = downloadAssetSvgButton.dataset.downloadAssetCarouselSvg;
+    const message = document.getElementById("media-message");
+    downloadAssetSvgButton.disabled = true;
+    const originalText = downloadAssetSvgButton.textContent;
+    downloadAssetSvgButton.textContent = "Preparing";
+    try {
+      await downloadProtectedFile(`/assets/${assetId}/carousel-assets.zip`, `drec-carousel-svg-assets-${assetId}.zip`, "application/zip");
+      message.textContent = "Carousel SVG ZIP downloaded.";
+    } catch (error) {
+      message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download carousel SVG ZIP.";
+    } finally {
+      downloadAssetSvgButton.disabled = false;
+      downloadAssetSvgButton.textContent = originalText;
+    }
+    return;
+  }
   const attachMediaButton = event.target.closest("[data-attach-asset-media]");
   if (attachMediaButton) {
     const message = document.getElementById("media-message");

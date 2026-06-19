@@ -187,6 +187,9 @@ const requiredRoutes = [
   "POST /briefs/archive-drafted",
   "POST /assets/approve-clear",
   "POST /assets/queue-ready",
+  "GET /assets/{asset_id}/carousel-preview/{slide_number}.png",
+  "GET /assets/{asset_id}/carousel-assets.zip",
+  "GET /assets/{asset_id}/carousel-png-assets.zip",
   "POST /assets/{asset_id}/queue",
   "PATCH /assets/{asset_id}/caption",
   "PATCH /assets/{asset_id}/media",
@@ -242,6 +245,21 @@ const requiredSnippets = [
     name: "bulk ready asset queue",
     file: "main",
     text: "queue_ready_assets",
+  },
+  {
+    name: "asset carousel png route",
+    file: "main",
+    text: "/assets/{asset_id}/carousel-png-assets.zip",
+  },
+  {
+    name: "asset carousel preview route",
+    file: "main",
+    text: "/assets/{asset_id}/carousel-preview/{slide_number}.png",
+  },
+  {
+    name: "asset carousel zip safety",
+    file: "main",
+    text: "This ZIP does not approve, attach, schedule, or publish anything.",
   },
   {
     name: "brief asset idempotency",
@@ -3422,6 +3440,21 @@ const requiredSnippets = [
     name: "web bulk asset queue action",
     file: "web",
     text: "queue-ready-assets",
+  },
+  {
+    name: "web asset carousel png action",
+    file: "web",
+    text: "data-download-asset-carousel-png",
+  },
+  {
+    name: "web asset carousel svg action",
+    file: "web",
+    text: "data-download-asset-carousel-svg",
+  },
+  {
+    name: "web asset carousel png endpoint",
+    file: "web",
+    text: "/carousel-png-assets.zip",
   },
   {
     name: "web creative pack action",
