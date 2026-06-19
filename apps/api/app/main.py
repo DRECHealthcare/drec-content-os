@@ -14269,6 +14269,149 @@ async def publishing_handoff(_: None = Depends(require_access_token)):
     }
 
 
+def zh_handoff_blocker(value: str):
+    return {
+        "Needs scheduling approval and scheduled status.": "需要先通过排程审批，并变成 scheduled 状态。",
+        "Needs scheduled status.": "需要 scheduled 状态。",
+        "Needs compliance clear.": "需要安全/合规状态为 clear。",
+        "Needs a planned publish time.": "需要计划发布时间。",
+        "Needs final caption.": "需要最终版文案。",
+        "No Facebook scheduled compliance-clear item is ready.": "没有可用于 Facebook 的已排程且安全通过项目。",
+        "No Instagram scheduled compliance-clear item is ready.": "没有可用于 Instagram 的已排程且安全通过项目。",
+        "Only Facebook items are supported by this worker.": "这个 worker 只支持 Facebook 项目。",
+        "Only Instagram items are supported by this worker.": "这个 worker 只支持 Instagram 项目。",
+        "Item must be scheduled before Meta dispatch.": "Meta dispatch 前项目必须已排程。",
+        "Item must be scheduled before Instagram dispatch.": "Instagram dispatch 前项目必须已排程。",
+        "Item needs a planned publish time before Meta dispatch.": "Meta dispatch 前需要计划发布时间。",
+        "Item needs a planned publish time before Instagram dispatch.": "Instagram dispatch 前需要计划发布时间。",
+        "Item must be compliance-clear before Meta dispatch.": "Meta dispatch 前必须安全通过。",
+        "Item must be compliance-clear before Instagram dispatch.": "Instagram dispatch 前必须安全通过。",
+        "Item already has an external Meta post ID.": "项目已有外部 Meta 帖子 ID。",
+        "Meta credentials or permissions are not ready.": "Meta 凭证或权限还没准备好。",
+        "Private media needs a public/signed publishing URL before Meta can receive it.": "Meta 接收前，私有媒体需要公开或签名发布链接。",
+        "Instagram publishing needs at least one image or video URL.": "Instagram 发布至少需要一个图片或视频链接。",
+        "Instagram carousel needs 2 to 10 media URLs.": "Instagram 轮播需要 2 到 10 个媒体链接。",
+        "Instagram reel needs a public video URL.": "Instagram Reel 需要公开视频链接。",
+    }.get(value, value)
+
+
+def zh_schedule_audit_status(value: str | None):
+    return {
+        "clear": "通过",
+        "needs_review": "需要复核",
+        "blocked": "有阻碍",
+    }.get(value or "", value or "未知")
+
+
+def zh_handoff_item_lines(item: dict, index: int, heading: str):
+    media_urls = [url for url in item.get("media_urls") or [] if url]
+    blockers = [zh_handoff_blocker(blocker) for blocker in item.get("handoff_blockers") or item.get("blockers") or []]
+    return [
+        f"### {index}. {heading}：{item.get('channel') or 'unknown'} / {item.get('format') or 'unknown'}",
+        "",
+        f"- 队列 ID：{item.get('id') or item.get('queue_id')}",
+        f"- 素材 ID：{item.get('asset_id') or '无'}",
+        f"- 状态：{item.get('status')}",
+        f"- 安全状态：{item.get('compliance_status')}",
+        f"- 计划发布时间：{item.get('planned_slot') or '尚未设置'}",
+        f"- 外部帖子 ID：{item.get('external_post_id') or '尚未记录'}",
+        f"- 阻碍：{'; '.join(blockers) if blockers else '无'}",
+        "",
+        "文案：",
+        "",
+        item.get("caption") or "暂无文案。",
+        "",
+        "媒体：",
+        "",
+        *(markdown_list(media_urls, "- 暂无媒体链接。")),
+        "",
+    ]
+
+
+@app.get("/operations/publishing-handoff.zh.md")
+async def operations_publishing_handoff_markdown_zh(_: None = Depends(require_access_token)):
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    handoff = await publishing_handoff(None)
+    audit = await schedule_audit_payload()
+    meta = await meta_readiness(None)
+    fb_item = await next_facebook_publish_item()
+    ig_item = await next_instagram_publish_item()
+    fb_blockers = facebook_dispatch_blockers(fb_item, meta)
+    ig_blockers = instagram_dispatch_blockers(ig_item, meta)
+    job = await meta_publishing_job_result("facebook", True)
+    ig_job = await meta_publishing_job_result("instagram", True)
+    ready_items = handoff.get("ready_items") or []
+    blocked_items = handoff.get("needs_review") or handoff.get("blocked_items") or []
+    lines = [
+        "# DREC Content OS 发布交接与 Meta 测试包",
+        "",
+        f"生成时间：{generated_at}",
+        "",
+        "用途：排程后检查哪些内容可以人工发布交接、哪些可以做 Meta dry run。本文件只读，不会发布、不会排程、不会修改队列。",
+        "",
+        "## 当前交接状态",
+        "",
+        f"- 可交接发布项目：{handoff.get('ready_count', 0)}",
+        f"- 仍有阻碍项目：{handoff.get('blocked_count', 0)}",
+        f"- 排程检查：{zh_schedule_audit_status(audit.get('overall_status'))}",
+        f"- 排程阻碍：{audit.get('block_count', 0)}",
+        f"- 排程提醒：{audit.get('warn_count', 0)}",
+        "",
+        "## 操作顺序",
+        "",
+        "1. 只处理 scheduled + compliance clear + 有 planned time 的项目。",
+        "2. 发布前先看 Schedule Audit；有 block 就不要发布或 dry run。",
+        "3. 人工发布时复制 handoff 文案，不要临时改文案；要改就回审核流程。",
+        "4. 发布后立刻记录 Meta post ID 或人工标签。",
+        "5. 之后到「表现数据」输入 7 天数据，再汇总到学习复盘。",
+        "6. Meta dry run 只测试准备度；正式发布需要 META_ENABLE_PUBLISHING 和 META_ENABLE_PUBLISHING_JOB 两个锁另外打开。",
+        "",
+        "## Meta Dry Run 状态",
+        "",
+        f"- Meta 总状态：{meta.get('overall_status')}",
+        f"- Facebook dry run：{'ready' if fb_item and not fb_blockers else 'blocked'}",
+        *(markdown_list([zh_handoff_blocker(item) for item in fb_blockers], "- Facebook 无阻碍。")),
+        f"- Instagram dry run：{'ready' if ig_item and not ig_blockers else 'blocked'}",
+        *(markdown_list([zh_handoff_blocker(item) for item in ig_blockers], "- Instagram 无阻碍。")),
+        f"- Meta publishing job dry run：Facebook {'ready' if job.get('ready') else 'blocked'} / Instagram {'ready' if ig_job.get('ready') else 'blocked'}",
+        "",
+        "## 可交接发布项目",
+        "",
+    ]
+    if ready_items:
+        for index, item in enumerate(ready_items[:40], start=1):
+            lines.extend(zh_handoff_item_lines(item, index, "可交接"))
+    else:
+        lines.extend(["- 暂无可交接发布项目。通常需要先完成：素材批准 → 加入队列 → 队列审核批准 → 排程。", ""])
+    lines.extend(["## 仍有阻碍项目", ""])
+    if blocked_items:
+        for index, item in enumerate(blocked_items[:40], start=1):
+            lines.extend(zh_handoff_item_lines(item, index, "阻碍"))
+    else:
+        lines.extend(["- 暂无阻碍项目。", ""])
+    lines.extend(
+        [
+            "## 可复制交接文字",
+            "",
+            "```",
+            handoff.get("handoff_text") or "暂无交接文字。",
+            "```",
+            "",
+            "## 完成后怎么做",
+            "",
+            "- 若有可交接项目：人工发布后，在排程页对应项目点「Record Published」。",
+            "- 若要测试 Meta：先点 Facebook/Instagram dry run 或 Meta Setup 的 Dry Run Publishing Job。",
+            "- dry run 成功不等于正式发布已打开；正式发布锁仍默认关闭。",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-publishing-handoff-zh.md"'},
+    )
+
+
 async def next_facebook_publish_item(item_id: str | None = None):
     if item_id:
         row = await fetch_row(

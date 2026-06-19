@@ -136,6 +136,7 @@ const uiZh = {
   "Review Approve": "审核批准",
   "Schedule": "排程",
   "Build Handoff": "生成交接内容",
+  "Download Publishing Handoff 中文": "下载中文发布交接包",
   "Record Published": "记录已发布",
   "Save & Roll Up": "保存并汇总",
   "Build Report": "生成报告",
@@ -5432,6 +5433,17 @@ document.getElementById("build-handoff").addEventListener("click", async () => {
     message.textContent = "Handoff ready.";
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not build handoff.";
+  }
+});
+
+document.getElementById("download-publishing-handoff-zh")?.addEventListener("click", async () => {
+  const message = document.getElementById("queue-message");
+  message.textContent = "Preparing Chinese publishing handoff...";
+  try {
+    await downloadProtectedFile("/operations/publishing-handoff.zh.md", "drec-publishing-handoff-zh.md", "text/markdown");
+    message.textContent = "中文发布交接包已下载。";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "请先设置访问 token。" : "无法下载中文发布交接包。";
   }
 });
 

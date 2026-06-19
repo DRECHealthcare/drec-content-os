@@ -137,6 +137,7 @@ const requiredRoutes = [
   "GET /publish-queue/schedule.csv",
   "GET /publish-queue/schedule-worksheet.csv",
   "POST /publish-queue/import-schedule-worksheet",
+  "GET /operations/publishing-handoff.zh.md",
   "GET /briefs/plan.csv",
   "GET /briefs/asset-pack.md",
   "GET /creative/style-library",
@@ -1758,6 +1759,16 @@ const requiredSnippets = [
     name: "publishing run sheet export",
     file: "main",
     text: "drec-publishing-run-sheet.md",
+  },
+  {
+    name: "publishing handoff chinese export",
+    file: "main",
+    text: "drec-publishing-handoff-zh.md",
+  },
+  {
+    name: "publishing handoff chinese safety",
+    file: "main",
+    text: "本文件只读，不会发布、不会排程、不会修改队列",
   },
   {
     name: "publishing run sheet ready section",
@@ -3428,6 +3439,16 @@ const requiredSnippets = [
     name: "web handoff blockers",
     file: "web",
     text: "handoff_blockers",
+  },
+  {
+    name: "web publishing handoff chinese action",
+    file: "web",
+    text: "download-publishing-handoff-zh",
+  },
+  {
+    name: "web publishing handoff chinese endpoint",
+    file: "web",
+    text: "/operations/publishing-handoff.zh.md",
   },
   {
     name: "web scheduled publishing job action",
