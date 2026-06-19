@@ -1433,9 +1433,9 @@ const requiredSnippets = [
     text: "## 媒体/设计准备",
   },
   {
-    name: "first publish media blocks queue action",
+    name: "first publish media safe advance action",
     file: "main",
-    text: "needs_media_design",
+    text: "attach_generated_media",
   },
   {
     name: "first publish chinese meta live lock",
@@ -1566,6 +1566,16 @@ const requiredSnippets = [
     name: "first publish advance no auto approve",
     file: "main",
     text: "This endpoint never approves assets or queue items.",
+  },
+  {
+    name: "first publish advance generated media attach",
+    file: "main",
+    text: "Attached generated media URLs to the first approved clear asset.",
+  },
+  {
+    name: "first publish advance generated media safety",
+    file: "main",
+    text: "It only attaches generated media to already approved clear assets",
   },
   {
     name: "first publish readiness meta blockers",

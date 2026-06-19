@@ -504,6 +504,8 @@ Object.assign(uiZh, {
   "Checking the next safe first-publish step...": "正在检查首发流程的下一步安全动作...",
   "First publish path advanced.": "首发流程已推进。",
   "First publish path needs a manual step.": "首发流程还需要一个人工步骤。",
+  "Attached generated media URLs to the first approved clear asset.": "已把生成图片链接挂到第一条已批准且安全通过的素材。",
+  "Generated media URLs can be attached to approved asset": "生成图片链接可以挂到已批准素材。",
   "Could not advance the first publish path.": "无法推进首发流程。",
   "Attaching generated first-publish PNG URLs...": "正在挂载首发生成 PNG 链接...",
   "Generated PNG media URLs attached. Visual QA, queue review, scheduling, and publishing remain separate gates.": "生成 PNG 链接已挂载。视觉 QA、队列审核、排程和发布仍然是独立关卡。",
@@ -614,6 +616,7 @@ function translateDynamicText(text) {
     [/^(\d+) item\(s\) are waiting in the publishing workflow\.$/, (_match, count) => `已有 ${count} 条内容在发布流程中等待处理。`],
     [/^(\d+) result\(s\) are feeding the learning loop\.$/, (_match, count) => `已有 ${count} 条表现数据进入学习循环。`],
     [/^Slide (\d+)$/, (_match, count) => `第 ${count} 张`],
+    [/^Generated media URLs can be attached to approved asset (.+)\.$/, (_match, assetId) => `生成图片链接可以挂到已批准素材 ${assetId}。`],
   ];
   for (const [pattern, replacer] of dynamicRules) {
     const match = value.match(pattern);
