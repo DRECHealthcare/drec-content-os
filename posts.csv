@@ -1,0 +1,3 @@
+date_time,platform,message,image_url,status
+2026-06-20 20:00,facebook,测试发帖内容,,pending
+2026-06-20 20:05,instagram,测试IG帖,https://example.com/photo.jpg,pending

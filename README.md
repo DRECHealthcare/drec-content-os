@@ -55,6 +55,15 @@ uvicorn app.main:app --reload --port 8080
 
 5. Open `apps/web/index.html` in a browser, or deploy the repository root to Vercel.
 
+## Standalone Meta Posting Helper
+
+The root-level `post.py` and `scheduler.py` scripts provide a direct Meta Graph API helper for controlled local tests:
+
+- `post.py` reads `.env` and supports Facebook text/image/scheduled posts plus Instagram image publishing.
+- `scheduler.py` reads `posts.csv` every 10 minutes and marks due rows as `posted` after publishing.
+- Keep `.env` local only. It is ignored by Git and should not be committed.
+- Install dependencies with `pip install -r requirements.txt`, then run `python3 post.py` for a Facebook test post.
+
 ## Current Status
 
 Stage 1 is now a working thin-core workflow:
