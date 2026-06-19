@@ -2909,6 +2909,16 @@ const requiredSnippets = [
     text: "data-copy-next-asset-decision",
   },
   {
+    name: "web next asset review fill decision csv action",
+    file: "web",
+    text: "data-fill-next-asset-decision",
+  },
+  {
+    name: "web next asset review fill decision csv message",
+    file: "web",
+    text: "Decision CSV template filled",
+  },
+  {
     name: "web asset review decision csv helper",
     file: "web",
     text: "assetReviewDecisionCsvText",

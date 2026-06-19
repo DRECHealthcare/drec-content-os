@@ -1776,6 +1776,7 @@ function renderNextAssetReview(items) {
       <div class="learning-actions">
         <button type="button" data-copy-next-asset-review="${escapeHtml(next.id)}">Copy Review Note</button>
         <button type="button" data-copy-next-asset-decision="${escapeHtml(next.id)}">Copy Decision CSV</button>
+        <button type="button" data-fill-next-asset-decision="${escapeHtml(next.id)}">Fill Decision CSV</button>
         <button type="button" data-jump-next-asset-review>Jump To Asset</button>
       </div>
     </article>
@@ -1894,11 +1895,13 @@ document.getElementById("queue-ready-assets").addEventListener("click", async (e
 document.getElementById("asset-next-review")?.addEventListener("click", async (event) => {
   const copyButton = event.target.closest("[data-copy-next-asset-review]");
   const decisionButton = event.target.closest("[data-copy-next-asset-decision]");
+  const fillButton = event.target.closest("[data-fill-next-asset-decision]");
   const jumpButton = event.target.closest("[data-jump-next-asset-review]");
-  if (!copyButton && !decisionButton && !jumpButton) return;
+  if (!copyButton && !decisionButton && !fillButton && !jumpButton) return;
   const message = document.getElementById("media-message");
   const assetId = copyButton?.dataset.copyNextAssetReview
     || decisionButton?.dataset.copyNextAssetDecision
+    || fillButton?.dataset.fillNextAssetDecision
     || document.querySelector("[data-copy-next-asset-review]")?.dataset.copyNextAssetReview;
   if (!assetId) return;
   if (jumpButton) {
@@ -1911,6 +1914,16 @@ document.getElementById("asset-next-review")?.addEventListener("click", async (e
   }
   const asset = storedAssetById(assetId);
   if (!asset) return;
+  if (fillButton) {
+    const textInput = document.getElementById("asset-review-decisions-text");
+    if (textInput) {
+      textInput.value = assetReviewDecisionCsvText(asset);
+      textInput.focus();
+      textInput.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (message) message.textContent = "Decision CSV template filled. Add reviewer decisions before import.";
+    }
+    return;
+  }
   try {
     await navigator.clipboard.writeText(decisionButton ? assetReviewDecisionCsvText(asset) : assetReviewNoteText(asset));
     if (message) message.textContent = decisionButton ? "Next asset decision CSV copied." : "Next asset review note copied.";

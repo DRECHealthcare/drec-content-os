@@ -73,7 +73,7 @@ Stage 1 is now a working thin-core workflow:
 - Download the Doctor Reply Inbox Pack to collect doctor decisions in the exact paste-back format before previewing and importing replies
 - Use the Doctor Reply Inbox inside Assets to copy all paste-back reply templates or one asset's reply block without opening the Markdown pack
 - Use the dashboard Test Path to copy the live next test step from the current checklist before moving one post through the manual cycle
-- Use the Assets Next Asset Review card to identify the first pending asset, copy its safety review note or one-row decision CSV template, and jump to its controls without approving or queueing it automatically
+- Use the Assets Next Asset Review card to identify the first pending asset, copy its safety review note, copy or fill its one-row decision CSV template, and jump to its controls without approving or queueing it automatically
 - Paste a one-row review decision CSV directly in Assets to preview/import explicit reviewer decisions without creating a file first
 - Paste doctor reply text back into Assets to preview/import review decisions, including optional `Use polished copy: yes` adoption after doctor approval, without converting WhatsApp-style replies into CSV
 - Use the Assets Rewrite Pack to prepare safer suggested captions for pending assets without auto-approving or changing saved content

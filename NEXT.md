@@ -163,6 +163,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Added Assets Next Asset Review card for first pending review copy/jump
 - [x] Added one-row decision CSV template copy for the next pending asset
 - [x] Added pasted review decision CSV preview/import path
+- [x] Added one-click fill from Next Asset Review into pasted decision CSV box
 - [x] Rendered Doctor Reply Inbox inside Assets with copy-ready paste-back templates
 - [x] Added full-batch Doctor Polish copy actions for the first ready review set
 - [x] Added Doctor Reply Inbox Pack for exact paste-back doctor decisions before preview/import
