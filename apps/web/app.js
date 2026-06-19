@@ -3,6 +3,7 @@ const tokenKey = "DREC_ACCESS_TOKEN";
 const actorKey = "DREC_ACTOR";
 const rememberTokenKey = "DREC_REMEMBER_ACCESS_TOKEN";
 const languageKey = "DREC_UI_LANGUAGE";
+const languageExplicitKey = "DREC_UI_LANGUAGE_EXPLICIT";
 let currentDraft = null;
 let editingQueueItem = null;
 let latestMetaSetupCommands = [];
@@ -604,9 +605,68 @@ Object.assign(uiZh, {
   "Add Media": "添加媒体",
   "No planned time": "未设置发布时间",
   "DREC Content OS Test Path": "DREC 内容系统测试路径",
+  "Can I Use It?": "现在可以用吗？",
+  "Checking readiness": "正在检查准备状态",
+  "Safe now": "现在安全可用",
+  "Not yet": "暂时还不行",
+  "Launch Stages": "上线阶段",
+  "External Setup Board": "外部设置看板",
+  "Setup item": "设置项目",
+  "Active Knowledge Context": "当前知识库上下文",
+  "entries loaded into planning and drafting.": "条记录已进入计划和草稿系统。",
+  "Style Rules": "风格规则",
+  "Safety Rules": "安全规则",
+  "DREC educational, calm, evidence-led, Mandarin-first.": "DREC 教育型、冷静、证据导向、中文优先。",
+  "Education only. Avoid guaranteed outcomes, diagnosis, or personal medical claims.": "只做健康教育。避免保证疗效、诊断或个人医疗承诺。",
+  "No content briefs yet. Generate this week's plan to start.": "目前还没有内容简报。请先生成本周内容计划。",
+  "Restore": "恢复",
+  "Archive": "归档",
+  "Mark Drafted": "标记为已生成草稿",
+  "No signals yet.": "目前还没有信号。",
+  "No checks available.": "目前还没有检查项。",
+  "Status": "状态",
+  "Credentials": "凭证",
+  "Token Check": "Token 检查",
+  "Channels": "频道",
+  "Safe Sequence": "安全顺序",
+  "Credential Setup Checklist": "凭证设置清单",
+  "Required Secrets": "必填密钥",
+  "Setup Commands": "设置命令",
+  "Meta OAuth Guide": "Meta OAuth 指南",
+  "OAuth URL is ready to copy.": "OAuth 链接已经可以复制。",
+  "Add META_APP_ID to generate a live OAuth URL. The template below shows the required redirect and scopes.": "加入 META_APP_ID 后可生成真实 OAuth 链接。下方模板列出需要的回调地址和权限。",
+  "OAuth guide unavailable.": "OAuth 指南暂不可用。",
+  "Keep app secrets server-side.": "App 密钥必须只放在服务器端。",
+  "GitHub Scheduler Setup": "GitHub 排程设置",
+  "Run the workflow once to record the first scheduler heartbeat.": "先手动运行一次流程，记录第一条排程心跳。",
+  "Nightly Metrics Scheduler": "每日数据排程",
+  "Meta Activation Switchboard": "Meta 启用开关板",
+  "Ready for controlled live test sequence.": "可以进入受控真实测试流程。",
+  "Keep live Meta workers locked.": "继续锁住真实 Meta 自动任务。",
+  "First Live Sequence": "首次真实上线顺序",
+  "Safety Notes": "安全备注",
+  "Notify Rail": "通知轨道",
+  "Alerts": "提醒",
+  "Roles": "角色",
+  "Approval Rules": "审批规则",
+  "Message Queue": "消息队列",
+  "No alerts waiting right now.": "目前没有等待处理的提醒。",
+  "Set the access token to load the setup checklist.": "请先设置访问码，才能读取设置清单。",
+  "Set the access token to load Notify Rail.": "请先设置访问码，才能读取通知轨道。",
 });
 
 function currentLanguage() {
+  const params = new URLSearchParams(window.location.search);
+  const requested = params.get("lang");
+  if (requested === "zh" || requested === "en") {
+    localStorage.setItem(languageKey, requested);
+    localStorage.setItem(languageExplicitKey, "true");
+    return requested;
+  }
+  if (localStorage.getItem(languageExplicitKey) !== "true") {
+    localStorage.setItem(languageKey, "zh");
+    return "zh";
+  }
   return localStorage.getItem(languageKey) || "zh";
 }
 
@@ -618,10 +678,21 @@ function translateDynamicText(text) {
   if (!isZh() || !text) return text || "";
   const value = String(text);
   const dynamicRules = [
+    [/^(\d+) total · (\d+) review · (\d+) handoff · (\d+) published$/, (_match, total, review, handoff, published) => `共 ${total} 条 · ${review} 条待审核 · ${handoff} 条待交接 · ${published} 条已发布`],
+    [/^(\d+) brief\(s\)$/, (_match, count) => `${count} 条内容简报`],
+    [/^(\d+) ready of (\d+) asset\(s\)$/, (_match, ready, total) => `${ready}/${total} 条素材可发布`],
+    [/^(\d+) media item\(s\)$/, (_match, count) => `${count} 个媒体素材`],
+    [/^(\d+) outcome\(s\) · (\d+) active weight\(s\)$/, (_match, outcomes, weights) => `${outcomes} 条表现数据 · ${weights} 个活跃权重`],
+    [/^(\d+) ready · (\d+) blocked$/, (_match, ready, blocked) => `${ready} 个已准备 · ${blocked} 个受阻`],
+    [/^(\d+)\/(\d+) required steps done · Next: (.+)$/, (_match, done, total, next) => `${done}/${total} 个必要步骤已完成 · 下一步：${translateText(next)}`],
+    [/^(.+) · (\d+)\/(\d+) required steps done · Next: (.+)$/, (_match, status, done, total, next) => `${translateText(status)} · ${done}/${total} 个必要步骤已完成 · 下一步：${translateText(next)}`],
     [/^(\d+) brief\(s\) are available for drafting\.$/, (_match, count) => `已有 ${count} 条内容简报可进入草稿。`],
     [/^(\d+) asset\(s\) are saved for review and queueing\.$/, (_match, count) => `已有 ${count} 条内容资产，等待审核或加入队列。`],
     [/^(\d+) item\(s\) are waiting in the publishing workflow\.$/, (_match, count) => `已有 ${count} 条内容在发布流程中等待处理。`],
     [/^(\d+) result\(s\) are feeding the learning loop\.$/, (_match, count) => `已有 ${count} 条表现数据进入学习循环。`],
+    [/^(\d+) entries loaded into planning and drafting\.$/, (_match, count) => `${count} 条记录已进入计划和草稿系统。`],
+    [/^(\d+) waiting$/, (_match, count) => `${count} 条等待处理`],
+    [/^High: (\d+) · Medium: (\d+) · Low: (\d+)$/, (_match, high, medium, low) => `高：${high} · 中：${medium} · 低：${low}`],
     [/^Slide (\d+)$/, (_match, count) => `第 ${count} 张`],
     [/^Generated media URLs can be attached to approved asset (.+)\.$/, (_match, assetId) => `生成图片链接可以挂到已批准素材 ${assetId}。`],
   ];
@@ -866,6 +937,7 @@ document.getElementById("token-save").addEventListener("click", saveAccessTokenF
 document.getElementById("token-clear").addEventListener("click", clearAccessToken);
 document.getElementById("language-toggle")?.addEventListener("click", async () => {
   localStorage.setItem(languageKey, isZh() ? "en" : "zh");
+  localStorage.setItem(languageExplicitKey, "true");
   applyLanguage();
   await Promise.all([loadLoopStatus(), loadFirstPublishReadiness()]);
 });
