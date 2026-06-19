@@ -1213,6 +1213,11 @@ const requiredSnippets = [
     text: "系统不会自动批准医疗内容",
   },
   {
+    name: "first publish chinese queue csv template",
+    file: "main",
+    text: "下一条队列审核 CSV 模板",
+  },
+  {
     name: "first publish readiness read only safety",
     file: "main",
     text: "This readiness pack is read-only.",
@@ -2488,6 +2493,16 @@ const requiredSnippets = [
     text: "data-fill-first-asset-decision",
   },
   {
+    name: "web first publish queue decision csv copy",
+    file: "web",
+    text: "data-copy-first-queue-decision",
+  },
+  {
+    name: "web first publish queue decision csv fill",
+    file: "web",
+    text: "data-fill-first-queue-decision",
+  },
+  {
     name: "web first publish advance action",
     file: "web",
     text: "data-advance-first-publish",
@@ -3221,6 +3236,21 @@ const requiredSnippets = [
     name: "web review queue decisions import action",
     file: "web",
     text: "import-review-queue-decisions",
+  },
+  {
+    name: "web review queue decisions paste input",
+    file: "web",
+    text: "review-queue-decisions-text",
+  },
+  {
+    name: "web review queue decisions paste preview",
+    file: "web",
+    text: "preview-review-queue-decisions-text",
+  },
+  {
+    name: "web review queue decisions paste import",
+    file: "web",
+    text: "import-review-queue-decisions-text",
   },
   {
     name: "web review queue decisions import endpoint",

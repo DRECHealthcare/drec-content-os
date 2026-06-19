@@ -128,6 +128,10 @@ const uiZh = {
   "Advance Safe Step": "推进安全步骤",
   "Copy Asset Decision CSV": "复制素材审核 CSV",
   "Fill Asset Decision CSV": "填入素材审核 CSV",
+  "Copy Queue Decision CSV": "复制队列审核 CSV",
+  "Fill Queue Decision CSV": "填入队列审核 CSV",
+  "Preview Pasted Queue Decisions": "预览粘贴的队列审核",
+  "Import Pasted Queue Decisions": "导入粘贴的队列审核",
   "Set access": "设置访问",
   "Access set": "已设置访问",
   "Access": "访问",
@@ -713,7 +717,9 @@ function renderFirstPublishReadiness(data) {
   const meta = data.meta || {};
   const actionPack = data.action_pack || {};
   container.dataset.nextAssetDecisionCsv = actionPack.next_asset_decision_csv || "";
+  container.dataset.nextQueueDecisionCsv = actionPack.next_queue_decision_csv || "";
   const hasDecisionCsv = Boolean(actionPack.next_asset_decision_csv);
+  const hasQueueDecisionCsv = Boolean(actionPack.next_queue_decision_csv);
   container.innerHTML = `
     <article class="learning-card wide-learning ${escapeHtml(next.status || "open")}">
       <h3>${escapeHtml(translateText("First Publish Readiness"))}</h3>
@@ -724,6 +730,8 @@ function renderFirstPublishReadiness(data) {
         <button type="button" data-advance-first-publish>${escapeHtml(translateText("Advance Safe Step"))}</button>
         ${hasDecisionCsv ? `<button type="button" data-copy-first-asset-decision>${escapeHtml(translateText("Copy Asset Decision CSV"))}</button>` : ""}
         ${hasDecisionCsv ? `<button type="button" data-fill-first-asset-decision>${escapeHtml(translateText("Fill Asset Decision CSV"))}</button>` : ""}
+        ${hasQueueDecisionCsv ? `<button type="button" data-copy-first-queue-decision>${escapeHtml(translateText("Copy Queue Decision CSV"))}</button>` : ""}
+        ${hasQueueDecisionCsv ? `<button type="button" data-fill-first-queue-decision>${escapeHtml(translateText("Fill Queue Decision CSV"))}</button>` : ""}
       </div>
     </article>
     <article class="learning-card wide-learning">
@@ -753,8 +761,10 @@ async function loadFirstPublishReadiness() {
 document.getElementById("first-publish-readiness")?.addEventListener("click", async (event) => {
   const copyButton = event.target.closest("[data-copy-first-asset-decision]");
   const fillButton = event.target.closest("[data-fill-first-asset-decision]");
+  const copyQueueButton = event.target.closest("[data-copy-first-queue-decision]");
+  const fillQueueButton = event.target.closest("[data-fill-first-queue-decision]");
   const advanceButton = event.target.closest("[data-advance-first-publish]");
-  if (!copyButton && !fillButton && !advanceButton) return;
+  if (!copyButton && !fillButton && !copyQueueButton && !fillQueueButton && !advanceButton) return;
   const container = document.getElementById("first-publish-readiness");
   const message = document.getElementById("test-path-message");
   if (advanceButton) {
@@ -773,6 +783,31 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
     } finally {
       advanceButton.disabled = false;
       advanceButton.textContent = originalText;
+    }
+    return;
+  }
+  if (copyQueueButton || fillQueueButton) {
+    const queueCsvText = container?.dataset.nextQueueDecisionCsv || "";
+    if (!queueCsvText) {
+      if (message) message.textContent = "No queue decision template is available yet.";
+      return;
+    }
+    if (fillQueueButton) {
+      showScreen("review");
+      const textInput = document.getElementById("review-queue-decisions-text");
+      if (textInput) {
+        textInput.value = queueCsvText;
+        textInput.focus();
+        textInput.scrollIntoView({ behavior: "smooth", block: "center" });
+        if (message) message.textContent = "Queue decision CSV filled. Add reviewer_action before import.";
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(queueCsvText);
+      if (message) message.textContent = "Queue decision CSV copied.";
+    } catch {
+      if (message) message.textContent = "Could not copy queue decision CSV. Use Fill Queue Decision CSV instead.";
     }
     return;
   }
@@ -5525,18 +5560,22 @@ function renderReviewQueueDecisionPreview(data) {
 async function uploadReviewQueueDecisions({ dryRun }) {
   const message = document.getElementById("queue-message");
   const fileInput = document.getElementById("review-queue-decisions-file");
+  const textInput = document.getElementById("review-queue-decisions-text");
   const file = fileInput?.files?.[0];
-  if (!file) {
-    message.textContent = "Choose a review queue decision CSV first.";
+  const pastedCsv = textInput?.value?.trim() || "";
+  if (!file && !pastedCsv) {
+    message.textContent = "Choose a review queue decision CSV or paste queue decision CSV text first.";
     return;
   }
   const body = new FormData();
-  body.append("file", file);
+  const uploadFile = file || new File([pastedCsv], "pasted-review-queue-decisions.csv", { type: "text/csv" });
+  body.append("file", uploadFile);
   body.append("dry_run", dryRun ? "true" : "false");
   message.textContent = dryRun ? "Previewing queue decisions..." : "Importing queue decisions...";
   try {
     const data = await fetchForm("/operations/import-review-queue-decisions", body);
     if (!dryRun) fileInput.value = "";
+    if (!dryRun && !file && textInput) textInput.value = "";
     message.textContent = data.message || (dryRun ? "Queue decisions previewed." : "Queue decisions imported.");
     renderReviewQueueDecisionPreview(data);
     if (!dryRun) await Promise.all([loadPublishQueue(), loadPreScheduleGate(), loadLoopStatus()]);
@@ -5550,6 +5589,14 @@ document.getElementById("preview-review-queue-decisions")?.addEventListener("cli
 });
 
 document.getElementById("import-review-queue-decisions")?.addEventListener("click", async () => {
+  await uploadReviewQueueDecisions({ dryRun: false });
+});
+
+document.getElementById("preview-review-queue-decisions-text")?.addEventListener("click", async () => {
+  await uploadReviewQueueDecisions({ dryRun: true });
+});
+
+document.getElementById("import-review-queue-decisions-text")?.addEventListener("click", async () => {
   await uploadReviewQueueDecisions({ dryRun: false });
 });
 
