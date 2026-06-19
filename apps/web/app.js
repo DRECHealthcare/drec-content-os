@@ -117,6 +117,7 @@ const uiZh = {
   "Ads Planning": "广告计划",
   "Planning Topics": "计划主题",
   "Signals": "信号",
+  "Load Learning Topics": "读取学习主题",
   "Generate Weekly Plan": "生成每周内容计划",
   "Download Plan CSV": "下载计划 CSV",
   "Download Asset Pack": "下载素材包",
@@ -167,6 +168,7 @@ const uiZh = {
   "Approve Current Queue Item": "批准当前队列项目",
   "Open Asset Review": "打开素材审核",
   "Download Chinese Pack": "下载中文包",
+  "Download Doctor Review Sheet": "下载首发医生审核单",
   "Download Media Pack": "下载媒体制作包",
   "Download PNG Zip": "下载 PNG 图片包",
   "Download SVG Zip": "下载 SVG 设计包",
@@ -264,6 +266,8 @@ const uiZh = {
   "Import Queue Decisions": "导入队列决定",
   "Channel": "频道",
   "Format": "格式",
+  "Language": "语言",
+  "Visual Style": "视觉风格",
   "Planned Time": "计划发布时间",
   "Compliance": "合规状态",
   "Caption": "文案",
@@ -386,8 +390,10 @@ const uiZh = {
   "Usage notes, consent context, crop idea, or campaign fit.": "使用说明、授权背景、裁切想法或活动适配。",
   "food, clinic, diabetes": "食物, 诊所, 糖尿病",
   "Paste the one-row decision CSV here, then fill reviewer_safety_decision and reviewer_review_decision before import.": "把一行审核决定 CSV 粘贴在这里，导入前填写 reviewer_safety_decision 和 reviewer_review_decision。",
+  "Asset ID: ...\nDecision: approve / needs edits / reject\nSafety: clear / needs review / blocked\nUse polished copy: yes / no\nNotes: ...": "按这个格式粘贴医生回复：\nAsset ID: ...\nDecision: approve / needs edits / reject\nSafety: clear / needs review / blocked\nUse polished copy: yes / no\nNotes: ...",
   "Dr. name": "医生姓名",
   "Designer or producer": "设计师或制作负责人",
+  "Asset ID: ...\nMedia URLs: https://...\nVisual QA: passed / pending / needs_work\nRights: owned / licensed / approved stock\nNotes: ...": "按这个格式粘贴制作回复：\nAsset ID: ...\nMedia URLs: https://...\nVisual QA: passed / pending / needs_work\nRights: owned / licensed / approved stock\nNotes: ...",
   "Paste one-row queue decision CSV here, then fill reviewer_action before import.": "把一行队列审核 CSV 粘贴在这里，导入前填写 reviewer_action。",
   "Paste or draft the caption here": "在这里粘贴或撰写文案",
   "One image or video URL per line": "每行一个图片或视频链接",
@@ -446,6 +452,7 @@ Object.assign(uiZh, {
   "Key Points": "重点",
   "Pillar": "内容支柱",
   "Hook": "开头钩子",
+  "Style": "风格",
   "Time Slot": "发布时间段",
   "CTA": "行动引导",
   "Audience": "受众",
@@ -456,6 +463,7 @@ Object.assign(uiZh, {
   "Offer": "服务/产品",
   "Medical Dictionary": "医学词库",
   "Competitor": "竞品",
+  "Ads": "广告",
   "Observation": "观察",
   "Idea": "想法",
   "7 days": "7 天",
@@ -528,6 +536,8 @@ Object.assign(uiZh, {
   "No queue decision template is available yet.": "目前还没有队列审核模板。",
   "No first asset decision template is available yet.": "目前还没有首发素材审核模板。",
   "First publish readiness downloaded.": "首次发布准备包已下载。",
+  "First publish doctor review sheet downloaded.": "首发医生审核单已下载。",
+  "Could not download first publish doctor review sheet.": "无法下载首发医生审核单。",
   "Could not download first publish readiness.": "无法下载首次发布准备包。",
   "Could not run risk audit.": "无法运行风险检查。",
   "Could not download snapshot.": "无法下载快照。",
@@ -1398,6 +1408,7 @@ function renderFirstPublishReadiness(data) {
         ${hasDecisionCsv ? `<button type="button" data-fill-first-asset-decision>${escapeHtml(translateText("Fill Asset Decision CSV"))}</button>` : ""}
         <button type="button" data-open-first-asset-review>${escapeHtml(translateText("Open Asset Review"))}</button>
         <button type="button" data-download-first-publish-zh>${escapeHtml(translateText("Download Chinese Pack"))}</button>
+        ${nextAsset.id ? `<button type="button" data-download-first-doctor-review-sheet>${escapeHtml(translateText("Download Doctor Review Sheet"))}</button>` : ""}
         <button type="button" data-download-first-media-pack>${escapeHtml(translateText("Download Media Pack"))}</button>
         <button type="button" data-download-first-carousel-png-zip>${escapeHtml(translateText("Download PNG Zip"))}</button>
         <button type="button" data-download-first-carousel-zip>${escapeHtml(translateText("Download SVG Zip"))}</button>
@@ -1491,6 +1502,7 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
   const approveCurrentFirstQueueButton = event.target.closest("[data-approve-current-first-queue]");
   const openAssetReviewButton = event.target.closest("[data-open-first-asset-review]");
   const downloadZhButton = event.target.closest("[data-download-first-publish-zh]");
+  const downloadDoctorReviewSheetButton = event.target.closest("[data-download-first-doctor-review-sheet]");
   const downloadMediaPackButton = event.target.closest("[data-download-first-media-pack]");
   const downloadCarouselPngZipButton = event.target.closest("[data-download-first-carousel-png-zip]");
   const downloadCarouselZipButton = event.target.closest("[data-download-first-carousel-zip]");
@@ -1500,7 +1512,7 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
   const copyQueueButton = event.target.closest("[data-copy-first-queue-decision]");
   const fillQueueButton = event.target.closest("[data-fill-first-queue-decision]");
   const advanceButton = event.target.closest("[data-advance-first-publish]");
-  if (!copyReviewButton && !fillDoctorReplyButton && !approveCurrentFirstAssetButton && !approveCurrentFirstQueueButton && !openAssetReviewButton && !downloadZhButton && !downloadMediaPackButton && !downloadCarouselPngZipButton && !downloadCarouselZipButton && !attachGeneratedMediaButton && !copyButton && !fillButton && !copyQueueButton && !fillQueueButton && !advanceButton) return;
+  if (!copyReviewButton && !fillDoctorReplyButton && !approveCurrentFirstAssetButton && !approveCurrentFirstQueueButton && !openAssetReviewButton && !downloadZhButton && !downloadDoctorReviewSheetButton && !downloadMediaPackButton && !downloadCarouselPngZipButton && !downloadCarouselZipButton && !attachGeneratedMediaButton && !copyButton && !fillButton && !copyQueueButton && !fillQueueButton && !advanceButton) return;
   const container = document.getElementById("first-publish-readiness");
   const message = document.getElementById("test-path-message");
   if (copyReviewButton) {
@@ -1583,6 +1595,16 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
       if (message) message.textContent = "中文首次发布准备包已下载。";
     } catch (error) {
       if (message) message.textContent = error.message === "Access token required" ? "请先设置访问码。" : "无法下载中文首次发布准备包。";
+    }
+    return;
+  }
+  if (downloadDoctorReviewSheetButton) {
+    if (message) message.textContent = "正在下载首发医生审核单...";
+    try {
+      await downloadProtectedFile("/operations/first-publish-doctor-review-sheet.zh.md", "drec-first-publish-doctor-review-sheet-zh.md", "text/markdown");
+      if (message) message.textContent = "First publish doctor review sheet downloaded.";
+    } catch (error) {
+      if (message) message.textContent = error.message === "Access token required" ? "请先设置访问码。" : "Could not download first publish doctor review sheet.";
     }
     return;
   }

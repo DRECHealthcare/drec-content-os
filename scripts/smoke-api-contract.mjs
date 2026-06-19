@@ -29,6 +29,7 @@ const requiredRoutes = [
   "GET /operations/first-publish-readiness",
   "GET /operations/first-publish-readiness.md",
   "GET /operations/first-publish-readiness.zh.md",
+  "GET /operations/first-publish-doctor-review-sheet.zh.md",
   "GET /operations/first-publish-media-pack.md",
   "GET /operations/first-publish-carousel-preview/{slide_number}.png",
   "GET /operations/first-publish-carousel-assets.zip",
@@ -1324,6 +1325,16 @@ const requiredSnippets = [
     name: "first publish chinese readiness export",
     file: "main",
     text: "drec-first-publish-readiness-zh.md",
+  },
+  {
+    name: "first publish doctor review sheet export",
+    file: "main",
+    text: "drec-first-publish-doctor-review-sheet-zh.md",
+  },
+  {
+    name: "first publish doctor review sheet safety",
+    file: "main",
+    text: "本审核单只读，不会修改任何状态",
   },
   {
     name: "first publish media pack route",
@@ -3114,6 +3125,16 @@ const requiredSnippets = [
     name: "web first publish chinese readiness endpoint",
     file: "web",
     text: "/operations/first-publish-readiness.zh.md",
+  },
+  {
+    name: "web first publish doctor review sheet action",
+    file: "web",
+    text: "data-download-first-doctor-review-sheet",
+  },
+  {
+    name: "web first publish doctor review sheet endpoint",
+    file: "web",
+    text: "/operations/first-publish-doctor-review-sheet.zh.md",
   },
   {
     name: "web chinese operator center action",

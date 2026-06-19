@@ -3314,6 +3314,127 @@ async def operations_first_publish_readiness_markdown_zh(_: None = Depends(requi
     )
 
 
+@app.get("/operations/first-publish-doctor-review-sheet.zh.md")
+async def operations_first_publish_doctor_review_sheet_zh(request: Request, _: None = Depends(require_access_token)):
+    payload = await first_publish_readiness_payload()
+    candidates = payload.get("candidates") or {}
+    action_pack = payload.get("action_pack") or {}
+    asset = candidates.get("next_asset") or {}
+    if not asset:
+        raise HTTPException(status_code=404, detail="No first-publish asset is available for doctor review.")
+    metadata = asset.get("metadata") or {}
+    slides = first_publish_slide_items(asset)
+    media_gate = action_pack.get("media_gate") or first_publish_media_gate(asset)
+    forwarded_proto = request.headers.get("x-forwarded-proto") or request.url.scheme or "https"
+    forwarded_host = request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.netloc
+    if forwarded_host.endswith(".fly.dev"):
+        forwarded_proto = "https"
+    base_url = f"{forwarded_proto}://{forwarded_host}".rstrip("/")
+    preview_links = [
+        f"{base_url}/operations/first-publish-carousel-preview/{index}.png"
+        for index, _slide in enumerate(slides, start=1)
+    ]
+    topic = metadata.get("topic") or asset.get("title") or "当前首发内容"
+    decision_csv = (action_pack.get("next_asset_decision_csv") or "").strip()
+    lines = [
+        "# DREC 首发医生审核单",
+        "",
+        f"生成时间：{datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}",
+        "",
+        "这是一份给医生/人工审核当前首发内容用的只读审核单。它不会批准、不会排程、不会发布。",
+        "",
+        "## 当前审核对象",
+        "",
+        f"- Asset ID：`{asset.get('id')}`",
+        f"- 主题：{topic}",
+        f"- 频道 / 格式：{asset.get('channel')} / {asset.get('format')}",
+        f"- 当前安全状态：{asset.get('compliance_status')}",
+        f"- 当前审核状态：{asset.get('review_status')}",
+        f"- 媒体/设计需求：{'需要' if media_gate.get('required') else '不强制'}；当前媒体 URL 数量：{media_gate.get('media_count') or 0}",
+        "",
+        "## 医生审核重点",
+        "",
+        "- 这篇内容是否只是健康教育，而不是诊断或个人治疗建议？",
+        "- 有没有承诺逆转、治愈、保证降糖、保证减重或保证停药？",
+        "- 有没有暗示读者可以自行开始、停止或调整药物？",
+        "- 中文医学意思是否准确、克制、不会制造恐惧？",
+        "- CTA 是否适合收藏、带去复诊讨论，或预约合格咨询？",
+        "",
+        "## 文案",
+        "",
+        asset.get("caption") or "暂无文案。",
+        "",
+        "## 轮播页内容",
+        "",
+    ]
+    if slides:
+        for index, slide in enumerate(slides, start=1):
+            visual_note = slide.get("visual_note") or "使用 DREC 深蓝/青绿色模板；不要把过小文字直接烘进图片。"
+            if visual_note == "Use DREC navy/teal template; no small text baked into generated images.":
+                visual_note = "使用 DREC 深蓝/青绿色模板；不要把过小文字直接烘进图片。"
+            lines.extend(
+                [
+                    f"### 第 {index} 张",
+                    "",
+                    f"- 标题：{slide.get('title') or ''}",
+                    f"- 正文：{slide.get('body') or ''}",
+                    f"- 视觉备注：{visual_note}",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["暂无轮播页计划。", ""])
+    lines.extend(["## 图片预览链接", ""])
+    if preview_links:
+        lines.extend([f"- 第 {index} 张：{url}" for index, url in enumerate(preview_links, start=1)])
+    else:
+        lines.append("- 暂无图片预览。")
+    lines.extend(
+        [
+            "",
+            "## 医生回复格式",
+            "",
+            "请直接复制以下格式回复：",
+            "",
+            "```",
+            f"Asset ID: {asset.get('id') or ''}",
+            "Decision: approve / needs edits / reject",
+            "Safety: clear / needs review / blocked",
+            "Use polished copy: yes / no",
+            "Notes:",
+            "```",
+            "",
+            "## 可以批准的条件",
+            "",
+            "- `Decision: approve`：医生确认内容可以进入后续制作/队列。",
+            "- `Safety: clear`：医生确认医学安全表达通过。",
+            "- 两者必须同时成立，才可以在系统里批准首发素材。",
+            "- 如果只是需要小改，请用 `needs edits`，不要 approve。",
+            "- 如果有医疗风险，请用 `Safety: blocked` 或 `needs review`。",
+            "",
+            "## 系统导入用素材审核 CSV",
+            "",
+            "只有收到医生/真人明确批准后，才可以把 `reviewer_safety_decision` 填 `clear`，把 `reviewer_review_decision` 填 `approved`。",
+            "",
+            "```csv",
+            decision_csv or "暂无可导入的审核 CSV。",
+            "```",
+            "",
+            "## 安全边界",
+            "",
+            "- 本审核单只读，不会修改任何状态。",
+            "- 通过审核后，媒体挂载、进入队列、队列审核、排程、Meta dry run 和正式发布仍是独立关卡。",
+            "- 正式 Meta 自动发布仍由 live 开关保护。",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="drec-first-publish-doctor-review-sheet-zh.md"'},
+    )
+
+
 @app.get("/operations/first-publish-media-pack.md")
 async def operations_first_publish_media_pack(_: None = Depends(require_access_token)):
     payload = await first_publish_readiness_payload()
