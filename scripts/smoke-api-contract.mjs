@@ -3247,6 +3247,26 @@ const requiredSnippets = [
     text: "测试自动发布任务",
   },
   {
+    name: "web chinese meta setup controls translation",
+    file: "web",
+    text: "下载凭证向导",
+  },
+  {
+    name: "web chinese scheduler controls translation",
+    file: "web",
+    text: "下载中文发布交接包",
+  },
+  {
+    name: "web chinese learning controls translation",
+    file: "web",
+    text: "把主题放回每周计划",
+  },
+  {
+    name: "web chinese knowledge controls translation",
+    file: "web",
+    text: "新增知识记录",
+  },
+  {
     name: "web chinese form label translation",
     file: "web",
     text: "translateDirectTextNodes",
