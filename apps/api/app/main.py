@@ -4514,6 +4514,143 @@ async def operations_metrics_closeout_pack(_: None = Depends(require_access_toke
     )
 
 
+@app.get("/operations/metrics-closeout-pack.zh.md")
+async def operations_metrics_closeout_pack_zh(_: None = Depends(require_access_token)):
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    candidates = await meta_metric_candidates(None, 50)
+    raw_rows = await recent_raw_metrics(50)
+    outcome_rows = await recent_outcome_rows(50)
+    insights = await outcome_insights()
+    raw_post_ids = {str(row.get("external_post_id")) for row in raw_rows if row.get("external_post_id")}
+    outcome_post_ids = {str(row.get("post_id")) for row in outcome_rows if row.get("post_id")}
+    waiting_for_metrics = [
+        item
+        for item in candidates
+        if item.get("external_post_id") and str(item.get("external_post_id")) not in raw_post_ids
+    ]
+    waiting_for_rollup = [
+        row
+        for row in raw_rows
+        if row.get("external_post_id") and str(row.get("external_post_id")) not in outcome_post_ids
+    ]
+    completed = [
+        row
+        for row in outcome_rows
+        if row.get("post_id") in raw_post_ids or not raw_rows
+    ]
+    top_signals = insights.get("top_signals") or []
+    lines = [
+        "# DREC Content OS 发布后数据与学习复盘包",
+        "",
+        f"生成时间：{generated_at}",
+        "",
+        "用途：发布后把 Meta 或人工发布数据录入系统，并汇总成学习结果，供下一周内容计划使用。本文件只读，不会导入数据、创建 outcome 或改变学习权重。",
+        "",
+        "## 关闭本轮内容循环的顺序",
+        "",
+        "1. 确认已发布项目已经记录 Meta post ID 或人工标签。",
+        "2. 下载 Metrics Template，填写 reach、likes、comments、saves、shares、leads、spend。",
+        "3. 先 Preview CSV，确认数字和 post ID 正确。",
+        "4. 勾选 Roll up imported rows 后导入，让系统创建 outcome。",
+        "5. 下载 Weekly Report，把学习建议带回下一次 Weekly Plan。",
+        "6. 若是 organic/manual 内容，spend 通常填 0；不要为了好看改数据。",
+        "",
+        "## 当前数量",
+        "",
+        f"- 已发布候选项目：{len(candidates)}",
+        f"- 等待录入原始数据：{len(waiting_for_metrics)}",
+        f"- 原始数据等待汇总成 outcome：{len(waiting_for_rollup)}",
+        f"- 最近 outcome：{len(outcome_rows)}",
+        f"- 学习样本数：{insights.get('sample_size', 0)}",
+        "",
+        "## 等待录入表现数据",
+        "",
+    ]
+    if waiting_for_metrics:
+        for index, item in enumerate(waiting_for_metrics[:30], start=1):
+            lines.extend(
+                [
+                    f"### {index}. {item.get('channel')} / {item.get('format')}",
+                    "",
+                    f"- 队列 ID：{item.get('id')}",
+                    f"- 外部帖子 ID：{item.get('external_post_id')}",
+                    f"- 发布时间/更新时间：{item.get('updated_at') or item.get('created_at') or '未知'}",
+                    "- 操作：把这条加入 Metrics Template，然后先 Preview CSV。",
+                    f"- 文案预览：{feedback_excerpt(item.get('caption'), 180)}",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["- 暂无已发布但等待录入表现数据的 Facebook/Instagram 项目。", ""])
+    lines.extend(["## 等待 Roll Up 的原始数据", ""])
+    if waiting_for_rollup:
+        for index, row in enumerate(waiting_for_rollup[:30], start=1):
+            lines.extend(
+                [
+                    f"### {index}. {row.get('external_post_id')}",
+                    "",
+                    f"- 来源：{row.get('source')}",
+                    f"- 抓取时间：{row.get('captured_at') or row.get('created_at')}",
+                    f"- 指标：{closeout_metric_summary(row.get('metrics') or {})}",
+                    "- 操作：用 Save & Roll Up，或用 CSV 导入并开启 rollup。",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["- 暂无等待汇总的原始数据。", ""])
+    lines.extend(["## 最近学习结果", ""])
+    if completed:
+        for index, row in enumerate(completed[:30], start=1):
+            lines.extend(
+                [
+                    f"### {index}. {row.get('post_id')}",
+                    "",
+                    f"- 频道 / 格式：{row.get('channel')} / {row.get('format')}",
+                    f"- 时间窗口：{row.get('metric_window')}",
+                    f"- 分数：{row.get('score')}",
+                    f"- 收藏 / 分享：{row.get('saves')} / {row.get('shares')}",
+                    f"- 学习备注：{row.get('vs_plan_note') or '暂无备注'}",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["- 暂无学习结果。发布并录入数据后，这里会出现 outcome。", ""])
+    lines.extend(["## 当前学习洞察", "", f"- 总结：{insights.get('summary') or '暂无学习洞察。'}", ""])
+    if top_signals:
+        for index, signal in enumerate(top_signals[:10], start=1):
+            label = signal.get("label") or f"{signal.get('dimension')}: {signal.get('key')}"
+            lines.extend(
+                [
+                    f"### {index}. {label}",
+                    "",
+                    f"- 平均分：{signal.get('avg_score')}",
+                    f"- 收藏总数：{signal.get('saves_total')}",
+                    f"- 分享总数：{signal.get('shares_total')}",
+                    f"- 建议：{signal.get('recommendation') or '继续观察。'}",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["- 暂无可比较的学习信号。", ""])
+    lines.extend(
+        [
+            "## 完成后怎么做",
+            "",
+            "- 到「表现数据」页下载 Metrics Template。",
+            "- 填好数据后先点 Preview CSV，再点 Import Metrics CSV。",
+            "- 若是单条手动输入，填完表单后点 Save & Roll Up。",
+            "- 到「学习复盘」页下载 Weekly Report，并点 Use Topics In Weekly Plan。",
+            "- 这一步只影响下一轮内容计划，不会自动批准、排程或发布任何内容。",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-metrics-closeout-pack-zh.md"'},
+    )
+
+
 def snapshot_row(record_type, item_id="", status="", channel="", fmt="", title="", created_at="", detail=""):
     return {
         "record_type": record_type,

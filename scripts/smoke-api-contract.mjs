@@ -109,6 +109,7 @@ const requiredRoutes = [
   "GET /learning/quarterly-memo.md",
   "GET /operations/metrics-template.csv",
   "GET /operations/metrics-closeout-pack.md",
+  "GET /operations/metrics-closeout-pack.zh.md",
   "GET /operations/weekly-cycle-pack.md",
   "GET /operations/publishing-run-sheet.md",
   "GET /operations/operator-pack.md",
@@ -1706,6 +1707,16 @@ const requiredSnippets = [
     text: "drec-metrics-closeout-pack.md",
   },
   {
+    name: "metrics closeout chinese pack export",
+    file: "main",
+    text: "drec-metrics-closeout-pack-zh.md",
+  },
+  {
+    name: "metrics closeout chinese safety",
+    file: "main",
+    text: "本文件只读，不会导入数据、创建 outcome 或改变学习权重",
+  },
+  {
     name: "metrics closeout sequence",
     file: "main",
     text: "## Closeout Sequence",
@@ -2464,6 +2475,16 @@ const requiredSnippets = [
     name: "web metrics closeout endpoint",
     file: "web",
     text: "/operations/metrics-closeout-pack.md",
+  },
+  {
+    name: "web metrics closeout chinese action",
+    file: "web",
+    text: "download-metrics-closeout-zh",
+  },
+  {
+    name: "web metrics closeout chinese endpoint",
+    file: "web",
+    text: "/operations/metrics-closeout-pack.zh.md",
   },
   {
     name: "web metrics template endpoint",

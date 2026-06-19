@@ -288,6 +288,7 @@ const uiZh = {
   "Load Published Post": "读取已发布帖子",
   "Download Metrics Template": "下载数据模板",
   "Download Metrics Closeout": "下载数据结算包",
+  "Download Metrics Closeout 中文": "下载中文数据结算包",
   "Import CSV": "导入 CSV",
   "Roll up imported rows": "汇总导入的数据行",
   "Preview CSV": "预览 CSV",
@@ -6090,6 +6091,16 @@ document.getElementById("download-metrics-closeout")?.addEventListener("click", 
     message.textContent = "Metrics closeout pack downloaded.";
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download metrics closeout pack.";
+  }
+});
+
+document.getElementById("download-metrics-closeout-zh")?.addEventListener("click", async () => {
+  const message = document.getElementById("metric-message");
+  try {
+    await downloadProtectedFile("/operations/metrics-closeout-pack.zh.md", "drec-metrics-closeout-pack-zh.md", "text/markdown");
+    message.textContent = "中文数据结算包已下载。";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "请先设置访问 token。" : "无法下载中文数据结算包。";
   }
 });
 
