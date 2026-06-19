@@ -13129,6 +13129,18 @@ async def import_notion_carousel_row(row: NotionCarouselRowIn, _: None = Depends
     existing_brief = await find_existing_notion_brief(topic_id)
     existing_asset = await find_existing_notion_asset(topic_id)
     if existing_brief:
+        if row.create_asset and not existing_asset:
+            asset_result = await create_asset_from_brief(str(existing_brief.get("id")), _)
+            existing_asset = asset_result.get("item") if isinstance(asset_result, dict) else asset_result
+            return {
+                "skipped": False,
+                "reason": "Topic ID already had a local brief; missing asset was created from the existing brief.",
+                "topic_id": topic_id,
+                "brief": existing_brief,
+                "asset": existing_asset,
+                "source": notion_carousel_source_payload(),
+                "next_step": "If generating images, update the Notion row Carousel Image Status to Ready for Review after visual QA.",
+            }
         return {
             "skipped": True,
             "reason": "Topic ID already exists locally; duplicate not created.",

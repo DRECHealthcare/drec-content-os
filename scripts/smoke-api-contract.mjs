@@ -707,6 +707,11 @@ const requiredSnippets = [
     text: "\"slides\": slides",
   },
   {
+    name: "notion carousel existing brief creates missing asset",
+    file: "main",
+    text: "missing asset was created from the existing brief",
+  },
+  {
     name: "notion carousel save asset slide reuse",
     file: "main",
     text: "notion_slides_from_brief",
