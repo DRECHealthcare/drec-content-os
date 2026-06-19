@@ -157,6 +157,7 @@ const uiZh = {
   "Copy Asset Decision CSV": "复制素材审核 CSV",
   "Fill Asset Decision CSV": "填入素材审核 CSV",
   "Copy Doctor Review": "复制医生审核文本",
+  "Fill Doctor Reply Template": "填写医生回复模板",
   "Open Asset Review": "打开素材审核",
   "Download Chinese Pack": "下载中文包",
   "Success Standard": "成功标准",
@@ -1008,6 +1009,7 @@ function renderFirstPublishReadiness(data) {
       <small>${escapeHtml(nextAssetTopic)} · ${escapeHtml(nextAssetStatus)}</small>
       <div class="learning-actions">
         ${nextAsset.id ? `<button type="button" data-copy-first-asset-review>${escapeHtml(translateText("Copy Doctor Review"))}</button>` : ""}
+        ${nextAsset.id ? `<button type="button" data-fill-first-doctor-reply>${escapeHtml(translateText("Fill Doctor Reply Template"))}</button>` : ""}
         ${hasDecisionCsv ? `<button type="button" data-fill-first-asset-decision>${escapeHtml(translateText("Fill Asset Decision CSV"))}</button>` : ""}
         <button type="button" data-open-first-asset-review>${escapeHtml(translateText("Open Asset Review"))}</button>
         <button type="button" data-download-first-publish-zh>${escapeHtml(translateText("Download Chinese Pack"))}</button>
@@ -1053,6 +1055,7 @@ async function loadFirstPublishReadiness() {
 
 document.getElementById("first-publish-readiness")?.addEventListener("click", async (event) => {
   const copyReviewButton = event.target.closest("[data-copy-first-asset-review]");
+  const fillDoctorReplyButton = event.target.closest("[data-fill-first-doctor-reply]");
   const openAssetReviewButton = event.target.closest("[data-open-first-asset-review]");
   const downloadZhButton = event.target.closest("[data-download-first-publish-zh]");
   const copyButton = event.target.closest("[data-copy-first-asset-decision]");
@@ -1060,7 +1063,7 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
   const copyQueueButton = event.target.closest("[data-copy-first-queue-decision]");
   const fillQueueButton = event.target.closest("[data-fill-first-queue-decision]");
   const advanceButton = event.target.closest("[data-advance-first-publish]");
-  if (!copyReviewButton && !openAssetReviewButton && !downloadZhButton && !copyButton && !fillButton && !copyQueueButton && !fillQueueButton && !advanceButton) return;
+  if (!copyReviewButton && !fillDoctorReplyButton && !openAssetReviewButton && !downloadZhButton && !copyButton && !fillButton && !copyQueueButton && !fillQueueButton && !advanceButton) return;
   const container = document.getElementById("first-publish-readiness");
   const message = document.getElementById("test-path-message");
   if (copyReviewButton) {
@@ -1074,6 +1077,22 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
       if (message) message.textContent = "中文医生审核文本已复制。";
     } catch {
       if (message) message.textContent = "无法自动复制，请下载中文首次发布准备包。";
+    }
+    return;
+  }
+  if (fillDoctorReplyButton) {
+    const asset = (latestFirstPublishReadiness?.candidates || {}).next_asset;
+    if (!asset?.id) {
+      if (message) message.textContent = "No first asset is available for doctor reply import yet.";
+      return;
+    }
+    showScreen("assets");
+    const textInput = document.getElementById("doctor-reply-text");
+    if (textInput) {
+      textInput.value = firstPublishDoctorReplyTemplate(asset);
+      textInput.focus();
+      textInput.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (message) message.textContent = "医生回复模板已填入。收到医生决定后，请把 Decision / Safety 改成实际结果再预览导入。";
     }
     return;
   }
@@ -2310,6 +2329,16 @@ function firstPublishDoctorReviewText(asset) {
     "Decision: approve / needs edits / reject",
     "Safety: clear / needs review / blocked",
     "Use polished copy: yes / no",
+    "Notes:",
+  ].join("\n");
+}
+
+function firstPublishDoctorReplyTemplate(asset) {
+  return [
+    `Asset ID: ${asset?.id || ""}`,
+    "Decision: approve / needs edits / reject",
+    "Safety: clear / needs review / blocked",
+    "Use polished copy: no",
     "Notes:",
   ].join("\n");
 }

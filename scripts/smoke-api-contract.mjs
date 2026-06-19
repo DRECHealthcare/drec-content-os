@@ -2815,6 +2815,16 @@ const requiredSnippets = [
     text: "data-copy-first-asset-review",
   },
   {
+    name: "web first publish doctor reply fill",
+    file: "web",
+    text: "data-fill-first-doctor-reply",
+  },
+  {
+    name: "web first publish doctor reply template",
+    file: "web",
+    text: "firstPublishDoctorReplyTemplate",
+  },
+  {
     name: "web first publish chinese doctor review text",
     file: "web",
     text: "DREC 首次发布医生/人工审核请求",
