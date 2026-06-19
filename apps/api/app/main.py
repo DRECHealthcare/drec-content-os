@@ -2313,6 +2313,118 @@ async def operations_first_publish_readiness_markdown(_: None = Depends(require_
     )
 
 
+def zh_first_publish_stage_label(key: str | None):
+    return {
+        "asset_review": "内容资产已安全通过并批准",
+        "queue": "已创建发布队列项目",
+        "review_queue": "队列项目已审核批准",
+        "schedule": "队列项目已排程",
+        "meta_dry_run": "Meta 发布任务测试运行",
+    }.get(key or "", key or "未知步骤")
+
+
+def zh_first_publish_stage_detail(stage: dict):
+    key = stage.get("key")
+    evidence = stage.get("evidence") or {}
+    if key == "asset_review":
+        ready = evidence.get("ready_assets") or 0
+        total = evidence.get("asset_count") or 0
+        return f"目前有 {total} 条内容资产，{ready} 条已同时满足安全通过和批准。"
+    if key == "queue":
+        return f"目前有 {evidence.get('queue_total') or 0} 条发布队列项目。"
+    if key == "review_queue":
+        return f"目前有 {evidence.get('review_approved_queue') or 0} 条队列项目已通过审核。"
+    if key == "schedule":
+        return f"目前有 {evidence.get('scheduled_queue') or 0} 条项目已排程。"
+    if key == "meta_dry_run":
+        blockers = [*evidence.get("facebook_blockers", []), *evidence.get("instagram_blockers", [])]
+        return "；".join(blockers) if blockers else "Meta dry run 已准备好。"
+    return stage.get("detail") or ""
+
+
+def zh_first_publish_action(next_step: dict):
+    key = next_step.get("key")
+    if key == "asset_review":
+        return "在 Dashboard 点击「填入素材审核 CSV」，进入素材页后填写 reviewer_safety_decision=clear 和 reviewer_review_decision=approved；只有真人确认安全后才可以这样填。"
+    if key == "queue":
+        return "点击「推进安全步骤」，系统会把已批准且安全通过的内容资产加入发布队列。"
+    if key == "review_queue":
+        return "下载或填入队列审核 CSV，由真人把 reviewer_action 填为 approve 后导入。"
+    if key == "schedule":
+        return "点击「推进安全步骤」，系统会给已审核批准的队列项目安排发布时间。"
+    if key == "meta_dry_run":
+        return "点击「推进安全步骤」，系统会运行 Meta dry run；正式发布仍受 Meta live 开关保护。"
+    return "按页面提示处理下一步。"
+
+
+@app.get("/operations/first-publish-readiness.zh.md")
+async def operations_first_publish_readiness_markdown_zh(_: None = Depends(require_access_token)):
+    payload = await first_publish_readiness_payload()
+    next_step = payload.get("next_step") or {}
+    candidates = payload.get("candidates") or {}
+    action_pack = payload.get("action_pack") or {}
+    next_asset = candidates.get("next_asset") or {}
+    meta = payload.get("meta") or {}
+    lines = [
+        "# DREC 首次发布准备包",
+        "",
+        f"- 生成时间：{payload.get('generated_at')}",
+        f"- 当前状态：{payload.get('overall_status')}",
+        f"- 下一步：{zh_first_publish_stage_label(next_step.get('key'))}",
+        f"- 说明：{zh_first_publish_stage_detail(next_step)}",
+        "",
+        "## 现在要做什么",
+        "",
+        f"- {zh_first_publish_action(next_step)}",
+        f"- 下一条内容资产 ID：`{next_asset.get('id') or '暂无'}`",
+        f"- 当前频道 / 格式：{next_asset.get('channel') or '暂无'} / {next_asset.get('format') or '暂无'}",
+        "",
+        "## 发布路径状态",
+        "",
+    ]
+    for stage in payload.get("stages") or []:
+        lines.append(f"- {stage.get('status')}：{zh_first_publish_stage_label(stage.get('key'))} - {zh_first_publish_stage_detail(stage)}")
+    lines.extend(
+        [
+            "",
+            "## CSV 填写说明",
+            "",
+            "- 素材审核只允许真人填写，系统不会自动批准医疗内容。",
+            "- 安全通过：`reviewer_safety_decision` 填 `clear`。",
+            "- 批准内容：`reviewer_review_decision` 填 `approved`。",
+            "- 如果不确定，请不要填 clear / approved；保持 pending、flagged 或 review。",
+            "- 导入审核表只会更新审核状态，不会自动排程或发布。",
+            "",
+            "## 下一条素材审核 CSV 模板",
+            "",
+            "```csv",
+            (action_pack.get("next_asset_decision_csv") or "暂无可审核素材").strip(),
+            "```",
+            "",
+            "## Meta 状态",
+            "",
+            f"- Meta 总状态：{meta.get('overall_status')}",
+            f"- 权限证明状态：{meta.get('permission_proof_status')}",
+            f"- Facebook 阻碍：{'；'.join(meta.get('facebook_blockers') or []) or '无'}",
+            f"- Instagram 阻碍：{'；'.join(meta.get('instagram_blockers') or []) or '无'}",
+            "",
+            "## 安全边界",
+            "",
+            "- 本准备包是只读说明，不会修改资料。",
+            "- 系统不会自动批准医疗内容或队列审核。",
+            "- 只有已批准且安全通过的内容资产，才可以进入发布队列。",
+            "- 只有队列审核通过后，才可以排程。",
+            "- 正式 Meta 发布仍由 live 开关保护；dry run 通过不等于正式发布。",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-first-publish-readiness-zh.md"'},
+    )
+
+
 @app.get("/operations/test-run-checklist")
 async def operations_test_run_checklist(_: None = Depends(require_access_token)):
     return await test_run_checklist_payload()

@@ -27,6 +27,7 @@ const requiredRoutes = [
   "GET /operations/test-run-checklist",
   "GET /operations/first-publish-readiness",
   "GET /operations/first-publish-readiness.md",
+  "GET /operations/first-publish-readiness.zh.md",
   "POST /operations/first-publish-advance",
   "POST /operations/scheduler-heartbeat",
   "GET /operations/scheduler-activation-pack.md",
@@ -1195,6 +1196,21 @@ const requiredSnippets = [
     name: "first publish readiness export",
     file: "main",
     text: "drec-first-publish-readiness.md",
+  },
+  {
+    name: "first publish chinese readiness export",
+    file: "main",
+    text: "drec-first-publish-readiness-zh.md",
+  },
+  {
+    name: "first publish chinese markdown route",
+    file: "main",
+    text: "operations_first_publish_readiness_markdown_zh",
+  },
+  {
+    name: "first publish chinese safety boundary",
+    file: "main",
+    text: "系统不会自动批准医疗内容",
   },
   {
     name: "first publish readiness read only safety",
@@ -2445,6 +2461,16 @@ const requiredSnippets = [
     name: "web first publish readiness action",
     file: "web",
     text: "download-first-publish-readiness",
+  },
+  {
+    name: "web first publish chinese readiness action",
+    file: "web",
+    text: "download-first-publish-readiness-zh",
+  },
+  {
+    name: "web first publish chinese readiness endpoint",
+    file: "web",
+    text: "/operations/first-publish-readiness.zh.md",
   },
   {
     name: "web first publish readiness endpoint",
