@@ -38,6 +38,7 @@ const requiredRoutes = [
   "GET /operations/chinese-operator-center.md",
   "POST /operations/first-publish-advance",
   "POST /operations/first-publish-attach-generated-media",
+  "POST /operations/first-publish-approve-current-asset",
   "POST /operations/scheduler-heartbeat",
   "GET /operations/scheduler-activation-pack.md",
   "GET /operations/scheduler-health",
@@ -1380,6 +1381,21 @@ const requiredSnippets = [
     name: "first publish generated media attach route",
     file: "main",
     text: "operations_first_publish_attach_generated_media",
+  },
+  {
+    name: "first publish approve current asset route",
+    file: "main",
+    text: "operations_first_publish_approve_current_asset",
+  },
+  {
+    name: "first publish approve current asset compliance guard",
+    file: "main",
+    text: "Compliance check flagged this asset; revise or reject it before approval.",
+  },
+  {
+    name: "first publish approve current asset separate gates",
+    file: "main",
+    text: "Media attachment, queueing, scheduling, and publishing remain separate gates.",
   },
   {
     name: "first publish generated media safety gate",
@@ -2920,6 +2936,21 @@ const requiredSnippets = [
     name: "web first publish doctor reply fill",
     file: "web",
     text: "data-fill-first-doctor-reply",
+  },
+  {
+    name: "web first publish approve current asset action",
+    file: "web",
+    text: "data-approve-current-first-asset",
+  },
+  {
+    name: "web first publish approve current asset endpoint",
+    file: "web",
+    text: "/operations/first-publish-approve-current-asset?dry_run=false",
+  },
+  {
+    name: "web first publish approve current asset confirm",
+    file: "web",
+    text: "你已经看过首发图片预览和文案",
   },
   {
     name: "web first publish doctor reply template",

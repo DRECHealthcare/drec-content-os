@@ -2669,6 +2669,88 @@ async def operations_first_publish_attach_generated_media(
     return result
 
 
+@app.post("/operations/first-publish-approve-current-asset")
+async def operations_first_publish_approve_current_asset(
+    dry_run: bool = True,
+    session: dict = Depends(require_review_access),
+):
+    payload = await first_publish_readiness_payload()
+    candidates = payload.get("candidates") or {}
+    asset = candidates.get("next_asset")
+    if not asset:
+        return {
+            "dry_run": dry_run,
+            "approved": False,
+            "action": "no_asset",
+            "message": "No current first-publish asset is available for approval.",
+            "readiness": payload,
+        }
+    if asset.get("review_status") == "approved" and asset.get("compliance_status") == "clear":
+        return {
+            "dry_run": dry_run,
+            "approved": False,
+            "action": "already_approved_clear",
+            "asset_id": asset.get("id"),
+            "message": "Current first-publish asset is already approved and safety clear.",
+            "readiness": payload,
+        }
+    compliance = check_text(asset.get("caption") or "")
+    result = {
+        "dry_run": dry_run,
+        "approved": False,
+        "action": "approve_current_first_publish_asset",
+        "asset_id": asset.get("id"),
+        "compliance": compliance,
+        "message": "Ready for explicit human approval if the reviewer confirms the image preview and caption are safe.",
+        "safety": [
+            "This operation requires review access and an explicit button click.",
+            "It only approves the current first-publish asset.",
+            "It refuses flagged medical copy.",
+            "Queueing, scheduling, and publishing remain separate gates.",
+        ],
+    }
+    if compliance.get("status") == "flagged":
+        result.update(
+            {
+                "action": "blocked_by_compliance",
+                "message": "Compliance check flagged this asset; revise or reject it before approval.",
+            }
+        )
+        return result
+    if dry_run:
+        result["planned"] = {
+            "asset_id": asset.get("id"),
+            "compliance_status": "clear",
+            "review_status": "approved",
+        }
+        return result
+    await update_asset_compliance(
+        str(asset.get("id")),
+        AssetComplianceIn(
+            compliance_status="clear",
+            reason="Current first-publish asset safety-cleared by explicit reviewer action after system compliance check.",
+        ),
+        session,
+    )
+    approved = await update_asset_status(
+        str(asset.get("id")),
+        AssetStatusIn(
+            review_status="approved",
+            reason="Current first-publish asset approved by explicit reviewer action.",
+        ),
+        session,
+    )
+    result.update(
+        {
+            "approved": True,
+            "result": approved,
+            "message": "Current first-publish asset approved and safety clear. Media attachment, queueing, scheduling, and publishing remain separate gates.",
+            "after": await first_publish_readiness_payload(),
+        }
+    )
+    return result
+
+
 @app.get("/operations/first-publish-readiness")
 async def operations_first_publish_readiness(_: None = Depends(require_access_token)):
     return await first_publish_readiness_payload()

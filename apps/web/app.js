@@ -161,6 +161,7 @@ const uiZh = {
   "Fill Asset Decision CSV": "填入素材审核 CSV",
   "Copy Doctor Review": "复制医生审核文本",
   "Fill Doctor Reply Template": "填写医生回复模板",
+  "Approve Current First Publish": "批准当前首发素材",
   "Open Asset Review": "打开素材审核",
   "Download Chinese Pack": "下载中文包",
   "Download Media Pack": "下载媒体制作包",
@@ -363,6 +364,7 @@ const uiZh = {
   "Set access": "设置访问",
   "Access set": "已设置访问",
   "Access": "访问",
+  "Set access token": "请先设置访问码",
   "Save": "保存",
   "Clear": "清除",
   "Remember": "记住",
@@ -507,6 +509,10 @@ Object.assign(uiZh, {
   "Generated PNG media URLs attached. Visual QA, queue review, scheduling, and publishing remain separate gates.": "生成 PNG 链接已挂载。视觉 QA、队列审核、排程和发布仍然是独立关卡。",
   "A human-approved and safety-clear asset is required before generated media URLs can be attached.": "需要先有人工批准且安全通过的素材，才能挂载生成图片链接。",
   "Could not attach generated media URLs.": "无法挂载生成图片链接。",
+  "Approving current first-publish asset...": "正在批准当前首发素材...",
+  "Current first-publish asset approved and safety clear. Media attachment, queueing, scheduling, and publishing remain separate gates.": "当前首发素材已批准并安全通过。挂载媒体、加入队列、排程和发布仍然是独立关卡。",
+  "Compliance check flagged this asset; revise or reject it before approval.": "系统合规检查标记了这条素材；批准前请先修改或拒绝。",
+  "Could not approve current first-publish asset.": "无法批准当前首发素材。",
   "No queue decision template is available yet.": "目前还没有队列审核模板。",
   "No first asset decision template is available yet.": "目前还没有首发素材审核模板。",
   "First publish readiness downloaded.": "首次发布准备包已下载。",
@@ -566,6 +572,29 @@ Object.assign(uiZh, {
   "Could not save and roll up metrics.": "无法保存并汇总数据。",
   "Could not roll up metrics.": "无法汇总数据。",
   "Could not save result.": "无法保存结果。",
+  "Generate this week's briefs": "生成本周内容简报",
+  "Start from Weekly Plan so the system has topics, formats, hooks, and safety notes.": "先从每周内容计划开始，让系统有主题、格式、开头钩子和安全备注。",
+  "Open Weekly Plan": "打开每周内容计划",
+  "Weekly briefs ready": "每周简报已准备好",
+  "View Briefs": "查看简报",
+  "Save one brief as an asset": "把一条简报保存为内容资产",
+  "Use Save Asset on a brief to create a reusable caption package with slides or script notes.": "在简报上使用“保存内容资产”，生成可复用的文案、轮播或脚本说明。",
+  "Review Assets": "审核内容资产",
+  "Draft assets ready": "草稿素材已准备好",
+  "Add an asset to the queue": "把内容资产加入队列",
+  "Move one clear asset into Review Queue before scheduling.": "排程前，先把一条安全通过的内容资产送进审核队列。",
+  "Queue has content": "发布队列已有内容",
+  "Review and schedule": "审核并排程",
+  "Approve safe content, choose a planned publish time, then build the manual handoff.": "批准安全内容，选择计划发布时间，再生成发布交接内容。",
+  "Open Review": "打开审核",
+  "Record performance": "记录表现数据",
+  "After a post is published, add results so future topics improve.": "内容发布后，填入表现数据，让之后的主题更准确。",
+  "Open Performance": "打开表现数据",
+  "Optional: add approved media": "可选：添加已批准媒体",
+  "Register owned or approved images/videos before using media-heavy posts.": "如果要做图片或视频内容，请先登记自有或已授权媒体。",
+  "Add Media": "添加媒体",
+  "No planned time": "未设置发布时间",
+  "DREC Content OS Test Path": "DREC 内容系统测试路径",
 });
 
 function currentLanguage() {
@@ -576,11 +605,28 @@ function isZh() {
   return currentLanguage() === "zh";
 }
 
+function translateDynamicText(text) {
+  if (!isZh() || !text) return text || "";
+  const value = String(text);
+  const dynamicRules = [
+    [/^(\d+) brief\(s\) are available for drafting\.$/, (_match, count) => `已有 ${count} 条内容简报可进入草稿。`],
+    [/^(\d+) asset\(s\) are saved for review and queueing\.$/, (_match, count) => `已有 ${count} 条内容资产，等待审核或加入队列。`],
+    [/^(\d+) item\(s\) are waiting in the publishing workflow\.$/, (_match, count) => `已有 ${count} 条内容在发布流程中等待处理。`],
+    [/^(\d+) result\(s\) are feeding the learning loop\.$/, (_match, count) => `已有 ${count} 条表现数据进入学习循环。`],
+    [/^Slide (\d+)$/, (_match, count) => `第 ${count} 张`],
+  ];
+  for (const [pattern, replacer] of dynamicRules) {
+    const match = value.match(pattern);
+    if (match) return replacer(...match);
+  }
+  return value;
+}
+
 function translateText(text) {
   if (!isZh()) {
     return Object.entries(uiZh).find(([, zh]) => zh === text)?.[0] || text;
   }
-  return uiZh[text] || text;
+  return uiZh[text] || translateDynamicText(text);
 }
 
 function setTextIfMapped(element) {
@@ -621,7 +667,7 @@ function translateTextNode(node) {
 }
 
 function translateTree(root = document) {
-  root.querySelectorAll?.("main h2,main h3,main h4,main p,main span,main strong,main small,main label,main button,main li,main option,aside .loop-note").forEach((element) => {
+  root.querySelectorAll?.("main h2,main h3,main h4,main p,main b,main span,main strong,main small,main label,main button,main li,main option,aside .brand span,aside .brand strong,aside .loop-note").forEach((element) => {
     if (element.children.length) {
       translateDirectTextNodes(element);
       return;
@@ -636,6 +682,7 @@ let languageObserverPaused = false;
 function applyLanguage() {
   languageObserverPaused = true;
   document.documentElement.lang = isZh() ? "zh-Hans" : "en";
+  document.title = isZh() ? "DREC 内容系统" : "DREC Content OS";
   document.querySelectorAll("nav button").forEach((button) => {
     const screen = button.dataset.screen;
     button.textContent = (isZh() ? titleMapZh : titleMapEn)[screen] || button.textContent;
@@ -828,7 +875,7 @@ new MutationObserver((mutations) => {
       }
       if (node.nodeType !== Node.ELEMENT_NODE) return;
       translateTree(node);
-      if (node.matches?.("main h2,main h3,main h4,main p,main span,main strong,main small,main label,main button,main li,main option,aside .loop-note")) {
+      if (node.matches?.("main h2,main h3,main h4,main p,main b,main span,main strong,main small,main label,main button,main li,main option,aside .brand span,aside .brand strong,aside .loop-note")) {
         if (node.children.length) translateDirectTextNodes(node);
         else setTextIfMapped(node);
       }
@@ -1243,6 +1290,7 @@ function renderFirstPublishReadiness(data) {
       <div class="learning-actions">
         ${nextAsset.id ? `<button type="button" data-copy-first-asset-review>${escapeHtml(translateText("Copy Doctor Review"))}</button>` : ""}
         ${nextAsset.id ? `<button type="button" data-fill-first-doctor-reply>${escapeHtml(translateText("Fill Doctor Reply Template"))}</button>` : ""}
+        ${nextAsset.id ? `<button type="button" data-approve-current-first-asset>${escapeHtml(translateText("Approve Current First Publish"))}</button>` : ""}
         ${hasDecisionCsv ? `<button type="button" data-fill-first-asset-decision>${escapeHtml(translateText("Fill Asset Decision CSV"))}</button>` : ""}
         <button type="button" data-open-first-asset-review>${escapeHtml(translateText("Open Asset Review"))}</button>
         <button type="button" data-download-first-publish-zh>${escapeHtml(translateText("Download Chinese Pack"))}</button>
@@ -1335,6 +1383,7 @@ async function loadFirstPublishReadiness() {
 document.getElementById("first-publish-readiness")?.addEventListener("click", async (event) => {
   const copyReviewButton = event.target.closest("[data-copy-first-asset-review]");
   const fillDoctorReplyButton = event.target.closest("[data-fill-first-doctor-reply]");
+  const approveCurrentFirstAssetButton = event.target.closest("[data-approve-current-first-asset]");
   const openAssetReviewButton = event.target.closest("[data-open-first-asset-review]");
   const downloadZhButton = event.target.closest("[data-download-first-publish-zh]");
   const downloadMediaPackButton = event.target.closest("[data-download-first-media-pack]");
@@ -1346,7 +1395,7 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
   const copyQueueButton = event.target.closest("[data-copy-first-queue-decision]");
   const fillQueueButton = event.target.closest("[data-fill-first-queue-decision]");
   const advanceButton = event.target.closest("[data-advance-first-publish]");
-  if (!copyReviewButton && !fillDoctorReplyButton && !openAssetReviewButton && !downloadZhButton && !downloadMediaPackButton && !downloadCarouselPngZipButton && !downloadCarouselZipButton && !attachGeneratedMediaButton && !copyButton && !fillButton && !copyQueueButton && !fillQueueButton && !advanceButton) return;
+  if (!copyReviewButton && !fillDoctorReplyButton && !approveCurrentFirstAssetButton && !openAssetReviewButton && !downloadZhButton && !downloadMediaPackButton && !downloadCarouselPngZipButton && !downloadCarouselZipButton && !attachGeneratedMediaButton && !copyButton && !fillButton && !copyQueueButton && !fillQueueButton && !advanceButton) return;
   const container = document.getElementById("first-publish-readiness");
   const message = document.getElementById("test-path-message");
   if (copyReviewButton) {
@@ -1376,6 +1425,25 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
       textInput.focus();
       textInput.scrollIntoView({ behavior: "smooth", block: "center" });
       if (message) message.textContent = "医生回复模板已填入。收到医生决定后，请把 Decision / Safety 改成实际结果再预览导入。";
+    }
+    return;
+  }
+  if (approveCurrentFirstAssetButton) {
+    const confirmed = window.confirm("请确认：你已经看过首发图片预览和文案，并同意把当前首发素材标记为“安全通过 + 批准”。系统不会自动发布。");
+    if (!confirmed) return;
+    const originalText = approveCurrentFirstAssetButton.textContent;
+    approveCurrentFirstAssetButton.disabled = true;
+    approveCurrentFirstAssetButton.textContent = "Working";
+    if (message) message.textContent = "Approving current first-publish asset...";
+    try {
+      const data = await fetchJson("/operations/first-publish-approve-current-asset?dry_run=false", { method: "POST" });
+      if (message) message.textContent = data.message || (data.approved ? "Current first-publish asset approved." : "Current first-publish asset was not approved.");
+      await Promise.all([loadFirstPublishReadiness(), loadLoopStatus(), loadAssets(), loadPublishQueue(), loadPreScheduleGate()]);
+    } catch (error) {
+      if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not approve current first-publish asset.";
+    } finally {
+      approveCurrentFirstAssetButton.disabled = false;
+      approveCurrentFirstAssetButton.textContent = originalText;
     }
     return;
   }
