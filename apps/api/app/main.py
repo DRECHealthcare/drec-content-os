@@ -5855,6 +5855,134 @@ async def operations_asset_review_session_markdown(_: None = Depends(require_acc
     )
 
 
+def zh_asset_review_decision(value: str | None):
+    return {
+        "rewrite_before_approval": "先改写，再审核",
+        "human_review_required": "需要人工审核",
+        "human_can_clear_and_approve": "人工确认后可安全通过并批准",
+        "ready_to_queue": "已可进入队列",
+        "keep_rejected": "维持拒绝",
+    }.get(value or "", value or "未知")
+
+
+def zh_detector_status(value: str | None):
+    return {
+        "clear": "未发现明显风险",
+        "review": "需要复核",
+        "blocked": "有阻碍",
+        "flagged": "有提醒",
+    }.get(value or "", value or "未知")
+
+
+def zh_asset_review_rule(rule: str):
+    return {
+        "Approve only after a human reviewer confirms the medical-safety checklist.": "只有人工审核者确认医疗安全检查后，才可以批准。",
+        "Safety Clear and Approve are separate decisions.": "“安全通过”和“批准发布”是两个独立决定。",
+        "Blocked detector findings require rewrite before approval.": "如果检测器发现阻碍，必须先改写，再审批。",
+        "Queue only approved, Safety Clear assets.": "只有“已批准 + 安全通过”的素材可以进入发布队列。",
+        "Publishing still uses manual handoff until Meta readiness is green.": "Meta 准备完全通过前，发布仍使用人工交接或 dry run。",
+    }.get(rule, rule)
+
+
+@app.get("/operations/asset-review-session.zh.md")
+async def operations_asset_review_session_markdown_zh(_: None = Depends(require_access_token)):
+    generated_at = datetime.now(timezone.utc).isoformat()
+    payload = await asset_review_session_payload()
+    first_publish = await first_publish_readiness_payload()
+    next_asset = ((first_publish.get("candidates") or {}).get("next_asset")) or None
+    action_pack = first_publish.get("action_pack") or {}
+    lines = [
+        "# DREC Content OS 素材审核会话包",
+        "",
+        f"生成时间：{generated_at}",
+        "",
+        "用途：给人工审核者快速决定哪一条草稿素材可以进入发布队列。本文件只读，不会批准、入队、排程或发布任何内容。",
+        "",
+        "## 当前卡点",
+        "",
+        f"- 当前首发状态：{first_publish.get('overall_status')}",
+        f"- 下一步：{zh_first_publish_stage_label((first_publish.get('next_step') or {}).get('key'))}",
+        f"- 说明：{zh_first_publish_stage_detail(first_publish.get('next_step') or {})}",
+        f"- 下一条建议审核素材 ID：{(next_asset or {}).get('id') or '暂无'}",
+        "",
+        "## 会话摘要",
+        "",
+        f"- 活跃素材：{payload.get('active_asset_count')}",
+        f"- 人工确认后可批准：{payload.get('can_approve_count')}",
+        f"- 已可进入队列：{payload.get('ready_to_queue_count')}",
+        f"- 需要改写：{payload.get('needs_rewrite_count')}",
+        f"- 已批准可用媒体：{payload.get('usable_media_count')}",
+        "",
+        "## 安全规则",
+        "",
+        *(markdown_list([zh_asset_review_rule(rule) for rule in payload.get("decision_rules") or []]) or ["- 必须人工审核。"]),
+        "",
+        "## 下一条素材审核 CSV 模板",
+        "",
+        "填写方式：只在人工确认后填写 `reviewer_safety_decision` 和 `reviewer_review_decision`。常用值是 `clear` 与 `approve`；如果不确定，填 `needs_review` 或 `reject`，不要硬批准。",
+        "",
+        "```csv",
+        (action_pack.get("next_asset_decision_csv") or "暂无待审核素材").strip(),
+        "```",
+        "",
+        "## 审核项目",
+        "",
+    ]
+    items = payload.get("session_items") or []
+    if not items:
+        lines.extend(["- 暂无活跃素材。请先从每周计划保存一条素材。", ""])
+    for index, item in enumerate(items, start=1):
+        finding_lines = [
+            f"- [{finding.get('severity')}] {finding.get('rule_id')}：{finding.get('message')}（{', '.join(finding.get('matches') or []) or '无匹配文字'}）"
+            for finding in item.get("findings") or []
+        ] or ["- 检测器未发现明显风险，但仍需要人工审核。"]
+        lines.extend(
+            [
+                f"### {index}. {item.get('topic')}",
+                "",
+                f"- 素材 ID：{item.get('asset_id')}",
+                f"- 频道 / 格式：{item.get('channel')} / {item.get('format')}",
+                f"- 当前安全 / 审核：{item.get('compliance_status')} / {item.get('review_status')}",
+                f"- 媒体数量：{item.get('media_count')}",
+                f"- 检测器：{zh_detector_status(item.get('detector_status'))} - {item.get('detector_recommendation')}",
+                f"- 建议决定：{zh_asset_review_decision(item.get('recommended_decision'))}",
+                f"- 下一步：{item.get('next_step')}",
+                "",
+                "检测结果：",
+                "",
+                *finding_lines,
+                "",
+                "文案预览：",
+                "",
+                item.get("caption_preview") or "暂无文案。",
+                "",
+                "可复制审核备注：",
+                "",
+                "```",
+                item.get("copy_review_note") or "",
+                "```",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## 完成后怎么做",
+            "",
+            "- 把上方 CSV 填好后，回到页面的「素材与内容资产」。",
+            "- 粘贴到「审核决定 CSV」，先点「预览粘贴的审核决定」。",
+            "- 确认无误后再点「导入粘贴的审核决定」。",
+            "- 然后回到总览，点「推进安全步骤」，系统会把批准且安全通过的素材加入队列。",
+            "- 系统仍不会自动发布；Meta 正式发布锁仍保持关闭，除非以后显式打开。",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-asset-review-session-zh.md"'},
+    )
+
+
 def approval_score(item: dict):
     score = 0
     if item.get("recommended_decision") == "human_can_clear_and_approve":

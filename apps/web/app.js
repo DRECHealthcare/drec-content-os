@@ -183,6 +183,7 @@ const uiZh = {
   "Download Asset Worklist": "下载素材工作清单",
   "Download Safety Review": "下载安全审核",
   "Download Review Session": "下载审核会话",
+  "Download Review Session 中文": "下载中文审核会话",
   "Download Doctor Approval": "下载医生审批包",
   "Download Doctor Request": "下载医生请求",
   "Download Doctor Bridge": "下载医生沟通桥",
@@ -4040,6 +4041,16 @@ document.getElementById("download-asset-review-session")?.addEventListener("clic
     message.textContent = "Asset review session pack downloaded.";
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download asset review session.";
+  }
+});
+
+document.getElementById("download-asset-review-session-zh")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/asset-review-session.zh.md", "drec-asset-review-session-zh.md", "text/markdown");
+    message.textContent = "中文素材审核会话包已下载。";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "请先设置访问 token。" : "无法下载中文素材审核会话包。";
   }
 });
 

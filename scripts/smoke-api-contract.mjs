@@ -57,6 +57,7 @@ const requiredRoutes = [
   "GET /operations/asset-safety-review.md",
   "GET /operations/asset-review-session",
   "GET /operations/asset-review-session.md",
+  "GET /operations/asset-review-session.zh.md",
   "GET /operations/doctor-approval-pack",
   "GET /operations/doctor-approval-request",
   "GET /operations/doctor-approval-request.md",
@@ -946,6 +947,16 @@ const requiredSnippets = [
     name: "asset review session export",
     file: "main",
     text: "drec-asset-review-session-pack.md",
+  },
+  {
+    name: "asset review session chinese export",
+    file: "main",
+    text: "drec-asset-review-session-zh.md",
+  },
+  {
+    name: "asset review session chinese safety",
+    file: "main",
+    text: "本文件只读，不会批准、入队、排程或发布任何内容",
   },
   {
     name: "doctor approval pack route",
@@ -2641,6 +2652,16 @@ const requiredSnippets = [
     name: "web asset review session action",
     file: "web",
     text: "download-asset-review-session",
+  },
+  {
+    name: "web asset review session chinese action",
+    file: "web",
+    text: "download-asset-review-session-zh",
+  },
+  {
+    name: "web asset review session chinese endpoint",
+    file: "web",
+    text: "/operations/asset-review-session.zh.md",
   },
   {
     name: "web doctor approval pack action",
