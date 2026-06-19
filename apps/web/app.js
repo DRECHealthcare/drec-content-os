@@ -224,6 +224,7 @@ const uiZh = {
   "Download Pre-Schedule Gate": "下载排程前检查",
   "Download Editorial QA": "下载编辑 QA",
   "Download Review-to-Schedule": "下载审核到排程包",
+  "Download Review-to-Schedule 中文": "下载中文审核到排程包",
   "Download Review Queue CSV": "下载审核队列 CSV",
   "Download Queue Decisions": "下载队列审核决定",
   "Download Review Log": "下载审核记录",
@@ -5763,6 +5764,16 @@ document.getElementById("download-review-schedule-pack")?.addEventListener("clic
     message.textContent = "Review-to-schedule pack downloaded.";
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download review-to-schedule pack.";
+  }
+});
+
+document.getElementById("download-review-schedule-pack-zh")?.addEventListener("click", async () => {
+  const message = document.getElementById("queue-message");
+  try {
+    await downloadProtectedFile("/operations/review-to-schedule-pack.zh.md", "drec-review-to-schedule-pack-zh.md", "text/markdown");
+    message.textContent = "中文审核到排程包已下载。";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "请先设置访问 token。" : "无法下载中文审核到排程包。";
   }
 });
 

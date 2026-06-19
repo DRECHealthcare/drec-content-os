@@ -103,6 +103,7 @@ const requiredRoutes = [
   "GET /operations/review-queue-decisions.csv",
   "POST /operations/import-review-queue-decisions",
   "GET /operations/review-to-schedule-pack.md",
+  "GET /operations/review-to-schedule-pack.zh.md",
   "GET /operations/learning-snapshot.csv",
   "GET /learning/quarterly-memo",
   "GET /learning/quarterly-memo.md",
@@ -1602,6 +1603,16 @@ const requiredSnippets = [
     name: "review to schedule pack export",
     file: "main",
     text: "drec-review-to-schedule-pack.md",
+  },
+  {
+    name: "review to schedule chinese pack export",
+    file: "main",
+    text: "drec-review-to-schedule-pack-zh.md",
+  },
+  {
+    name: "review to schedule chinese safety",
+    file: "main",
+    text: "本文件只读，不会自动批准、排程、发布或发送 Meta 请求",
   },
   {
     name: "review to schedule safe sequence",
@@ -3267,6 +3278,16 @@ const requiredSnippets = [
     name: "web review to schedule endpoint",
     file: "web",
     text: "/operations/review-to-schedule-pack.md",
+  },
+  {
+    name: "web review to schedule chinese action",
+    file: "web",
+    text: "download-review-schedule-pack-zh",
+  },
+  {
+    name: "web review to schedule chinese endpoint",
+    file: "web",
+    text: "/operations/review-to-schedule-pack.zh.md",
   },
   {
     name: "web review log endpoint",

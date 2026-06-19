@@ -13726,6 +13726,218 @@ async def operations_review_to_schedule_pack(_: None = Depends(require_access_to
     )
 
 
+def zh_review_queue_state(value: str | None):
+    return {
+        "ready_to_schedule": "已审核通过，可进入排程前检查",
+        "rejected_feedback": "最新审核已拒绝",
+        "needs_regen": "需要重新生成或改写",
+        "blocked_safety": "安全状态未通过",
+        "needs_review": "等待人工审核",
+        "outside_review_queue": "不在审核队列",
+    }.get(value or "", value or "未知")
+
+
+def zh_review_schedule_blocker(value: str):
+    return {
+        "Not in draft review queue.": "不在草稿审核队列。",
+        "Needs compliance clear before approval or scheduling.": "批准或排程前必须先安全通过。",
+        "Latest review rejected this item.": "最新审核已拒绝此项目。",
+        "Latest review requested regeneration.": "最新审核要求重新生成。",
+        "Needs human review approval.": "需要人工审核批准。",
+        "Needs human review approval before scheduling.": "排程前需要人工审核批准。",
+        "Caption is not compliance clear.": "文案合规状态不是 clear。",
+        "Already has planned time; use schedule audit instead.": "已经有发布时间，请改看排程检查。",
+        "Needs approved media/design URL before scheduling.": "排程前需要已批准的媒体或设计链接。",
+    }.get(value, value)
+
+
+def zh_pre_schedule_rule(value: str):
+    return {
+        "This gate is read-only and does not schedule, queue, publish, or send Meta requests.": "这个检查只读，不会排程、入队、发布或发送 Meta 请求。",
+        "Schedule only draft queue items with human approval, compliance clear status, final caption, and approved media/design.": "只有人工批准、安全通过、文案最终版、媒体/设计已批准的草稿队列项目才可以排程。",
+        "Visual formats need an approved media/design URL before scheduling.": "图片、轮播、Reel、Story 等视觉格式，排程前必须有已批准的媒体/设计链接。",
+        "Run Schedule Audit after scheduling and before manual handoff or Meta dry runs.": "排程后、人工交接或 Meta dry run 前，要再跑 Schedule Audit。",
+    }.get(value, value)
+
+
+def zh_review_schedule_queue_lines(item: dict, index: int, heading: str):
+    blockers = [zh_review_schedule_blocker(blocker) for blocker in item.get("review_queue_blockers") or item.get("blockers") or []]
+    return [
+        f"### {index}. {heading}：{item.get('channel')} / {item.get('format')}",
+        "",
+        f"- 队列 ID：{item.get('id') or item.get('queue_id')}",
+        f"- 素材 ID：{item.get('asset_id') or 'n/a'}",
+        f"- 状态：{item.get('status')}",
+        f"- 安全状态：{item.get('compliance_status')}",
+        f"- 审核状态：{zh_review_queue_state(item.get('review_queue_state'))}",
+        f"- 最近审核动作：{(item.get('latest_feedback') or {}).get('action') or item.get('latest_review') or 'none'}",
+        f"- 计划发布时间：{item.get('planned_slot') or '尚未排程'}",
+        f"- 媒体数量：{len([url for url in item.get('media_urls') or [] if url]) if 'media_urls' in item else item.get('media_count')}",
+        f"- 阻碍：{'; '.join(blockers) if blockers else '无'}",
+        "",
+        "文案预览：",
+        "",
+        feedback_excerpt(item.get("caption") or item.get("caption_preview"), 420) or "暂无文案。",
+        "",
+    ]
+
+
+@app.get("/operations/review-to-schedule-pack.zh.md")
+async def operations_review_to_schedule_pack_zh(_: None = Depends(require_access_token)):
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    assets = await fetch_asset_list(200)
+    queue_items = await fetch_publish_queue_items(200)
+    handoff = await publishing_handoff(None)
+    first_publish = await first_publish_readiness_payload()
+    pre_schedule = await pre_schedule_gate_payload()
+    action_pack = first_publish.get("action_pack") or {}
+    active_queue_asset_ids = {
+        str(item.get("asset_id"))
+        for item in queue_items
+        if item.get("asset_id") and item.get("status") in {"draft", "scheduled", "publishing"}
+    }
+    queue_ready_assets = [
+        asset
+        for asset in assets
+        if asset.get("review_status") == "approved"
+        and asset.get("compliance_status") == "clear"
+        and str(asset.get("id")) not in active_queue_asset_ids
+    ]
+    ready_to_schedule = []
+    queue_needs_review = []
+    for item in queue_items:
+        state, blockers = review_queue_state(item)
+        enriched = {**item, "review_queue_state": state, "review_queue_blockers": blockers}
+        if state == "ready_to_schedule":
+            ready_to_schedule.append(enriched)
+        elif item.get("status") == "draft":
+            queue_needs_review.append(enriched)
+    handoff_ready = handoff.get("ready_items") or []
+    handoff_blocked = handoff.get("blocked_items") or handoff.get("needs_review") or []
+    next_step = first_publish.get("next_step") or {}
+    lines = [
+        "# DREC Content OS 审核到排程操作包",
+        "",
+        f"生成时间：{generated_at}",
+        "",
+        "用途：把“已安全通过的素材”继续推进到队列审核、排程、发布交接。本文件只读，不会自动批准、排程、发布或发送 Meta 请求。",
+        "",
+        "## 当前首发状态",
+        "",
+        f"- 当前状态：{first_publish.get('overall_status')}",
+        f"- 下一步：{zh_first_publish_stage_label(next_step.get('key'))}",
+        f"- 说明：{zh_first_publish_stage_detail(next_step)}",
+        "",
+        "## 安全顺序",
+        "",
+        "1. 只有人工安全审核通过后，才导入素材审核决定。",
+        "2. 只有 approved + clear 的素材可以加入发布队列。",
+        "3. 队列里的草稿项目必须再次由人工审核，`reviewer_action=approve` 后才可排程。",
+        "4. 排程前必须通过 Pre-Schedule Gate：文案最终、安全 clear、媒体/设计已批准。",
+        "5. 排程后再跑 Schedule Audit，然后才做人工发布交接或 Meta dry run。",
+        "6. 正式 Meta 自动发布仍保持上锁，除非之后明确打开 live 开关。",
+        "",
+        "## 当前数量",
+        "",
+        f"- 尚未入队的可发布素材：{len(queue_ready_assets)}",
+        f"- 已审核通过、可做排程前检查的队列项目：{len(ready_to_schedule)}",
+        f"- 仍需队列审核的草稿项目：{len(queue_needs_review)}",
+        f"- 已可发布交接的排程项目：{len(handoff_ready)}",
+        f"- 发布交接仍被阻碍的项目：{len(handoff_blocked)}",
+        f"- 排程前检查可排程：{pre_schedule.get('ready_to_schedule_count')}",
+        f"- 排程前检查阻碍：{pre_schedule.get('blocked_count')}",
+        "",
+        "## 下一条队列审核 CSV 模板",
+        "",
+        "如果这里显示 CSV，填 `reviewer_action=approve` 代表人工批准；不确定就填 `edit`、`regen` 或 `reject`。导入队列审核不会排程或发布。",
+        "",
+        "```csv",
+        (action_pack.get("next_queue_decision_csv") or "暂无待审核队列项目。先完成素材审核并加入队列。").strip(),
+        "```",
+        "",
+        "## 排程前检查规则",
+        "",
+        *(markdown_list([zh_pre_schedule_rule(rule) for rule in pre_schedule.get("rules") or []]) or ["- 必须人工审核。"]),
+        "",
+        "## 尚未入队的可发布素材",
+        "",
+    ]
+    if queue_ready_assets:
+        for index, asset in enumerate(queue_ready_assets[:40], start=1):
+            metadata = asset.get("metadata") or {}
+            lines.extend(
+                [
+                    f"### {index}. {metadata.get('topic') or asset.get('format') or '未命名素材'}",
+                    "",
+                    f"- 素材 ID：{asset.get('id')}",
+                    f"- 频道 / 格式：{asset.get('channel')} / {asset.get('format')}",
+                    f"- 安全 / 审核：{asset.get('compliance_status')} / {asset.get('review_status')}",
+                    f"- 下一步：回到总览点「推进安全步骤」，或在素材页点「把可发布素材加入队列」。",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["- 暂无已批准且安全通过、等待入队的素材。", ""])
+    lines.extend(["## 已审核通过，可做排程前检查", ""])
+    if ready_to_schedule:
+        for index, item in enumerate(ready_to_schedule[:40], start=1):
+            lines.extend(zh_review_schedule_queue_lines(item, index, "可检查排程"))
+    else:
+        lines.extend(["- 暂无队列项目同时满足人工批准和安全 clear。", ""])
+    lines.extend(["## 仍需队列审核", ""])
+    if queue_needs_review:
+        for index, item in enumerate(queue_needs_review[:40], start=1):
+            lines.extend(zh_review_schedule_queue_lines(item, index, "需审核"))
+    else:
+        lines.extend(["- 暂无等待队列审核的草稿项目。", ""])
+    lines.extend(["## 排程前检查项目", ""])
+    gate_items = pre_schedule.get("gate_items") or []
+    if gate_items:
+        for index, item in enumerate(gate_items[:40], start=1):
+            blockers = [zh_review_schedule_blocker(blocker) for blocker in item.get("blockers") or []]
+            lines.extend(
+                [
+                    f"### {index}. {item.get('channel')} / {item.get('format')}",
+                    "",
+                    f"- 队列 ID：{item.get('queue_id')}",
+                    f"- 检查状态：{item.get('gate_status')}",
+                    f"- 最近审核：{item.get('latest_review')}",
+                    f"- 媒体数量：{item.get('media_count')}",
+                    f"- 阻碍：{'; '.join(blockers) if blockers else '无'}",
+                    f"- 下一步：{item.get('next_step')}",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["- 暂无可检查的草稿或已排程队列项目。", ""])
+    lines.extend(["## 发布交接", ""])
+    if handoff_ready:
+        for index, item in enumerate(handoff_ready[:40], start=1):
+            lines.extend(zh_review_schedule_queue_lines(item, index, "已可交接发布"))
+    else:
+        lines.extend(["- 暂无已排程且安全通过、可做发布交接的项目。", ""])
+    if handoff_blocked:
+        lines.extend(["## 发布交接阻碍", ""])
+        for index, item in enumerate(handoff_blocked[:40], start=1):
+            lines.extend(zh_review_schedule_queue_lines(item, index, "交接阻碍"))
+    lines.extend(
+        [
+            "## 完成后怎么做",
+            "",
+            "- 如果已有队列审核 CSV：粘贴到「审核队列」页面，先预览，再导入。",
+            "- 导入后回到总览点「推进安全步骤」；系统只会安排合规发布时间，不会正式发布。",
+            "- 排程后下载 Schedule Audit 或 Calendar 检查时间。",
+            "- 到时间后可做 Meta dry run；正式发布仍需要额外 live 开关。",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-review-to-schedule-pack-zh.md"'},
+    )
+
+
 @app.post("/compliance/check")
 async def check_compliance(item: ComplianceCheckIn, _: None = Depends(require_access_token)):
     return check_text(item.text)
