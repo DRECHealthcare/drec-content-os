@@ -25,6 +25,8 @@ const requiredRoutes = [
   "GET /automation/status",
   "GET /operations/launch-readiness",
   "GET /operations/test-run-checklist",
+  "GET /operations/first-publish-readiness",
+  "GET /operations/first-publish-readiness.md",
   "POST /operations/scheduler-heartbeat",
   "GET /operations/scheduler-activation-pack.md",
   "GET /operations/scheduler-health",
@@ -1177,6 +1179,31 @@ const requiredSnippets = [
     name: "pre schedule gate safety",
     file: "main",
     text: "read_only_schedule_readiness",
+  },
+  {
+    name: "first publish readiness route",
+    file: "main",
+    text: "first_publish_readiness_payload",
+  },
+  {
+    name: "first publish readiness asset helper",
+    file: "main",
+    text: "assets_ready_for_queue",
+  },
+  {
+    name: "first publish readiness export",
+    file: "main",
+    text: "drec-first-publish-readiness.md",
+  },
+  {
+    name: "first publish readiness read only safety",
+    file: "main",
+    text: "This readiness pack is read-only.",
+  },
+  {
+    name: "first publish readiness meta blockers",
+    file: "main",
+    text: "facebook_blockers",
   },
   {
     name: "asset rewrite pack route",
@@ -2372,6 +2399,26 @@ const requiredSnippets = [
     name: "web queue cancel handler",
     file: "web",
     text: "cancelQueueItem",
+  },
+  {
+    name: "web first publish readiness card",
+    file: "web",
+    text: "first-publish-readiness",
+  },
+  {
+    name: "web first publish readiness loader",
+    file: "web",
+    text: "loadFirstPublishReadiness",
+  },
+  {
+    name: "web first publish readiness action",
+    file: "web",
+    text: "download-first-publish-readiness",
+  },
+  {
+    name: "web first publish readiness endpoint",
+    file: "web",
+    text: "/operations/first-publish-readiness",
   },
   {
     name: "web published metrics helper",

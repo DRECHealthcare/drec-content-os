@@ -534,6 +534,44 @@ async function loadTestRunChecklist() {
   }
 }
 
+function renderFirstPublishReadiness(data) {
+  const container = document.getElementById("first-publish-readiness");
+  if (!container) return;
+  const next = data.next_step || {};
+  const stages = data.stages || [];
+  const meta = data.meta || {};
+  container.innerHTML = `
+    <article class="learning-card wide-learning ${escapeHtml(next.status || "open")}">
+      <h3>First Publish Readiness</h3>
+      <p>${escapeHtml(next.label || "Checking first publish path")}</p>
+      <small>${escapeHtml(next.detail || data.overall_status || "")}</small>
+      <div class="learning-actions">
+        <button type="button" data-workflow-screen="${escapeHtml(next.screen || "assets")}">${escapeHtml(next.action || "Open Next Step")}</button>
+      </div>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Meta Dry Run</h3>
+      <p>${escapeHtml(meta.overall_status || "unknown")}</p>
+      <small>FB: ${escapeHtml((meta.facebook_blockers || [])[0] || "ready")} · IG: ${escapeHtml((meta.instagram_blockers || [])[0] || "ready")}</small>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Publish Path</h3>
+      <ul>${stages.map((stage) => `<li><strong>${escapeHtml(stage.status || "")}</strong> ${escapeHtml(stage.label || "")} · ${escapeHtml(stage.detail || "")}</li>`).join("")}</ul>
+    </article>
+  `;
+}
+
+async function loadFirstPublishReadiness() {
+  const container = document.getElementById("first-publish-readiness");
+  if (!container) return;
+  try {
+    const data = await fetchJson("/operations/first-publish-readiness");
+    renderFirstPublishReadiness(data);
+  } catch {
+    container.innerHTML = "";
+  }
+}
+
 function renderWorkflowNext(data) {
   const container = document.getElementById("workflow-next");
   if (!container) return;
@@ -582,6 +620,7 @@ async function loadLoopStatus() {
     renderWorkflowNext(data.workflow || loop);
     loadLaunchReadiness();
     loadTestRunChecklist();
+    loadFirstPublishReadiness();
   } catch {
     const message = accessToken() ? "API access failed" : "Set access token";
     document.getElementById("queue-count").textContent = message;
@@ -3350,6 +3389,16 @@ document.getElementById("download-daily-ops")?.addEventListener("click", async (
     message.textContent = "Daily ops checklist downloaded.";
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download daily ops checklist.";
+  }
+});
+
+document.getElementById("download-first-publish-readiness")?.addEventListener("click", async () => {
+  const message = document.getElementById("test-path-message");
+  try {
+    await downloadProtectedFile("/operations/first-publish-readiness.md", "drec-first-publish-readiness.md", "text/markdown");
+    message.textContent = "First publish readiness downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download first publish readiness.";
   }
 });
 

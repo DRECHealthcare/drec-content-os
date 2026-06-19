@@ -1935,6 +1935,192 @@ async def test_run_checklist_payload():
     }
 
 
+def first_publish_stage(key, label, status, detail, action, screen, evidence=None):
+    return {
+        "key": key,
+        "label": label,
+        "status": status,
+        "detail": detail,
+        "action": action,
+        "screen": screen,
+        "evidence": evidence or {},
+    }
+
+
+def assets_ready_for_queue(items: list[dict]):
+    return [
+        item
+        for item in items
+        if item.get("review_status") == "approved" and item.get("compliance_status") == "clear"
+    ]
+
+
+async def first_publish_readiness_payload():
+    checklist = await test_run_checklist_payload()
+    assets = await fetch_asset_list(200)
+    queue = await fetch_publish_queue_items(200)
+    meta = await meta_readiness(None)
+    schedule_audit = await schedule_audit_payload()
+    ready_assets = assets_ready_for_queue(assets)
+    next_asset = next((item for item in assets if item not in ready_assets), assets[0] if assets else None)
+    review_approved_queue = [
+        item
+        for item in queue
+        if item.get("status") == "draft"
+        and item.get("compliance_status") == "clear"
+        and (item.get("latest_feedback") or {}).get("action") == "approve"
+    ]
+    scheduled_queue = [
+        item
+        for item in queue
+        if item.get("status") == "scheduled" and item.get("planned_slot") and item.get("compliance_status") == "clear"
+    ]
+    fb_item = await next_facebook_publish_item()
+    ig_item = await next_instagram_publish_item()
+    fb_blockers = facebook_dispatch_blockers(fb_item, meta)
+    ig_blockers = instagram_dispatch_blockers(ig_item, meta)
+    stages = [
+        first_publish_stage(
+            "asset_review",
+            "Asset approved and safety clear",
+            "done" if ready_assets else "open" if assets else "locked",
+            f"{len(ready_assets)} ready asset(s)." if ready_assets else f"{len(assets)} asset(s) exist; approve one with explicit safety clear." if assets else "Generate and save one asset first.",
+            "Open Assets",
+            "assets",
+            {"asset_count": len(assets), "ready_assets": len(ready_assets), "next_asset_id": next_asset.get("id") if next_asset else None},
+        ),
+        first_publish_stage(
+            "queue",
+            "Queue item created",
+            "done" if queue else "open" if ready_assets else "locked",
+            f"{len(queue)} queue item(s) exist." if queue else "Queue one approved clear asset.",
+            "Queue Ready Asset",
+            "assets",
+            {"queue_total": len(queue)},
+        ),
+        first_publish_stage(
+            "review_queue",
+            "Queue item review-approved",
+            "done" if review_approved_queue or scheduled_queue else "open" if queue else "locked",
+            f"{len(review_approved_queue)} review-approved draft item(s)." if review_approved_queue else "Approve one queue item before scheduling.",
+            "Open Review Queue",
+            "review",
+            {"review_approved_queue": len(review_approved_queue)},
+        ),
+        first_publish_stage(
+            "schedule",
+            "Queue item scheduled",
+            "done" if scheduled_queue else "open" if review_approved_queue else "locked",
+            f"{len(scheduled_queue)} scheduled item(s)." if scheduled_queue else "Suggest or import one planned slot after queue review approval.",
+            "Open Scheduler",
+            "scheduler",
+            {"scheduled_queue": len(scheduled_queue), "schedule_audit": schedule_audit.get("overall_status")},
+        ),
+        first_publish_stage(
+            "meta_dry_run",
+            "Meta worker dry run",
+            "done" if (fb_item and not fb_blockers) or (ig_item and not ig_blockers) else "open" if scheduled_queue else "locked",
+            "A due scheduled item is ready for Meta dry run." if (fb_item and not fb_blockers) or (ig_item and not ig_blockers) else "Dry run is waiting for a scheduled compliance-clear item.",
+            "Dry Run Meta Publishing",
+            "scheduler",
+            {"facebook_blockers": fb_blockers, "instagram_blockers": ig_blockers},
+        ),
+    ]
+    next_stage = next((stage for stage in stages if stage["status"] in {"open", "locked"}), stages[-1])
+    return {
+        "overall_status": "ready_for_meta_dry_run" if next_stage["key"] == "meta_dry_run" and next_stage["status"] == "open" else "building_first_publish_item",
+        "generated_at": datetime.utcnow().isoformat() + "Z",
+        "next_step": next_stage,
+        "manual_cycle": {
+            "done_count": checklist.get("done_count"),
+            "total_required": checklist.get("total_required"),
+            "checklist_next_step": checklist.get("next_step"),
+        },
+        "stages": stages,
+        "candidates": {
+            "next_asset": next_asset,
+            "ready_asset": ready_assets[0] if ready_assets else None,
+            "review_approved_queue": review_approved_queue[0] if review_approved_queue else None,
+            "scheduled_queue": scheduled_queue[0] if scheduled_queue else None,
+            "facebook_dispatch_item": fb_item,
+            "instagram_dispatch_item": ig_item,
+        },
+        "meta": {
+            "overall_status": meta.get("overall_status"),
+            "permission_proof_status": meta.get("permission_proof_status"),
+            "channels": meta.get("channels"),
+            "facebook_blockers": fb_blockers,
+            "instagram_blockers": ig_blockers,
+        },
+        "links": {
+            "asset_review": "/operations/asset-review-session.md",
+            "asset_decisions": "/operations/asset-review-decisions.csv",
+            "review_queue": "/operations/review-queue.csv",
+            "review_queue_decisions": "/operations/review-queue-decisions.csv",
+            "pre_schedule_gate": "/operations/pre-schedule-gate.md",
+            "schedule_audit": "/publish-queue/schedule-audit.md",
+            "meta_preflight": "/meta/preflight-audit.md",
+            "publishing_handoff": "/publishing-handoff",
+        },
+        "safety": [
+            "This readiness pack is read-only.",
+            "Do not approve assets unless the reviewer explicitly marks safety clear and approved.",
+            "Do not schedule queue items before review approval and pre-schedule checks.",
+            "Keep live Meta switches off until dry runs and setup gates are green.",
+        ],
+    }
+
+
+@app.get("/operations/first-publish-readiness")
+async def operations_first_publish_readiness(_: None = Depends(require_access_token)):
+    return await first_publish_readiness_payload()
+
+
+@app.get("/operations/first-publish-readiness.md")
+async def operations_first_publish_readiness_markdown(_: None = Depends(require_access_token)):
+    payload = await first_publish_readiness_payload()
+    next_step = payload.get("next_step") or {}
+    lines = [
+        "# DREC First Publish Readiness",
+        "",
+        f"- Generated: {payload.get('generated_at')}",
+        f"- Overall status: {payload.get('overall_status')}",
+        f"- Next step: {next_step.get('label')} - {next_step.get('detail')}",
+        f"- Action: {next_step.get('action')} ({next_step.get('screen')})",
+        "",
+        "## Stages",
+        "",
+    ]
+    for stage in payload.get("stages") or []:
+        lines.append(f"- {stage.get('status')}: {stage.get('label')} - {stage.get('detail')}")
+    meta = payload.get("meta") or {}
+    lines.extend(
+        [
+            "",
+            "## Meta Dry Run State",
+            "",
+            f"- Meta status: {meta.get('overall_status')}",
+            f"- Permission proof: {meta.get('permission_proof_status')}",
+            f"- Facebook blockers: {', '.join(meta.get('facebook_blockers') or []) or 'None'}",
+            f"- Instagram blockers: {', '.join(meta.get('instagram_blockers') or []) or 'None'}",
+            "",
+            "## Action Links",
+            "",
+            *[f"- {key.replace('_', ' ').title()}: `{value}`" for key, value in (payload.get("links") or {}).items()],
+            "",
+            "## Safety",
+            "",
+            *markdown_list(payload.get("safety"), "- Read-only readiness pack."),
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-first-publish-readiness.md"'},
+    )
+
+
 @app.get("/operations/test-run-checklist")
 async def operations_test_run_checklist(_: None = Depends(require_access_token)):
     return await test_run_checklist_payload()
