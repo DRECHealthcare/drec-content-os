@@ -93,11 +93,14 @@ const requiredRoutes = [
   "GET /operations/asset-rewrite-pack.md",
   "GET /operations/first-cycle-handoff",
   "GET /operations/first-cycle-handoff.md",
+  "GET /operations/first-cycle-handoff.zh.md",
   "GET /operations/first-cycle-sprint-pack",
   "GET /operations/first-cycle-sprint-pack.md",
+  "GET /operations/first-cycle-sprint-pack.zh.md",
   "GET /operations/first-cycle-sprint-tracker.csv",
   "GET /operations/today-runbook",
   "GET /operations/today-runbook.md",
+  "GET /operations/today-runbook.zh.md",
   "GET /operations/asset-media-attachments.csv",
   "POST /operations/import-asset-media-attachments",
   "POST /operations/import-production-replies",
@@ -1339,6 +1342,21 @@ const requiredSnippets = [
     text: "/operations/asset-review-session.zh.md",
   },
   {
+    name: "chinese operator center today runbook link",
+    file: "main",
+    text: "/operations/today-runbook.zh.md",
+  },
+  {
+    name: "chinese operator center first cycle sprint link",
+    file: "main",
+    text: "/operations/first-cycle-sprint-pack.zh.md",
+  },
+  {
+    name: "chinese operator center first cycle handoff link",
+    file: "main",
+    text: "/operations/first-cycle-handoff.zh.md",
+  },
+  {
     name: "chinese operator center doctor bridge link",
     file: "main",
     text: "/operations/doctor-review-bridge.zh.md",
@@ -1444,6 +1462,16 @@ const requiredSnippets = [
     text: "drec-first-cycle-handoff-pack.md",
   },
   {
+    name: "first cycle handoff chinese export",
+    file: "main",
+    text: "drec-first-cycle-handoff-pack-zh.md",
+  },
+  {
+    name: "first cycle handoff chinese safety",
+    file: "main",
+    text: "安全改写只改草稿文案，不等于批准。",
+  },
+  {
     name: "first cycle handoff safety",
     file: "main",
     text: "manual_safe_sequence",
@@ -1472,6 +1500,16 @@ const requiredSnippets = [
     name: "first cycle sprint pack route",
     file: "main",
     text: "first_cycle_sprint_pack_payload",
+  },
+  {
+    name: "first cycle sprint chinese export",
+    file: "main",
+    text: "drec-first-cycle-sprint-pack-zh.md",
+  },
+  {
+    name: "first cycle sprint chinese safety",
+    file: "main",
+    text: "本冲刺包只读，不会触发批准、素材导入、排程或发布。",
   },
   {
     name: "doctor review polish pack route",
@@ -1547,6 +1585,16 @@ const requiredSnippets = [
     name: "today runbook export",
     file: "main",
     text: "drec-today-runbook.md",
+  },
+  {
+    name: "today runbook chinese export",
+    file: "main",
+    text: "drec-today-runbook-zh.md",
+  },
+  {
+    name: "today runbook chinese sequence",
+    file: "main",
+    text: "推荐执行顺序",
   },
   {
     name: "today runbook safety",
@@ -3029,9 +3077,29 @@ const requiredSnippets = [
     text: "download-first-cycle-handoff",
   },
   {
+    name: "web first cycle handoff chinese action",
+    file: "web",
+    text: "download-first-cycle-handoff-zh",
+  },
+  {
+    name: "web first cycle handoff chinese endpoint",
+    file: "web",
+    text: "/operations/first-cycle-handoff.zh.md",
+  },
+  {
     name: "web first cycle sprint action",
     file: "web",
     text: "download-first-cycle-sprint-pack",
+  },
+  {
+    name: "web first cycle sprint chinese action",
+    file: "web",
+    text: "download-first-cycle-sprint-pack-zh",
+  },
+  {
+    name: "web first cycle sprint chinese endpoint",
+    file: "web",
+    text: "/operations/first-cycle-sprint-pack.zh.md",
   },
   {
     name: "web doctor review polish action",
@@ -3257,6 +3325,16 @@ const requiredSnippets = [
     name: "web today runbook endpoint",
     file: "web",
     text: "/operations/today-runbook.md",
+  },
+  {
+    name: "web today runbook chinese action",
+    file: "web",
+    text: "download-today-runbook-zh",
+  },
+  {
+    name: "web today runbook chinese endpoint",
+    file: "web",
+    text: "/operations/today-runbook.zh.md",
   },
   {
     name: "web asset rewrite apply action",

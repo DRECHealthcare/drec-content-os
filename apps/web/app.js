@@ -199,9 +199,12 @@ const uiZh = {
   "下载中文审批控制台": "下载中文审批控制台",
   "Download Rewrite Pack": "下载改写包",
   "Download Sprint Pack": "下载冲刺包",
+  "下载中文首轮冲刺包": "下载中文首轮冲刺包",
   "Download Sprint Tracker": "下载冲刺追踪表",
   "Download Today Runbook": "下载今日操作手册",
+  "下载中文今日执行手册": "下载中文今日执行手册",
   "Download First Cycle Handoff": "下载首轮交接包",
+  "下载中文首轮交接包": "下载中文首轮交接包",
   "Download Production Pack": "下载制作包",
   "Download Production Bridge": "下载制作交接桥",
   "下载中文制作交接桥接包": "下载中文制作交接桥接包",
@@ -4203,6 +4206,16 @@ document.getElementById("download-first-cycle-sprint-pack")?.addEventListener("c
   }
 });
 
+document.getElementById("download-first-cycle-sprint-pack-zh")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/first-cycle-sprint-pack.zh.md", "drec-first-cycle-sprint-pack-zh.md", "text/markdown");
+    message.textContent = "中文首轮冲刺包已下载。";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "请先设置访问 token。" : "无法下载中文首轮冲刺包。";
+  }
+});
+
 document.getElementById("download-first-cycle-sprint-tracker")?.addEventListener("click", async () => {
   const message = document.getElementById("media-message");
   try {
@@ -4223,6 +4236,16 @@ document.getElementById("download-first-cycle-handoff")?.addEventListener("click
   }
 });
 
+document.getElementById("download-first-cycle-handoff-zh")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/first-cycle-handoff.zh.md", "drec-first-cycle-handoff-pack-zh.md", "text/markdown");
+    message.textContent = "中文首轮交接包已下载。";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "请先设置访问 token。" : "无法下载中文首轮交接包。";
+  }
+});
+
 document.getElementById("download-today-runbook")?.addEventListener("click", async () => {
   const message = document.getElementById("media-message");
   try {
@@ -4230,6 +4253,16 @@ document.getElementById("download-today-runbook")?.addEventListener("click", asy
     message.textContent = "Today runbook downloaded.";
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download today runbook.";
+  }
+});
+
+document.getElementById("download-today-runbook-zh")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/today-runbook.zh.md", "drec-today-runbook-zh.md", "text/markdown");
+    message.textContent = "中文今日执行手册已下载。";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "请先设置访问 token。" : "无法下载中文今日执行手册。";
   }
 });
 

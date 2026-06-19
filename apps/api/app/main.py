@@ -2284,6 +2284,24 @@ async def chinese_operator_center_payload():
             "purpose": "查看第一条内容从审核到 Meta dry run 的整体状态。",
         },
         {
+            "stage": "今日执行手册",
+            "status": readiness.get("overall_status"),
+            "link": "/operations/today-runbook.zh.md",
+            "purpose": "把今天该做的安全步骤排成一条中文执行路线。",
+        },
+        {
+            "stage": "首轮冲刺包",
+            "status": "manual_cycle_in_progress",
+            "link": "/operations/first-cycle-sprint-pack.zh.md",
+            "purpose": "把医生审核、制作回复、排程前检查放进同一个中文冲刺包。",
+        },
+        {
+            "stage": "首轮交接包",
+            "status": "manual_cycle_in_progress",
+            "link": "/operations/first-cycle-handoff.zh.md",
+            "purpose": "从草稿素材走到人工发布交接的中文总览。",
+        },
+        {
             "stage": "素材审核",
             "status": (stage_lookup.get("asset_review") or {}).get("status"),
             "link": "/operations/asset-review-session.zh.md",
@@ -2364,6 +2382,9 @@ async def chinese_operator_center_payload():
         },
         "links": {
             "首次发布准备": "/operations/first-publish-readiness.zh.md",
+            "今日执行手册": "/operations/today-runbook.zh.md",
+            "首轮冲刺包": "/operations/first-cycle-sprint-pack.zh.md",
+            "首轮交接包": "/operations/first-cycle-handoff.zh.md",
             "素材审核": "/operations/asset-review-session.zh.md",
             "医生审核桥接": "/operations/doctor-review-bridge.zh.md",
             "医生回复收件箱": "/operations/doctor-reply-inbox-pack.zh.md",
@@ -8515,6 +8536,76 @@ async def operations_first_cycle_handoff_markdown(_: None = Depends(require_acce
     )
 
 
+@app.get("/operations/first-cycle-handoff.zh.md")
+async def operations_first_cycle_handoff_markdown_zh(_: None = Depends(require_access_token)):
+    payload = await first_cycle_handoff_payload()
+    generated_at = datetime.now(timezone.utc).isoformat()
+    summary = payload.get("summary") or {}
+    recommended = payload.get("recommended_step") or {}
+    lines = [
+        "# DREC 首轮交接包",
+        "",
+        f"- 生成时间：{generated_at}",
+        f"- 当前模式：{payload.get('mode')}",
+        f"- 建议下一步：{recommended.get('label') or '暂无'}",
+        f"- 做法：{recommended.get('action') or '按页面提示继续'}",
+        "",
+        "这个包用于把第一轮内容从草稿素材推进到人工发布交接。它只读，不会自动批准、进队列、排程、发布或发送 Meta 请求。",
+        "",
+        "## 当前数字",
+        "",
+        f"- 活跃素材：{summary.get('active_assets')}",
+        f"- 可安全改写候选：{summary.get('safe_rewrite_candidates')}",
+        f"- 可人工审核批准：{summary.get('can_approve_after_human_review')}",
+        f"- 可加入队列：{summary.get('ready_to_queue')}",
+        f"- 队列总数：{summary.get('queue_total')}",
+        f"- 可交接发布：{summary.get('handoff_ready')}",
+        "",
+        "## 安全步骤",
+        "",
+    ]
+    for index, stage in enumerate(payload.get("stages") or [], start=1):
+        lines.extend(
+            [
+                f"### {index}. {stage.get('label')}",
+                "",
+                f"- 状态：{stage.get('status')}",
+                f"- 说明：{stage.get('detail')}",
+                f"- 动作：{stage.get('action')}",
+                f"- 页面：{stage.get('screen')}",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## 安全线",
+            "",
+            "- 安全改写只改草稿文案，不等于批准。",
+            "- 只有真人确认中文医学含义和安全表达后，才能批准。",
+            "- 只有 approved 且 compliance_status clear 的素材才能进入队列。",
+            "- Meta 正式发布保持关闭，直到凭证和安全门槛都准备好。",
+            "",
+            "## 中文相关包",
+            "",
+            "- 今日执行手册：`/operations/today-runbook.zh.md`",
+            "- 中文素材审核会话：`/operations/asset-review-session.zh.md`",
+            "- 中文医生审核桥接：`/operations/doctor-review-bridge.zh.md`",
+            "- 中文医生回复收件箱：`/operations/doctor-reply-inbox-pack.zh.md`",
+            "- 中文审批控制台：`/operations/approval-cockpit.zh.md`",
+            "- 中文制作交接桥接：`/operations/production-handoff-bridge.zh.md`",
+            "- 中文制作回复收件箱：`/operations/production-reply-inbox-pack.zh.md`",
+            "- 中文审核到排程包：`/operations/review-to-schedule-pack.zh.md`",
+            "- 中文发布交接包：`/operations/publishing-handoff.zh.md`",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-first-cycle-handoff-pack-zh.md"'},
+    )
+
+
 async def first_cycle_sprint_pack_payload():
     doctor = await doctor_approval_request_payload()
     production = await post_approval_production_payload()
@@ -8669,6 +8760,95 @@ async def operations_first_cycle_sprint_pack_markdown(_: None = Depends(require_
         "\n".join(lines),
         media_type="text/markdown",
         headers={"Content-Disposition": 'attachment; filename="drec-first-cycle-sprint-pack.md"'},
+    )
+
+
+@app.get("/operations/first-cycle-sprint-pack.zh.md")
+async def operations_first_cycle_sprint_pack_markdown_zh(_: None = Depends(require_access_token)):
+    payload = await first_cycle_sprint_pack_payload()
+    generated_at = datetime.now(timezone.utc).isoformat()
+    lines = [
+        "# DREC 首轮冲刺包",
+        "",
+        f"- 生成时间：{generated_at}",
+        f"- 可送医生审核：{payload.get('ready_for_doctor_review')}",
+        f"- 等待批准：{payload.get('waiting_approval')}",
+        f"- 需要素材/设计：{payload.get('needs_media')}",
+        f"- 可排程：{payload.get('ready_to_schedule')}",
+        "",
+        "这个包用于把当前的医生审核、制作素材、排程前检查集中到一轮冲刺里。它只读，不会自动批准、加素材、进队列、排程、发布或发送 Meta 请求。",
+        "",
+        "## 操作步骤",
+        "",
+        "- 先把医生审核内容发给医生。",
+        "- 收到医生回复后，贴到 Doctor Reply Text，先 Preview 再 Import。",
+        "- 医生批准后，把制作任务发给设计/制作。",
+        "- 收到设计/制作回复后，贴到 Production Reply Text，先 Preview 再 Import。",
+        "- 最后跑排程前检查，再进入队列审核和排程。",
+        "",
+        "## 冲刺项目",
+        "",
+    ]
+    items = payload.get("sprint_items") or []
+    if not items:
+        lines.extend(["- 目前没有冲刺项目。请先生成或审核草稿素材。", ""])
+    for index, item in enumerate(items, start=1):
+        lines.extend(
+            [
+                f"### {index}. {item.get('topic') or '未命名内容'}",
+                "",
+                f"- Asset ID：`{item.get('asset_id')}`",
+                f"- 频道 / 格式：{item.get('channel')} / {item.get('format')}",
+                "",
+                "给医生审核的文案：",
+                "",
+                item.get("copy_to_review") or "暂无文案。",
+                "",
+                "医生回复模板：",
+                "",
+                "```",
+                item.get("doctor_reply_template") or "",
+                "```",
+                "",
+                "医生批准后的制作任务：",
+                "",
+                f"- 任务：{item.get('production_task')}",
+                f"- 视觉方向：{item.get('visual_direction') or '使用 DREC 安全教育视觉风格。'}",
+                f"- 模板：{item.get('template_suggestion') or '使用最接近的 Template Studio 版式。'}",
+                f"- 授权检查：{item.get('rights_check') or '只使用已批准、授权、自有或已同意的素材。'}",
+                "",
+                "制作回复模板：",
+                "",
+                "```",
+                item.get("production_reply_template") or "",
+                "```",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## 安全线",
+            "",
+            "- 本冲刺包只读，不会触发批准、素材导入、排程或发布。",
+            "- 医生回复必须先预览再导入。",
+            "- 制作回复只处理媒体/设计链接，不代表医疗批准。",
+            "- 排程必须等人工批准、安全 clear、素材/设计完成和队列审核都通过。",
+            "",
+            "## 中文相关包",
+            "",
+            "- 中文医生审核桥接：`/operations/doctor-review-bridge.zh.md`",
+            "- 中文医生回复收件箱：`/operations/doctor-reply-inbox-pack.zh.md`",
+            "- 中文审批控制台：`/operations/approval-cockpit.zh.md`",
+            "- 中文制作交接桥接：`/operations/production-handoff-bridge.zh.md`",
+            "- 中文制作回复收件箱：`/operations/production-reply-inbox-pack.zh.md`",
+            "- 中文审核到排程包：`/operations/review-to-schedule-pack.zh.md`",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-first-cycle-sprint-pack-zh.md"'},
     )
 
 
@@ -8959,6 +9139,97 @@ async def operations_today_runbook_markdown(_: None = Depends(require_access_tok
         "\n".join(lines),
         media_type="text/markdown",
         headers={"Content-Disposition": 'attachment; filename="drec-today-runbook.md"'},
+    )
+
+
+@app.get("/operations/today-runbook.zh.md")
+async def operations_today_runbook_markdown_zh(_: None = Depends(require_access_token)):
+    payload = await today_runbook_payload()
+    summary = payload.get("summary") or {}
+    action = payload.get("immediate_action") or {}
+    lines = [
+        "# DREC 今日执行手册",
+        "",
+        f"- 生成时间：{payload.get('generated_at')}",
+        f"- 当前总状态：{payload.get('overall_status')}",
+        "",
+        "这个手册是今天的中文操作地图。它只读，不会自动批准、进队列、排程、发布或发送 Meta 请求。",
+        "",
+        "## 现在先做什么",
+        "",
+        f"- 动作：{action.get('label')}",
+        f"- 页面：{action.get('screen')}",
+        f"- 做法：{action.get('action')}",
+        "",
+        "## 当前快照",
+        "",
+        f"- 现在可测试：{'可以' if summary.get('can_test_now') else '还不可以'}",
+        f"- 可自动发布：{'可以' if summary.get('can_auto_publish') else '不可以'}",
+        f"- 可人工审核素材：{summary.get('assets_ready_for_human_review')}",
+        f"- 等待批准素材：{summary.get('assets_waiting_approval')}",
+        f"- 已批准、可制作/进队列：{summary.get('approved_ready_for_design_or_queue')}",
+        f"- 仍需素材/设计：{summary.get('production_needs_media')}",
+        f"- 可排程：{summary.get('ready_to_schedule')}",
+        f"- 排程阻碍：{summary.get('schedule_blocks')}",
+        f"- Meta 状态：{summary.get('meta_status')}",
+        f"- 安全状态：{summary.get('security_status')}",
+        f"- 自动化状态：{summary.get('automation_status')}",
+        "",
+        "## 今日关卡",
+        "",
+    ]
+    for gate in payload.get("gates") or []:
+        lines.extend(
+            [
+                f"### {gate.get('label')}",
+                "",
+                f"- 状态：{gate.get('status')}",
+                f"- 说明：{gate.get('detail')}",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## 推荐执行顺序",
+            "",
+            "- 先用中文医生审核桥接包，把待审核中文内容发给医生。",
+            "- 收到医生回复后，用中文医生回复收件箱贴回系统，先预览再导入。",
+            "- 用中文审批控制台确认哪条内容可以先批准。",
+            "- 批准后，用中文制作交接桥接包给设计/制作。",
+            "- 收到设计/制作回复后，用中文制作回复收件箱贴回系统，先预览再导入。",
+            "- 跑中文审核到排程包和排程检查。",
+            "- 到发布时间后，用中文发布交接包做人工发布或 Meta dry run。",
+            "- 发布后，用中文数据结算包导入表现数据，回流到学习。",
+            "",
+            "## 安全线",
+            "",
+            "- 检测器 clear 不等于真人批准。",
+            "- 制作/媒体完成不等于发布批准。",
+            "- 医疗内容必须保持人工/医生审核。",
+            "- Meta 正式发布保持关闭，直到 Meta 和安全门槛都准备好。",
+            "",
+            "## 中文下载链接",
+            "",
+            "- 中文操作中心：`/operations/chinese-operator-center.md`",
+            "- 中文首次发布准备包：`/operations/first-publish-readiness.zh.md`",
+            "- 中文首轮冲刺包：`/operations/first-cycle-sprint-pack.zh.md`",
+            "- 中文首轮交接包：`/operations/first-cycle-handoff.zh.md`",
+            "- 中文素材审核会话：`/operations/asset-review-session.zh.md`",
+            "- 中文医生审核桥接：`/operations/doctor-review-bridge.zh.md`",
+            "- 中文医生回复收件箱：`/operations/doctor-reply-inbox-pack.zh.md`",
+            "- 中文审批控制台：`/operations/approval-cockpit.zh.md`",
+            "- 中文制作交接桥接：`/operations/production-handoff-bridge.zh.md`",
+            "- 中文制作回复收件箱：`/operations/production-reply-inbox-pack.zh.md`",
+            "- 中文审核到排程包：`/operations/review-to-schedule-pack.zh.md`",
+            "- 中文发布交接包：`/operations/publishing-handoff.zh.md`",
+            "- 中文数据结算包：`/operations/metrics-closeout-pack.zh.md`",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-today-runbook-zh.md"'},
     )
 
 
