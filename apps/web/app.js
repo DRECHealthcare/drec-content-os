@@ -481,6 +481,81 @@ Object.assign(uiZh, {
   "Set the access token to load the first cycle handoff.": "请先设置访问码，才能读取首轮交接。",
   "Set the access token to load the approval cockpit.": "请先设置访问码，才能读取审批控制台。",
   "Set the access token to load the production pack.": "请先设置访问码，才能读取制作包。",
+  "No first asset is available for doctor review yet.": "目前还没有可交给医生审核的首发内容。",
+  "No first asset is available for doctor reply import yet.": "目前还没有可导入医生回复的首发内容。",
+  "Preparing first publish media pack...": "正在准备首发媒体制作包...",
+  "First publish media pack downloaded.": "首发媒体制作包已下载。",
+  "Could not download first publish media pack.": "无法下载首发媒体制作包。",
+  "Preparing first publish PNG files...": "正在准备首发 PNG 图片包...",
+  "First publish PNG design ZIP downloaded.": "首发 PNG 图片包已下载。",
+  "Could not download first publish PNG ZIP.": "无法下载首发 PNG 图片包。",
+  "Preparing first publish SVG files...": "正在准备首发 SVG 设计包...",
+  "First publish SVG design ZIP downloaded.": "首发 SVG 设计包已下载。",
+  "Could not download first publish SVG ZIP.": "无法下载首发 SVG 设计包。",
+  "Advancing": "推进中",
+  "Checking the next safe first-publish step...": "正在检查首发流程的下一步安全动作...",
+  "First publish path advanced.": "首发流程已推进。",
+  "First publish path needs a manual step.": "首发流程还需要一个人工步骤。",
+  "Could not advance the first publish path.": "无法推进首发流程。",
+  "No queue decision template is available yet.": "目前还没有队列审核模板。",
+  "No first asset decision template is available yet.": "目前还没有首发素材审核模板。",
+  "First publish readiness downloaded.": "首次发布准备包已下载。",
+  "Could not download first publish readiness.": "无法下载首次发布准备包。",
+  "Could not run risk audit.": "无法运行风险检查。",
+  "Could not download snapshot.": "无法下载快照。",
+  "Could not download backup pack.": "无法下载备份包。",
+  "Could not download pipeline board.": "无法下载流程看板。",
+  "Could not download audit trail.": "无法下载审计记录。",
+  "Could not download launch evidence.": "无法下载上线证据。",
+  "Could not download first test kit.": "无法下载首次测试包。",
+  "Could not download test tracker.": "无法下载测试追踪表。",
+  "Could not download manual QA report.": "无法下载人工 QA 报告。",
+  "Could not download access control pack.": "无法下载访问控制包。",
+  "Could not download service role install pack.": "无法下载服务角色安装包。",
+  "Could not download RLS hardening plan.": "无法下载 RLS 加固计划。",
+  "Could not download daily ops checklist.": "无法下载每日运营清单。",
+  "Could not check Meta readiness.": "无法检查 Meta 准备状态。",
+  "Could not load Creative Studio.": "无法读取创意工作室。",
+  "Could not load Sense Brief.": "无法读取洞察简报。",
+  "Could not load Ads Planning.": "无法读取广告计划。",
+  "Could not load Template Studio.": "无法读取模板工作室。",
+  "Could not load Video Studio.": "无法读取视频工作室。",
+  "Could not update media status.": "无法更新媒体状态。",
+  "Could not create media link.": "无法创建媒体链接。",
+  "Could not apply safe rewrites.": "无法套用安全改写。",
+  "Could not apply rewrite.": "无法套用改写。",
+  "Could not suggest a slot.": "无法建议发布时间。",
+  "Could not cancel queue item.": "无法取消队列项目。",
+  "Could not download Knowledge Base CSV.": "无法下载知识库 CSV。",
+  "Could not generate weekly plan.": "无法生成每周内容计划。",
+  "Could not load learning topics.": "无法读取学习主题。",
+  "Could not download plan CSV.": "无法下载计划 CSV。",
+  "Could not download brief-to-asset pack.": "无法下载简报转素材包。",
+  "Could not save all draft assets.": "无法保存全部草稿素材。",
+  "Could not archive drafted briefs.": "无法归档已生成内容。",
+  "Could not save draft asset.": "无法保存草稿素材。",
+  "Could not upload media.": "无法上传媒体。",
+  "Could not register media.": "无法登记媒体。",
+  "Could not save composer draft.": "无法保存文案草稿。",
+  "Could not attach media/design.": "无法挂载媒体/设计素材。",
+  "Could not add asset to queue.": "无法把素材加入队列。",
+  "Could not save queue item.": "无法保存队列项目。",
+  "Safety check failed.": "安全检查失败。",
+  "Could not build handoff.": "无法生成交接包。",
+  "Could not download calendar.": "无法下载日历。",
+  "Could not dry run Facebook worker.": "无法测试 Facebook 发布任务。",
+  "Could not dry run Instagram worker.": "无法测试 Instagram 发布任务。",
+  "Could not dry run scheduled publishing.": "无法测试自动发布任务。",
+  "Could not dry run Meta metrics.": "无法测试 Meta 数据抓取。",
+  "Could not schedule approved items.": "无法排程已批准项目。",
+  "Could not download review log.": "无法下载审核记录。",
+  "Could not download editorial QA pack.": "无法下载编辑 QA 包。",
+  "Could not log learning.": "无法记录学习。",
+  "Could not load a published post.": "无法读取已发布帖子。",
+  "Could not save raw metrics.": "无法保存原始数据。",
+  "Could not save and roll up metrics.": "无法保存并汇总数据。",
+  "Could not roll up metrics.": "无法汇总数据。",
+  "Could not save result.": "无法保存结果。",
 });
 
 function currentLanguage() {
@@ -492,7 +567,9 @@ function isZh() {
 }
 
 function translateText(text) {
-  if (!isZh()) return text;
+  if (!isZh()) {
+    return Object.entries(uiZh).find(([, zh]) => zh === text)?.[0] || text;
+  }
   return uiZh[text] || text;
 }
 
@@ -523,6 +600,14 @@ function translateDirectTextNodes(element) {
     if (translated === trimmed) return;
     node.textContent = node.textContent.replace(trimmed, translated);
   });
+}
+
+function translateTextNode(node) {
+  if (node.nodeType !== Node.TEXT_NODE) return;
+  const trimmed = node.textContent.trim();
+  if (!trimmed) return;
+  const translated = translateText(trimmed);
+  if (translated !== trimmed) node.textContent = node.textContent.replace(trimmed, translated);
 }
 
 function translateTree(root = document) {
@@ -722,7 +807,15 @@ new MutationObserver((mutations) => {
   if (!isZh() || languageObserverPaused) return;
   languageObserverPaused = true;
   for (const mutation of mutations) {
+    if (mutation.type === "characterData") {
+      translateTextNode(mutation.target);
+      continue;
+    }
     mutation.addedNodes.forEach((node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        translateTextNode(node);
+        return;
+      }
       if (node.nodeType !== Node.ELEMENT_NODE) return;
       translateTree(node);
       if (node.matches?.("main h2,main h3,main h4,main p,main span,main strong,main small,main label,main button,main li,main option,aside .loop-note")) {
@@ -733,7 +826,7 @@ new MutationObserver((mutations) => {
     });
   }
   languageObserverPaused = false;
-}).observe(document.body, { childList: true, subtree: true });
+}).observe(document.body, { childList: true, characterData: true, subtree: true });
 
 document.getElementById("token-input").addEventListener("keydown", (event) => {
   if (event.key === "Enter") saveAccessTokenFromPanel();

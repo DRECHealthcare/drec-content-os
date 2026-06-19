@@ -3,128 +3,128 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>DREC Content OS</title>
+  <title>DREC 内容系统</title>
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
   <aside>
     <div class="brand">
       <span>逆转医学 · DREC</span>
-      <strong>Content OS</strong>
+      <strong>内容系统</strong>
     </div>
     <nav>
-      <button class="active" data-screen="dashboard">Dashboard</button>
-      <button data-screen="insights">Insight Inbox</button>
-      <button data-screen="plan">Weekly Plan</button>
-      <button data-screen="compose">Create Post</button>
-      <button data-screen="creative">Creative Studio</button>
-      <button data-screen="templates">Template Studio</button>
-      <button data-screen="video">Video Studio</button>
-      <button data-screen="assets">Assets</button>
-      <button data-screen="review">Review Queue</button>
-      <button data-screen="scheduler">Scheduler</button>
-      <button data-screen="meta">Meta Setup</button>
-      <button data-screen="outcomes">Performance</button>
-      <button data-screen="learning">Learning</button>
-      <button data-screen="kb">Knowledge Base</button>
+      <button class="active" data-screen="dashboard">总览</button>
+      <button data-screen="insights">洞察收件箱</button>
+      <button data-screen="plan">每周内容计划</button>
+      <button data-screen="compose">创建帖子</button>
+      <button data-screen="creative">创意工作室</button>
+      <button data-screen="templates">模板工作室</button>
+      <button data-screen="video">视频工作室</button>
+      <button data-screen="assets">素材与内容资产</button>
+      <button data-screen="review">审核队列</button>
+      <button data-screen="scheduler">排程</button>
+      <button data-screen="meta">Meta 设置</button>
+      <button data-screen="outcomes">表现数据</button>
+      <button data-screen="learning">学习复盘</button>
+      <button data-screen="kb">知识库</button>
     </nav>
-    <div class="loop-note">Stage 1: Thin Core + Publish/Sense rails</div>
+    <div class="loop-note">第 1 阶段：核心流程 + 发布/洞察轨道</div>
   </aside>
 
   <main>
     <header>
-      <h1 id="title">Dashboard</h1>
-      <span>Week of Mon 15 Jun 2026 · MYT</span>
+      <h1 id="title">总览</h1>
+      <span>2026 年 6 月 15 日这一周 · 马来西亚时间</span>
       <div id="token-panel" class="token-panel" hidden>
-        <input id="token-input" type="password" placeholder="Access token">
-        <input id="actor-input" type="text" placeholder="Actor name">
-        <label class="token-remember"><input id="token-remember" type="checkbox"> Remember</label>
-        <button id="token-save" type="button">Save</button>
-        <button id="token-clear" type="button">Clear</button>
+        <input id="token-input" type="password" placeholder="访问码">
+        <input id="actor-input" type="text" placeholder="操作者姓名">
+        <label class="token-remember"><input id="token-remember" type="checkbox"> 记住</label>
+        <button id="token-save" type="button">保存</button>
+        <button id="token-clear" type="button">清除</button>
       </div>
-      <button id="language-toggle" class="token-button" type="button">中文</button>
-      <button id="token-button" class="token-button" type="button">Access</button>
+      <button id="language-toggle" class="token-button" type="button">English</button>
+      <button id="token-button" class="token-button" type="button">访问</button>
     </header>
 
     <section id="dashboard" class="screen active">
       <div class="card wide">
-        <h2>This Week Through The Loop</h2>
+        <h2>本周内容循环</h2>
         <div class="loop">
-          <div><b>SENSE</b><span>metrics ready</span></div>
-          <div><b>DECIDE</b><span>brain next</span></div>
-          <div><b>CREATE</b><span>static engine next</span></div>
-          <div><b>REVIEW</b><span>human gate</span></div>
-          <div><b>PUBLISH</b><span>queue foundation</span></div>
-          <div><b>LEARN</b><span>feedback spine</span></div>
+          <div><b>洞察</b><span>数据已准备</span></div>
+          <div><b>判断</b><span>下一步判断</span></div>
+          <div><b>创作</b><span>下一步制作静态素材</span></div>
+          <div><b>审核</b><span>人工审核门槛</span></div>
+          <div><b>发布</b><span>发布队列基础</span></div>
+          <div><b>学习</b><span>反馈学习主线</span></div>
         </div>
       </div>
       <div class="grid">
-        <article class="card"><h2>Publish Queue</h2><p id="queue-count">Waiting for API</p></article>
-        <article class="card"><h2>Content Briefs</h2><p id="brief-count">Waiting for API</p></article>
-        <article class="card"><h2>Ready Assets</h2><p id="asset-count">Waiting for API</p></article>
-        <article class="card"><h2>Media Library</h2><p id="media-count">Waiting for API</p></article>
-        <article class="card"><h2>Learning Loop</h2><p id="outcome-count">Waiting for API</p></article>
-        <article class="card"><h2>Launch Readiness</h2><p id="launch-count">Waiting for API</p></article>
-        <article class="card"><h2>Security Gate</h2><p id="security-count">Waiting for API</p></article>
-        <article class="card"><h2>Access Role</h2><p id="access-role-count">Waiting for API</p></article>
-        <article class="card"><h2>Automation Gate</h2><p id="automation-count">Waiting for API</p></article>
+        <article class="card"><h2>发布队列</h2><p id="queue-count">等待系统连接</p></article>
+        <article class="card"><h2>内容简报</h2><p id="brief-count">等待系统连接</p></article>
+        <article class="card"><h2>可发布素材</h2><p id="asset-count">等待系统连接</p></article>
+        <article class="card"><h2>媒体库</h2><p id="media-count">等待系统连接</p></article>
+        <article class="card"><h2>学习循环</h2><p id="outcome-count">等待系统连接</p></article>
+        <article class="card"><h2>上线准备</h2><p id="launch-count">等待系统连接</p></article>
+        <article class="card"><h2>安全门槛</h2><p id="security-count">等待系统连接</p></article>
+        <article class="card"><h2>访问权限</h2><p id="access-role-count">等待系统连接</p></article>
+        <article class="card"><h2>自动化门槛</h2><p id="automation-count">等待系统连接</p></article>
       </div>
       <div class="card wide workflow-card">
         <div class="workflow-head">
           <div>
-            <h2>Next Best Action</h2>
-            <p class="section-note">Follow the first open step to move one post through the full system.</p>
+            <h2>下一步最佳动作</h2>
+            <p class="section-note">按第一个未完成步骤，把一条内容走完整个系统。</p>
           </div>
-          <button id="refresh-workflow" type="button">Refresh</button>
+          <button id="refresh-workflow" type="button">刷新</button>
         </div>
         <div id="workflow-next" class="workflow-next">
-          <p class="status-note">Waiting for API</p>
+          <p class="status-note">等待系统连接</p>
         </div>
         <div id="launch-readiness" class="learning-grid"></div>
       </div>
       <div class="card wide test-path-card">
         <div class="workflow-head">
           <div>
-            <h2>Test Path</h2>
-            <p class="section-note">Use this once to confirm the full manual workflow is working end to end.</p>
+            <h2>测试路径</h2>
+            <p class="section-note">先用一次，确认完整人工流程可以从头跑到尾。</p>
           </div>
           <div class="form-actions">
-            <button id="copy-next-test-step" type="button">Copy Next Step</button>
-            <button id="copy-test-path" type="button">Copy Test Path</button>
-            <button id="run-risk-audit" type="button">Run Risk Audit</button>
-            <button id="download-daily-ops" type="button">Download Daily Ops</button>
-            <button id="download-first-publish-readiness" type="button">Download First Publish Readiness</button>
+            <button id="copy-next-test-step" type="button">复制下一步</button>
+            <button id="copy-test-path" type="button">复制测试路径</button>
+            <button id="run-risk-audit" type="button">运行风险检查</button>
+            <button id="download-daily-ops" type="button">下载每日运营包</button>
+            <button id="download-first-publish-readiness" type="button">下载首次发布准备包</button>
             <button id="download-first-publish-readiness-zh" type="button">下载中文首次发布准备包</button>
             <button id="download-chinese-operator-center" type="button">下载中文操作中心</button>
-            <button id="download-cycle-command-center" type="button">Download Command Center</button>
-            <button id="download-cycle-evidence-ledger" type="button">Download Evidence Ledger</button>
-            <button id="download-external-setup-board" type="button">Download Setup Board</button>
-            <button id="download-first-test-kit" type="button">Download First Test Kit</button>
-            <button id="download-test-run-tracker" type="button">Download Test Tracker</button>
-            <button id="download-manual-cycle-qa" type="button">Download Manual QA</button>
-            <button id="download-access-pack" type="button">Download Access Pack</button>
-            <button id="download-service-role-pack" type="button">Download Service Role Pack</button>
-            <button id="download-rls-plan" type="button">Download RLS Plan</button>
-            <button id="download-snapshot" type="button">Download Snapshot</button>
-            <button id="download-backup-pack" type="button">Download Backup Pack</button>
-            <button id="download-pipeline-board" type="button">Download Pipeline Board</button>
-            <button id="download-audit-trail" type="button">Download Audit Trail</button>
-            <button id="download-launch-evidence" type="button">Download Launch Evidence</button>
-            <button id="download-operator-pack" type="button">Download Operator Pack</button>
+            <button id="download-cycle-command-center" type="button">下载指挥中心</button>
+            <button id="download-cycle-evidence-ledger" type="button">下载证据记录</button>
+            <button id="download-external-setup-board" type="button">下载设置清单</button>
+            <button id="download-first-test-kit" type="button">下载首次测试包</button>
+            <button id="download-test-run-tracker" type="button">下载测试追踪表</button>
+            <button id="download-manual-cycle-qa" type="button">下载人工 QA 包</button>
+            <button id="download-access-pack" type="button">下载访问权限包</button>
+            <button id="download-service-role-pack" type="button">下载服务角色包</button>
+            <button id="download-rls-plan" type="button">下载 RLS 计划</button>
+            <button id="download-snapshot" type="button">下载快照</button>
+            <button id="download-backup-pack" type="button">下载备份包</button>
+            <button id="download-pipeline-board" type="button">下载流程看板</button>
+            <button id="download-audit-trail" type="button">下载审计记录</button>
+            <button id="download-launch-evidence" type="button">下载上线证据</button>
+            <button id="download-operator-pack" type="button">下载操作员包</button>
           </div>
         </div>
         <ol id="test-path-list" class="test-path-list">
-          <li><strong>Save Asset</strong><span>Open Weekly Plan and save one brief as an asset.</span></li>
-          <li><strong>Safety Clear</strong><span>Open Assets, mark the asset Safety Clear, then Approve.</span></li>
-          <li><strong>Add To Queue</strong><span>Add that approved clear asset to the publishing queue.</span></li>
-          <li><strong>Review Approve</strong><span>Open Review Queue and approve the queue item.</span></li>
-          <li><strong>Schedule</strong><span>Open Scheduler, choose a planned time, and save the item.</span></li>
-          <li><strong>Build Handoff</strong><span>Generate the handoff copy and check it lists one ready item.</span></li>
-          <li><strong>Record Published</strong><span>After manual posting, paste the Meta post ID from the handoff ready item.</span></li>
-          <li><strong>Save & Roll Up</strong><span>Add metrics under Performance, then save and roll them into learning.</span></li>
-          <li><strong>Build Report</strong><span>Open Learning and build the weekly report.</span></li>
-          <li><strong>Use Topics</strong><span>Send learning recommendations back into Weekly Plan.</span></li>
-          <li><strong>Meta Setup</strong><span>Keep Meta in dry-run mode until real credentials and permissions are approved.</span></li>
+          <li><strong>保存内容资产</strong><span>打开每周内容计划，把一条简报保存为内容资产。</span></li>
+          <li><strong>安全通过</strong><span>打开素材页，把该内容标记为安全通过，然后批准。</span></li>
+          <li><strong>加入队列</strong><span>把这条已批准、已安全通过的内容加入发布队列。</span></li>
+          <li><strong>审核批准</strong><span>打开审核队列，批准这条队列项目。</span></li>
+          <li><strong>排程</strong><span>打开排程，选择计划发布时间并保存。</span></li>
+          <li><strong>生成交接内容</strong><span>生成发布交接内容，并确认里面列出一条可发布项目。</span></li>
+          <li><strong>记录已发布</strong><span>人工发布后，把 Meta 帖子 ID 粘贴回系统。</span></li>
+          <li><strong>保存并汇总</strong><span>在表现数据里填入数据，然后保存并汇总到学习系统。</span></li>
+          <li><strong>生成报告</strong><span>打开学习复盘，生成周报。</span></li>
+          <li><strong>使用推荐主题</strong><span>把学习建议送回每周内容计划。</span></li>
+          <li><strong>Meta 设置</strong><span>在真实凭证和权限确认前，Meta 保持测试模式。</span></li>
         </ol>
         <div id="test-path-message" class="status-note"></div>
         <div id="first-publish-readiness" class="learning-grid"></div>
