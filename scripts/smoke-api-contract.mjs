@@ -39,6 +39,7 @@ const requiredRoutes = [
   "POST /operations/first-publish-advance",
   "POST /operations/first-publish-attach-generated-media",
   "POST /operations/first-publish-approve-current-asset",
+  "POST /operations/first-publish-approve-current-queue",
   "POST /operations/scheduler-heartbeat",
   "GET /operations/scheduler-activation-pack.md",
   "GET /operations/scheduler-health",
@@ -1396,6 +1397,21 @@ const requiredSnippets = [
     name: "first publish approve current asset separate gates",
     file: "main",
     text: "Media attachment, queueing, scheduling, and publishing remain separate gates.",
+  },
+  {
+    name: "first publish approve current queue route",
+    file: "main",
+    text: "operations_first_publish_approve_current_queue",
+  },
+  {
+    name: "first publish approve current queue media guard",
+    file: "main",
+    text: "Media/design URLs are required before queue review approval.",
+  },
+  {
+    name: "first publish approve current queue separate gates",
+    file: "main",
+    text: "Scheduling and publishing remain separate gates.",
   },
   {
     name: "first publish generated media safety gate",
@@ -2961,6 +2977,21 @@ const requiredSnippets = [
     name: "web first publish approve current asset confirm",
     file: "web",
     text: "你已经看过首发图片预览和文案",
+  },
+  {
+    name: "web first publish approve current queue action",
+    file: "web",
+    text: "data-approve-current-first-queue",
+  },
+  {
+    name: "web first publish approve current queue endpoint",
+    file: "web",
+    text: "/operations/first-publish-approve-current-queue?dry_run=false",
+  },
+  {
+    name: "web first publish approve current queue confirm",
+    file: "web",
+    text: "你已经看过当前首发队列项目的文案、媒体和排程适配",
   },
   {
     name: "web first publish doctor reply template",

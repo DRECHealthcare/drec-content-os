@@ -2781,6 +2781,102 @@ async def operations_first_publish_approve_current_asset(
     return result
 
 
+@app.post("/operations/first-publish-approve-current-queue")
+async def operations_first_publish_approve_current_queue(
+    dry_run: bool = True,
+    session: dict = Depends(require_review_access),
+):
+    payload = await first_publish_readiness_payload()
+    candidates = payload.get("candidates") or {}
+    item = candidates.get("review_needed_queue") or candidates.get("review_approved_queue")
+    if not item:
+        return {
+            "dry_run": dry_run,
+            "approved": False,
+            "action": "no_queue_item",
+            "message": "No current first-publish queue item is available for review approval.",
+            "readiness": payload,
+        }
+    latest_feedback = item.get("latest_feedback") or {}
+    if latest_feedback.get("action") == "approve":
+        return {
+            "dry_run": dry_run,
+            "approved": False,
+            "action": "already_review_approved",
+            "queue_id": item.get("id"),
+            "message": "Current first-publish queue item is already review-approved.",
+            "readiness": payload,
+        }
+    compliance = check_text(item.get("caption") or "")
+    media_count = len([url for url in item.get("media_urls") or [] if url])
+    result = {
+        "dry_run": dry_run,
+        "approved": False,
+        "action": "approve_current_first_publish_queue",
+        "queue_id": item.get("id"),
+        "asset_id": item.get("asset_id"),
+        "compliance": compliance,
+        "media_count": media_count,
+        "message": "Ready for explicit queue review approval if the reviewer confirms caption, media, and timing fit.",
+        "safety": [
+            "This operation requires review access and an explicit button click.",
+            "It only records approval feedback for the current first-publish queue item.",
+            "It refuses flagged medical copy and queue items without required media.",
+            "Scheduling and publishing remain separate gates.",
+        ],
+    }
+    if item.get("status") != "draft":
+        result.update(
+            {
+                "action": "blocked_by_status",
+                "message": "Only draft queue items can receive review approval.",
+            }
+        )
+        return result
+    if item.get("compliance_status") != "clear" or compliance.get("status") == "flagged":
+        result.update(
+            {
+                "action": "blocked_by_compliance",
+                "message": "Compliance check blocked this queue item; revise or reject it before approval.",
+            }
+        )
+        return result
+    if item.get("format") in {"carousel", "single", "story", "reel"} and media_count == 0:
+        result.update(
+            {
+                "action": "blocked_by_media",
+                "message": "Media/design URLs are required before queue review approval.",
+            }
+        )
+        return result
+    if dry_run:
+        result["planned"] = {
+            "queue_id": item.get("id"),
+            "feedback_action": "approve",
+            "next_gate": "schedule",
+        }
+        return result
+    feedback = FeedbackIn(
+        module="first_publish_queue_review",
+        ref_type="publish_queue",
+        ref_id=str(item.get("id")),
+        action="approve",
+        reason="Current first-publish queue item approved by explicit reviewer action.",
+        before_text=item.get("caption"),
+        tags=["first_publish_queue_review", *audit_tags(session)],
+    )
+    approved = await save_feedback(feedback)
+    result.update(
+        {
+            "approved": True,
+            "result": approved,
+            "message": "Current first-publish queue item review-approved. Scheduling and publishing remain separate gates.",
+            "after": await first_publish_readiness_payload(),
+        }
+    )
+    return result
+
+
 @app.get("/operations/first-publish-readiness")
 async def operations_first_publish_readiness(_: None = Depends(require_access_token)):
     return await first_publish_readiness_payload()

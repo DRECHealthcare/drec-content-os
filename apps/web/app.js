@@ -162,6 +162,7 @@ const uiZh = {
   "Copy Doctor Review": "复制医生审核文本",
   "Fill Doctor Reply Template": "填写医生回复模板",
   "Approve Current First Publish": "批准当前首发素材",
+  "Approve Current Queue Item": "批准当前队列项目",
   "Open Asset Review": "打开素材审核",
   "Download Chinese Pack": "下载中文包",
   "Download Media Pack": "下载媒体制作包",
@@ -515,6 +516,12 @@ Object.assign(uiZh, {
   "Current first-publish asset approved and safety clear. Media attachment, queueing, scheduling, and publishing remain separate gates.": "当前首发素材已批准并安全通过。挂载媒体、加入队列、排程和发布仍然是独立关卡。",
   "Compliance check flagged this asset; revise or reject it before approval.": "系统合规检查标记了这条素材；批准前请先修改或拒绝。",
   "Could not approve current first-publish asset.": "无法批准当前首发素材。",
+  "Approving current first-publish queue item...": "正在批准当前首发队列项目...",
+  "Current first-publish queue item review-approved. Scheduling and publishing remain separate gates.": "当前首发队列项目已审核批准。排程和发布仍然是独立关卡。",
+  "Current first-publish queue item was not approved.": "当前首发队列项目未被批准。",
+  "Compliance check blocked this queue item; revise or reject it before approval.": "合规检查阻挡了这条队列项目；批准前请先修改或拒绝。",
+  "Media/design URLs are required before queue review approval.": "队列审核批准前需要先有媒体/设计链接。",
+  "Could not approve current first-publish queue item.": "无法批准当前首发队列项目。",
   "No queue decision template is available yet.": "目前还没有队列审核模板。",
   "No first asset decision template is available yet.": "目前还没有首发素材审核模板。",
   "First publish readiness downloaded.": "首次发布准备包已下载。",
@@ -1271,6 +1278,7 @@ function renderFirstPublishReadiness(data) {
   const meta = data.meta || {};
   const candidates = data.candidates || {};
   const nextAsset = candidates.next_asset || {};
+  const currentQueueItem = candidates.review_needed_queue || candidates.review_approved_queue || {};
   const nextAssetMetadata = nextAsset.metadata || {};
   const nextAssetTopic = nextAssetMetadata.topic || nextAsset.title || nextAsset.brief_title || "No asset selected";
   const nextAssetStatus = [
@@ -1294,6 +1302,7 @@ function renderFirstPublishReadiness(data) {
         ${nextAsset.id ? `<button type="button" data-copy-first-asset-review>${escapeHtml(translateText("Copy Doctor Review"))}</button>` : ""}
         ${nextAsset.id ? `<button type="button" data-fill-first-doctor-reply>${escapeHtml(translateText("Fill Doctor Reply Template"))}</button>` : ""}
         ${nextAsset.id ? `<button type="button" data-approve-current-first-asset>${escapeHtml(translateText("Approve Current First Publish"))}</button>` : ""}
+        ${currentQueueItem.id ? `<button type="button" data-approve-current-first-queue>${escapeHtml(translateText("Approve Current Queue Item"))}</button>` : ""}
         ${hasDecisionCsv ? `<button type="button" data-fill-first-asset-decision>${escapeHtml(translateText("Fill Asset Decision CSV"))}</button>` : ""}
         <button type="button" data-open-first-asset-review>${escapeHtml(translateText("Open Asset Review"))}</button>
         <button type="button" data-download-first-publish-zh>${escapeHtml(translateText("Download Chinese Pack"))}</button>
@@ -1387,6 +1396,7 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
   const copyReviewButton = event.target.closest("[data-copy-first-asset-review]");
   const fillDoctorReplyButton = event.target.closest("[data-fill-first-doctor-reply]");
   const approveCurrentFirstAssetButton = event.target.closest("[data-approve-current-first-asset]");
+  const approveCurrentFirstQueueButton = event.target.closest("[data-approve-current-first-queue]");
   const openAssetReviewButton = event.target.closest("[data-open-first-asset-review]");
   const downloadZhButton = event.target.closest("[data-download-first-publish-zh]");
   const downloadMediaPackButton = event.target.closest("[data-download-first-media-pack]");
@@ -1398,7 +1408,7 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
   const copyQueueButton = event.target.closest("[data-copy-first-queue-decision]");
   const fillQueueButton = event.target.closest("[data-fill-first-queue-decision]");
   const advanceButton = event.target.closest("[data-advance-first-publish]");
-  if (!copyReviewButton && !fillDoctorReplyButton && !approveCurrentFirstAssetButton && !openAssetReviewButton && !downloadZhButton && !downloadMediaPackButton && !downloadCarouselPngZipButton && !downloadCarouselZipButton && !attachGeneratedMediaButton && !copyButton && !fillButton && !copyQueueButton && !fillQueueButton && !advanceButton) return;
+  if (!copyReviewButton && !fillDoctorReplyButton && !approveCurrentFirstAssetButton && !approveCurrentFirstQueueButton && !openAssetReviewButton && !downloadZhButton && !downloadMediaPackButton && !downloadCarouselPngZipButton && !downloadCarouselZipButton && !attachGeneratedMediaButton && !copyButton && !fillButton && !copyQueueButton && !fillQueueButton && !advanceButton) return;
   const container = document.getElementById("first-publish-readiness");
   const message = document.getElementById("test-path-message");
   if (copyReviewButton) {
@@ -1447,6 +1457,25 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
     } finally {
       approveCurrentFirstAssetButton.disabled = false;
       approveCurrentFirstAssetButton.textContent = originalText;
+    }
+    return;
+  }
+  if (approveCurrentFirstQueueButton) {
+    const confirmed = window.confirm("请确认：你已经看过当前首发队列项目的文案、媒体和排程适配，并同意把它标记为“队列审核批准”。系统不会自动排程或发布。");
+    if (!confirmed) return;
+    const originalText = approveCurrentFirstQueueButton.textContent;
+    approveCurrentFirstQueueButton.disabled = true;
+    approveCurrentFirstQueueButton.textContent = "Working";
+    if (message) message.textContent = "Approving current first-publish queue item...";
+    try {
+      const data = await fetchJson("/operations/first-publish-approve-current-queue?dry_run=false", { method: "POST" });
+      if (message) message.textContent = data.message || (data.approved ? "Current first-publish queue item review-approved." : "Current first-publish queue item was not approved.");
+      await Promise.all([loadFirstPublishReadiness(), loadLoopStatus(), loadPublishQueue(), loadPreScheduleGate()]);
+    } catch (error) {
+      if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not approve current first-publish queue item.";
+    } finally {
+      approveCurrentFirstQueueButton.disabled = false;
+      approveCurrentFirstQueueButton.textContent = originalText;
     }
     return;
   }
