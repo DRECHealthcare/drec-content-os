@@ -82,6 +82,10 @@ const uiZh = {
   "Security Gate": "安全门槛",
   "Access Role": "访问权限",
   "Automation Gate": "自动化门槛",
+  "Project Completion": "项目完成度",
+  "System Build": "系统建设",
+  "First Cycle": "首轮发布",
+  "Main blockers": "主要阻碍",
   "Next Best Action": "下一步最佳动作",
   "Follow the first open step to move one post through the full system.": "按第一个未完成步骤，把一条内容走完整个系统。",
   "Refresh": "刷新",
@@ -718,6 +722,9 @@ Object.assign(uiZh, {
   "Download Asset Pack": "下载素材包",
   "Save All Assets": "保存全部素材",
   "Archive Drafted": "归档已生成草稿",
+  "Refresh Notion Source": "刷新 Notion 真源",
+  "Download Notion Image Workflow": "下载 Notion 图片工作流",
+  "Download Notion Intake CSV": "下载 Notion 导入模板",
   "Review queued content and send approval signals into the learning spine.": "审核队列中的内容，并把批准信号送回学习主线。",
   "Schedule Approved": "排程已审核内容",
   "Download Pre-Schedule Gate": "下载排程前检查包",
@@ -767,6 +774,34 @@ Object.assign(uiZh, {
   "Time Slot": "发布时间段",
   "Entry title": "记录标题",
   "What should the system remember?": "系统应该记住什么？",
+  "Notion Monthly Source": "Notion 月度内容真源",
+  "Monthly refresh": "月度刷新",
+  "Unique ID": "唯一 ID",
+  "Image status rule": "图片状态规则",
+  "Caption boundary": "Caption 边界",
+  "Use Topic ID as the unique identifier; do not create duplicate topics.": "使用 Topic ID 作为唯一识别，不要创建重复主题。",
+  "Do not touch Caption Status unless acting as the caption AI.": "除非执行 caption AI 工作，否则不要动 Caption Status。",
+  "Core app and API are live": "核心应用和 API 已上线",
+  "Weekly planning": "每周计划",
+  "Draft asset pipeline": "草稿素材流程",
+  "Media preparation": "媒体准备",
+  "Review and approval path": "审核与批准流程",
+  "Scheduling and handoff path": "排程与交接流程",
+  "Learning loop": "学习循环",
+  "Meta test workers": "Meta 测试任务",
+  "Security hardening": "安全加固",
+  "First publish cycle": "首次发布循环",
+  "The protected API and browser UI are deployed and responding.": "受保护 API 和浏览器页面已部署并可回应。",
+  "Human approval is still required for the first clear asset.": "第一条安全素材仍需要人工/医生明确批准。",
+  "Queue and schedule are ready as tooling, but need an approved item.": "队列和排程工具已准备好，但还需要一条已批准内容。",
+  "Meta workers remain locked until controlled testing.": "Meta 任务会保持锁定，直到进入受控测试。",
+  "Add service-role key before strict RLS hardening.": "严格 RLS 加固前，需要先补 service-role key。",
+  "First cycle still needs approval, queueing, scheduling, and manual publishing evidence.": "首轮仍需要批准、加入队列、排程和人工发布证据。",
+  "First asset still needs explicit doctor or human approval.": "第一条素材仍需要医生或人工明确批准。",
+  "Publishing queue is empty until one approved clear asset is queued.": "发布队列还是空的；要先把一条已批准且安全通过的素材加入队列。",
+  "Supabase service-role key is missing, so strict RLS hardening is not complete.": "Supabase service-role key 还缺，所以严格 RLS 安全加固尚未完成。",
+  "No reviewed item has been scheduled yet.": "还没有已审核内容完成排程。",
+  "Run the final publish, metrics, and learning closeout evidence.": "完成最终发布、数据记录和学习收尾证据。",
 });
 
 function currentLanguage() {
@@ -929,7 +964,7 @@ document.querySelectorAll("nav button").forEach((button) => {
     document.getElementById("title").textContent = (isZh() ? titleMapZh : titleMapEn)[screen] || screen;
     if (screen === "insights") loadSenseBrief();
     if (screen === "insights") loadAdsPlanning();
-    if (screen === "plan") loadBriefs();
+    if (screen === "plan") Promise.all([loadBriefs(), loadNotionCarouselSource()]);
     if (screen === "creative") loadStyleLibrary();
     if (screen === "templates") loadTemplateStudio();
     if (screen === "video") loadVideoStudio();
@@ -989,6 +1024,7 @@ function refreshProtectedData() {
   loadLoopStatus();
   loadKb();
   loadBriefs();
+  loadNotionCarouselSource();
   loadAssets();
   loadMediaAssets();
   loadOutcomes();
@@ -1850,21 +1886,58 @@ function renderWorkflowNext(data) {
   const container = document.getElementById("workflow-next");
   if (!container) return;
   const steps = data.steps || workflowSteps(data);
+  const completion = data.completion || {};
+  const completionItems = completion.items || [];
+  const blockers = completion.blockers || [];
   const firstOpen = data.next_action || steps.find((step) => step.state === "open" && !step.optional) || steps.find((step) => step.state === "open") || steps[0];
   container.innerHTML = `
+    ${completion.percent !== undefined ? `
+      <article class="completion-card" data-project-completion>
+        <div class="completion-head">
+          <div>
+            <strong>${escapeHtml(translateText("Project Completion"))}</strong>
+            <p>${escapeHtml(translateText(completion.next_requirement || ""))}</p>
+          </div>
+          <b>${escapeHtml(String(completion.percent || 0))}%</b>
+        </div>
+        <div class="completion-bars">
+          <div>
+            <span>${escapeHtml(translateText("System Build"))}</span>
+            <div class="completion-track"><i style="width:${escapeHtml(String(completion.percent || 0))}%"></i></div>
+          </div>
+          <div>
+            <span>${escapeHtml(translateText("First Cycle"))}</span>
+            <div class="completion-track"><i style="width:${escapeHtml(String(completion.first_cycle_percent || 0))}%"></i></div>
+          </div>
+        </div>
+        <div class="completion-breakdown">
+          ${completionItems.slice(0, 10).map((item) => `
+            <span class="${escapeHtml(item.status || "waiting")}">
+              ${escapeHtml(translateText(item.label || ""))} ${escapeHtml(String(item.score || 0))}/${escapeHtml(String(item.weight || 0))}
+            </span>
+          `).join("")}
+        </div>
+        ${blockers.length ? `
+          <div class="completion-blockers">
+            <strong>${escapeHtml(translateText("Main blockers"))}</strong>
+            <ul>${blockers.slice(0, 4).map((blocker) => `<li>${escapeHtml(translateText(blocker))}</li>`).join("")}</ul>
+          </div>
+        ` : ""}
+      </article>
+    ` : ""}
     <article class="workflow-primary ${escapeHtml(firstOpen.state)}">
       <div>
-        <strong>${escapeHtml(firstOpen.title)}</strong>
-        <p>${escapeHtml(firstOpen.body)}</p>
+        <strong>${escapeHtml(translateText(firstOpen.title))}</strong>
+        <p>${escapeHtml(translateText(firstOpen.body))}</p>
       </div>
-      <button type="button" data-workflow-screen="${escapeHtml(firstOpen.screen)}">${escapeHtml(firstOpen.action)}</button>
+      <button type="button" data-workflow-screen="${escapeHtml(firstOpen.screen)}">${escapeHtml(translateText(firstOpen.action))}</button>
     </article>
     <div class="workflow-steps">
       ${steps.map((step) => `
         <button type="button" class="workflow-step ${escapeHtml(step.state)}" data-workflow-screen="${escapeHtml(step.screen)}">
-          <span>${escapeHtml(step.state)}</span>
-          <strong>${escapeHtml(step.title)}</strong>
-          <small>${escapeHtml(step.body)}</small>
+          <span>${escapeHtml(translateText(step.state))}</span>
+          <strong>${escapeHtml(translateText(step.title))}</strong>
+          <small>${escapeHtml(translateText(step.body))}</small>
         </button>
       `).join("")}
     </div>
@@ -2070,6 +2143,36 @@ async function loadBriefs() {
       : "<p class=\"status-note\">No content briefs yet. Generate this week's plan to start.</p>";
   } catch {
     container.innerHTML = '<p class="status-note">Set the access token to load weekly briefs.</p>';
+  }
+}
+
+function renderNotionCarouselSource(data) {
+  const container = document.getElementById("notion-carousel-source");
+  if (!container) return;
+  const statusRules = data.status_rules || [];
+  container.innerHTML = `
+    <article class="learning-card wide-learning" data-notion-carousel-source>
+      <h3>${escapeHtml(translateText("Notion Monthly Source"))}</h3>
+      <p>${escapeHtml(data.name || "Notion source")}</p>
+      <small>${escapeHtml(data.database_url || "")}</small>
+      <ul>
+        <li><strong>${escapeHtml(translateText("Unique ID"))}</strong> ${escapeHtml(data.unique_id_property || "Topic ID")}</li>
+        <li><strong>${escapeHtml(translateText("Monthly refresh"))}</strong> ${escapeHtml(String(data.monthly_refresh_rule || ""))}</li>
+        <li><strong>${escapeHtml(translateText("Image status rule"))}</strong> ${escapeHtml(translateText(statusRules.find((item) => item.includes("Carousel Image Status = Not Started")) || ""))}</li>
+        <li><strong>${escapeHtml(translateText("Caption boundary"))}</strong> ${escapeHtml(translateText(statusRules.find((item) => item.includes("Caption Status")) || ""))}</li>
+      </ul>
+    </article>
+  `;
+}
+
+async function loadNotionCarouselSource() {
+  const container = document.getElementById("notion-carousel-source");
+  if (!container) return;
+  try {
+    const data = await fetchJson("/notion/carousel-source");
+    renderNotionCarouselSource(data);
+  } catch {
+    container.innerHTML = '<p class="status-note">Set the access token to load Notion source.</p>';
   }
 }
 
@@ -5614,6 +5717,39 @@ document.getElementById("download-brief-asset-pack")?.addEventListener("click", 
   }
 });
 
+document.getElementById("refresh-notion-carousel-source")?.addEventListener("click", async () => {
+  const message = document.getElementById("plan-message");
+  message.textContent = "Loading Notion monthly source...";
+  try {
+    await loadNotionCarouselSource();
+    message.textContent = "Notion monthly source loaded.";
+  } catch {
+    message.textContent = "Could not load Notion monthly source.";
+  }
+});
+
+document.getElementById("download-notion-carousel-workflow")?.addEventListener("click", async () => {
+  const message = document.getElementById("plan-message");
+  message.textContent = "Preparing Notion image workflow...";
+  try {
+    await downloadProtectedFile("/notion/carousel-image-workflow.md", "drec-notion-carousel-image-workflow.md", "text/markdown");
+    message.textContent = "Notion image workflow downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download Notion image workflow.";
+  }
+});
+
+document.getElementById("download-notion-carousel-template")?.addEventListener("click", async () => {
+  const message = document.getElementById("plan-message");
+  message.textContent = "Preparing Notion intake CSV...";
+  try {
+    await downloadProtectedFile("/notion/carousel-intake-template.csv", "drec-notion-carousel-intake-template.csv", "text/csv");
+    message.textContent = "Notion intake CSV downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download Notion intake CSV.";
+  }
+});
+
 document.getElementById("save-all-assets").addEventListener("click", async () => {
   const button = document.getElementById("save-all-assets");
   const message = document.getElementById("plan-message");
@@ -7364,6 +7500,7 @@ loadLoopStatus();
 loadLaunchReadiness();
 loadKb();
 loadBriefs();
+loadNotionCarouselSource();
 loadAssets();
 loadDoctorSendQueue();
 loadDoctorReplyInboxPack();

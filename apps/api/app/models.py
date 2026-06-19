@@ -125,6 +125,21 @@ class WeeklyPlanIn(BaseModel):
     count: int = 5
 
 
+class NotionCarouselRowIn(BaseModel):
+    topic_id: str
+    mandarin_topic_title: str
+    carousel_slide_plan: str
+    english_topic_title: Optional[str] = None
+    content_stage: Optional[str] = None
+    day: Optional[float] = None
+    overall_status: Optional[str] = None
+    carousel_image_status: Optional[str] = None
+    caption_status: Optional[str] = None
+    planned_posting_date: Optional[str] = None
+    notion_url: Optional[str] = None
+    create_asset: bool = False
+
+
 class PublishQueueIn(BaseModel):
     asset_id: Optional[str] = None
     channel: Literal["facebook", "instagram"]

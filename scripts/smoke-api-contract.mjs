@@ -37,6 +37,10 @@ const requiredRoutes = [
   "GET /public/first-publish-assets/{asset_id}/slides/{slide_number}.png",
   "GET /operations/chinese-operator-center",
   "GET /operations/chinese-operator-center.md",
+  "GET /notion/carousel-source",
+  "GET /notion/carousel-intake-template.csv",
+  "GET /notion/carousel-image-workflow.md",
+  "POST /notion/carousel-row/import",
   "POST /operations/first-publish-advance",
   "POST /operations/first-publish-attach-generated-media",
   "POST /operations/first-publish-approve-current-asset",
@@ -620,6 +624,36 @@ const requiredSnippets = [
     name: "launch readiness usability scope",
     file: "main",
     text: "can_use_for_manual_ops",
+  },
+  {
+    name: "workflow completion payload",
+    file: "main",
+    text: "build_completion_status",
+  },
+  {
+    name: "workflow completion weighted method",
+    file: "main",
+    text: "weighted_operational_readiness",
+  },
+  {
+    name: "notion carousel source payload",
+    file: "main",
+    text: "NOTION_CAROUSEL_SOURCE",
+  },
+  {
+    name: "notion carousel monthly refresh rule",
+    file: "main",
+    text: "monthly_refresh_day",
+  },
+  {
+    name: "notion carousel source route",
+    file: "main",
+    text: "/notion/carousel-source",
+  },
+  {
+    name: "notion carousel import route",
+    file: "main",
+    text: "/notion/carousel-row/import",
   },
   {
     name: "test run checklist route",
@@ -2590,6 +2624,31 @@ const requiredSnippets = [
     name: "web automation gate card",
     file: "web",
     text: "automation-count",
+  },
+  {
+    name: "web project completion card",
+    file: "web",
+    text: "data-project-completion",
+  },
+  {
+    name: "web notion carousel source card",
+    file: "web",
+    text: "data-notion-carousel-source",
+  },
+  {
+    name: "web notion carousel source action",
+    file: "web",
+    text: "refresh-notion-carousel-source",
+  },
+  {
+    name: "web notion carousel workflow endpoint",
+    file: "web",
+    text: "/notion/carousel-image-workflow.md",
+  },
+  {
+    name: "web notion carousel template endpoint",
+    file: "web",
+    text: "/notion/carousel-intake-template.csv",
   },
   {
     name: "web access role card",

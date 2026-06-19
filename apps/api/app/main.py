@@ -53,6 +53,7 @@ from .models import (
     MetaMetricsIn,
     MetricIn,
     MetricRollupIn,
+    NotionCarouselRowIn,
     OutcomeIn,
     ProductionReplyImportIn,
     PublishQueueIn,
@@ -82,6 +83,49 @@ LEARNING_TOPIC_LIBRARY = {
     "TOFU": "刚开始担心血糖时，应该先看懂哪三个信号",
     "MOFU": "已经在控糖的人，如何判断方法是否真的适合自己",
     "BOFU": "复诊前如何整理饮食、血糖和腰围记录",
+}
+
+NOTION_CAROUSEL_SOURCE = {
+    "name": "Dr. Eason Chang Diabetes Reversal Carousel Master Content Plan",
+    "database_url": "https://app.notion.com/p/7541a002443b4ce6afe90036fc57f378",
+    "data_source_url": "collection://58a85294-ac72-4f16-8df0-bf0caf1b0b52",
+    "unique_id_property": "Topic ID",
+    "source_of_truth": True,
+    "monthly_refresh_day": 19,
+    "monthly_refresh_rule": "Treat the Notion database as refreshed on the 19th of every month. Re-scan existing rows after that date, but still use Topic ID for dedupe and do not create new Notion rows unless instructed.",
+    "primary_language": "Mandarin",
+    "target_audience": "Chinese-speaking adults around 50 with diabetes, prediabetes, insulin resistance, blood sugar concerns, fatty liver, belly fat, abnormal blood lipids, or family history of diabetes.",
+    "fields": [
+        "Topic ID",
+        "Mandarin Topic Title",
+        "English Topic Title",
+        "Content Stage",
+        "Day",
+        "Planned Posting Date",
+        "Overall Status",
+        "Carousel Image Status",
+        "Caption Status",
+        "Carousel Slide Plan",
+    ],
+    "status_rules": [
+        "Use Topic ID as the unique identifier; do not create duplicate topics.",
+        "Work from existing Notion rows; do not create new Notion rows unless explicitly instructed.",
+        "Skip rows where Overall Status = Published.",
+        "For image generation, only work on rows where Carousel Image Status = Not Started.",
+        "Before image generation, update Carousel Image Status to In Progress in Notion.",
+        "After images are finished, update Carousel Image Status to Ready for Review in Notion.",
+        "Do not touch Caption Status unless acting as the caption AI.",
+        "Every month on the 19th, re-check this database for the refreshed monthly plan before generating new carousel images or captions.",
+    ],
+    "slide_rules": [
+        "Read Carousel Slide Plan carefully and generate each slide directly from it.",
+        "Slide 1 is cover hook only: Big Title/Hook and Visual Element; no explanation body text.",
+        "Slides 2 onward must include Big Title, Explanation Text, Highlighted Keywords, Visual Element, and Bottom Takeaway/Teaser.",
+        "Mandarin is primary; text-explanation-led educational carousel, not sparse infographic slogans.",
+        "Visuals support the explanation and should not overtake the educational text.",
+        "Use professional DREC blue, green, and teal medical style.",
+        "Avoid cartoonish, childish, overly decorative, scary, fear-based, miracle-cure, guaranteed reversal, or direct course-selling language.",
+    ],
 }
 
 FORMAT_ROTATION = ["carousel", "single", "reel", "carousel", "story"]
@@ -12550,6 +12594,267 @@ async def create_knowledge_entry(entry: KnowledgeEntryIn, _: None = Depends(requ
     return {"item": row or entry.model_dump()}
 
 
+def notion_carousel_source_payload():
+    return {
+        **NOTION_CAROUSEL_SOURCE,
+        "intake_template": "/notion/carousel-intake-template.csv",
+        "image_workflow_pack": "/notion/carousel-image-workflow.md",
+        "import_endpoint": "/notion/carousel-row/import",
+        "sample_row": {
+            "topic_id": "DC001",
+            "mandarin_topic_title": "血糖高，不只是因为吃太甜",
+            "english_topic_title": "High Blood Sugar Is Not Only About Eating Sweets",
+            "overall_status": "In Progress",
+            "carousel_image_status": "Ready for Review",
+            "caption_status": "Not Started",
+            "content_stage": "Awareness",
+        },
+        "operator_note": "Codex can read and update this Notion database through the Notion connector. The deployed app keeps a protected import/sync contract so generated assets always preserve Topic ID and Notion status rules.",
+    }
+
+
+def extract_notion_cover_hook(slide_plan: str, fallback: str):
+    match = re.search(r"Big Title/Hook:\s*(.+?)(?:<br>|\n|Visual Element:)", slide_plan or "", flags=re.IGNORECASE | re.DOTALL)
+    if not match:
+        match = re.search(r"Big Title:\s*(.+?)(?:<br>|\n|Explanation Text:)", slide_plan or "", flags=re.IGNORECASE | re.DOTALL)
+    if not match:
+        return fallback
+    return re.sub(r"\s+", " ", html.unescape(match.group(1))).strip() or fallback
+
+
+async def find_existing_notion_brief(topic_id: str):
+    for brief in await fetch_content_brief_list(200):
+        beats = brief.get("structure_beats") or {}
+        if isinstance(beats, str):
+            try:
+                beats = json.loads(beats)
+            except json.JSONDecodeError:
+                beats = {}
+        source = beats.get("notion_source") or {}
+        if source.get("topic_id") == topic_id:
+            return brief
+    return None
+
+
+async def find_existing_notion_asset(topic_id: str):
+    for asset in await fetch_asset_list(200):
+        metadata = asset.get("metadata") or {}
+        if isinstance(metadata, str):
+            try:
+                metadata = json.loads(metadata)
+            except json.JSONDecodeError:
+                metadata = {}
+        source = metadata.get("notion_source") or {}
+        if source.get("topic_id") == topic_id:
+            return asset
+    return None
+
+
+def notion_row_to_brief(row: NotionCarouselRowIn):
+    topic = row.mandarin_topic_title.strip()
+    hook = extract_notion_cover_hook(row.carousel_slide_plan, topic)
+    return ContentBriefIn(
+        channel="organic",
+        format="carousel",
+        pillar="metabolic_education",
+        funnel_stage="TOFU",
+        awareness_stage=row.content_stage or "notion_monthly_plan",
+        topic=topic,
+        hook_primary=hook,
+        hook_alt1=row.english_topic_title,
+        hook_alt2=f"Topic ID: {row.topic_id}",
+        structure_beats={
+            "source": "notion_master_content_plan",
+            "notion_source": {
+                "database_url": NOTION_CAROUSEL_SOURCE["database_url"],
+                "data_source_url": NOTION_CAROUSEL_SOURCE["data_source_url"],
+                "topic_id": row.topic_id,
+                "notion_url": row.notion_url,
+                "overall_status": row.overall_status,
+                "carousel_image_status": row.carousel_image_status,
+                "caption_status": row.caption_status,
+                "planned_posting_date": row.planned_posting_date,
+                "day": row.day,
+            },
+            "carousel_slide_plan": row.carousel_slide_plan,
+            "slide_rules": NOTION_CAROUSEL_SOURCE["slide_rules"],
+            "image_workflow_rules": NOTION_CAROUSEL_SOURCE["status_rules"],
+        },
+        style_hint="DREC blue/green/teal medical style; text-explanation-led educational carousel.",
+        cta_type="soft_save_share_follow",
+        target_signal="organic saves, shares, follows, qualified comments",
+        language="zh",
+        compliance_notes="Education only. Avoid miracle cure, guaranteed reversal, fear-based claims, medication instructions, diagnosis, or direct course-selling language.",
+    )
+
+
+@app.get("/notion/carousel-source")
+async def notion_carousel_source(_: None = Depends(require_access_token)):
+    return notion_carousel_source_payload()
+
+
+@app.get("/notion/carousel-intake-template.csv")
+async def notion_carousel_intake_template(_: None = Depends(require_access_token)):
+    output = StringIO()
+    fieldnames = [
+        "topic_id",
+        "mandarin_topic_title",
+        "english_topic_title",
+        "content_stage",
+        "day",
+        "overall_status",
+        "carousel_image_status",
+        "caption_status",
+        "planned_posting_date",
+        "notion_url",
+        "carousel_slide_plan",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    writer.writerow(
+        {
+            "topic_id": "DC001",
+            "mandarin_topic_title": "血糖高，不只是因为吃太甜",
+            "english_topic_title": "High Blood Sugar Is Not Only About Eating Sweets",
+            "content_stage": "Awareness",
+            "day": "1",
+            "overall_status": "In Progress",
+            "carousel_image_status": "Not Started",
+            "caption_status": "Not Started",
+            "planned_posting_date": "2026-06-10",
+            "notion_url": "https://app.notion.com/p/...",
+            "carousel_slide_plan": "Slide 1\\nBig Title/Hook: ...\\nVisual Element: ...\\n\\nSlide 2\\nBig Title: ...\\nExplanation Text:\\n...\\nHighlighted Keywords: ...\\nVisual Element: ...\\nBottom Takeaway/Teaser: ...",
+        }
+    )
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-notion-carousel-intake-template.csv"'},
+    )
+
+
+@app.get("/notion/carousel-image-workflow.md")
+async def notion_carousel_image_workflow(_: None = Depends(require_access_token)):
+    source = notion_carousel_source_payload()
+    lines = [
+        "# DREC Notion Carousel Image Workflow",
+        "",
+        f"Source database: {source['name']}",
+        f"Database URL: {source['database_url']}",
+        f"Data source: `{source['data_source_url']}`",
+        f"Monthly refresh: every month on day {source['monthly_refresh_day']}",
+        "",
+        "## Single Source Of Truth",
+        "",
+        f"- Unique identifier: `{source['unique_id_property']}`",
+        "- Work only from existing Notion rows.",
+        "- Do not create duplicate topics or new rows unless specifically instructed.",
+        "- Preserve Topic ID in every local brief, asset, image pack, and handoff note.",
+        f"- Monthly refresh rule: {source['monthly_refresh_rule']}",
+        "",
+        "## Status Rules",
+        "",
+        *markdown_list(source["status_rules"]),
+        "",
+        "## Slide Rules",
+        "",
+        *markdown_list(source["slide_rules"]),
+        "",
+        "## Image AI Instructions",
+        "",
+        "- Use the `Carousel Slide Plan` field directly for every slide.",
+        "- Slide 1 must only contain the cover hook and visual support, with no explanation body.",
+        "- Slides 2 onward must preserve Big Title, Explanation Text, Highlighted Keywords, Visual Element, and Bottom Takeaway/Teaser.",
+        "- Keep visuals small or medium; do not over-enlarge illustrations or replace text with graphics.",
+        "- Use professional DREC blue/green/teal medical styling.",
+        "",
+        "## Caption AI Boundary",
+        "",
+        "- Caption AI may use the same Topic ID and slide plan to expand the medical explanation for Facebook.",
+        "- Caption AI should not touch `Carousel Image Status`.",
+        "- Image AI should not touch `Caption Status`.",
+        "",
+    ]
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-notion-carousel-image-workflow.md"'},
+    )
+
+
+@app.post("/notion/carousel-row/import")
+async def import_notion_carousel_row(row: NotionCarouselRowIn, _: None = Depends(require_review_access)):
+    topic_id = row.topic_id.strip()
+    if not topic_id:
+        raise HTTPException(status_code=400, detail="Topic ID is required.")
+    if not row.mandarin_topic_title.strip():
+        raise HTTPException(status_code=400, detail="Mandarin Topic Title is required.")
+    if not row.carousel_slide_plan.strip():
+        raise HTTPException(status_code=400, detail="Carousel Slide Plan is required.")
+    if (row.overall_status or "").strip().lower() == "published":
+        return {
+            "skipped": True,
+            "reason": "Overall Status is Published; row was not imported.",
+            "topic_id": topic_id,
+            "source": notion_carousel_source_payload(),
+        }
+    existing_brief = await find_existing_notion_brief(topic_id)
+    existing_asset = await find_existing_notion_asset(topic_id)
+    if existing_brief:
+        return {
+            "skipped": True,
+            "reason": "Topic ID already exists locally; duplicate not created.",
+            "topic_id": topic_id,
+            "brief": existing_brief,
+            "asset": existing_asset,
+            "source": notion_carousel_source_payload(),
+        }
+    brief = await insert_brief(notion_row_to_brief(row))
+    asset = None
+    if row.create_asset:
+        existing_asset = await find_existing_notion_asset(topic_id)
+        if existing_asset:
+            asset = existing_asset
+        else:
+            caption = f"{extract_notion_cover_hook(row.carousel_slide_plan, row.mandarin_topic_title)}\n\n{row.carousel_slide_plan}"
+            asset = await create_asset(
+                AssetIn(
+                    brief_id=brief.get("id") if isinstance(brief, dict) else None,
+                    channel="facebook",
+                    format="carousel",
+                    caption=caption,
+                    media_urls=[],
+                    metadata={
+                        "topic": row.mandarin_topic_title,
+                        "slides_source": "notion_carousel_slide_plan",
+                        "carousel_slide_plan": row.carousel_slide_plan,
+                        "notion_source": {
+                            "topic_id": topic_id,
+                            "database_url": NOTION_CAROUSEL_SOURCE["database_url"],
+                            "data_source_url": NOTION_CAROUSEL_SOURCE["data_source_url"],
+                            "notion_url": row.notion_url,
+                            "overall_status": row.overall_status,
+                            "carousel_image_status": row.carousel_image_status,
+                            "caption_status": row.caption_status,
+                            "planned_posting_date": row.planned_posting_date,
+                        },
+                        "image_generation_rules": NOTION_CAROUSEL_SOURCE["slide_rules"],
+                    },
+                    compliance_status="pending",
+                    review_status="draft",
+                ),
+                _,
+            )
+    return {
+        "skipped": False,
+        "topic_id": topic_id,
+        "brief": brief,
+        "asset": asset.get("item") if isinstance(asset, dict) else asset,
+        "source": notion_carousel_source_payload(),
+        "next_step": "If generating images, update the Notion row Carousel Image Status to In Progress before image work, then Ready for Review after completion.",
+    }
+
+
 def brief_payload(brief: ContentBriefIn):
     return {
         "channel": brief.channel,
@@ -18772,6 +19077,157 @@ def workflow_step(state, title, body, screen, action, optional=False):
     }
 
 
+def completion_item(key, label, score, weight, status, detail):
+    bounded_score = max(0, min(int(score), int(weight)))
+    return {
+        "key": key,
+        "label": label,
+        "score": bounded_score,
+        "weight": int(weight),
+        "status": status,
+        "detail": detail,
+    }
+
+
+def build_completion_status(loop, workflow, security, automation):
+    summary = workflow.get("summary") or {}
+    automation_summary = (automation or {}).get("summary") or {}
+    automation_gates = {item.get("key"): item for item in (automation or {}).get("gates") or []}
+    brief_count = int(summary.get("brief_count") or loop.get("brief_count") or 0)
+    asset_count = int(summary.get("asset_count") or loop.get("asset_count") or 0)
+    media_count = int(summary.get("media_count") or loop.get("media_count") or 0)
+    outcome_count = int(summary.get("outcome_count") or loop.get("outcome_count") or 0)
+    weight_count = int(loop.get("weight_count") or 0)
+    ready_asset_count = int(summary.get("queue_ready_asset_count") or automation_summary.get("ready_assets") or 0)
+    queue_total = int(summary.get("queue_total") or automation_summary.get("queue_total") or 0)
+    scheduled_queue = int(automation_summary.get("scheduled_queue") or 0)
+    published_queue = int(automation_summary.get("published_queue") or 0)
+    meta_ready = (automation_gates.get("meta") or {}).get("status") == "ready"
+    supabase_ready = security.get("supabase_rest") == "configured"
+    browser_protected = security.get("direct_browser_supabase") == "disabled_by_design"
+    strict_security_ready = bool(security.get("rls_hardening_ready"))
+
+    first_cycle_score = 0
+    if asset_count:
+        first_cycle_score += 4
+    if ready_asset_count:
+        first_cycle_score += 4
+    if queue_total:
+        first_cycle_score += 3
+    if scheduled_queue:
+        first_cycle_score += 2
+    if published_queue:
+        first_cycle_score += 1
+
+    items = [
+        completion_item(
+            "core_app",
+            "Core app and API are live",
+            8,
+            8,
+            "ready",
+            "The protected API and browser UI are deployed and responding.",
+        ),
+        completion_item(
+            "weekly_planning",
+            "Weekly planning",
+            10 if brief_count else 0,
+            10,
+            "ready" if brief_count else "open",
+            f"{brief_count} brief(s) are available.",
+        ),
+        completion_item(
+            "draft_assets",
+            "Draft asset pipeline",
+            10 if asset_count else 0,
+            10,
+            "ready" if asset_count else "open",
+            f"{asset_count} draft asset(s) exist.",
+        ),
+        completion_item(
+            "media_preparation",
+            "Media preparation",
+            6 if media_count else 0,
+            6,
+            "ready" if media_count else "open",
+            f"{media_count} media item(s) are registered.",
+        ),
+        completion_item(
+            "review_approval",
+            "Review and approval path",
+            8 if ready_asset_count else 4 if asset_count else 0,
+            8,
+            "ready" if ready_asset_count else "waiting",
+            "Human approval is still required for the first clear asset." if not ready_asset_count else f"{ready_asset_count} approved clear asset(s) can enter queue.",
+        ),
+        completion_item(
+            "scheduling_handoff",
+            "Scheduling and handoff path",
+            6 if scheduled_queue else 3 if queue_total or asset_count else 0,
+            6,
+            "ready" if scheduled_queue else "waiting",
+            "Queue and schedule are ready as tooling, but need an approved item." if not scheduled_queue else f"{scheduled_queue} item(s) are scheduled.",
+        ),
+        completion_item(
+            "learning_loop",
+            "Learning loop",
+            8 if weight_count else 6 if outcome_count else 0,
+            8,
+            "ready" if outcome_count else "open",
+            f"{outcome_count} outcome(s) and {weight_count} active weight(s) are available.",
+        ),
+        completion_item(
+            "meta_workers",
+            "Meta test workers",
+            7 if meta_ready else 0,
+            8,
+            "ready_for_testing" if meta_ready else "waiting",
+            (automation_gates.get("meta") or {}).get("detail") or "Meta workers remain locked until controlled testing.",
+        ),
+        completion_item(
+            "security_hardening",
+            "Security hardening",
+            8 if strict_security_ready else 4 if supabase_ready and browser_protected else 0,
+            8,
+            "ready" if strict_security_ready else "blocked",
+            security.get("next_step") or "Add service-role key before strict RLS hardening.",
+        ),
+        completion_item(
+            "first_publish_cycle",
+            "First publish cycle",
+            first_cycle_score,
+            14,
+            "ready" if published_queue else "waiting",
+            "First cycle still needs approval, queueing, scheduling, and manual publishing evidence.",
+        ),
+    ]
+    total_score = sum(item["score"] for item in items)
+    total_weight = sum(item["weight"] for item in items)
+    percent = round(total_score * 100 / total_weight) if total_weight else 0
+    first_cycle_percent = round(first_cycle_score * 100 / 14)
+    blockers = []
+    if not ready_asset_count:
+        blockers.append("First asset still needs explicit doctor or human approval.")
+    if not queue_total:
+        blockers.append("Publishing queue is empty until one approved clear asset is queued.")
+    if not strict_security_ready:
+        blockers.append("Supabase service-role key is missing, so strict RLS hardening is not complete.")
+    if scheduled_queue == 0:
+        blockers.append("No reviewed item has been scheduled yet.")
+    return {
+        "percent": percent,
+        "label": f"{percent}% built",
+        "first_cycle_percent": first_cycle_percent,
+        "first_cycle_label": f"{first_cycle_percent}% first cycle",
+        "score": total_score,
+        "weight": total_weight,
+        "items": items,
+        "blockers": blockers,
+        "next_requirement": blockers[0] if blockers else "Run the final publish, metrics, and learning closeout evidence.",
+        "method": "weighted_operational_readiness",
+    }
+
+
 def build_workflow_guidance(loop):
     total_queue = total_queue_count(loop.get("queue"))
     brief_count = int(loop.get("brief_count") or 0)
@@ -18909,11 +19365,15 @@ def build_workflow_guidance(loop):
 @app.get("/workflow/status")
 async def workflow_status(_: None = Depends(require_access_token)):
     loop = await build_loop_status()
+    workflow = build_workflow_guidance(loop)
+    security = security_status_payload()
+    automation = await automation_status_payload()
+    workflow["completion"] = build_completion_status(loop, workflow, security, automation)
     return {
         "loop": loop,
-        "workflow": build_workflow_guidance(loop),
-        "security": security_status_payload(),
-        "automation": await automation_status_payload(),
+        "workflow": workflow,
+        "security": security,
+        "automation": automation,
     }
 
 

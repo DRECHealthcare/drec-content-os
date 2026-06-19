@@ -245,6 +245,107 @@ header span { color: var(--muted); font-size: 12px; }
   gap: 12px;
 }
 
+.completion-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid #C7D2FE;
+  border-radius: 8px;
+  background: #F8FAFF;
+}
+
+.completion-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.completion-head strong {
+  display: block;
+  color: var(--navy);
+}
+
+.completion-head p {
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.completion-head b {
+  color: var(--navy);
+  font-size: 30px;
+  line-height: 1;
+}
+
+.completion-bars {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.completion-bars span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--navy2);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.completion-track {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #E2E8F0;
+}
+
+.completion-track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--teal);
+}
+
+.completion-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.completion-breakdown span {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: #FFF;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.completion-breakdown .ready,
+.completion-breakdown .ready_for_testing {
+  border-color: #B8E7E2;
+  color: var(--teal);
+}
+
+.completion-breakdown .blocked {
+  border-color: #FECACA;
+  color: #B91C1C;
+}
+
+.completion-blockers {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.completion-blockers strong {
+  color: var(--navy2);
+  font-size: 12px;
+}
+
+.completion-blockers ul {
+  margin-top: 6px;
+}
+
 .workflow-primary {
   display: flex;
   align-items: center;
@@ -1143,8 +1244,9 @@ button[type="submit"] {
   .token-panel input { flex: 1; width: auto; }
   .token-button { margin-left: auto; }
   .screen { padding: 18px; }
-  .grid, .loop, .split-form, .learning-grid, .handoff-summary, .creative-preview, .weight-row, .scheduler-toolbar, .week-schedule, .workflow-steps, .test-path-list, .quick-composer, .sprint-board { grid-template-columns: 1fr; }
+  .grid, .loop, .split-form, .learning-grid, .handoff-summary, .creative-preview, .weight-row, .scheduler-toolbar, .week-schedule, .workflow-steps, .test-path-list, .quick-composer, .sprint-board, .completion-bars { grid-template-columns: 1fr; }
   .workflow-head, .workflow-primary { align-items: stretch; flex-direction: column; }
+  .completion-head { flex-direction: column; }
   .workflow-primary button { width: 100%; }
   .loop div { border-right: 0; border-bottom: 1px solid var(--line); }
 }
