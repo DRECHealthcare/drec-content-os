@@ -15,7 +15,7 @@ from uuid import UUID, uuid4
 
 import httpx
 from PIL import Image, ImageDraw, ImageFont
-from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
@@ -2080,7 +2080,7 @@ def first_publish_media_attachment_csv(asset: dict | None):
                 "visual_qa_status": "passed / pending / needs_work",
                 "rights_note": "Owned by DREC / licensed / approved for DREC publishing use",
                 "producer_name": "",
-                "production_notes": "Replace placeholder URLs with final exported PNG/JPG URLs before import.",
+                "production_notes": "After human approval + safety clear, use /operations/first-publish-attach-generated-media to attach system-generated PNG URLs, or replace placeholders with final exported PNG/JPG URLs before import.",
             }
         )
     return output.getvalue()
@@ -2216,6 +2216,47 @@ def first_publish_slide_png(asset: dict, slide: dict, index: int, total: int):
     output = BytesIO()
     image.save(output, format="PNG", optimize=True)
     return output.getvalue()
+
+
+def request_public_base_url(request: Request):
+    forwarded_proto = request.headers.get("x-forwarded-proto") or request.url.scheme
+    forwarded_host = request.headers.get("x-forwarded-host") or request.headers.get("host")
+    if forwarded_host:
+        return f"{forwarded_proto}://{forwarded_host}".rstrip("/")
+    return str(request.base_url).rstrip("/")
+
+
+def first_publish_asset_is_approved_clear(asset: dict | None):
+    return bool(asset) and asset.get("review_status") == "approved" and asset.get("compliance_status") == "clear"
+
+
+def first_publish_generated_media_urls(request: Request, asset: dict):
+    base_url = request_public_base_url(request)
+    slides = first_publish_slide_items(asset)
+    asset_id = asset.get("id")
+    return [
+        f"{base_url}/public/first-publish-assets/{asset_id}/slides/{index}.png"
+        for index, _ in enumerate(slides, start=1)
+    ]
+
+
+@app.get("/public/first-publish-assets/{asset_id}/slides/{slide_number}.png")
+async def public_first_publish_generated_slide_png(asset_id: str, slide_number: int):
+    asset = await asset_by_id(asset_id)
+    if not first_publish_asset_is_approved_clear(asset):
+        raise HTTPException(
+            status_code=404,
+            detail="Generated media URLs are available only after human approval and safety clear.",
+        )
+    slides = first_publish_slide_items(asset)
+    if slide_number < 1 or slide_number > len(slides):
+        raise HTTPException(status_code=404, detail="Slide not found.")
+    data = first_publish_slide_png(asset, slides[slide_number - 1], slide_number, len(slides))
+    return Response(
+        content=data,
+        media_type="image/png",
+        headers={"Cache-Control": "public, max-age=3600"},
+    )
 
 
 ASSET_REVIEW_DECISION_FIELDS = [
@@ -2545,6 +2586,86 @@ async def operations_first_publish_advance(dry_run: bool = True, _: None = Depen
         return result
     result["action"] = "complete_or_unknown"
     result["message"] = "No automatic first publish action is available."
+    return result
+
+
+@app.post("/operations/first-publish-attach-generated-media")
+async def operations_first_publish_attach_generated_media(
+    request: Request,
+    dry_run: bool = True,
+    session: dict = Depends(require_review_access),
+):
+    payload = await first_publish_readiness_payload()
+    candidates = payload.get("candidates") or {}
+    asset = candidates.get("approved_clear_asset") or candidates.get("ready_asset")
+    if not asset:
+        return {
+            "dry_run": dry_run,
+            "attached": False,
+            "action": "needs_asset_review",
+            "message": "A human-approved and safety-clear asset is required before generated media URLs can be attached.",
+            "safety": [
+                "This operation never approves an asset.",
+                "Generated media URLs are available only after human approval and safety clear.",
+                "Queueing, scheduling, and publishing remain separate gates.",
+            ],
+            "readiness": payload,
+        }
+    if not first_publish_asset_is_approved_clear(asset):
+        return {
+            "dry_run": dry_run,
+            "attached": False,
+            "action": "blocked_by_safety_gate",
+            "asset_id": asset.get("id"),
+            "message": "Generated media URLs are available only after human approval and safety clear.",
+            "readiness": payload,
+        }
+    if not first_publish_media_required(asset):
+        return {
+            "dry_run": dry_run,
+            "attached": False,
+            "action": "no_media_required",
+            "asset_id": asset.get("id"),
+            "message": "This first-publish format does not require generated media URLs.",
+            "readiness": payload,
+        }
+    media_urls = first_publish_generated_media_urls(request, asset)
+    result = {
+        "dry_run": dry_run,
+        "attached": False,
+        "action": "attach_generated_media",
+        "asset_id": asset.get("id"),
+        "media_count": len(media_urls),
+        "media_urls": media_urls,
+        "message": "Generated PNG media URLs are ready to attach after approval and safety clear.",
+        "safety": [
+            "This operation never approves, queues, schedules, or publishes content.",
+            "Public PNG URLs return 404 until the asset is approved and safety clear.",
+            "Visual QA remains pending after attachment.",
+        ],
+    }
+    if dry_run:
+        result["planned"] = {"media_urls": media_urls}
+        return result
+    attached = await update_asset_media(
+        str(asset.get("id")),
+        AssetMediaIn(
+            media_urls=media_urls,
+            reason="Generated first-publish PNG media URLs after human approval and safety clear.",
+            visual_qa_status="pending",
+            rights_note="Generated by DREC Content OS from approved asset copy.",
+            sync_draft_queue=True,
+        ),
+        session,
+    )
+    result.update(
+        {
+            "attached": True,
+            "result": attached,
+            "message": "Generated PNG media URLs attached. Visual QA, queue review, scheduling, and publishing remain separate gates.",
+            "after": await first_publish_readiness_payload(),
+        }
+    )
     return result
 
 

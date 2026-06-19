@@ -31,9 +31,11 @@ const requiredRoutes = [
   "GET /operations/first-publish-media-pack.md",
   "GET /operations/first-publish-carousel-assets.zip",
   "GET /operations/first-publish-carousel-png-assets.zip",
+  "GET /public/first-publish-assets/{asset_id}/slides/{slide_number}.png",
   "GET /operations/chinese-operator-center",
   "GET /operations/chinese-operator-center.md",
   "POST /operations/first-publish-advance",
+  "POST /operations/first-publish-attach-generated-media",
   "POST /operations/scheduler-heartbeat",
   "GET /operations/scheduler-activation-pack.md",
   "GET /operations/scheduler-health",
@@ -1346,6 +1348,26 @@ const requiredSnippets = [
     name: "first publish slide png helper",
     file: "main",
     text: "first_publish_slide_png",
+  },
+  {
+    name: "first publish generated media urls helper",
+    file: "main",
+    text: "first_publish_generated_media_urls",
+  },
+  {
+    name: "first publish public generated png route",
+    file: "main",
+    text: "public_first_publish_generated_slide_png",
+  },
+  {
+    name: "first publish generated media attach route",
+    file: "main",
+    text: "operations_first_publish_attach_generated_media",
+  },
+  {
+    name: "first publish generated media safety gate",
+    file: "main",
+    text: "Generated media URLs are available only after human approval and safety clear.",
   },
   {
     name: "first publish media pack safety",
@@ -2916,6 +2938,21 @@ const requiredSnippets = [
     name: "web first publish carousel png zip action",
     file: "web",
     text: "data-download-first-carousel-png-zip",
+  },
+  {
+    name: "web first publish attach generated media action",
+    file: "web",
+    text: "data-attach-first-generated-media",
+  },
+  {
+    name: "web first publish attach generated media endpoint",
+    file: "web",
+    text: "/operations/first-publish-attach-generated-media?dry_run=false",
+  },
+  {
+    name: "web first publish attach generated media chinese",
+    file: "web",
+    text: "挂载生成图片链接",
   },
   {
     name: "web first publish media pack endpoint",

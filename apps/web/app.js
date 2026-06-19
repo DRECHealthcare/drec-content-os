@@ -164,6 +164,7 @@ const uiZh = {
   "Download Media Pack": "下载媒体制作包",
   "Download PNG Zip": "下载 PNG 图片包",
   "Download SVG Zip": "下载 SVG 设计包",
+  "Attach Generated Media": "挂载生成图片链接",
   "Success Standard": "成功标准",
   "Copy Queue Decision CSV": "复制队列审核 CSV",
   "Fill Queue Decision CSV": "填入队列审核 CSV",
@@ -497,6 +498,10 @@ Object.assign(uiZh, {
   "First publish path advanced.": "首发流程已推进。",
   "First publish path needs a manual step.": "首发流程还需要一个人工步骤。",
   "Could not advance the first publish path.": "无法推进首发流程。",
+  "Attaching generated first-publish PNG URLs...": "正在挂载首发生成 PNG 链接...",
+  "Generated PNG media URLs attached. Visual QA, queue review, scheduling, and publishing remain separate gates.": "生成 PNG 链接已挂载。视觉 QA、队列审核、排程和发布仍然是独立关卡。",
+  "A human-approved and safety-clear asset is required before generated media URLs can be attached.": "需要先有人工批准且安全通过的素材，才能挂载生成图片链接。",
+  "Could not attach generated media URLs.": "无法挂载生成图片链接。",
   "No queue decision template is available yet.": "目前还没有队列审核模板。",
   "No first asset decision template is available yet.": "目前还没有首发素材审核模板。",
   "First publish readiness downloaded.": "首次发布准备包已下载。",
@@ -1238,6 +1243,7 @@ function renderFirstPublishReadiness(data) {
         <button type="button" data-download-first-media-pack>${escapeHtml(translateText("Download Media Pack"))}</button>
         <button type="button" data-download-first-carousel-png-zip>${escapeHtml(translateText("Download PNG Zip"))}</button>
         <button type="button" data-download-first-carousel-zip>${escapeHtml(translateText("Download SVG Zip"))}</button>
+        ${nextAsset.id ? `<button type="button" data-attach-first-generated-media>${escapeHtml(translateText("Attach Generated Media"))}</button>` : ""}
       </div>
       <small><strong>${escapeHtml(translateText("Success Standard"))}:</strong> Safety: clear + Decision: approve. Otherwise keep this item in review.</small>
     </article>
@@ -1286,12 +1292,13 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
   const downloadMediaPackButton = event.target.closest("[data-download-first-media-pack]");
   const downloadCarouselPngZipButton = event.target.closest("[data-download-first-carousel-png-zip]");
   const downloadCarouselZipButton = event.target.closest("[data-download-first-carousel-zip]");
+  const attachGeneratedMediaButton = event.target.closest("[data-attach-first-generated-media]");
   const copyButton = event.target.closest("[data-copy-first-asset-decision]");
   const fillButton = event.target.closest("[data-fill-first-asset-decision]");
   const copyQueueButton = event.target.closest("[data-copy-first-queue-decision]");
   const fillQueueButton = event.target.closest("[data-fill-first-queue-decision]");
   const advanceButton = event.target.closest("[data-advance-first-publish]");
-  if (!copyReviewButton && !fillDoctorReplyButton && !openAssetReviewButton && !downloadZhButton && !downloadMediaPackButton && !downloadCarouselPngZipButton && !downloadCarouselZipButton && !copyButton && !fillButton && !copyQueueButton && !fillQueueButton && !advanceButton) return;
+  if (!copyReviewButton && !fillDoctorReplyButton && !openAssetReviewButton && !downloadZhButton && !downloadMediaPackButton && !downloadCarouselPngZipButton && !downloadCarouselZipButton && !attachGeneratedMediaButton && !copyButton && !fillButton && !copyQueueButton && !fillQueueButton && !advanceButton) return;
   const container = document.getElementById("first-publish-readiness");
   const message = document.getElementById("test-path-message");
   if (copyReviewButton) {
@@ -1366,6 +1373,23 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
       if (message) message.textContent = "First publish SVG design ZIP downloaded.";
     } catch (error) {
       if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download first publish SVG ZIP.";
+    }
+    return;
+  }
+  if (attachGeneratedMediaButton) {
+    const originalText = attachGeneratedMediaButton.textContent;
+    attachGeneratedMediaButton.disabled = true;
+    attachGeneratedMediaButton.textContent = "Working";
+    if (message) message.textContent = "Attaching generated first-publish PNG URLs...";
+    try {
+      const data = await fetchJson("/operations/first-publish-attach-generated-media?dry_run=false", { method: "POST" });
+      if (message) message.textContent = data.message || (data.attached ? "Generated media URLs attached." : "Generated media URLs were not attached.");
+      await Promise.all([loadFirstPublishReadiness(), loadLoopStatus(), loadAssets(), loadPublishQueue(), loadPreScheduleGate()]);
+    } catch (error) {
+      if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not attach generated media URLs.";
+    } finally {
+      attachGeneratedMediaButton.disabled = false;
+      attachGeneratedMediaButton.textContent = originalText;
     }
     return;
   }
