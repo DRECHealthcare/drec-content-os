@@ -43,10 +43,10 @@ Current system behavior:
 - `/compliance/check` returns `clear`, `pending`, or `flagged`.
 - `/publish-queue` rejects flagged captions.
 - `/publish-queue/{id}` rejects scheduling unless the item is compliance-clear.
-- `/meta/readiness` checks whether Meta app, Page, IG user, token, and required permissions are ready.
+- `/meta/readiness` checks whether Page, IG user, and Page token are functional, while separating formal Meta app permission proof into its own review state.
 - `/meta/setup-checklist` returns missing credentials, missing token permissions, setup steps, and copy-ready Fly command templates without storing secret values in the browser.
-- `/publishing/facebook/dispatch` dry-runs the next eligible Facebook item and blocks real publishing unless credentials are ready and `META_ENABLE_PUBLISHING=true`.
-- `/jobs/meta-publishing` wraps Facebook and Instagram dispatch as a scheduler-ready job. It dry-runs by default, only looks at due scheduled posts, and blocks real publishing unless `META_ENABLE_PUBLISHING=true` and `META_ENABLE_PUBLISHING_JOB=true`.
+- `/publishing/facebook/dispatch` dry-runs the next eligible Facebook item and blocks real publishing unless credentials are functional and `META_ENABLE_PUBLISHING=true`; the worker supports text posts and public image URL posts.
+- `/jobs/meta-publishing` wraps Facebook and Instagram dispatch as a scheduler-ready job. It dry-runs by default, only looks at due scheduled posts, waits for Instagram media containers to finish before publishing, and blocks real publishing unless `META_ENABLE_PUBLISHING=true` and `META_ENABLE_PUBLISHING_JOB=true`.
 - `/metrics/meta/ingest` dry-runs published-post metric ingestion and blocks real ingestion until Meta readiness is green.
 - `/jobs/nightly-meta-metrics` wraps Meta metrics ingestion as a scheduler-ready nightly job. It dry-runs by default and blocks real writes unless Meta readiness is green and `META_ENABLE_METRICS_JOB=true`.
 - Real Meta publishing is intentionally not enabled until credentials and review flow are ready.

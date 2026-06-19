@@ -1749,6 +1749,36 @@ const requiredSnippets = [
     text: "does not enable live switches",
   },
   {
+    name: "meta page token functional fallback",
+    file: "main",
+    text: "permission_proof_status",
+  },
+  {
+    name: "meta direct page token fallback message",
+    file: "main",
+    text: "Page token can access the configured Facebook Page",
+  },
+  {
+    name: "meta graph post retry helper",
+    file: "main",
+    text: "meta_post_with_retry",
+  },
+  {
+    name: "facebook photo publish endpoint support",
+    file: "main",
+    text: "endpoint = \"photos\" if media_urls else \"feed\"",
+  },
+  {
+    name: "instagram container status wait",
+    file: "main",
+    text: "wait_for_instagram_container",
+  },
+  {
+    name: "instagram finished status requirement",
+    file: "main",
+    text: "status_code == \"FINISHED\"",
+  },
+  {
     name: "meta credential wizard route",
     file: "main",
     text: "meta_credential_wizard",

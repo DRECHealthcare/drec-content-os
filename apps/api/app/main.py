@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import asyncio
 import csv
 from datetime import datetime, timedelta, timezone
 from io import StringIO
@@ -310,22 +311,48 @@ async def inspect_meta_page_token():
             "missing_permissions": META_REQUIRED_PERMISSIONS,
         }
     url = f"https://graph.facebook.com/{settings.meta_graph_version}/me"
-    params = {
-        "fields": "id,name,permissions",
-        "access_token": settings.meta_page_access_token,
-    }
+    params = {"fields": "id,name,permissions", "access_token": settings.meta_page_access_token}
     try:
         async with httpx.AsyncClient(timeout=15) as client:
             res = await client.get(url, params=params)
         if res.status_code >= 400:
-            return {
-                "status": "error",
-                "message": "Meta token check failed. Reconnect or refresh the Page token.",
-                "permissions": [],
-                "missing_permissions": META_REQUIRED_PERMISSIONS,
-            }
+            raise httpx.HTTPStatusError("Meta /me check failed.", request=res.request, response=res)
         data = res.json()
     except httpx.HTTPError:
+        page_identity = None
+        ig_identity = None
+        try:
+            async with httpx.AsyncClient(timeout=15) as client:
+                page_res = await client.get(
+                    f"https://graph.facebook.com/{settings.meta_graph_version}/{settings.meta_page_id}",
+                    params={
+                        "fields": "id,name,instagram_business_account",
+                        "access_token": settings.meta_page_access_token,
+                    },
+                )
+                if page_res.status_code < 400:
+                    page_data = page_res.json()
+                    page_identity = {"id": page_data.get("id"), "name": page_data.get("name")}
+                    if settings.meta_ig_user_id:
+                        ig_res = await client.get(
+                            f"https://graph.facebook.com/{settings.meta_graph_version}/{settings.meta_ig_user_id}",
+                            params={"fields": "id,username", "access_token": settings.meta_page_access_token},
+                        )
+                        if ig_res.status_code < 400:
+                            ig_data = ig_res.json()
+                            ig_identity = {"id": ig_data.get("id"), "username": ig_data.get("username")}
+        except httpx.HTTPError:
+            page_identity = None
+        if page_identity:
+            return {
+                "status": "functional",
+                "message": "Page token can access the configured Facebook Page. App-level permission proof still needs Meta app credentials.",
+                "page_identity": page_identity,
+                "ig_identity": ig_identity,
+                "permissions": [],
+                "missing_permissions": META_REQUIRED_PERMISSIONS,
+                "permission_proof": "unverified_without_app_credentials",
+            }
         return {
             "status": "error",
             "message": "Meta token check could not reach Graph API.",
@@ -350,14 +377,21 @@ async def inspect_meta_page_token():
 async def meta_readiness(_: None = Depends(require_access_token)):
     env_checks = meta_env_status()
     token_check = await inspect_meta_page_token()
-    missing_env = [check["key"] for check in env_checks if not check["configured"]]
-    page_ready = not missing_env and token_check.get("status") == "ready"
+    missing_publish_env = [
+        check["key"]
+        for check in env_checks
+        if not check["configured"] and check["key"] in {"META_PAGE_ID", "META_IG_USER_ID", "META_PAGE_ACCESS_TOKEN"}
+    ]
+    token_status = token_check.get("status")
+    page_ready = not missing_publish_env and token_status in {"ready", "functional"}
+    permission_proof_ready = token_status == "ready"
     facebook_status = "ready" if page_ready else "blocked"
     instagram_status = "ready" if page_ready and settings.meta_ig_user_id else "blocked"
     return {
         "graph_version": settings.meta_graph_version,
         "mode": "manual_handoff" if not page_ready else "ready_for_worker_testing",
         "overall_status": "ready_for_worker_testing" if page_ready else "not_connected",
+        "permission_proof_status": "ready" if permission_proof_ready else "review",
         "env_checks": env_checks,
         "token_check": token_check,
         "required_permissions": META_REQUIRED_PERMISSIONS,
@@ -504,6 +538,9 @@ async def meta_setup_checklist(_: None = Depends(require_access_token)):
     oauth_guide = meta_oauth_guide_payload()
     missing_env = [check for check in readiness.get("env_checks", []) if not check.get("configured")]
     missing_permissions = readiness.get("token_check", {}).get("missing_permissions", [])
+    missing_publish_env = [item for item in missing_env if item["key"] in {"META_PAGE_ID", "META_IG_USER_ID", "META_PAGE_ACCESS_TOKEN"}]
+    missing_app_env = [item for item in missing_env if item["key"] in {"META_APP_ID", "META_APP_SECRET"}]
+    token_status = readiness.get("token_check", {}).get("status")
     required_secret_names = [
         "META_APP_ID",
         "META_APP_SECRET",
@@ -566,13 +603,18 @@ async def meta_setup_checklist(_: None = Depends(require_access_token)):
             "detail": security.get("next_step") or "Install SUPABASE_SERVICE_ROLE_KEY before strict RLS or live workers.",
         },
         {
-            "label": "Meta secrets installed",
-            "status": "ready" if not missing_env else "locked",
-            "detail": "All required Meta secrets are configured." if not missing_env else "Missing: " + ", ".join(item["key"] for item in missing_env),
+            "label": "Meta publishing secrets installed",
+            "status": "ready" if not missing_publish_env else "locked",
+            "detail": "Page, IG, and Page token secrets are configured." if not missing_publish_env else "Missing: " + ", ".join(item["key"] for item in missing_publish_env),
+        },
+        {
+            "label": "Meta app review credentials",
+            "status": "ready" if not missing_app_env else "review",
+            "detail": "Meta app credentials are configured." if not missing_app_env else "Missing for app-review proof: " + ", ".join(item["key"] for item in missing_app_env),
         },
         {
             "label": "Page token permission check",
-            "status": "ready" if not missing_permissions and readiness.get("token_check", {}).get("status") == "ready" else "locked",
+            "status": "ready" if token_status == "ready" else "review" if token_status == "functional" else "locked",
             "detail": readiness.get("token_check", {}).get("message") or "Confirm Page token permissions before live publishing.",
         },
         {
@@ -605,6 +647,8 @@ async def meta_setup_checklist(_: None = Depends(require_access_token)):
     return {
         "overall_status": "ready_to_enable" if meta_ready and security_ready else "needs_setup",
         "missing_credentials": [item["key"] for item in missing_env],
+        "missing_publish_credentials": [item["key"] for item in missing_publish_env],
+        "missing_app_credentials": [item["key"] for item in missing_app_env],
         "missing_permissions": missing_permissions,
         "required_secrets": required_secret_names,
         "setup_commands": setup_commands,
@@ -629,14 +673,19 @@ async def meta_setup_checklist(_: None = Depends(require_access_token)):
                 "detail": security.get("next_step"),
             },
             {
-                "label": "Install Meta app, Page, IG, and Page token secrets",
-                "status": "ready" if not missing_env else "needed",
-                "detail": "Missing: " + ", ".join(item["key"] for item in missing_env) if missing_env else "All required Meta secrets are configured.",
+                "label": "Install Meta Page, IG, and Page token secrets",
+                "status": "ready" if not missing_publish_env else "needed",
+                "detail": "Missing: " + ", ".join(item["key"] for item in missing_publish_env) if missing_publish_env else "Page publishing credentials are configured.",
+            },
+            {
+                "label": "Add Meta app credentials for formal permission proof",
+                "status": "ready" if not missing_app_env else "review",
+                "detail": "Missing: " + ", ".join(item["key"] for item in missing_app_env) if missing_app_env else "Meta app credentials are configured.",
             },
             {
                 "label": "Confirm Meta token permissions",
-                "status": "ready" if not missing_permissions and readiness.get("token_check", {}).get("status") == "ready" else "needed",
-                "detail": "Missing: " + ", ".join(missing_permissions) if missing_permissions else readiness.get("token_check", {}).get("message", "Check Page token permissions."),
+                "status": "ready" if token_status == "ready" else "review" if token_status == "functional" else "needed",
+                "detail": readiness.get("token_check", {}).get("message", "Check Page token permissions."),
             },
             {
                 "label": "Run dry-run checks before live switches",
@@ -1001,19 +1050,24 @@ async def meta_preflight_audit_payload():
     schedule = await schedule_audit_payload()
     security = security_status_payload()
     access_policy = access_policy_payload()
+    token_status = (readiness.get("token_check") or {}).get("status")
+    meta_status = "ready" if token_status == "ready" and readiness.get("overall_status") == "ready_for_worker_testing" else "review" if readiness.get("overall_status") == "ready_for_worker_testing" else "blocked"
+    meta_detail = (
+        "Meta credentials and Page token permissions are ready."
+        if meta_status == "ready"
+        else "Page token can access the configured Facebook Page; add Meta app credentials for formal permission proof before broad automation."
+        if meta_status == "review"
+        else "Missing publishing credentials: "
+        + (", ".join(setup.get("missing_publish_credentials") or []) or "None")
+        + "; missing app credentials: "
+        + (", ".join(setup.get("missing_app_credentials") or []) or "None")
+    )
     gates = [
         {
             "key": "meta_credentials",
             "label": "Meta credentials and permissions",
-            "status": "ready" if readiness.get("overall_status") == "ready_for_worker_testing" else "blocked",
-            "detail": (
-                "Meta credentials and Page token permissions are ready."
-                if readiness.get("overall_status") == "ready_for_worker_testing"
-                else "Missing credentials: "
-                + (", ".join(setup.get("missing_credentials") or []) or "None")
-                + "; missing permissions: "
-                + (", ".join(setup.get("missing_permissions") or []) or "None")
-            ),
+            "status": meta_status,
+            "detail": meta_detail,
         },
         {
             "key": "content_risk",
@@ -13636,23 +13690,39 @@ def instagram_dispatch_plan(item: dict | None):
         ]
     return [
         {"step": "create_media_container", "url": f"{base}/media", "params": instagram_container_payload(item)},
+        {"step": "wait_for_container_finished", "url": "{container-id}", "params": {"fields": "status_code,status"}},
         {"step": "publish_container", "url": f"{base}/media_publish", "params": {"creation_id": "{container-id}"}},
     ]
 
 
+async def meta_post_with_retry(url: str, data: dict, error_message: str):
+    last_detail = None
+    for attempt in range(3):
+        async with httpx.AsyncClient(timeout=30) as client:
+            res = await client.post(url, data=data)
+        if res.status_code < 400:
+            payload = res.json()
+            if not payload.get("error"):
+                return payload
+            last_detail = payload.get("error")
+        else:
+            try:
+                last_detail = res.json().get("error", res.text)
+            except ValueError:
+                last_detail = res.text
+        if attempt < 2:
+            await asyncio.sleep(30 * (attempt + 1))
+    raise HTTPException(status_code=502, detail={"message": error_message, "meta_error": last_detail})
+
+
 async def publish_facebook_feed_item(item: dict):
-    url = f"https://graph.facebook.com/{settings.meta_graph_version}/{settings.meta_page_id}/feed"
-    async with httpx.AsyncClient(timeout=30) as client:
-        res = await client.post(
-            url,
-            data={
-                "message": item.get("caption") or "",
-                "access_token": settings.meta_page_access_token,
-            },
-        )
-    if res.status_code >= 400:
-        raise HTTPException(status_code=502, detail="Meta rejected the Facebook publish request.")
-    data = res.json()
+    media_urls = [url for url in item.get("media_urls") or [] if url]
+    endpoint = "photos" if media_urls else "feed"
+    url = f"https://graph.facebook.com/{settings.meta_graph_version}/{settings.meta_page_id}/{endpoint}"
+    payload = {"message": item.get("caption") or "", "access_token": settings.meta_page_access_token}
+    if media_urls:
+        payload["url"] = str(media_urls[0])
+    data = await meta_post_with_retry(url, payload, "Meta rejected the Facebook publish request.")
     post_id = data.get("id")
     if post_id:
         row = await fetch_row(
@@ -13676,23 +13746,43 @@ async def publish_facebook_feed_item(item: dict):
 
 async def create_instagram_container(payload: dict):
     url = f"https://graph.facebook.com/{settings.meta_graph_version}/{settings.meta_ig_user_id}/media"
-    async with httpx.AsyncClient(timeout=30) as client:
-        res = await client.post(url, data={**payload, "access_token": settings.meta_page_access_token})
-    if res.status_code >= 400:
-        raise HTTPException(status_code=502, detail="Meta rejected the Instagram container request.")
-    return res.json().get("id")
+    data = await meta_post_with_retry(
+        url,
+        {**payload, "access_token": settings.meta_page_access_token},
+        "Meta rejected the Instagram container request.",
+    )
+    return data.get("id")
+
+
+async def wait_for_instagram_container(container_id: str):
+    url = f"https://graph.facebook.com/{settings.meta_graph_version}/{container_id}"
+    last_status = None
+    for _ in range(12):
+        async with httpx.AsyncClient(timeout=15) as client:
+            res = await client.get(
+                url,
+                params={"fields": "status_code,status", "access_token": settings.meta_page_access_token},
+            )
+        if res.status_code >= 400:
+            raise HTTPException(status_code=502, detail="Meta rejected the Instagram container status request.")
+        data = res.json()
+        last_status = data
+        status_code = data.get("status_code")
+        if status_code == "FINISHED":
+            return data
+        if status_code in {"ERROR", "EXPIRED"}:
+            raise HTTPException(status_code=502, detail={"message": "Instagram container failed.", "container_status": data})
+        await asyncio.sleep(5)
+    raise HTTPException(status_code=504, detail={"message": "Instagram container was not ready after 60 seconds.", "container_status": last_status})
 
 
 async def publish_instagram_container(container_id: str):
     url = f"https://graph.facebook.com/{settings.meta_graph_version}/{settings.meta_ig_user_id}/media_publish"
-    async with httpx.AsyncClient(timeout=30) as client:
-        res = await client.post(
-            url,
-            data={"creation_id": container_id, "access_token": settings.meta_page_access_token},
-        )
-    if res.status_code >= 400:
-        raise HTTPException(status_code=502, detail="Meta rejected the Instagram publish request.")
-    return res.json()
+    return await meta_post_with_retry(
+        url,
+        {"creation_id": container_id, "access_token": settings.meta_page_access_token},
+        "Meta rejected the Instagram publish request.",
+    )
 
 
 async def publish_instagram_item(item: dict):
@@ -13709,6 +13799,7 @@ async def publish_instagram_item(item: dict):
         container_id = await create_instagram_container(instagram_container_payload(item))
     if not container_id:
         raise HTTPException(status_code=502, detail="Meta did not return an Instagram container ID.")
+    container_status = await wait_for_instagram_container(container_id)
     data = await publish_instagram_container(container_id)
     post_id = data.get("id")
     if post_id:
@@ -13728,7 +13819,7 @@ async def publish_instagram_item(item: dict):
                 {"status": "published", "external_post_id": post_id},
                 {"id": f"eq.{item['id']}"},
             )
-    return {"post_id": post_id, "container_id": container_id, "meta_response": data}
+    return {"post_id": post_id, "container_id": container_id, "container_status": container_status, "meta_response": data}
 
 
 async def next_due_publish_item(channel: str):
