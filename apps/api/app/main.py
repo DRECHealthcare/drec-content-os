@@ -6196,6 +6196,212 @@ async def operations_metrics_closeout_pack_zh(_: None = Depends(require_access_t
     )
 
 
+async def monthly_carousel_learning_closeout_payload():
+    assets = await monthly_carousel_asset_list()
+    queue_items = await fetch_publish_queue_items(200)
+    raw_rows = await recent_raw_metrics(100)
+    outcome_rows = await recent_outcome_rows(100)
+    queue_by_asset: dict[str, list[dict]] = {}
+    for item in queue_items:
+        asset_id = str(item.get("asset_id") or "")
+        if asset_id:
+            queue_by_asset.setdefault(asset_id, []).append(item)
+    metric_by_post = {
+        str(row.get("external_post_id")): row
+        for row in raw_rows
+        if row.get("external_post_id")
+    }
+    outcome_by_post = {
+        str(row.get("post_id")): row
+        for row in outcome_rows
+        if row.get("post_id")
+    }
+    items = []
+    stage_counts: dict[str, int] = {}
+    for asset in assets:
+        metadata = asset.get("metadata") or {}
+        notion_source = metadata.get("notion_source") or {}
+        asset_id = str(asset.get("id") or "")
+        asset_queue = queue_by_asset.get(asset_id) or []
+        queue_item = next(
+            (item for item in asset_queue if item.get("status") == "published" or item.get("external_post_id")),
+            asset_queue[0] if asset_queue else None,
+        )
+        external_post_id = str((queue_item or {}).get("external_post_id") or "")
+        raw_metric = metric_by_post.get(external_post_id) if external_post_id else None
+        outcome = outcome_by_post.get(external_post_id) if external_post_id else None
+        if outcome:
+            closeout_stage = "learning_complete"
+            next_action = "Use this Topic ID as learning evidence for the next monthly plan."
+        elif raw_metric:
+            closeout_stage = "waiting_rollup"
+            next_action = "Roll up the raw metrics into an outcome."
+        elif external_post_id:
+            closeout_stage = "waiting_metrics"
+            next_action = "Enter 7-day metrics for this published post."
+        elif queue_item and queue_item.get("status") == "scheduled":
+            closeout_stage = "waiting_publish"
+            next_action = "Publish from handoff at the planned time, then record the post ID."
+        elif queue_item:
+            closeout_stage = "waiting_queue_finish"
+            next_action = "Finish queue review and scheduling before metrics closeout."
+        else:
+            closeout_stage = "upstream_gate"
+            next_action = "Finish doctor review, production QA, and queueing before learning closeout."
+        stage_counts[closeout_stage] = stage_counts.get(closeout_stage, 0) + 1
+        items.append(
+            {
+                "topic_id": monthly_carousel_topic_id(asset),
+                "asset_id": asset.get("id"),
+                "brief_id": asset.get("brief_id"),
+                "topic": metadata.get("topic") or monthly_carousel_topic_id(asset),
+                "planned_posting_date": notion_source.get("planned_posting_date") or "",
+                "notion_overall_status": notion_source.get("overall_status") or "",
+                "queue_id": (queue_item or {}).get("id") or "",
+                "queue_status": (queue_item or {}).get("status") or "",
+                "planned_slot": (queue_item or {}).get("planned_slot") or "",
+                "external_post_id": external_post_id,
+                "raw_metric_status": "captured" if raw_metric else "",
+                "raw_metric_captured_at": (raw_metric or {}).get("captured_at") or (raw_metric or {}).get("created_at") or "",
+                "outcome_status": "saved" if outcome else "",
+                "outcome_score": (outcome or {}).get("score") or "",
+                "outcome_saves": (outcome or {}).get("saves") or "",
+                "outcome_shares": (outcome or {}).get("shares") or "",
+                "closeout_stage": closeout_stage,
+                "next_action": next_action,
+            }
+        )
+    return {
+        "source": NOTION_CAROUSEL_SOURCE,
+        "mode": "read_only_monthly_learning_closeout",
+        "asset_count": len(items),
+        "stage_counts": stage_counts,
+        "waiting_metrics_count": stage_counts.get("waiting_metrics", 0),
+        "waiting_rollup_count": stage_counts.get("waiting_rollup", 0),
+        "learning_complete_count": stage_counts.get("learning_complete", 0),
+        "items": items,
+        "next_step": next(
+            (item.get("next_action") for item in items if item.get("closeout_stage") in {"waiting_metrics", "waiting_rollup"}),
+            "No monthly carousel item is waiting for metrics or rollup right now; continue upstream gates.",
+        ),
+        "safety": [
+            "This monthly learning closeout is read-only.",
+            "It does not import metrics, create outcomes, update Notion, schedule, publish, or call Meta.",
+            "Use Topic ID to connect Notion topics to queue items, metrics, outcomes, and future learning.",
+            "Use real Meta post IDs when available; manual labels are only for early workflow evidence.",
+        ],
+    }
+
+
+def zh_monthly_learning_stage(value: str | None):
+    return {
+        "upstream_gate": "前置流程未完成",
+        "waiting_queue_finish": "等待队列审核/排程",
+        "waiting_publish": "等待发布并记录 post ID",
+        "waiting_metrics": "等待录入表现数据",
+        "waiting_rollup": "等待汇总成 outcome",
+        "learning_complete": "学习闭环完成",
+    }.get(value or "", value or "未知")
+
+
+@app.get("/operations/monthly-carousel-learning-closeout")
+async def operations_monthly_carousel_learning_closeout(_: None = Depends(require_access_token)):
+    return await monthly_carousel_learning_closeout_payload()
+
+
+@app.get("/operations/monthly-carousel-learning-closeout.csv")
+async def operations_monthly_carousel_learning_closeout_csv(_: None = Depends(require_access_token)):
+    payload = await monthly_carousel_learning_closeout_payload()
+    output = StringIO()
+    fieldnames = [
+        "topic_id",
+        "asset_id",
+        "brief_id",
+        "topic",
+        "planned_posting_date",
+        "notion_overall_status",
+        "queue_id",
+        "queue_status",
+        "planned_slot",
+        "external_post_id",
+        "raw_metric_status",
+        "raw_metric_captured_at",
+        "outcome_status",
+        "outcome_score",
+        "outcome_saves",
+        "outcome_shares",
+        "closeout_stage",
+        "next_action",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for item in payload.get("items") or []:
+        writer.writerow({key: item.get(key, "") for key in fieldnames})
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-learning-closeout.csv"'},
+    )
+
+
+@app.get("/operations/monthly-carousel-learning-closeout.zh.md")
+async def operations_monthly_carousel_learning_closeout_zh(_: None = Depends(require_access_token)):
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    payload = await monthly_carousel_learning_closeout_payload()
+    source = payload.get("source") or {}
+    stage_counts = payload.get("stage_counts") or {}
+    lines = [
+        "# DREC 月度 Carousel 数据复盘收尾表",
+        "",
+        f"生成时间：{generated_at}",
+        f"Notion 来源：{source.get('name')}",
+        f"月度刷新日：每月 {source.get('monthly_refresh_day')} 日",
+        "",
+        "用途：把每个 Topic ID 从 Notion 内容、发布队列、post ID、raw metrics 到 outcome 串起来。本文件只读，不会导入数据、创建 outcome、更新 Notion、排程、发布或调用 Meta。",
+        "",
+        "## 当前数量",
+        "",
+        f"- 月度内容数：{payload.get('asset_count')}",
+        f"- 等待录入表现数据：{payload.get('waiting_metrics_count')}",
+        f"- 等待汇总成 outcome：{payload.get('waiting_rollup_count')}",
+        f"- 已完成学习闭环：{payload.get('learning_complete_count')}",
+        "",
+        "## 阶段统计",
+        "",
+        *markdown_list([f"{zh_monthly_learning_stage(key)}：{value}" for key, value in sorted(stage_counts.items())], "- 暂无阶段数据。"),
+        "",
+        "## 下一步",
+        "",
+        f"- {payload.get('next_step')}",
+        "",
+        "## 每条月度内容",
+        "",
+    ]
+    for item in payload.get("items") or []:
+        lines.extend(
+            [
+                f"### {item.get('topic_id')} · {item.get('topic')}",
+                "",
+                f"- Asset ID：`{item.get('asset_id')}`",
+                f"- Queue ID：`{item.get('queue_id') or '无'}`",
+                f"- 队列状态：{item.get('queue_status') or '无'}",
+                f"- 计划发布时间：{item.get('planned_slot') or item.get('planned_posting_date') or '未设置'}",
+                f"- 外部帖子 ID：{item.get('external_post_id') or '尚未记录'}",
+                f"- Raw metrics：{item.get('raw_metric_status') or '尚未录入'}",
+                f"- Outcome：{item.get('outcome_status') or '尚未生成'}；分数 {item.get('outcome_score') or 'n/a'}；收藏 {item.get('outcome_saves') or 0}；分享 {item.get('outcome_shares') or 0}",
+                f"- 收尾阶段：`{item.get('closeout_stage')}`（{zh_monthly_learning_stage(item.get('closeout_stage'))}）",
+                f"- 下一步：{item.get('next_action')}",
+                "",
+            ]
+        )
+    lines.extend(["## 安全线", "", *markdown_list(payload.get("safety")), ""])
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-learning-closeout-zh.md"'},
+    )
+
+
 def snapshot_row(record_type, item_id="", status="", channel="", fmt="", title="", created_at="", detail=""):
     return {
         "record_type": record_type,
