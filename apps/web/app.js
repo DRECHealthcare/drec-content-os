@@ -3850,10 +3850,11 @@ function renderDoctorSendQueue(data) {
     </article>
     <article class="learning-card wide-learning">
       <h3>Copy To Doctor</h3>
-      <p>${escapeHtml(data.paste_back_template || "Copy the review text, then paste back the doctor's explicit decision and safety status.")}</p>
+      <p>${escapeHtml((data.full_doctor_message || "Copy the review text, then paste back the doctor's explicit decision and safety status.").slice(0, 420))}${(data.full_doctor_message || "").length > 420 ? "..." : ""}</p>
       <div class="learning-actions sprint-bulk-actions">
         <button type="button" data-copy-doctor-full-message>Copy Full Message</button>
         <button type="button" data-copy-doctor-paste-back>Copy Paste-Back</button>
+        <button type="button" data-fill-doctor-paste-back>Fill Reply Box</button>
         <button type="button" data-copy-doctor-send-all>Copy Item Batch</button>
       </div>
       <div class="sprint-board">${itemCards || '<p class="status-note">No doctor send items are ready yet.</p>'}</div>
@@ -7254,6 +7255,23 @@ document.addEventListener("click", async (event) => {
 
   const doctorFullMessageButton = event.target.closest("[data-copy-doctor-full-message]");
   const doctorPasteBackButton = event.target.closest("[data-copy-doctor-paste-back]");
+  const doctorFillPasteBackButton = event.target.closest("[data-fill-doctor-paste-back]");
+  if (doctorFillPasteBackButton) {
+    const message = document.getElementById("media-message") || document.getElementById("asset-message");
+    if (!latestDoctorPasteBackTemplate) {
+      if (message) message.textContent = "No paste-back template to fill yet.";
+      return;
+    }
+    showScreen("assets");
+    const textInput = document.getElementById("doctor-reply-text");
+    if (textInput) {
+      textInput.value = latestDoctorPasteBackTemplate;
+      textInput.focus();
+      textInput.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (message) message.textContent = "Doctor reply box filled. Replace template choices with the doctor's actual reply before preview/import.";
+    }
+    return;
+  }
   const doctorBridgeButton = doctorFullMessageButton || doctorPasteBackButton;
   if (doctorBridgeButton) {
     const message = document.getElementById("media-message") || document.getElementById("asset-message");
