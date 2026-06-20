@@ -3824,19 +3824,22 @@ async def operations_test_run_checklist(_: None = Depends(require_access_token))
     return await test_run_checklist_payload()
 
 
-@app.post("/operations/scheduler-heartbeat")
-async def operations_scheduler_heartbeat(
+async def record_scheduler_heartbeat(
     workflow: str = "DREC Scheduler Dry Run",
     mode: str = "dry_run",
-    session: dict = Depends(require_admin_access),
+    session: dict | None = None,
+    source: str = "github-actions",
+    checks: dict | None = None,
 ):
     safe_workflow = re.sub(r"[^a-zA-Z0-9_. -]", "", workflow)[:80] or "github-actions"
     safe_mode = re.sub(r"[^a-zA-Z0-9_-]", "", mode)[:40] or "dry_run"
+    safe_source = re.sub(r"[^a-zA-Z0-9_. -]", "", source)[:80] or "scheduler"
     payload = {
         "recorded_at": datetime.now(timezone.utc).isoformat(),
-        "source": "github-actions",
+        "source": safe_source,
         "workflow": safe_workflow,
         "mode": safe_mode,
+        "checks": checks or {},
     }
     await save_feedback(
         FeedbackIn(
@@ -3845,11 +3848,76 @@ async def operations_scheduler_heartbeat(
             ref_id=safe_workflow,
             action="heartbeat",
             before_text=json.dumps(payload, ensure_ascii=False),
-            reason=f"GitHub scheduler {safe_mode} checks completed.",
-            tags=["github-actions", "scheduler", safe_mode, *audit_tags(session)],
+            reason=f"Scheduler {safe_mode} checks completed.",
+            tags=[safe_source, "scheduler", safe_mode, *audit_tags(session or {})],
         )
     )
     return {"heartbeat": await latest_scheduler_heartbeat()}
+
+
+@app.post("/operations/scheduler-heartbeat")
+async def operations_scheduler_heartbeat(
+    workflow: str = "DREC Scheduler Dry Run",
+    mode: str = "dry_run",
+    session: dict = Depends(require_admin_access),
+):
+    return await record_scheduler_heartbeat(workflow=workflow, mode=mode, session=session, source="github-actions")
+
+
+@app.post("/operations/scheduler-dry-run-self-check")
+async def operations_scheduler_dry_run_self_check(
+    workflow: str = "DREC Scheduler Dry Run",
+    mode: str = "dry_run",
+    record_heartbeat: bool = True,
+    session: dict = Depends(require_admin_access),
+):
+    publishing = await meta_publishing_job(channel="all", dry_run=True)
+    metrics = await nightly_meta_metrics_job(dry_run=True, limit=25, rollup=True)
+    automation = await automation_status_payload()
+    risk = await content_risk_audit_payload()
+    checks = {
+        "meta_publishing": {
+            "ready_count": publishing.get("ready_count", 0),
+            "dry_run": True,
+        },
+        "nightly_meta_metrics": {
+            "ready": bool(metrics.get("ready")),
+            "mode": metrics.get("mode"),
+            "blockers": metrics.get("blockers") or [],
+        },
+        "automation_status": automation.get("overall_status"),
+        "risk_status": risk.get("overall_status"),
+    }
+    heartbeat = None
+    if record_heartbeat:
+        heartbeat = await record_scheduler_heartbeat(
+            workflow=workflow,
+            mode=mode,
+            session=session,
+            source="scheduler-self-check",
+            checks=checks,
+        )
+    return {
+        "mode": "dry_run_self_check",
+        "recorded_heartbeat": bool(record_heartbeat),
+        "checks": checks,
+        "publishing": publishing,
+        "metrics": metrics,
+        "automation": {
+            "overall_status": automation.get("overall_status"),
+            "gates": automation.get("gates"),
+        },
+        "risk": {
+            "overall_status": risk.get("overall_status"),
+            "items": risk.get("items", [])[:10],
+        },
+        "heartbeat": heartbeat.get("heartbeat") if heartbeat else await latest_scheduler_heartbeat(),
+        "safety": [
+            "This self-check calls dry-run jobs only.",
+            "It records a scheduler heartbeat only after the dry-run endpoints and diagnostics return successfully.",
+            "It does not publish to Meta, schedule posts, approve assets, or ingest live metrics.",
+        ],
+    }
 
 
 @app.get("/operations/scheduler-activation-pack.md")
@@ -4014,6 +4082,7 @@ async def scheduler_health_payload():
         "likely_causes": likely_causes,
         "checks": [
             "Open GitHub > Actions and confirm DREC Scheduler Dry Run is enabled.",
+            "Use /operations/scheduler-dry-run-self-check or the Meta page button to run the same dry-run checks and record heartbeat evidence from inside DREC Content OS.",
             "Open the latest DREC Scheduler Dry Run run and check whether it reached Record scheduler heartbeat.",
             "Read the GitHub run summary; it now states the API URL, token presence, event, schedule, and dry-run safety line.",
             "Confirm repository secret DREC_ACCESS_TOKEN exists and is the current admin or legacy app token.",
@@ -4022,6 +4091,7 @@ async def scheduler_health_payload():
         ],
         "safety": [
             "This health pack is read-only and does not record a heartbeat.",
+            "The scheduler self-check endpoint records a heartbeat only after dry-run jobs and diagnostics return successfully.",
             "Do not paste secret values into GitHub files, docs, screenshots, or browser-visible fields.",
             "The recurring workflow calls dry-run endpoints only; live Meta switches remain locked separately.",
         ],

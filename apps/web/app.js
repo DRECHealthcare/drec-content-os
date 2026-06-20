@@ -785,6 +785,10 @@ Object.assign(uiZh, {
   "Keep app secrets server-side.": "App 密钥必须只放在服务器端。",
   "GitHub Scheduler Setup": "GitHub 排程设置",
   "Run the workflow once to record the first scheduler heartbeat.": "先手动运行一次流程，记录第一条排程心跳。",
+  "Running scheduler dry-run self-check...": "正在运行排程 dry-run 自检...",
+  "Scheduler self-check passed and heartbeat is recent.": "排程自检已通过，心跳已更新。",
+  "Scheduler self-check ran; heartbeat still needs attention.": "排程自检已运行，但心跳仍需要检查。",
+  "Could not run scheduler self-check.": "无法运行排程自检。",
   "Nightly Metrics Scheduler": "每日数据排程",
   "Meta Activation Switchboard": "Meta 启用开关板",
   "Ready for controlled live test sequence.": "可以进入受控真实测试流程。",
@@ -7552,6 +7556,27 @@ document.getElementById("download-scheduler-recovery").addEventListener("click",
     message.textContent = "Scheduler recovery pack downloaded.";
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download scheduler recovery pack.";
+  }
+});
+
+document.getElementById("dry-run-scheduler-self-check")?.addEventListener("click", async () => {
+  const message = document.getElementById("meta-message");
+  message.textContent = translateText("Running scheduler dry-run self-check...");
+  try {
+    const data = await fetchJson("/operations/scheduler-dry-run-self-check?record_heartbeat=true", {
+      method: "POST",
+    });
+    renderMetaPublishingJobDryRun(data.publishing || {});
+    renderMetaMetricsDryRun(data.metrics || {});
+    await Promise.all([loadMetaSetup(), loadNotifyRail(), loadProjectCompletionAudit()]);
+    const heartbeat = data.heartbeat || {};
+    message.textContent = heartbeat.status === "recent"
+      ? translateText("Scheduler self-check passed and heartbeat is recent.")
+      : translateText("Scheduler self-check ran; heartbeat still needs attention.");
+  } catch (error) {
+    message.textContent = error.message === "Access token required"
+      ? translateText("Set the access token first.")
+      : translateText("Could not run scheduler self-check.");
   }
 });
 
