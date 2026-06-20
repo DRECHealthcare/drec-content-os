@@ -595,6 +595,10 @@ Object.assign(uiZh, {
   "Could not download project completion audit.": "无法下载项目完成度审计。",
   "Project completion CSV downloaded.": "项目完成度 CSV 已下载。",
   "Could not download project completion CSV.": "无法下载项目完成度 CSV。",
+  "Running service-role smoke test...": "正在运行 service-role smoke test...",
+  "Service-role smoke test passed.": "Service-role smoke test 已通过。",
+  "Service-role key is still missing.": "Service-role key 仍未安装。",
+  "Could not run service-role smoke test.": "无法运行 service-role smoke test。",
   "Choose the Notion carousel CSV first.": "请先选择 Notion Carousel CSV。",
   "Previewing Notion carousel CSV...": "正在预览 Notion Carousel CSV...",
   "Importing Notion carousel CSV...": "正在导入 Notion Carousel CSV...",
@@ -5248,6 +5252,22 @@ document.getElementById("download-service-role-pack")?.addEventListener("click",
     message.textContent = "Service role install pack downloaded.";
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download service role install pack.";
+  }
+});
+
+document.getElementById("run-service-role-smoke")?.addEventListener("click", async () => {
+  const message = document.getElementById("test-path-message");
+  message.textContent = translateText("Running service-role smoke test...");
+  try {
+    const data = await fetchJson("/security/service-role-smoke-test", { method: "POST" });
+    message.textContent = data.passed
+      ? translateText("Service-role smoke test passed.")
+      : translateText("Service-role key is still missing.");
+    await Promise.all([loadLoopStatus(), loadProjectCompletionAudit()]);
+  } catch (error) {
+    message.textContent = error.message === "Access token required"
+      ? translateText("Set the access token first.")
+      : translateText("Could not run service-role smoke test.");
   }
 });
 

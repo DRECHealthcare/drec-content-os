@@ -1265,6 +1265,86 @@ async def security_status(_: None = Depends(require_access_token)):
     return security_status_payload()
 
 
+@app.post("/security/service-role-smoke-test")
+async def security_service_role_smoke_test(session: dict = Depends(require_admin_access)):
+    security = security_status_payload()
+    if not settings.supabase_service_role_key:
+        return {
+            "mode": "service_role_smoke_test",
+            "status": "missing_service_role_key",
+            "passed": False,
+            "security": security,
+            "message": "SUPABASE_SERVICE_ROLE_KEY is not installed on Fly yet.",
+            "next_step": "Install the service-role key with the Service Role Install Pack, then rerun this smoke test.",
+            "safety": [
+                "This test never displays or returns secret values.",
+                "No RLS policy should be tightened until this smoke test passes.",
+            ],
+        }
+    if not supabase_rest.configured():
+        return {
+            "mode": "service_role_smoke_test",
+            "status": "supabase_rest_missing",
+            "passed": False,
+            "security": security,
+            "message": "Supabase REST is not configured.",
+            "next_step": "Confirm SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set on Fly.",
+            "safety": [
+                "This test never displays or returns secret values.",
+                "No RLS policy should be tightened until this smoke test passes.",
+            ],
+        }
+    marker = f"service-role-smoke-{uuid4()}"
+    payload = {
+        "module": "security",
+        "ref_type": "service_role",
+        "ref_id": marker,
+        "action": "heartbeat",
+        "before_text": json.dumps(
+            {
+                "kind": "service_role_smoke_test",
+                "recorded_at": datetime.now(timezone.utc).isoformat(),
+                "api_key_source": "supabase_service_role_key",
+            },
+            ensure_ascii=False,
+        ),
+        "after_text": None,
+        "reason": "Server-side Supabase service-role smoke test succeeded.",
+        "tags": ["service-role-smoke", "security", *audit_tags(session)],
+    }
+    try:
+        inserted = await supabase_rest.insert("feedback", payload)
+    except Exception as exc:
+        return {
+            "mode": "service_role_smoke_test",
+            "status": "failed",
+            "passed": False,
+            "security": security,
+            "message": "Server-side service-role REST write failed.",
+            "error_type": exc.__class__.__name__,
+            "next_step": "Confirm the service-role key belongs to this Supabase project and Fly has restarted after setting the secret.",
+            "safety": [
+                "This response does not expose the service-role key.",
+                "Keep strict RLS changes paused until the smoke test passes.",
+            ],
+        }
+    return {
+        "mode": "service_role_smoke_test",
+        "status": "passed",
+        "passed": True,
+        "security": security_status_payload(),
+        "feedback_id": (inserted or {}).get("id"),
+        "ref_id": marker,
+        "message": "Server-side Supabase service-role REST write succeeded.",
+        "next_step": "Run live smoke, then use the RLS hardening plan before applying strict policies.",
+        "safety": [
+            "This test writes one audit heartbeat row to feedback as proof.",
+            "It never displays, stores in the browser, or returns the service-role key.",
+            "Real Meta jobs still remain locked behind Meta readiness and live switches.",
+        ],
+    }
+
+
 @app.get("/security/access-policy")
 async def security_access_policy(session: dict = Depends(require_access_token)):
     return access_policy_payload(session.get("role", "none"), session.get("actor", ""))
@@ -1373,7 +1453,9 @@ async def security_service_role_install_pack(_: None = Depends(require_admin_acc
         "unset SUPABASE_SERVICE_ROLE_KEY",
         "# 3. Fly restarts machines after the secret is set. Then verify the gate:",
         "DREC_ACCESS_TOKEN=\"***\" curl -H \"X-DREC-Access-Token: $DREC_ACCESS_TOKEN\" https://drec-content-os-api.fly.dev/security/status",
-        "# 4. Run live smoke before applying strict RLS:",
+        "# 4. Run the service-role smoke test. This writes one audit heartbeat and never displays the key:",
+        "DREC_ACCESS_TOKEN=\"***\" curl -X POST -H \"X-DREC-Access-Token: $DREC_ACCESS_TOKEN\" https://drec-content-os-api.fly.dev/security/service-role-smoke-test",
+        "# 5. Run live smoke before applying strict RLS:",
         "DREC_ACCESS_TOKEN=\"***\" DREC_WEB_URL=\"https://drec-content-os-api.fly.dev/ui/\" npm run smoke:live",
     ]
     lines = [
@@ -1408,6 +1490,7 @@ async def security_service_role_install_pack(_: None = Depends(require_admin_acc
         "",
         "- `fly secrets list -a drec-content-os-api` shows `SUPABASE_SERVICE_ROLE_KEY` deployed.",
         "- `/security/status` returns `ready_for_rls_hardening`.",
+        "- `/security/service-role-smoke-test` returns `passed` and records one feedback audit heartbeat.",
         "- `npm run smoke:live` passes against the Fly URL.",
         "- Only after those checks, use `Download RLS Plan` and apply `supabase/migrations/20260617040906_strict_server_only_rls.sql`.",
         "",
