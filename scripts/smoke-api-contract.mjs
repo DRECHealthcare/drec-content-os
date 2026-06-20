@@ -4706,6 +4706,15 @@ function collectRoutes(source) {
   return new Set(routes);
 }
 
+function collectInternalMarkdownLinks(source) {
+  const links = new Set();
+  const linkPattern = /\/(?:operations|notion|learning)[A-Za-z0-9_./-]*\.zh\.md|\/weekly-report\.zh\.md/g;
+  for (const match of source.matchAll(linkPattern)) {
+    links.add(match[0]);
+  }
+  return links;
+}
+
 function pass(name, detail = "ok") {
   console.log(`PASS ${name}: ${detail}`);
 }
@@ -4744,6 +4753,19 @@ for (const check of forbiddenSnippets) {
     failures.push(fail(check.name, "forbidden stale code present"));
   } else {
     pass(check.name);
+  }
+}
+
+const linkedMarkdownRoutes = new Set([
+  ...collectInternalMarkdownLinks(sources.main),
+  ...collectInternalMarkdownLinks(sources.web),
+]);
+for (const link of [...linkedMarkdownRoutes].sort()) {
+  const route = `GET ${link}`;
+  if (routes.has(route)) {
+    pass(`internal markdown link ${link}`);
+  } else {
+    failures.push(fail(`internal markdown link ${link}`, "missing matching GET route"));
   }
 }
 
