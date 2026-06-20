@@ -11021,10 +11021,11 @@ async def operations_monthly_carousel_production_qa_pack_zh(_: None = Depends(re
         "## 使用顺序",
         "",
         "1. 只有医生明确 `Decision: approve` 且 `Safety: clear` 的项目，才可以当作正式制作输入。",
-        "2. 下载月度制作设计表 CSV，填 `new_media_urls`、`visual_qa_status`、`rights_note`、`producer_name`。",
-        "3. 先 Preview Monthly Production，确认只影响本月 Topic ID。",
-        "4. 确认无误后 Import Monthly Production。",
-        "5. 导入后仍需入队检查、队列审核、排程检查和发布交接。",
+        "2. 先看制作导入规则：`/operations/monthly-carousel-production-import-rules.zh.md`。",
+        "3. 下载月度制作设计表 CSV，填 `new_media_urls`、`visual_qa_status`、`rights_note`、`producer_name`、`production_notes`。",
+        "4. 先 Preview Monthly Production，确认只影响本月 Topic ID。",
+        "5. 确认无误后 Import Monthly Production。",
+        "6. 导入后仍需入队检查、队列审核、排程检查和发布交接。",
         "",
         "## 视觉 QA 标准",
         "",
@@ -11580,6 +11581,8 @@ async def monthly_carousel_action_pack_payload():
             "doctor_worksheet": "/operations/monthly-carousel-doctor-decision-worksheet.csv",
             "production_worksheet": "/operations/monthly-carousel-production-design-worksheet.csv",
             "production_qa_pack": "/operations/monthly-carousel-production-qa-pack.zh.md",
+            "production_import_rules": "/operations/monthly-carousel-production-import-rules.zh.md",
+            "production_import_rules_csv": "/operations/monthly-carousel-production-import-rules.csv",
             "queue_readiness": "/operations/monthly-carousel-queue-readiness.zh.md",
             "queue_execution_pack": "/operations/monthly-carousel-queue-execution-pack.zh.md",
             "monthly_queue_ready_action": "/operations/monthly-carousel-queue-ready",
@@ -15731,6 +15734,8 @@ async def process_asset_media_attachment_csv(
     session: dict,
     source_label: str = "asset media attachment",
     allowed_asset_ids: set[str] | None = None,
+    require_approved_clear: bool = False,
+    strict_final_media_evidence: bool = False,
 ):
     reader = csv.DictReader(StringIO(csv_text))
     required = {"asset_id", "new_media_urls"}
@@ -15769,6 +15774,28 @@ async def process_asset_media_attachment_csv(
         producer_name = (row.get("producer_name") or "").strip()
         rights_note = (row.get("rights_note") or "").strip()
         notes = (row.get("production_notes") or "").strip()
+        if require_approved_clear and not (existing.get("review_status") == "approved" and existing.get("compliance_status") == "clear"):
+            skipped.append({"row": index, "asset_id": asset_id, "reason": "Monthly production import requires doctor approval and Safety clear before attaching final media."})
+            continue
+        if strict_final_media_evidence:
+            missing_evidence = []
+            if visual_qa_status == "passed":
+                if not rights_note:
+                    missing_evidence.append("rights_note")
+                if not producer_name:
+                    missing_evidence.append("producer_name")
+                if not notes:
+                    missing_evidence.append("production_notes")
+            if missing_evidence:
+                skipped.append(
+                    {
+                        "row": index,
+                        "asset_id": asset_id,
+                        "reason": "Final media with visual_qa_status=passed requires rights_note, producer_name, and production_notes.",
+                        "missing_evidence": missing_evidence,
+                    }
+                )
+                continue
         reason_parts = [f"{source_label} CSV media/design attachment import."]
         if producer_name:
             reason_parts.append(f"Producer: {producer_name}.")
@@ -15972,6 +15999,8 @@ async def import_monthly_carousel_production_design_worksheet(
         session=session,
         source_label="monthly carousel production design worksheet",
         allowed_asset_ids=allowed_asset_ids,
+        require_approved_clear=True,
+        strict_final_media_evidence=True,
     )
     result["source"] = "monthly_carousel_production_design_worksheet"
     result["message"] = (
@@ -15982,6 +16011,8 @@ async def import_monthly_carousel_production_design_worksheet(
     result["safety"] = [
         *result.get("safety", []),
         "Monthly import accepts only assets from the Notion monthly carousel source of truth.",
+        "Monthly import requires doctor approval and Safety clear before attaching final media.",
+        "Monthly final media marked Visual QA passed requires rights_note, producer_name, and production_notes.",
         "Monthly import still does not approve, queue, schedule, publish, or call Meta.",
     ]
     return result
@@ -16325,6 +16356,96 @@ def monthly_doctor_import_rules_markdown():
     return "\n".join(lines)
 
 
+def monthly_production_import_rules_payload():
+    return {
+        "mode": "read_only_monthly_production_import_rules",
+        "applies_to": "/operations/import-monthly-carousel-production-design-worksheet",
+        "source_of_truth": NOTION_CAROUSEL_SOURCE,
+        "identifier_rules": [
+            "Asset ID is the import key.",
+            "Rows for assets outside the monthly Notion carousel source of truth are skipped.",
+            "Production import is for final media evidence, not doctor approval.",
+        ],
+        "required_columns": ["asset_id", "new_media_urls"],
+        "approval_gate": [
+            "Existing asset review_status must be approved.",
+            "Existing asset compliance_status must be clear.",
+            "Doctor approval and Safety clear must be imported before final media is attached.",
+        ],
+        "final_media_required_fields_when_visual_qa_passed": [
+            "new_media_urls",
+            "visual_qa_status=passed",
+            "rights_note",
+            "producer_name",
+            "production_notes",
+        ],
+        "accepted_visual_qa_values": {
+            "pending": ["pending", "review", "needs review", "qa pending"],
+            "passed": ["passed", "pass", "approved", "clear", "ok", "yes", "y"],
+            "needs_work": ["needs work", "needs edit", "fix", "blocked", "fail", "failed", "no", "n"],
+        },
+        "skip_rules": [
+            "Missing asset_id.",
+            "Asset is not part of the monthly carousel source of truth.",
+            "Asset is not already doctor-approved and Safety clear.",
+            "Missing new_media_urls.",
+            "Media URLs do not start with http or https.",
+            "Invalid visual_qa_status value.",
+            "visual_qa_status=passed without rights_note, producer_name, or production_notes.",
+        ],
+        "safe_import_sequence": [
+            "Finish monthly doctor worksheet import first.",
+            "Download monthly production QA pack and production worksheet.",
+            "Fill public final media URLs, rights note, producer name, and production notes.",
+            "Run Preview Monthly Production first.",
+            "Only import if preview shows planned rows and no unexpected skipped rows.",
+            "After import, run monthly queue readiness before any queue action.",
+        ],
+        "safety": [
+            "This rules pack is read-only.",
+            "Production import does not approve assets, queue, schedule, publish, update Notion, record post IDs, or call Meta.",
+            "Visual QA passed is not a publishing approval.",
+            "Queue readiness and pre-schedule gates still apply after production import.",
+        ],
+    }
+
+
+def monthly_production_import_rules_markdown():
+    payload = monthly_production_import_rules_payload()
+    lines = [
+        "# DREC 月度制作/媒体导入规则",
+        "",
+        "这个文件只读，不会批准、修改医生审核、挂载媒体、入队、排程、发布、更新 Notion、记录 post ID 或调用 Meta。",
+        "",
+        "## 适用范围",
+        "",
+        f"- 导入端点：`{payload.get('applies_to')}`",
+        f"- Notion 来源：{(payload.get('source_of_truth') or {}).get('name')}",
+        "",
+        "## 导入前必须已经通过",
+        "",
+        *markdown_list(payload.get("approval_gate")),
+        "",
+        "## Visual QA passed 时必填",
+        "",
+        *markdown_list(payload.get("final_media_required_fields_when_visual_qa_passed")),
+        "",
+        "## 会被跳过的情况",
+        "",
+        *markdown_list(payload.get("skip_rules")),
+        "",
+        "## 安全导入顺序",
+        "",
+        *markdown_list(payload.get("safe_import_sequence")),
+        "",
+        "## 安全线",
+        "",
+        *markdown_list(payload.get("safety")),
+        "",
+    ]
+    return "\n".join(lines)
+
+
 @app.get("/operations/monthly-carousel-doctor-import-rules")
 async def operations_monthly_carousel_doctor_import_rules(_: None = Depends(require_access_token)):
     return monthly_doctor_import_rules_payload()
@@ -16355,6 +16476,39 @@ async def operations_monthly_carousel_doctor_import_rules_csv(_: None = Depends(
         output.getvalue(),
         media_type="text/csv",
         headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-doctor-import-rules.csv"'},
+    )
+
+
+@app.get("/operations/monthly-carousel-production-import-rules")
+async def operations_monthly_carousel_production_import_rules(_: None = Depends(require_access_token)):
+    return monthly_production_import_rules_payload()
+
+
+@app.get("/operations/monthly-carousel-production-import-rules.zh.md")
+async def operations_monthly_carousel_production_import_rules_zh(_: None = Depends(require_access_token)):
+    return Response(
+        monthly_production_import_rules_markdown(),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-production-import-rules-zh.md"'},
+    )
+
+
+@app.get("/operations/monthly-carousel-production-import-rules.csv")
+async def operations_monthly_carousel_production_import_rules_csv(_: None = Depends(require_access_token)):
+    payload = monthly_production_import_rules_payload()
+    output = StringIO()
+    writer = csv.DictWriter(output, fieldnames=["rule_type", "field", "requirement"])
+    writer.writeheader()
+    for item in payload.get("approval_gate") or []:
+        writer.writerow({"rule_type": "approval_gate", "field": "", "requirement": item})
+    for item in payload.get("final_media_required_fields_when_visual_qa_passed") or []:
+        writer.writerow({"rule_type": "visual_qa_passed_required_field", "field": item, "requirement": "Required when visual_qa_status=passed."})
+    for item in payload.get("skip_rules") or []:
+        writer.writerow({"rule_type": "skip_rule", "field": "", "requirement": item})
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-production-import-rules.csv"'},
     )
 
 

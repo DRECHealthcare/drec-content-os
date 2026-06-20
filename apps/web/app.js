@@ -678,6 +678,8 @@ Object.assign(uiZh, {
   "Could not download monthly carousel production worksheet.": "无法下载月度 Carousel 制作设计表。",
   "Monthly carousel production QA pack downloaded.": "月度 Carousel 制作 QA 包已下载。",
   "Could not download monthly carousel production QA pack.": "无法下载月度 Carousel 制作 QA 包。",
+  "Monthly carousel production import rules downloaded.": "月度 Carousel 制作导入规则已下载。",
+  "Could not download monthly carousel production import rules.": "无法下载月度 Carousel 制作导入规则。",
   "Monthly carousel evidence bridge downloaded.": "月度 Carousel 证据桥接表已下载。",
   "Could not download monthly carousel evidence bridge.": "无法下载月度 Carousel 证据桥接表。",
   "Monthly carousel queue readiness downloaded.": "月度 Carousel 入队检查表已下载。",
@@ -2879,6 +2881,7 @@ function renderDashboardMonthlyActionQueue(data) {
         <button type="button" data-import-dashboard-doctor-reply-safe>导入回复并安全推进</button>
         <button type="button" data-download-dashboard-monthly-production-worksheet>下载制作设计表</button>
         <button type="button" data-download-dashboard-monthly-production-qa>下载制作 QA 包</button>
+        <button type="button" data-download-dashboard-monthly-production-import-rules>下载制作导入规则</button>
         <button type="button" data-fill-dashboard-production-reply-template>填写制作回复模板</button>
         <button type="button" data-download-dashboard-monthly-queue-readiness>下载入队检查表</button>
         <button type="button" data-download-dashboard-monthly-queue-execution>下载入队执行包</button>
@@ -6656,6 +6659,16 @@ document.getElementById("download-monthly-carousel-production-qa-pack")?.addEven
   }
 });
 
+document.getElementById("download-monthly-carousel-production-import-rules")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/monthly-carousel-production-import-rules.zh.md", "drec-monthly-carousel-production-import-rules-zh.md", "text/markdown");
+    message.textContent = translateText("Monthly carousel production import rules downloaded.");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download monthly carousel production import rules.");
+  }
+});
+
 document.getElementById("download-monthly-carousel-evidence-bridge")?.addEventListener("click", async () => {
   const message = document.getElementById("media-message");
   try {
@@ -7481,6 +7494,7 @@ document.getElementById("dashboard-monthly-action-queue")?.addEventListener("cli
   const importDoctorReplySafe = event.target.closest("[data-import-dashboard-doctor-reply-safe]");
   const downloadProductionWorksheet = event.target.closest("[data-download-dashboard-monthly-production-worksheet]");
   const downloadProductionQa = event.target.closest("[data-download-dashboard-monthly-production-qa]");
+  const downloadProductionImportRules = event.target.closest("[data-download-dashboard-monthly-production-import-rules]");
   const fillProductionReplyTemplate = event.target.closest("[data-fill-dashboard-production-reply-template]");
   const downloadQueueReadiness = event.target.closest("[data-download-dashboard-monthly-queue-readiness]");
   const downloadQueueExecution = event.target.closest("[data-download-dashboard-monthly-queue-execution]");
@@ -7500,7 +7514,7 @@ document.getElementById("dashboard-monthly-action-queue")?.addEventListener("cli
   const downloadNextPlanCsv = event.target.closest("[data-download-dashboard-monthly-next-plan-csv]");
   const downloadQueue = event.target.closest("[data-download-dashboard-monthly-action-queue]");
   const downloadCsv = event.target.closest("[data-download-dashboard-monthly-action-csv]");
-  if (!openAssets && !downloadDoctorHandoff && !downloadDoctorTriage && !downloadDoctorImportRules && !downloadDoctorReview && !downloadPngAssets && !downloadDoctorWorksheet && !fillDoctorReplyTemplate && !previewDoctorReplySafe && !importDoctorReplySafe && !downloadProductionWorksheet && !downloadProductionQa && !fillProductionReplyTemplate && !downloadQueueReadiness && !downloadQueueExecution && !previewQueueReady && !runQueueReady && !previewSafeAdvance && !runSafeAdvance && !downloadScheduleWorksheet && !downloadSchedulePack && !downloadScheduleAudit && !downloadPublishingHandoff && !downloadMetricsTemplate && !downloadMetricsPack && !downloadLearningCloseout && !downloadLearningCsv && !downloadNextPlanHandback && !downloadNextPlanCsv && !downloadQueue && !downloadCsv) return;
+  if (!openAssets && !downloadDoctorHandoff && !downloadDoctorTriage && !downloadDoctorImportRules && !downloadDoctorReview && !downloadPngAssets && !downloadDoctorWorksheet && !fillDoctorReplyTemplate && !previewDoctorReplySafe && !importDoctorReplySafe && !downloadProductionWorksheet && !downloadProductionQa && !downloadProductionImportRules && !fillProductionReplyTemplate && !downloadQueueReadiness && !downloadQueueExecution && !previewQueueReady && !runQueueReady && !previewSafeAdvance && !runSafeAdvance && !downloadScheduleWorksheet && !downloadSchedulePack && !downloadScheduleAudit && !downloadPublishingHandoff && !downloadMetricsTemplate && !downloadMetricsPack && !downloadLearningCloseout && !downloadLearningCsv && !downloadNextPlanHandback && !downloadNextPlanCsv && !downloadQueue && !downloadCsv) return;
   if (openAssets) {
     showScreen("assets");
     const card = document.getElementById("monthly-carousel-status-board");
@@ -7653,6 +7667,16 @@ document.getElementById("dashboard-monthly-action-queue")?.addEventListener("cli
         preparing: "Preparing monthly production QA pack...",
         done: "Monthly carousel production QA pack downloaded.",
         failed: "Could not download monthly carousel production QA pack.",
+      };
+    }
+    if (downloadProductionImportRules) {
+      return {
+        path: "/operations/monthly-carousel-production-import-rules.zh.md",
+        filename: "drec-monthly-carousel-production-import-rules-zh.md",
+        type: "text/markdown",
+        preparing: "Preparing monthly production import rules...",
+        done: "Monthly carousel production import rules downloaded.",
+        failed: "Could not download monthly carousel production import rules.",
       };
     }
     if (downloadQueueReadiness) {

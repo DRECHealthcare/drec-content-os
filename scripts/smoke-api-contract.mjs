@@ -102,6 +102,9 @@ const requiredRoutes = [
   "GET /operations/monthly-carousel-doctor-import-rules",
   "GET /operations/monthly-carousel-doctor-import-rules.zh.md",
   "GET /operations/monthly-carousel-doctor-import-rules.csv",
+  "GET /operations/monthly-carousel-production-import-rules",
+  "GET /operations/monthly-carousel-production-import-rules.zh.md",
+  "GET /operations/monthly-carousel-production-import-rules.csv",
   "POST /operations/import-doctor-replies",
   "GET /operations/approval-cockpit",
   "GET /operations/approval-cockpit.md",
@@ -2968,6 +2971,36 @@ const requiredSnippets = [
     name: "web dashboard monthly production qa action",
     file: "web",
     text: "download-dashboard-monthly-production-qa",
+  },
+  {
+    name: "web monthly production import rules action",
+    file: "web",
+    text: "download-monthly-carousel-production-import-rules",
+  },
+  {
+    name: "web dashboard monthly production import rules action",
+    file: "web",
+    text: "data-download-dashboard-monthly-production-import-rules",
+  },
+  {
+    name: "monthly production import rules route",
+    file: "main",
+    text: "/operations/monthly-carousel-production-import-rules.zh.md",
+  },
+  {
+    name: "monthly production import approval gate",
+    file: "main",
+    text: "require_approved_clear=True",
+  },
+  {
+    name: "monthly production import final media evidence gate",
+    file: "main",
+    text: "strict_final_media_evidence=True",
+  },
+  {
+    name: "monthly production import evidence copy",
+    file: "main",
+    text: "Final media with visual_qa_status=passed requires rights_note, producer_name, and production_notes.",
   },
   {
     name: "web dashboard production reply fill action",
