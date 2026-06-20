@@ -3319,6 +3319,31 @@ const requiredSnippets = [
     text: "/operations/post-publish-metrics-template.csv",
   },
   {
+    name: "web simple operator publishing handoff action",
+    file: "web",
+    text: "data-simple-download-handoff",
+  },
+  {
+    name: "web simple operator reel handoff action",
+    file: "web",
+    text: "data-simple-download-reel",
+  },
+  {
+    name: "web simple operator post-publish action",
+    file: "web",
+    text: "data-simple-download-post-publish",
+  },
+  {
+    name: "web simple operator post metrics action",
+    file: "web",
+    text: "data-simple-download-post-metrics",
+  },
+  {
+    name: "web simple operator reel handoff endpoint",
+    file: "web",
+    text: "/video/manual-reel-handoff.zh.md",
+  },
+  {
     name: "web publishing closeout renderer",
     file: "web",
     text: "renderPublishingCloseout",

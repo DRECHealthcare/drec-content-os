@@ -2463,12 +2463,15 @@ function renderSimpleOperator(data) {
       <button type="button" data-simple-open-scheduler>打开排程</button>
     `;
   } else if (scheduledQueue > 0) {
-    title = "已有内容排程，下一步是发布交接";
-    body = `已有 ${scheduledQueue} 条内容进入排程。下一步下载发布交接包，正式发布仍需要人工确认。`;
-    status = "已排程";
+    title = "已排程，下一步只做交接和人工确认";
+    body = `已有 ${scheduledQueue} 条内容进入排程。这里的按钮只会下载交接资料或打开页面，不会发布到 Facebook / Instagram。`;
+    status = "已排程 · 未发布";
     actions = `
       <button class="primary" type="button" data-simple-open-scheduler>打开排程</button>
       <button type="button" data-simple-download-handoff>下载发布交接包</button>
+      <button type="button" data-simple-download-reel>下载 Reel 制作包</button>
+      <button type="button" data-simple-download-post-publish>下载发布后下一步</button>
+      <button type="button" data-simple-download-post-metrics>下载数据记录表</button>
     `;
   }
 
@@ -5710,8 +5713,11 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   const openReview = event.target.closest("[data-simple-open-review]");
   const openScheduler = event.target.closest("[data-simple-open-scheduler]");
   const downloadHandoff = event.target.closest("[data-simple-download-handoff]");
+  const downloadReel = event.target.closest("[data-simple-download-reel]");
+  const downloadPostPublish = event.target.closest("[data-simple-download-post-publish]");
+  const downloadPostMetrics = event.target.closest("[data-simple-download-post-metrics]");
   const refresh = event.target.closest("[data-simple-refresh]");
-  if (!runReadyAssets && !openAssets && !openReview && !openScheduler && !downloadHandoff && !refresh) return;
+  if (!runReadyAssets && !openAssets && !openReview && !openScheduler && !downloadHandoff && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !refresh) return;
   if (refresh) {
     await loadLoopStatus();
     await loadDashboardMonthlyActionQueue();
@@ -5730,7 +5736,19 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
     return;
   }
   if (downloadHandoff) {
-    await downloadProtectedFile("/operations/monthly-carousel-publishing-handoff.zh.md", "drec-monthly-carousel-publishing-handoff-zh.md", "text/markdown");
+    await downloadProtectedFile("/operations/publishing-handoff.zh.md", "drec-publishing-handoff-zh.md", "text/markdown");
+    return;
+  }
+  if (downloadReel) {
+    await downloadProtectedFile("/video/manual-reel-handoff.zh.md", "drec-manual-reel-handoff-zh.md", "text/markdown");
+    return;
+  }
+  if (downloadPostPublish) {
+    await downloadProtectedFile("/operations/post-publish-next-steps.zh.md", "drec-post-publish-next-steps-zh.md", "text/markdown");
+    return;
+  }
+  if (downloadPostMetrics) {
+    await downloadProtectedFile("/operations/post-publish-metrics-template.csv", "drec-post-publish-metrics-template.csv", "text/csv");
     return;
   }
   showScreen("assets");
