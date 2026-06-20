@@ -663,6 +663,27 @@ async def meta_setup_checklist(_: None = Depends(require_access_token)):
         ],
         "safety": "This workflow is read-only. It does not approve, queue, schedule, publish, update Notion, or call Meta.",
     }
+    publishing_closeout_watch = {
+        "status": "armed_read_only" if scheduler_heartbeat.get("status") in {"recent", "stale"} else "needs_first_run",
+        "workflow_file": ".github/workflows/drec-publishing-closeout-watch.yml",
+        "schedule": "daily at 10:00 Asia/Kuala_Lumpur",
+        "required_github_secrets": ["DREC_ACCESS_TOKEN"],
+        "optional_github_variables": ["DREC_API_BASE_URL"],
+        "default_mode": "read_only",
+        "checks": [
+            "/operations/publishing-closeout",
+            "/metrics/published-source",
+            "/learning-summary",
+            "/weekly-report.md",
+        ],
+        "steps": [
+            "Keep using the same DREC_ACCESS_TOKEN repository secret as the dry-run scheduler.",
+            "Run DREC Publishing Closeout Watch manually once after installation.",
+            "After any manual post, check the Action summary for missing post IDs, metrics, rollups, or weekly report blockers.",
+            "Use the Performance page to import metrics and roll up outcomes; this workflow only watches.",
+        ],
+        "safety": "This workflow is read-only. It does not publish, import metrics, roll up outcomes, approve content, update Notion, or call Meta.",
+    }
     meta_ready = readiness.get("overall_status") == "ready_for_worker_testing"
     security_ready = bool(security.get("rls_hardening_ready"))
     heartbeat_recent = scheduler_heartbeat.get("status") == "recent"
@@ -726,6 +747,7 @@ async def meta_setup_checklist(_: None = Depends(require_access_token)):
         "scheduler_setup": scheduler_setup,
         "nightly_metrics_scheduler": nightly_metrics_scheduler,
         "monthly_notion_refresh_watch": monthly_notion_refresh_watch,
+        "publishing_closeout_watch": publishing_closeout_watch,
         "activation_switchboard": activation_switchboard,
         "live_ready": live_ready,
         "live_sequence": [

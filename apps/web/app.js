@@ -2672,6 +2672,7 @@ function renderMetaSetupChecklist(data) {
   const scheduler = data.scheduler_setup || {};
   const nightlyScheduler = data.nightly_metrics_scheduler || {};
   const monthlyRefreshWatch = data.monthly_notion_refresh_watch || {};
+  const closeoutWatch = data.publishing_closeout_watch || {};
   const githubSecrets = scheduler.required_github_secrets || [];
   const githubVariables = scheduler.optional_github_variables || [];
   const schedulerSteps = scheduler.steps || [];
@@ -2679,6 +2680,8 @@ function renderMetaSetupChecklist(data) {
   const nightlySteps = nightlyScheduler.steps || [];
   const monthlyRefreshSteps = monthlyRefreshWatch.steps || [];
   const monthlyRefreshChecks = monthlyRefreshWatch.checks || [];
+  const closeoutSteps = closeoutWatch.steps || [];
+  const closeoutChecks = closeoutWatch.checks || [];
   const switchboard = data.activation_switchboard || [];
   const liveSequence = data.live_sequence || [];
   container.innerHTML = `
@@ -2745,6 +2748,19 @@ function renderMetaSetupChecklist(data) {
       <ol>${monthlyRefreshSteps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol>
       <small>${escapeHtml(monthlyRefreshChecks.join(" · "))}</small>
       <p>${escapeHtml(monthlyRefreshWatch.safety || "")}</p>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Publishing Closeout Watch</h3>
+      <p>${escapeHtml(closeoutWatch.status || "not_checked")}</p>
+      <small>${escapeHtml(closeoutWatch.workflow_file || ".github/workflows/drec-publishing-closeout-watch.yml")}</small>
+      <ul>
+        <li><strong>Schedule</strong> ${escapeHtml(closeoutWatch.schedule || "daily closeout check")}</li>
+        <li><strong>Default</strong> ${escapeHtml(closeoutWatch.default_mode || "read_only")}</li>
+        <li><strong>Secret</strong> ${escapeHtml((closeoutWatch.required_github_secrets || []).join(", ") || "DREC_ACCESS_TOKEN")}</li>
+      </ul>
+      <ol>${closeoutSteps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol>
+      <small>${escapeHtml(closeoutChecks.join(" · "))}</small>
+      <p>${escapeHtml(closeoutWatch.safety || "")}</p>
     </article>
     <article class="learning-card wide-learning">
       <h3>Meta Activation Switchboard</h3>

@@ -1,0 +1,77 @@
+name: DREC Publishing Closeout Watch
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Daily 10:00 MYT check for manual publishing, metrics, and learning closeout gaps.
+    - cron: "0 2 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: drec-publishing-closeout-watch
+  cancel-in-progress: false
+
+jobs:
+  closeout-watch:
+    runs-on: ubuntu-latest
+    env:
+      DREC_API_BASE_URL: ${{ vars.DREC_API_BASE_URL || 'https://drec-content-os-api.fly.dev' }}
+      DREC_ACCESS_TOKEN: ${{ secrets.DREC_ACCESS_TOKEN }}
+    steps:
+      - name: Skip when access token is missing
+        if: ${{ env.DREC_ACCESS_TOKEN == '' }}
+        run: |
+          echo "DREC_ACCESS_TOKEN is not configured. Skipping publishing closeout watch."
+
+      - name: Check publishing closeout workbench
+        if: ${{ env.DREC_ACCESS_TOKEN != '' }}
+        run: |
+          curl --fail --silent --show-error --retry 3 --retry-delay 10 --max-time 120 \
+            --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
+            "${DREC_API_BASE_URL}/operations/publishing-closeout" \
+            | tee publishing-closeout.json
+
+      - name: Check published metric source
+        if: ${{ env.DREC_ACCESS_TOKEN != '' }}
+        run: |
+          curl --fail --silent --show-error --retry 3 --retry-delay 10 --max-time 120 \
+            --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
+            "${DREC_API_BASE_URL}/metrics/published-source?limit=10" \
+            | tee published-source.json
+
+      - name: Check learning summary
+        if: ${{ env.DREC_ACCESS_TOKEN != '' }}
+        run: |
+          curl --fail --silent --show-error --retry 3 --retry-delay 10 --max-time 120 \
+            --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
+            "${DREC_API_BASE_URL}/learning-summary" \
+            | tee learning-summary.json
+
+      - name: Check weekly report builds
+        if: ${{ env.DREC_ACCESS_TOKEN != '' }}
+        run: |
+          curl --fail --silent --show-error --retry 3 --retry-delay 10 --max-time 120 \
+            --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
+            "${DREC_API_BASE_URL}/weekly-report.md" \
+            > weekly-report.md
+
+      - name: Write closeout watch summary
+        if: ${{ always() }}
+        run: |
+          {
+            echo "## DREC Publishing Closeout Watch"
+            echo ""
+            echo "- API: ${DREC_API_BASE_URL}"
+            echo "- Event: ${GITHUB_EVENT_NAME}"
+            echo "- Schedule: ${GITHUB_EVENT_SCHEDULE:-manual}"
+            echo "- Token configured: $([ -n "${DREC_ACCESS_TOKEN}" ] && echo yes || echo no)"
+            echo "- Safety: read-only closeout checks only; this workflow does not publish, import metrics, roll up outcomes, approve content, update Notion, or call Meta."
+            echo ""
+            echo "Checks:"
+            echo "- /operations/publishing-closeout"
+            echo "- /metrics/published-source"
+            echo "- /learning-summary"
+            echo "- /weekly-report.md"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -275,6 +275,37 @@ Notion, or call Meta. Use the Action summary after the 19th refresh to confirm
 there are no duplicate Topic IDs, current-cycle rows are visible, and generated
 carousel previews still pass structural smoke tests.
 
+## GitHub Publishing Closeout Watch
+
+The repository includes `.github/workflows/drec-publishing-closeout-watch.yml`.
+It runs daily at 10:00 Asia/Kuala_Lumpur to check whether manual publishing,
+post-ID capture, metrics entry, learning rollup, and weekly reporting are still
+moving after a post is published.
+
+It uses the same GitHub Actions secret as the other safe monitors:
+
+```text
+DREC_ACCESS_TOKEN
+```
+
+Optional repository variable:
+
+```text
+DREC_API_BASE_URL=https://drec-content-os-api.fly.dev
+```
+
+The workflow is read-only. It calls:
+
+- `/operations/publishing-closeout`
+- `/metrics/published-source`
+- `/learning-summary`
+- `/weekly-report.md`
+
+It does not publish, import metrics, roll up outcomes, approve content, update
+Notion, or call Meta. Use the Action summary after a manual post to spot any
+missing external post ID, missing metrics, pending rollup, or learning report
+issue before the next planning cycle.
+
 ## GitHub Nightly Meta Metrics Scheduler
 
 The repository also includes `.github/workflows/drec-nightly-meta-metrics.yml`.
