@@ -99,6 +99,7 @@ const requiredRoutes = [
   "GET /operations/monthly-carousel-doctor-triage.zh.md",
   "GET /operations/monthly-carousel-doctor-triage.csv",
   "GET /operations/monthly-carousel-doctor-handoff-pack.zip",
+  "GET /operations/monthly-carousel-doctor-send-message.zh.md",
   "GET /operations/monthly-carousel-doctor-import-rules",
   "GET /operations/monthly-carousel-doctor-import-rules.zh.md",
   "GET /operations/monthly-carousel-doctor-import-rules.csv",
@@ -2858,6 +2859,16 @@ const requiredSnippets = [
     text: "download-monthly-carousel-doctor-handoff-pack",
   },
   {
+    name: "web monthly doctor send message action",
+    file: "web",
+    text: "data-simple-download-monthly-doctor-message",
+  },
+  {
+    name: "web dashboard monthly doctor send message action",
+    file: "web",
+    text: "data-download-dashboard-monthly-doctor-message",
+  },
+  {
     name: "web monthly doctor import rules action",
     file: "web",
     text: "download-monthly-carousel-doctor-import-rules",
@@ -2891,6 +2902,16 @@ const requiredSnippets = [
     name: "monthly carousel doctor handoff zip route",
     file: "main",
     text: "/operations/monthly-carousel-doctor-handoff-pack.zip",
+  },
+  {
+    name: "monthly carousel doctor send message route",
+    file: "main",
+    text: "/operations/monthly-carousel-doctor-send-message.zh.md",
+  },
+  {
+    name: "monthly carousel doctor send message zip inclusion",
+    file: "main",
+    text: "00-doctor-send-message.zh.md",
   },
   {
     name: "monthly carousel doctor handoff zip safety",

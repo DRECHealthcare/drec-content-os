@@ -10324,6 +10324,123 @@ async def operations_monthly_carousel_doctor_reply_templates_zh(_: None = Depend
     )
 
 
+def monthly_carousel_doctor_send_message_markdown(payload: dict):
+    source = payload.get("source") or {}
+    items = payload.get("items") or []
+    attention_items = [
+        item for item in items
+        if item.get("triage_level") in {"high_attention", "medium_attention"}
+    ]
+    lines = [
+        "# DREC 月度 Carousel 医生审核发送消息",
+        "",
+        "用途：把下面这段复制给医生或医生助理，再附上医生交接 ZIP / PNG ZIP。这个文件只读，不会批准、入队、排程、发布、更新 Notion 或调用 Meta。",
+        "",
+        "## 可直接复制发送",
+        "",
+        "```text",
+        "医生您好，这是本月 DREC 糖尿病逆转/代谢健康教育 Carousel 内容，请帮忙做医学安全审核。",
+        "",
+        f"本月内容数：{payload.get('asset_count')}",
+        f"Notion 来源：{source.get('name')}",
+        f"月度刷新日：每月 {source.get('monthly_refresh_day')} 日",
+        "",
+        "请重点确认：",
+        "1. 是否仍是教育内容，不像个人诊断或治疗指令。",
+        "2. 是否没有保证逆转、保证改善、一定有效等承诺。",
+        "3. 是否没有叫患者自行停药、减药、换药。",
+        "4. 中文表达是否准确，适合 50 岁左右华语糖尿病/血糖问题受众。",
+        "5. CTA 是否只是温和保存/分享/关注，不是直接卖课或制造恐惧。",
+        "",
+        "请每条内容用下面格式回复，尤其必须写清楚 Decision 和 Safety：",
+        "",
+        "Asset ID: 对应素材 ID",
+        "Decision: approve / needs edits / reject",
+        "Safety: clear / needs review / blocked",
+        "Use polished copy: no",
+        "Notes: 批准说明或需要修改的地方",
+        "",
+        "只有您明确写 Decision: approve 且 Safety: clear 的内容，我们才会进入后续制作/入队。若您不确定，请写 needs review 或 blocked。",
+        "谢谢医生。",
+        "```",
+        "",
+        "## 附件/链接清单",
+        "",
+        "- 医生交接 ZIP：`/operations/monthly-carousel-doctor-handoff-pack.zip`",
+        "- 医生快速判定包：`/operations/monthly-carousel-doctor-triage.zh.md`",
+        "- 医生审核总包：`/operations/monthly-carousel-doctor-review.zh.md`",
+        "- 回复模板：`/operations/monthly-carousel-doctor-reply-templates.zh.md`",
+        "- 全部 PNG 图片 ZIP：`/operations/monthly-carousel-png-assets.zip`",
+        "- 导入前规则：`/operations/monthly-carousel-doctor-import-rules.zh.md`",
+        "",
+        "## 优先请医生先看",
+        "",
+    ]
+    if attention_items:
+        for index, item in enumerate(attention_items[:8], start=1):
+            focus = item.get("doctor_focus") or []
+            lines.extend(
+                [
+                    f"### {index}. {item.get('topic_id')} · {item.get('topic')}",
+                    "",
+                    f"- Asset ID：`{item.get('asset_id')}`",
+                    f"- 级别：`{item.get('triage_level')}`",
+                    f"- 风险提示：{item.get('risk_flag_text') or '无'}",
+                    f"- 图片 ZIP：`{item.get('png_zip_url')}`",
+                    "- 医生重点：",
+                    *markdown_list(focus),
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["- 暂无高/中注意项目；仍需医生逐条确认。", ""])
+    lines.extend(
+        [
+            "## 回复模板",
+            "",
+            "```text",
+        ]
+    )
+    for index, item in enumerate(items, start=1):
+        lines.extend(
+            [
+                f"--- {index} / {len(items)} ---",
+                f"Topic ID: {item.get('topic_id')}",
+                f"Topic: {item.get('topic')}",
+                f"Asset ID: {item.get('asset_id')}",
+                "Decision: approve / needs edits / reject",
+                "Safety: clear / needs review / blocked",
+                "Use polished copy: no",
+                "Notes:",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "```",
+            "",
+            "## 安全线",
+            "",
+            "- 这份消息不会批准任何内容。",
+            "- 医生没有明确 approve + clear 的项目不会进入制作、入队、排程或发布。",
+            "- 不要把模糊回复改写成 approve 或 Safety clear。",
+            "- Meta live 发布仍保持关闭。",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+@app.get("/operations/monthly-carousel-doctor-send-message.zh.md")
+async def operations_monthly_carousel_doctor_send_message_zh(_: None = Depends(require_access_token)):
+    payload = await monthly_carousel_doctor_triage_payload()
+    return Response(
+        monthly_carousel_doctor_send_message_markdown(payload),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-doctor-send-message-zh.md"'},
+    )
+
+
 def monthly_carousel_doctor_decision_worksheet_csv_text(payload: dict):
     output = StringIO()
     fieldnames = [
@@ -10477,18 +10594,20 @@ async def operations_monthly_carousel_doctor_handoff_pack_zip(_: None = Depends(
                     "",
                     "建议顺序：",
                     "",
-                    "1. 先看 `01-doctor-triage.zh.md`。",
-                    "2. 需要细读时看 `02-doctor-review-summary.zh.md`。",
-                    "3. 医生回复可用 `03-doctor-reply-templates.zh.md`。",
-                    "4. 助理记录可用 `04-doctor-decision-worksheet.csv`；若要 approve，`reviewer_name`、`review_notes` 和五个 `doctor_check_*` 栏位都必须填写 yes/pass。",
-                    "5. 图片素材下载链接在 `05-png-review-links.csv`；完整图片 ZIP 仍由系统端点 `/operations/monthly-carousel-png-assets.zip` 下载。",
-                    "6. 导入前规则在 `06-import-validation-rules.zh.md`；不符合规则的 approve/clear 会被 dry-run 和 import 跳过。",
+                    "1. 先复制 `00-doctor-send-message.zh.md` 给医生或助理。",
+                    "2. 再看 `01-doctor-triage.zh.md`。",
+                    "3. 需要细读时看 `02-doctor-review-summary.zh.md`。",
+                    "4. 医生回复可用 `03-doctor-reply-templates.zh.md`。",
+                    "5. 助理记录可用 `04-doctor-decision-worksheet.csv`；若要 approve，`reviewer_name`、`review_notes` 和五个 `doctor_check_*` 栏位都必须填写 yes/pass。",
+                    "6. 图片素材下载链接在 `05-png-review-links.csv`；完整图片 ZIP 仍由系统端点 `/operations/monthly-carousel-png-assets.zip` 下载。",
+                    "7. 导入前规则在 `06-import-validation-rules.zh.md`；不符合规则的 approve/clear 会被 dry-run 和 import 跳过。",
                     "",
                     "只有医生明确写 `Decision: approve` 且 `Safety: clear`，才可以进入后续导入和制作步骤。",
                     "导入时系统仍会检查 evidence，不会因为 CSV 误填 approve 就绕过医生审核门槛。",
                 ]
             ),
         )
+        archive.writestr("00-doctor-send-message.zh.md", monthly_carousel_doctor_send_message_markdown(triage_payload))
         archive.writestr("01-doctor-triage.zh.md", monthly_carousel_doctor_handoff_triage_markdown(triage_payload))
         archive.writestr(
             "02-doctor-review-summary.zh.md",

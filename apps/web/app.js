@@ -643,6 +643,8 @@ Object.assign(uiZh, {
   "Could not import Notion carousel CSV.": "无法导入 Notion Carousel CSV。",
   "Monthly carousel doctor handoff ZIP downloaded.": "月度 Carousel 医生交接 ZIP 已下载。",
   "Could not download monthly carousel doctor handoff ZIP.": "无法下载月度 Carousel 医生交接 ZIP。",
+  "Monthly carousel doctor send message downloaded.": "月度 Carousel 医生发送消息已下载。",
+  "Could not download monthly carousel doctor send message.": "无法下载月度 Carousel 医生发送消息。",
   "Monthly carousel doctor import rules downloaded.": "月度 Carousel 医生导入规则已下载。",
   "Could not download monthly carousel doctor import rules.": "无法下载月度 Carousel 医生导入规则。",
   "Monthly carousel doctor triage pack downloaded.": "月度 Carousel 医生快速判定包已下载。",
@@ -2472,6 +2474,7 @@ function renderSimpleOperator(data, monthly = null) {
     body = monthlyPrimary.detail || "现在只需要把医生交接 ZIP 发给医生审核；医生没有明确 approve + Safety clear 前，系统不会推进制作、入队或发布。";
     status = "等待医生审核 · 不会发布";
     actions = `
+      <button class="primary" type="button" data-simple-download-monthly-doctor-message>下载医生发送消息</button>
       <button class="primary" type="button" data-simple-download-monthly-doctor-handoff>下载医生交接 ZIP</button>
       <button type="button" data-simple-download-monthly-action-queue>下载今日行动队列</button>
       <button type="button" data-simple-refresh>刷新状态</button>
@@ -2912,7 +2915,8 @@ function renderDashboardMonthlyActionQueue(data) {
       <details class="advanced-actions">
         <summary>高级工具（平时不用打开）</summary>
         <div class="learning-actions">
-          <button type="button" data-open-monthly-assets-review>打开月度素材审核</button>
+        <button type="button" data-open-monthly-assets-review>打开月度素材审核</button>
+        <button type="button" data-download-dashboard-monthly-doctor-message>下载医生发送消息</button>
         <button type="button" data-download-dashboard-monthly-doctor-review>下载医生审核总包</button>
         <button type="button" data-download-dashboard-monthly-doctor-import-rules>下载医生导入规则</button>
         <button type="button" data-download-dashboard-monthly-png-assets>下载全部 PNG</button>
@@ -5794,6 +5798,7 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   const openReview = event.target.closest("[data-simple-open-review]");
   const openScheduler = event.target.closest("[data-simple-open-scheduler]");
   const downloadMonthlyDoctorHandoff = event.target.closest("[data-simple-download-monthly-doctor-handoff]");
+  const downloadMonthlyDoctorMessage = event.target.closest("[data-simple-download-monthly-doctor-message]");
   const downloadMonthlyActionQueue = event.target.closest("[data-simple-download-monthly-action-queue]");
   const downloadMonthlyProductionRules = event.target.closest("[data-simple-download-monthly-production-rules]");
   const downloadMonthlyProductionQa = event.target.closest("[data-simple-download-monthly-production-qa]");
@@ -5804,7 +5809,7 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   const downloadPostPublish = event.target.closest("[data-simple-download-post-publish]");
   const downloadPostMetrics = event.target.closest("[data-simple-download-post-metrics]");
   const refresh = event.target.closest("[data-simple-refresh]");
-  if (!runReadyAssets && !openAssets && !openReview && !openScheduler && !downloadMonthlyDoctorHandoff && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadTodayPack && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !refresh) return;
+  if (!runReadyAssets && !openAssets && !openReview && !openScheduler && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadTodayPack && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !refresh) return;
   if (refresh) {
     await loadLoopStatus();
     await loadDashboardMonthlyActionQueue();
@@ -5824,6 +5829,10 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   }
   if (downloadMonthlyDoctorHandoff) {
     await downloadProtectedFile("/operations/monthly-carousel-doctor-handoff-pack.zip", "drec-monthly-carousel-doctor-handoff-pack.zip", "application/zip");
+    return;
+  }
+  if (downloadMonthlyDoctorMessage) {
+    await downloadProtectedFile("/operations/monthly-carousel-doctor-send-message.zh.md", "drec-monthly-carousel-doctor-send-message-zh.md", "text/markdown");
     return;
   }
   if (downloadMonthlyActionQueue) {
@@ -7550,6 +7559,7 @@ document.getElementById("dashboard-notion-refresh-status")?.addEventListener("cl
 document.getElementById("dashboard-monthly-action-queue")?.addEventListener("click", async (event) => {
   const openAssets = event.target.closest("[data-open-monthly-assets-review]");
   const downloadDoctorHandoff = event.target.closest("[data-download-dashboard-monthly-doctor-handoff]");
+  const downloadDoctorMessage = event.target.closest("[data-download-dashboard-monthly-doctor-message]");
   const downloadDoctorTriage = event.target.closest("[data-download-dashboard-monthly-doctor-triage]");
   const downloadDoctorImportRules = event.target.closest("[data-download-dashboard-monthly-doctor-import-rules]");
   const downloadDoctorReview = event.target.closest("[data-download-dashboard-monthly-doctor-review]");
@@ -7580,7 +7590,7 @@ document.getElementById("dashboard-monthly-action-queue")?.addEventListener("cli
   const downloadNextPlanCsv = event.target.closest("[data-download-dashboard-monthly-next-plan-csv]");
   const downloadQueue = event.target.closest("[data-download-dashboard-monthly-action-queue]");
   const downloadCsv = event.target.closest("[data-download-dashboard-monthly-action-csv]");
-  if (!openAssets && !downloadDoctorHandoff && !downloadDoctorTriage && !downloadDoctorImportRules && !downloadDoctorReview && !downloadPngAssets && !downloadDoctorWorksheet && !fillDoctorReplyTemplate && !previewDoctorReplySafe && !importDoctorReplySafe && !downloadProductionWorksheet && !downloadProductionQa && !downloadProductionImportRules && !fillProductionReplyTemplate && !downloadQueueReadiness && !downloadQueueExecution && !previewQueueReady && !runQueueReady && !previewSafeAdvance && !runSafeAdvance && !downloadScheduleWorksheet && !downloadSchedulePack && !downloadScheduleAudit && !downloadPublishingHandoff && !downloadMetricsTemplate && !downloadMetricsPack && !downloadLearningCloseout && !downloadLearningCsv && !downloadNextPlanHandback && !downloadNextPlanCsv && !downloadQueue && !downloadCsv) return;
+  if (!openAssets && !downloadDoctorHandoff && !downloadDoctorMessage && !downloadDoctorTriage && !downloadDoctorImportRules && !downloadDoctorReview && !downloadPngAssets && !downloadDoctorWorksheet && !fillDoctorReplyTemplate && !previewDoctorReplySafe && !importDoctorReplySafe && !downloadProductionWorksheet && !downloadProductionQa && !downloadProductionImportRules && !fillProductionReplyTemplate && !downloadQueueReadiness && !downloadQueueExecution && !previewQueueReady && !runQueueReady && !previewSafeAdvance && !runSafeAdvance && !downloadScheduleWorksheet && !downloadSchedulePack && !downloadScheduleAudit && !downloadPublishingHandoff && !downloadMetricsTemplate && !downloadMetricsPack && !downloadLearningCloseout && !downloadLearningCsv && !downloadNextPlanHandback && !downloadNextPlanCsv && !downloadQueue && !downloadCsv) return;
   if (openAssets) {
     showScreen("assets");
     const card = document.getElementById("monthly-carousel-status-board");
@@ -7663,6 +7673,16 @@ document.getElementById("dashboard-monthly-action-queue")?.addEventListener("cli
         preparing: "Preparing monthly doctor handoff ZIP...",
         done: "Monthly carousel doctor handoff ZIP downloaded.",
         failed: "Could not download monthly carousel doctor handoff ZIP.",
+      };
+    }
+    if (downloadDoctorMessage) {
+      return {
+        path: "/operations/monthly-carousel-doctor-send-message.zh.md",
+        filename: "drec-monthly-carousel-doctor-send-message-zh.md",
+        type: "text/markdown",
+        preparing: "Preparing monthly doctor send message...",
+        done: "Monthly carousel doctor send message downloaded.",
+        failed: "Could not download monthly carousel doctor send message.",
       };
     }
     if (downloadDoctorTriage) {
