@@ -20386,6 +20386,111 @@ async def video_studio_readiness_payload():
     }
 
 
+def reel_storyboard_rows(asset: dict):
+    metadata = asset.get("metadata") or {}
+    script = metadata.get("reel_script") or []
+    if script:
+        beats = script
+    else:
+        beats = [
+            {"time": "0-3s", "beat": "Hook", "line": (asset.get("caption") or "").splitlines()[0][:80]},
+            {"time": "3-35s", "beat": "Explain", "line": "Use the approved caption as the explanation spine."},
+            {"time": "35-45s", "beat": "Close", "line": "Close with save/share and clinician discussion CTA."},
+        ]
+    rows = []
+    for index, beat in enumerate(beats, start=1):
+        label = str(beat.get("beat") or f"Beat {index}")
+        line = str(beat.get("line") or "").strip()
+        rows.append(
+            {
+                "beat_no": index,
+                "timecode": beat.get("time") or "",
+                "beat": label,
+                "voiceover": line,
+                "subtitle": line,
+                "visual_direction": reel_visual_direction(label, line, index),
+                "edit_note": reel_edit_note(label, index),
+            }
+        )
+    return rows
+
+
+def reel_visual_direction(label: str, line: str, index: int):
+    lowered = label.lower()
+    if index == 1 or "hook" in lowered:
+        return "医生正面半身，DREC 蓝绿背景，屏幕左侧放大标题；不要放恐吓画面。"
+    if "context" in lowered:
+        return "切到白板或简洁数据卡，显示“习惯 + 数据 + 趋势”，文字不要超过两行。"
+    if "mechanism" in lowered:
+        return "用 HbA1c、饭后血糖、腰围趋势等中性图标辅助解释，不使用夸张前后对比。"
+    if "observation" in lowered or "practical" in lowered:
+        return "展示记录本、血糖仪、餐盘或复诊资料的安全 B-roll；只用已授权素材。"
+    if "close" in lowered:
+        return "医生收尾，底部字幕提示“收藏/下次复诊可参考”；避免直接销售。"
+    return "使用医生讲解 + 简洁医疗图形，视觉支持口播，不替代解释。"
+
+
+def reel_edit_note(label: str, index: int):
+    if index == 1:
+        return "前三秒字幕要大，保留人物眼神接触；节奏清楚但不要制造焦虑。"
+    if "close" in label.lower():
+        return "结尾保留 1 秒 DREC logo/关注提示；CTA 要软，不承诺逆转结果。"
+    return "每 4-6 秒可换一次镜头；字幕在中下安全区，字号手机可读。"
+
+
+def markdown_table_cell(value):
+    return str(value or "").replace("|", "\\|").replace("\n", "<br>").strip()
+
+
+async def video_manual_reel_handoff_payload():
+    payload = await video_studio_readiness_payload()
+    assets = await fetch_asset_list(200)
+    queue_items = await fetch_publish_queue_items(200)
+    queue_by_asset = {
+        str(item.get("asset_id")): item
+        for item in queue_items
+        if item.get("asset_id") and item.get("format") == "reel" and item.get("status") in {"draft", "scheduled"}
+    }
+    handoff_jobs = []
+    for job in payload.get("jobs") or []:
+        asset_id = str(job.get("asset_id") or "")
+        asset = next((item for item in assets if str(item.get("id")) == asset_id), {})
+        queue_item = queue_by_asset.get(asset_id, {})
+        rows = reel_storyboard_rows(asset)
+        handoff_jobs.append(
+            {
+                **job,
+                "queue_id": queue_item.get("id"),
+                "planned_slot": queue_item.get("planned_slot"),
+                "queue_status": queue_item.get("status"),
+                "caption": queue_item.get("caption") or asset.get("caption"),
+                "storyboard_rows": rows,
+                "delivery_requirements": [
+                    "Export one public or signed MP4 URL before this item can enter publishing handoff.",
+                    "Vertical 1080x1920 MP4 H.264, clear voice, readable Mandarin subtitles.",
+                    "Use only DREC-owned, licensed, patient-consented, or approved generated visuals.",
+                    "Do not add miracle, guaranteed reversal, fear-based, or direct course-selling claims.",
+                    "After final QA, attach the video URL to the asset media field; do not publish from the video handoff.",
+                ],
+            }
+        )
+    return {
+        "phase": "manual_reel_handoff",
+        "mode": "read_only_video_production_handoff",
+        "job_count": len(handoff_jobs),
+        "ready_for_edit_count": sum(1 for item in handoff_jobs if not item.get("blockers")),
+        "blocked_count": sum(1 for item in handoff_jobs if item.get("blockers")),
+        "jobs": handoff_jobs,
+        "safety": [
+            "This handoff does not publish to Facebook or Instagram.",
+            "This handoff does not create a final video file automatically.",
+            "A real MP4 URL must be attached before Reel publishing handoff can proceed.",
+            "Meta live publishing remains locked behind separate environment switches.",
+        ],
+        "next_step": "Send blocked Reel jobs to manual video production, then attach the final approved MP4 URL back to the asset.",
+    }
+
+
 @app.get("/video/studio-readiness")
 async def video_studio_readiness(_: None = Depends(require_access_token)):
     return await video_studio_readiness_payload()
@@ -20458,6 +20563,138 @@ async def video_sop_pack(_: None = Depends(require_access_token)):
         "\n".join(lines),
         media_type="text/markdown",
         headers={"Content-Disposition": 'attachment; filename="drec-video-studio-sop-pack.md"'},
+    )
+
+
+@app.get("/video/manual-reel-handoff")
+async def video_manual_reel_handoff(_: None = Depends(require_access_token)):
+    return await video_manual_reel_handoff_payload()
+
+
+@app.get("/video/manual-reel-handoff.zh.md")
+async def video_manual_reel_handoff_zh(_: None = Depends(require_access_token)):
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    payload = await video_manual_reel_handoff_payload()
+    lines = [
+        "# DREC Reel 手动制作交接包",
+        "",
+        f"生成时间：{generated_at}",
+        "",
+        "用途：把已审核的 Reel 脚本交给人工剪辑/制作，生成最终公开视频 MP4。这个文件只读，不会发布到 Facebook 或 Instagram。",
+        "",
+        "## 当前状态",
+        "",
+        f"- Reel 工作数：{payload.get('job_count')}",
+        f"- 可直接剪辑：{payload.get('ready_for_edit_count')}",
+        f"- 仍有阻碍：{payload.get('blocked_count')}",
+        "",
+        "## 安全边界",
+        "",
+        *markdown_list(payload.get("safety")),
+        "",
+    ]
+    if not payload.get("jobs"):
+        lines.extend(["## Reel 工作", "", "- 暂无 Reel 工作。", ""])
+    for index, job in enumerate(payload.get("jobs") or [], start=1):
+        lines.extend(
+            [
+                f"## {index}. {job.get('topic') or 'Reel asset'}",
+                "",
+                f"- Asset ID：{job.get('asset_id')}",
+                f"- Queue ID：{job.get('queue_id') or '尚未入队'}",
+                f"- 队列状态：{job.get('queue_status') or 'n/a'}",
+                f"- 计划发布时间：{job.get('planned_slot') or '尚未设置'}",
+                f"- 审核 / 安全：{job.get('review_status')} / {job.get('compliance_status')}",
+                f"- 脚本段落：{job.get('script_beats')}",
+                f"- 已挂媒体：{job.get('media_count')}",
+                f"- 下一步：{job.get('next_step')}",
+                "",
+                "### 阻碍",
+                "",
+                *markdown_list(job.get("blockers"), "- 无；可以交给人工剪辑。"),
+                "",
+                "### 交付要求",
+                "",
+                *markdown_list(job.get("delivery_requirements")),
+                "",
+                "### 分镜脚本",
+                "",
+                "| 时间 | 口播 | 画面建议 | 剪辑备注 |",
+                "| --- | --- | --- | --- |",
+            ]
+        )
+        for row in job.get("storyboard_rows") or []:
+            lines.append(
+                "| {time} | {voice} | {visual} | {note} |".format(
+                    time=markdown_table_cell(row.get("timecode")),
+                    voice=markdown_table_cell(row.get("voiceover")),
+                    visual=markdown_table_cell(row.get("visual_direction")),
+                    note=markdown_table_cell(row.get("edit_note")),
+                )
+            )
+        lines.extend(
+            [
+                "",
+                "### 已批准文案",
+                "",
+                job.get("caption") or "暂无文案。",
+                "",
+            ]
+        )
+    lines.extend(["## 下一步", "", f"- {payload.get('next_step')}", ""])
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="drec-manual-reel-handoff-zh.md"'},
+    )
+
+
+@app.get("/video/manual-reel-handoff.csv")
+async def video_manual_reel_handoff_csv(_: None = Depends(require_access_token)):
+    payload = await video_manual_reel_handoff_payload()
+    output = StringIO()
+    fieldnames = [
+        "asset_id",
+        "queue_id",
+        "planned_slot",
+        "topic",
+        "beat_no",
+        "timecode",
+        "beat",
+        "voiceover",
+        "subtitle",
+        "visual_direction",
+        "edit_note",
+        "final_video_url",
+        "qa_status",
+        "producer_notes",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for job in payload.get("jobs") or []:
+        for row in job.get("storyboard_rows") or []:
+            writer.writerow(
+                {
+                    "asset_id": job.get("asset_id"),
+                    "queue_id": job.get("queue_id"),
+                    "planned_slot": job.get("planned_slot"),
+                    "topic": job.get("topic"),
+                    "beat_no": row.get("beat_no"),
+                    "timecode": row.get("timecode"),
+                    "beat": row.get("beat"),
+                    "voiceover": row.get("voiceover"),
+                    "subtitle": row.get("subtitle"),
+                    "visual_direction": row.get("visual_direction"),
+                    "edit_note": row.get("edit_note"),
+                    "final_video_url": "",
+                    "qa_status": "pending",
+                    "producer_notes": "",
+                }
+            )
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-manual-reel-handoff.csv"'},
     )
 
 

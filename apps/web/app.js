@@ -6699,6 +6699,26 @@ document.getElementById("download-video-sop")?.addEventListener("click", async (
   }
 });
 
+document.getElementById("download-manual-reel-handoff")?.addEventListener("click", async () => {
+  const message = document.getElementById("video-message");
+  try {
+    await downloadProtectedFile("/video/manual-reel-handoff.zh.md", "drec-manual-reel-handoff-zh.md", "text/markdown");
+    if (message) message.textContent = "Reel 制作交接包已下载。";
+  } catch (error) {
+    if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "无法下载 Reel 制作交接包。";
+  }
+});
+
+document.getElementById("download-manual-reel-csv")?.addEventListener("click", async () => {
+  const message = document.getElementById("video-message");
+  try {
+    await downloadProtectedFile("/video/manual-reel-handoff.csv", "drec-manual-reel-handoff.csv", "text/csv");
+    if (message) message.textContent = "Reel 分镜 CSV 已下载。";
+  } catch (error) {
+    if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "无法下载 Reel 分镜 CSV。";
+  }
+});
+
 function renderAssetReviewDecisionPreview(data) {
   const container = document.getElementById("asset-review-decision-preview");
   if (!container) return;

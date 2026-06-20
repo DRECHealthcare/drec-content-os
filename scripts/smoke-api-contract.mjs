@@ -180,6 +180,9 @@ const requiredRoutes = [
   "GET /templates/static-render-pack.md",
   "GET /video/studio-readiness",
   "GET /video/sop-pack.md",
+  "GET /video/manual-reel-handoff",
+  "GET /video/manual-reel-handoff.zh.md",
+  "GET /video/manual-reel-handoff.csv",
   "POST /composer/draft-post",
   "GET /metrics/published-source",
   "POST /metrics/import-csv",
@@ -3161,6 +3164,16 @@ const requiredSnippets = [
     name: "web video sop endpoint",
     file: "web",
     text: "/video/sop-pack.md",
+  },
+  {
+    name: "web manual reel handoff endpoint",
+    file: "web",
+    text: "/video/manual-reel-handoff.zh.md",
+  },
+  {
+    name: "web manual reel handoff csv endpoint",
+    file: "web",
+    text: "/video/manual-reel-handoff.csv",
   },
   {
     name: "web composer target signal",
