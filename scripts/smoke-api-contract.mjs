@@ -3593,6 +3593,21 @@ const requiredSnippets = [
     text: "系统不会自动发到 Facebook / Instagram",
   },
   {
+    name: "web simple operator monthly doctor blocker",
+    file: "web",
+    text: "data-simple-download-monthly-doctor-handoff",
+  },
+  {
+    name: "web simple operator monthly production rules",
+    file: "web",
+    text: "data-simple-download-monthly-production-rules",
+  },
+  {
+    name: "web simple operator monthly queue readiness",
+    file: "web",
+    text: "data-simple-download-monthly-queue-readiness",
+  },
+  {
     name: "web simple operator scheduled queue fallback",
     file: "web",
     text: "loopScheduledQueue",

@@ -2439,10 +2439,12 @@ function renderWorkflowNext(data) {
   `;
 }
 
-function renderSimpleOperator(data) {
+function renderSimpleOperator(data, monthly = null) {
   const container = document.getElementById("simple-operator");
   if (!container) return;
   const summary = data.workflow?.summary || data.summary || {};
+  const monthlyPrimary = monthly?.primary_action || {};
+  const monthlyGateCounts = monthly?.gate_counts || {};
   const loopQueue = Array.isArray(data.loop?.queue) ? data.loop.queue : [];
   const loopQueueTotal = loopQueue.reduce((total, row) => total + Number(row.count || 0), 0);
   const loopScheduledQueue = loopQueue
@@ -2464,7 +2466,40 @@ function renderSimpleOperator(data) {
   `;
   let safetyNote = "这里不会发布到 Facebook / Instagram。";
 
-  if (readyAssets > 0 && queueTotal === 0) {
+  if (Number(monthlyGateCounts.waiting_doctor_safety_clear || 0) > 0) {
+    eyebrow = "月度 Carousel 下一步";
+    title = `${Number(monthlyGateCounts.waiting_doctor_safety_clear || 0)} 条内容等待医生 Safety clear`;
+    body = monthlyPrimary.detail || "现在只需要把医生交接 ZIP 发给医生审核；医生没有明确 approve + Safety clear 前，系统不会推进制作、入队或发布。";
+    status = "等待医生审核 · 不会发布";
+    actions = `
+      <button class="primary" type="button" data-simple-download-monthly-doctor-handoff>下载医生交接 ZIP</button>
+      <button type="button" data-simple-download-monthly-action-queue>下载今日行动队列</button>
+      <button type="button" data-simple-refresh>刷新状态</button>
+    `;
+    safetyNote = "安全锁：医生未 approve + Safety clear 前，我不会推进制作、入队、排程或发布。";
+  } else if (Number(monthlyGateCounts.waiting_final_media || 0) > 0 || Number(monthlyGateCounts.waiting_visual_qa || 0) > 0) {
+    eyebrow = "月度 Carousel 下一步";
+    title = "等待最终图片和视觉 QA";
+    body = monthlyPrimary.detail || "先下载制作规则和制作表；只有医生已批准且 Safety clear 的内容才能挂最终媒体。";
+    status = "制作阶段 · 不会发布";
+    actions = `
+      <button class="primary" type="button" data-simple-download-monthly-production-rules>下载制作导入规则</button>
+      <button type="button" data-simple-download-monthly-production-qa>下载制作 QA 包</button>
+      <button type="button" data-simple-refresh>刷新状态</button>
+    `;
+    safetyNote = "安全锁：制作导入不能替代医生审核，也不会入队、排程或发布。";
+  } else if (Number(monthlyGateCounts.ready_to_queue || 0) > 0) {
+    eyebrow = "月度 Carousel 下一步";
+    title = `${Number(monthlyGateCounts.ready_to_queue || 0)} 条月度内容可预览入队`;
+    body = "先下载入队检查表；确认只处理 ready_to_queue 的内容。入队不是发布。";
+    status = "可预览入队 · 不会发布";
+    actions = `
+      <button class="primary" type="button" data-simple-download-monthly-queue-readiness>下载入队检查表</button>
+      <button type="button" data-simple-open-assets>打开素材页查看</button>
+      <button type="button" data-simple-refresh>刷新状态</button>
+    `;
+    safetyNote = "安全锁：入队后仍需队列审核、排程检查和发布交接。";
+  } else if (readyAssets > 0 && queueTotal === 0) {
     eyebrow = "下一步：安全入队";
     title = `${readyAssets} 条内容已安全通过，可以入队`;
     body = `已有 ${readyAssets} 条通用内容是 approved + safety clear。执行入队只会放进审核队列，不会发布到 Meta。`;
@@ -2525,6 +2560,12 @@ function securityGateSummary(security = {}) {
 async function loadLoopStatus() {
   try {
     const data = await fetchJson("/workflow/status");
+    let monthly = null;
+    try {
+      monthly = await fetchJson("/operations/monthly-carousel-next-action-queue");
+    } catch {
+      monthly = null;
+    }
     const loop = data.loop || data;
     const totalQueue = queueTotal(loop.queue);
     const draftQueue = countByStatus(loop.queue, "status", "draft");
@@ -2542,7 +2583,7 @@ async function loadLoopStatus() {
     document.getElementById("outcome-count").textContent = `${loop.outcome_count || 0} outcome(s) · ${loop.weight_count || 0} active weight(s)`;
     document.getElementById("security-count").textContent = securityGateSummary(security);
     document.getElementById("automation-count").textContent = `${automation.ready_count || 0} ready · ${automation.blocked_count || 0} blocked`;
-    renderSimpleOperator(data);
+    renderSimpleOperator(data, monthly);
     renderWorkflowNext(data.workflow || loop);
     loadLaunchReadiness();
     loadTestRunChecklist();
@@ -5752,13 +5793,18 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   const openAssets = event.target.closest("[data-simple-open-assets]");
   const openReview = event.target.closest("[data-simple-open-review]");
   const openScheduler = event.target.closest("[data-simple-open-scheduler]");
+  const downloadMonthlyDoctorHandoff = event.target.closest("[data-simple-download-monthly-doctor-handoff]");
+  const downloadMonthlyActionQueue = event.target.closest("[data-simple-download-monthly-action-queue]");
+  const downloadMonthlyProductionRules = event.target.closest("[data-simple-download-monthly-production-rules]");
+  const downloadMonthlyProductionQa = event.target.closest("[data-simple-download-monthly-production-qa]");
+  const downloadMonthlyQueueReadiness = event.target.closest("[data-simple-download-monthly-queue-readiness]");
   const downloadHandoff = event.target.closest("[data-simple-download-handoff]");
   const downloadTodayPack = event.target.closest("[data-simple-download-today-pack]");
   const downloadReel = event.target.closest("[data-simple-download-reel]");
   const downloadPostPublish = event.target.closest("[data-simple-download-post-publish]");
   const downloadPostMetrics = event.target.closest("[data-simple-download-post-metrics]");
   const refresh = event.target.closest("[data-simple-refresh]");
-  if (!runReadyAssets && !openAssets && !openReview && !openScheduler && !downloadHandoff && !downloadTodayPack && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !refresh) return;
+  if (!runReadyAssets && !openAssets && !openReview && !openScheduler && !downloadMonthlyDoctorHandoff && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadTodayPack && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !refresh) return;
   if (refresh) {
     await loadLoopStatus();
     await loadDashboardMonthlyActionQueue();
@@ -5774,6 +5820,26 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   }
   if (openAssets) {
     showScreen("assets");
+    return;
+  }
+  if (downloadMonthlyDoctorHandoff) {
+    await downloadProtectedFile("/operations/monthly-carousel-doctor-handoff-pack.zip", "drec-monthly-carousel-doctor-handoff-pack.zip", "application/zip");
+    return;
+  }
+  if (downloadMonthlyActionQueue) {
+    await downloadProtectedFile("/operations/monthly-carousel-action-queue.zh.md", "drec-monthly-carousel-action-queue-zh.md", "text/markdown");
+    return;
+  }
+  if (downloadMonthlyProductionRules) {
+    await downloadProtectedFile("/operations/monthly-carousel-production-import-rules.zh.md", "drec-monthly-carousel-production-import-rules-zh.md", "text/markdown");
+    return;
+  }
+  if (downloadMonthlyProductionQa) {
+    await downloadProtectedFile("/operations/monthly-carousel-production-qa-pack.zh.md", "drec-monthly-carousel-production-qa-pack-zh.md", "text/markdown");
+    return;
+  }
+  if (downloadMonthlyQueueReadiness) {
+    await downloadProtectedFile("/operations/monthly-carousel-queue-readiness.zh.md", "drec-monthly-carousel-queue-readiness-zh.md", "text/markdown");
     return;
   }
   if (downloadTodayPack) {
