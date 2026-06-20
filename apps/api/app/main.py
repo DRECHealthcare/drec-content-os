@@ -8391,6 +8391,70 @@ async def operations_monthly_carousel_doctor_review_zh(_: None = Depends(require
     )
 
 
+@app.get("/operations/monthly-carousel-doctor-reply-templates.zh.md")
+async def operations_monthly_carousel_doctor_reply_templates_zh(_: None = Depends(require_access_token)):
+    generated_at = datetime.now(timezone.utc).isoformat()
+    payload = await monthly_carousel_review_payload()
+    source = payload.get("source") or {}
+    items = payload.get("items") or []
+    lines = [
+        "# DREC 月度 Carousel 医生回复模板包",
+        "",
+        f"生成时间：{generated_at}",
+        f"Notion 来源：{source.get('name')}",
+        f"月度刷新日：每月 {source.get('monthly_refresh_day')} 日",
+        f"本包项目数：{len(items)}",
+        "",
+        "用途：把本月每个 Topic ID 的医生回复格式集中给医生或助理填写。这个文件只读，不会批准、修改、入队、排程、发布或调用 Meta。",
+        "",
+        "## 使用方式",
+        "",
+        "1. 先把「月度 Carousel 医生审核总包」和 PNG ZIP 给医生看。",
+        "2. 医生只需要在下面每个 block 里保留对应 Asset ID，并填写 Decision / Safety / Notes。",
+        "3. 只有明确 `Decision: approve` 且 `Safety: clear` 的项目，才可以导入并进入下一步。",
+        "4. 若医生写 needs edits、needs review、blocked 或不确定，就保持在审核状态，不要推进。",
+        "",
+        "## 可复制整包回复模板",
+        "",
+        "```text",
+    ]
+    if not items:
+        lines.append("暂无月度 carousel 项目。")
+    for index, item in enumerate(items, start=1):
+        lines.extend(
+            [
+                f"--- {index} / {len(items)} ---",
+                f"Topic ID: {item.get('topic_id')}",
+                f"Topic: {item.get('topic')}",
+                f"Asset ID: {item.get('asset_id')}",
+                "Decision: approve / needs edits / reject",
+                "Safety: clear / needs review / blocked",
+                "Use polished copy: no",
+                "Notes:",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "```",
+            "",
+            "## 导入前检查",
+            "",
+            "- 每条必须保留 Asset ID。",
+            "- `Decision` 只能接受 approve、needs edits、reject。",
+            "- `Safety` 只能接受 clear、needs review、blocked。",
+            "- 不要把医生没明确批准的项目改成 approve。",
+            "- 不要把医生没明确写 clear 的项目改成 Safety clear。",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-doctor-reply-templates-zh.md"'},
+    )
+
+
 @app.get("/operations/monthly-carousel-png-assets.zip")
 async def operations_monthly_carousel_png_assets_zip(_: None = Depends(require_access_token)):
     assets = await monthly_carousel_asset_list()
@@ -9100,6 +9164,7 @@ async def monthly_carousel_action_pack_payload():
         "items": items,
         "links": {
             "doctor_review_pack": "/operations/monthly-carousel-doctor-review.zh.md",
+            "doctor_reply_templates": "/operations/monthly-carousel-doctor-reply-templates.zh.md",
             "png_assets_zip": "/operations/monthly-carousel-png-assets.zip",
             "doctor_worksheet": "/operations/monthly-carousel-doctor-decision-worksheet.csv",
             "production_worksheet": "/operations/monthly-carousel-production-design-worksheet.csv",

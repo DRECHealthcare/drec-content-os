@@ -589,6 +589,8 @@ Object.assign(uiZh, {
   "Could not download first publish doctor review sheet.": "无法下载首发医生审核单。",
   "Monthly carousel doctor review pack downloaded.": "月度 Carousel 医生审核总包已下载。",
   "Could not download monthly carousel doctor review pack.": "无法下载月度 Carousel 医生审核总包。",
+  "Monthly carousel doctor reply templates downloaded.": "月度医生回复模板已下载。",
+  "Could not download monthly carousel doctor reply templates.": "无法下载月度医生回复模板。",
   "Monthly carousel PNG ZIP downloaded.": "月度 Carousel 全部图片 ZIP 已下载。",
   "Could not download monthly carousel PNG ZIP.": "无法下载月度 Carousel 全部图片 ZIP。",
   "Monthly carousel status board downloaded.": "月度 Carousel 状态板已下载。",
@@ -5268,6 +5270,16 @@ document.getElementById("download-monthly-carousel-doctor-review-zh")?.addEventL
     message.textContent = translateText("Monthly carousel doctor review pack downloaded.");
   } catch (error) {
     message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download monthly carousel doctor review pack.");
+  }
+});
+
+document.getElementById("download-monthly-carousel-doctor-reply-templates")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/monthly-carousel-doctor-reply-templates.zh.md", "drec-monthly-carousel-doctor-reply-templates-zh.md", "text/markdown");
+    message.textContent = translateText("Monthly carousel doctor reply templates downloaded.");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download monthly carousel doctor reply templates.");
   }
 });
 
