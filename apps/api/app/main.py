@@ -4079,6 +4079,199 @@ async def operations_first_publish_approval_handoff_zh(request: Request, _: None
     )
 
 
+async def first_publish_review_exit_status_payload(request: Request):
+    readiness = await first_publish_readiness_payload()
+    next_step = readiness.get("next_step") or {}
+    candidates = readiness.get("candidates") or {}
+    action_pack = readiness.get("action_pack") or {}
+    asset = candidates.get("next_asset") or candidates.get("approved_clear_asset") or candidates.get("ready_asset") or {}
+    if not asset:
+        return {
+            "mode": "read_only_first_publish_review_exit_status",
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "overall_status": "blocked",
+            "asset": None,
+            "ready_count": 0,
+            "blocked_count": 1,
+            "checks": [
+                {
+                    "key": "first_publish_asset",
+                    "status": "blocked",
+                    "detail": "No first-publish asset is available.",
+                    "required_action": "Generate and save one asset before review.",
+                }
+            ],
+            "next_action": "Generate and save one asset before review.",
+            "safety": ["This status is read-only and does not approve, import, queue, schedule, publish, or call Meta."],
+        }
+    metadata = asset.get("metadata") or {}
+    slides = first_publish_slide_items(asset)
+    media_gate = action_pack.get("media_gate") or first_publish_media_gate(asset)
+    decision_csv = (action_pack.get("next_asset_decision_csv") or "").strip()
+    forwarded_proto = request.headers.get("x-forwarded-proto") or request.url.scheme or "https"
+    forwarded_host = request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.netloc
+    if forwarded_host.endswith(".fly.dev"):
+        forwarded_proto = "https"
+    base_url = f"{forwarded_proto}://{forwarded_host}".rstrip("/")
+    approval_ready = asset.get("review_status") == "approved" and asset.get("compliance_status") == "clear"
+    checks = [
+        {
+            "key": "doctor_review_handoff",
+            "status": "ready",
+            "detail": "Chinese approval handoff and doctor review sheet are available.",
+            "required_action": "Download the handoff and send it to the doctor or human reviewer.",
+            "evidence": "/operations/first-publish-approval-handoff.zh.md",
+        },
+        {
+            "key": "slide_plan",
+            "status": "ready" if slides else "blocked",
+            "detail": f"{len(slides)} slide(s) found for the first-publish asset." if slides else "No slide plan found on the first-publish asset.",
+            "required_action": "Use the Carousel Slide Plan to rebuild the asset before review." if not slides else "Review slide text and visual notes before approval.",
+            "evidence": f"{len(slides)} slide(s)",
+        },
+        {
+            "key": "preview_images",
+            "status": "ready" if slides else "blocked",
+            "detail": "PNG preview endpoints are available for every slide." if slides else "PNG previews cannot render without slides.",
+            "required_action": "Open the PNG preview links or download the PNG ZIP for visual review.",
+            "evidence": f"{base_url}/operations/first-publish-carousel-preview/1.png" if slides else "",
+        },
+        {
+            "key": "doctor_reply_template",
+            "status": "ready" if asset.get("id") else "blocked",
+            "detail": "Doctor reply template includes Asset ID, Decision, Safety, Use polished copy, and Notes.",
+            "required_action": "Require Decision: approve and Safety: clear before any approval import.",
+            "evidence": f"Asset ID: {asset.get('id')}",
+        },
+        {
+            "key": "decision_csv",
+            "status": "ready" if decision_csv else "blocked",
+            "detail": "One-row asset decision CSV is available for preview/import." if decision_csv else "Decision CSV is missing.",
+            "required_action": "Preview/import only after explicit doctor or human approval.",
+            "evidence": "/operations/asset-review-decisions.csv",
+        },
+        {
+            "key": "human_approval",
+            "status": "ready" if approval_ready else "blocked",
+            "detail": "Asset already has review_status=approved and compliance_status=clear." if approval_ready else "Waiting for explicit Decision: approve and Safety: clear.",
+            "required_action": "Paste or import the doctor reply only when both approval and safety are explicit.",
+            "evidence": f"{asset.get('review_status') or 'n/a'} / {asset.get('compliance_status') or 'n/a'}",
+        },
+        {
+            "key": "media_design",
+            "status": "ready" if (not media_gate.get("required") or media_gate.get("ready")) else "blocked",
+            "detail": media_gate.get("detail") or "Media/design state is unknown.",
+            "required_action": "Download PNG ZIP, finish visual QA, host approved image URLs, then attach media before queueing." if media_gate.get("required") and not media_gate.get("ready") else "Keep approved media/design attached before queueing.",
+            "evidence": f"{media_gate.get('media_count') or 0} media URL(s)",
+        },
+        {
+            "key": "safe_auto_advance",
+            "status": "ready" if approval_ready and (not media_gate.get("required") or media_gate.get("ready")) else "blocked",
+            "detail": "Safe advance can proceed to the next mechanical step." if approval_ready and (not media_gate.get("required") or media_gate.get("ready")) else "Safe advance will stop at the current manual gate.",
+            "required_action": "Run safe advance only after approval and media/design gates are satisfied.",
+            "evidence": "/operations/first-publish-safe-advance-loop?dry_run=false&max_steps=8",
+        },
+    ]
+    blocked = [item for item in checks if item.get("status") != "ready"]
+    return {
+        "mode": "read_only_first_publish_review_exit_status",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "overall_status": "ready_to_advance" if not blocked else "waiting_for_review_exit",
+        "next_step": next_step,
+        "asset": {
+            "id": asset.get("id"),
+            "topic": metadata.get("topic") or asset.get("title") or asset.get("brief_title"),
+            "channel": asset.get("channel"),
+            "format": asset.get("format"),
+            "review_status": asset.get("review_status"),
+            "compliance_status": asset.get("compliance_status"),
+            "slide_count": len(slides),
+        },
+        "ready_count": len(checks) - len(blocked),
+        "blocked_count": len(blocked),
+        "checks": checks,
+        "next_action": (blocked[0].get("required_action") if blocked else "Run first-publish safe advance."),
+        "links": {
+            "approval_handoff": "/operations/first-publish-approval-handoff.zh.md",
+            "doctor_review_sheet": "/operations/first-publish-doctor-review-sheet.zh.md",
+            "media_pack": "/operations/first-publish-media-pack.md",
+            "png_zip": "/operations/first-publish-carousel-png-assets.zip",
+            "safe_advance": "/operations/first-publish-safe-advance-loop",
+            "project_unblock": "/operations/project-unblock-board.zh.md",
+        },
+        "safety": [
+            "This status is read-only and does not approve, import, queue, schedule, publish, update Notion, store secrets, or call Meta.",
+            "Human approval and safety clearance remain mandatory before queueing.",
+            "Visual content still requires approved hosted media/design URLs before queueing.",
+        ],
+    }
+
+
+@app.get("/operations/first-publish-review-exit-status")
+async def operations_first_publish_review_exit_status(request: Request, _: None = Depends(require_access_token)):
+    return await first_publish_review_exit_status_payload(request)
+
+
+@app.get("/operations/first-publish-review-exit-status.zh.md")
+async def operations_first_publish_review_exit_status_zh(request: Request, _: None = Depends(require_access_token)):
+    payload = await first_publish_review_exit_status_payload(request)
+    asset = payload.get("asset") or {}
+    lines = [
+        "# DREC 首发审核出口状态",
+        "",
+        f"生成时间：{payload.get('generated_at')}",
+        "",
+        "用途：检查当前首发内容是否已经具备从医生/人工审核 gate 进入下一步的全部材料。本文件只读，不会批准、导入、入队、排程、发布或调用 Meta。",
+        "",
+        "## 总状态",
+        "",
+        f"- 状态：`{payload.get('overall_status')}`",
+        f"- 已准备：{payload.get('ready_count')}",
+        f"- 阻塞：{payload.get('blocked_count')}",
+        f"- 下一步：{payload.get('next_action')}",
+        "",
+        "## 当前首发内容",
+        "",
+        f"- Asset ID：`{asset.get('id') or 'n/a'}`",
+        f"- 主题：{asset.get('topic') or 'n/a'}",
+        f"- 频道 / 格式：{asset.get('channel') or 'n/a'} / {asset.get('format') or 'n/a'}",
+        f"- 安全 / 审核：{asset.get('compliance_status') or 'n/a'} / {asset.get('review_status') or 'n/a'}",
+        f"- Slide 数量：{asset.get('slide_count') or 0}",
+        "",
+        "## 出口检查",
+        "",
+    ]
+    for index, item in enumerate(payload.get("checks") or [], start=1):
+        lines.extend(
+            [
+                f"### {index}. `{item.get('key')}`",
+                "",
+                f"- 状态：`{item.get('status')}`",
+                f"- 说明：{item.get('detail')}",
+                f"- 需要动作：{item.get('required_action')}",
+                f"- 证据：{item.get('evidence') or 'n/a'}",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## 相关入口",
+            "",
+            *markdown_list([f"{key}: `{value}`" for key, value in (payload.get("links") or {}).items()]),
+            "",
+            "## 安全线",
+            "",
+            *markdown_list(payload.get("safety")),
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="drec-first-publish-review-exit-status-zh.md"'},
+    )
+
+
 @app.get("/operations/first-publish-media-pack.md")
 async def operations_first_publish_media_pack(_: None = Depends(require_access_token)):
     payload = await first_publish_readiness_payload()
