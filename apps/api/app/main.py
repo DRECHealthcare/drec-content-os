@@ -6259,6 +6259,8 @@ async def monthly_carousel_learning_closeout_payload():
                 "notion_overall_status": notion_source.get("overall_status") or "",
                 "queue_id": (queue_item or {}).get("id") or "",
                 "queue_status": (queue_item or {}).get("status") or "",
+                "queue_channel": (queue_item or {}).get("channel") or "",
+                "queue_format": (queue_item or {}).get("format") or "",
                 "planned_slot": (queue_item or {}).get("planned_slot") or "",
                 "external_post_id": external_post_id,
                 "raw_metric_status": "captured" if raw_metric else "",
@@ -6322,6 +6324,8 @@ async def operations_monthly_carousel_learning_closeout_csv(_: None = Depends(re
         "notion_overall_status",
         "queue_id",
         "queue_status",
+        "queue_channel",
+        "queue_format",
         "planned_slot",
         "external_post_id",
         "raw_metric_status",
@@ -6341,6 +6345,95 @@ async def operations_monthly_carousel_learning_closeout_csv(_: None = Depends(re
         output.getvalue(),
         media_type="text/csv",
         headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-learning-closeout.csv"'},
+    )
+
+
+@app.get("/operations/monthly-carousel-metrics-template.csv")
+async def operations_monthly_carousel_metrics_template_csv(_: None = Depends(require_access_token)):
+    payload = await monthly_carousel_learning_closeout_payload()
+    output = StringIO()
+    fieldnames = [
+        "row_type",
+        "topic_id",
+        "asset_id",
+        "queue_id",
+        "source",
+        "external_post_id",
+        "captured_at",
+        "reach",
+        "likes",
+        "comments",
+        "saves",
+        "shares",
+        "leads",
+        "spend",
+        "format",
+        "channel",
+        "funnel_stage",
+        "metric_window",
+        "notes",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    waiting_metrics = [
+        item
+        for item in payload.get("items") or []
+        if item.get("closeout_stage") == "waiting_metrics" and item.get("external_post_id")
+    ]
+    for item in waiting_metrics:
+        channel = item.get("queue_channel") or "manual"
+        fmt = item.get("queue_format") or "carousel"
+        writer.writerow(
+            {
+                "row_type": "monthly_carousel_waiting_metrics",
+                "topic_id": item.get("topic_id") or "",
+                "asset_id": item.get("asset_id") or "",
+                "queue_id": item.get("queue_id") or "",
+                "source": channel,
+                "external_post_id": item.get("external_post_id") or "",
+                "captured_at": datetime.now(timezone.utc).isoformat(),
+                "reach": "",
+                "likes": "",
+                "comments": "",
+                "saves": "",
+                "shares": "",
+                "leads": "",
+                "spend": "0",
+                "format": fmt,
+                "channel": channel,
+                "funnel_stage": "TOFU",
+                "metric_window": "7d",
+                "notes": f"{item.get('topic_id') or ''} · {item.get('topic') or ''}".strip(" ·"),
+            }
+        )
+    if not waiting_metrics:
+        writer.writerow(
+            {
+                "row_type": "instructions",
+                "topic_id": "No monthly carousel item is waiting for metrics right now.",
+                "asset_id": "Publish first, then record the Meta post ID or manual label.",
+                "queue_id": "After that, download this CSV again.",
+                "source": "Allowed: facebook, instagram, manual, ads",
+                "external_post_id": "Required for import.",
+                "captured_at": "ISO timestamp.",
+                "reach": "Number",
+                "likes": "Number",
+                "comments": "Number",
+                "saves": "Number",
+                "shares": "Number",
+                "leads": "Number",
+                "spend": "Use 0 for organic/manual posts.",
+                "format": "carousel",
+                "channel": "facebook or instagram",
+                "funnel_stage": "TOFU",
+                "metric_window": "7d",
+                "notes": "Do not invent metrics. Use real Meta numbers or first-test manual evidence.",
+            }
+        )
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-metrics-template.csv"'},
     )
 
 
@@ -6399,6 +6492,132 @@ async def operations_monthly_carousel_learning_closeout_zh(_: None = Depends(req
         "\n".join(lines),
         media_type="text/markdown",
         headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-learning-closeout-zh.md"'},
+    )
+
+
+@app.get("/operations/monthly-carousel-metrics-execution-pack.zh.md")
+async def operations_monthly_carousel_metrics_execution_pack_zh(_: None = Depends(require_access_token)):
+    payload = await monthly_carousel_learning_closeout_payload()
+    source = payload.get("source") or {}
+    items = payload.get("items") or []
+    waiting_publish = [item for item in items if item.get("closeout_stage") == "waiting_publish"]
+    waiting_metrics = [item for item in items if item.get("closeout_stage") == "waiting_metrics"]
+    waiting_rollup = [item for item in items if item.get("closeout_stage") == "waiting_rollup"]
+    complete = [item for item in items if item.get("closeout_stage") == "learning_complete"]
+    upstream = [item for item in items if item.get("closeout_stage") in {"upstream_gate", "waiting_queue_finish"}]
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    lines = [
+        "# DREC 月度 Carousel 数据导入执行包",
+        "",
+        f"生成时间：{generated_at}",
+        f"Notion 来源：{source.get('name')}",
+        f"月度刷新日：每月 {source.get('monthly_refresh_day')} 日",
+        "",
+        "用途：月度 carousel 发布后，指导你把真实表现数据录入系统并汇总成学习结果。本文件只读，不会导入数据、创建 outcome、更新 Notion、发布或调用 Meta。",
+        "",
+        "## 当前状态",
+        "",
+        f"- 月度内容数：{payload.get('asset_count')}",
+        f"- 等待发布并记录 post ID：{len(waiting_publish)}",
+        f"- 等待录入表现数据：{len(waiting_metrics)}",
+        f"- 等待汇总成 outcome：{len(waiting_rollup)}",
+        f"- 已完成学习闭环：{len(complete)}",
+        f"- 仍在上游 gate：{len(upstream)}",
+        "",
+        "## 正确操作顺序",
+        "",
+        "1. 人工发布后，先在排程页记录 Meta post ID 或 manual label。",
+        "2. 下载「月度数据导入表 CSV」。",
+        "3. 只填写真实 Meta / manual 数据：reach、likes、comments、saves、shares、leads、spend。",
+        "4. 先点 Preview CSV，确认 post ID 和数字正确。",
+        "5. 勾选 Roll up imported rows 后导入，让系统创建 outcome。",
+        "6. 导入后下载「月度数据复盘」和 Weekly Report，把学习建议带回下一轮计划。",
+        "",
+        "## 数据填写规则",
+        "",
+        "- organic/manual 内容的 spend 通常填 0。",
+        "- 没有的数据不要猜；可以留 0 或等数据稳定后再录。",
+        "- 建议使用 7 天窗口，除非你明确要做 28d 或 90d 回看。",
+        "- 不要为了让结果好看而改数据；学习系统需要真实反馈。",
+        "- 数据导入只影响表现数据和学习结果，不会批准、排程或发布任何内容。",
+        "",
+        "## 等待录入表现数据",
+        "",
+    ]
+    if waiting_metrics:
+        for index, item in enumerate(waiting_metrics[:60], start=1):
+            lines.extend(
+                [
+                    f"### {index}. {item.get('topic_id')} · {item.get('topic')}",
+                    "",
+                    f"- Queue ID：`{item.get('queue_id')}`",
+                    f"- External post ID：{item.get('external_post_id')}",
+                    f"- 建议窗口：7d",
+                    f"- 下一步：填写月度数据导入表 CSV 后先 Preview。",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["- 目前没有月度 carousel 帖子等待录入表现数据。", ""])
+    lines.extend(["## 等待 Roll Up", ""])
+    if waiting_rollup:
+        for index, item in enumerate(waiting_rollup[:60], start=1):
+            lines.extend(
+                [
+                    f"### {index}. {item.get('topic_id')} · {item.get('topic')}",
+                    "",
+                    f"- External post ID：{item.get('external_post_id')}",
+                    f"- Raw metrics：{item.get('raw_metric_status') or '已录入'}；{item.get('raw_metric_captured_at') or '时间未知'}",
+                    "- 下一步：使用 Roll Up Latest，或重新导入并开启 rollup。",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["- 暂无等待 rollup 的月度数据。", ""])
+    lines.extend(["## 已完成学习闭环", ""])
+    if complete:
+        for index, item in enumerate(complete[:60], start=1):
+            lines.extend(
+                [
+                    f"### {index}. {item.get('topic_id')} · {item.get('topic')}",
+                    "",
+                    f"- Outcome 分数：{item.get('outcome_score') or 'n/a'}",
+                    f"- 收藏 / 分享：{item.get('outcome_saves') or 0} / {item.get('outcome_shares') or 0}",
+                    "- 下一步：可作为下次月度内容计划的学习证据。",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["- 暂无完成学习闭环的月度项目。", ""])
+    lines.extend(["## 仍在上游 gate", ""])
+    if upstream:
+        for index, item in enumerate(upstream[:60], start=1):
+            lines.extend(
+                [
+                    f"### {index}. {item.get('topic_id')} · {item.get('topic')}",
+                    "",
+                    f"- 阶段：{zh_monthly_learning_stage(item.get('closeout_stage'))}",
+                    f"- 下一步：{item.get('next_action')}",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["- 暂无上游 gate 项目。", ""])
+    lines.extend(
+        [
+            "## 安全线",
+            "",
+            "- 这个执行包不会写入任何数据。",
+            "- 月度数据导入表不会自动填表现数字。",
+            "- Preview 通过后才导入；导入后再看月度数据复盘。",
+            "- Meta 自动发布和自动抓取仍受独立开关控制。",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-metrics-execution-pack-zh.md"'},
     )
 
 
@@ -9382,6 +9601,8 @@ async def monthly_carousel_action_pack_payload():
             "monthly_schedule_execution_pack": "/operations/monthly-carousel-schedule-execution-pack.zh.md",
             "monthly_schedule_import": "/operations/import-monthly-carousel-schedule-worksheet",
             "monthly_publishing_handoff": "/operations/monthly-carousel-publishing-handoff.zh.md",
+            "monthly_metrics_template": "/operations/monthly-carousel-metrics-template.csv",
+            "monthly_metrics_execution_pack": "/operations/monthly-carousel-metrics-execution-pack.zh.md",
             "status_board": "/operations/monthly-carousel-status-board.zh.md",
             "pre_schedule_gate": "/operations/pre-schedule-gate.md",
             "review_to_schedule": "/operations/review-to-schedule-pack.zh.md",

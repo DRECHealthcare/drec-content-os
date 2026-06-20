@@ -7834,6 +7834,26 @@ document.getElementById("download-monthly-carousel-learning-closeout-csv")?.addE
   }
 });
 
+document.getElementById("download-monthly-carousel-metrics-template")?.addEventListener("click", async () => {
+  const message = document.getElementById("metric-message");
+  try {
+    await downloadProtectedFile("/operations/monthly-carousel-metrics-template.csv", "drec-monthly-carousel-metrics-template.csv", "text/csv");
+    message.textContent = "月度数据导入表已下载。";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "请先设置访问码。" : "无法下载月度数据导入表。";
+  }
+});
+
+document.getElementById("download-monthly-carousel-metrics-execution-pack")?.addEventListener("click", async () => {
+  const message = document.getElementById("metric-message");
+  try {
+    await downloadProtectedFile("/operations/monthly-carousel-metrics-execution-pack.zh.md", "drec-monthly-carousel-metrics-execution-pack-zh.md", "text/markdown");
+    message.textContent = "月度数据执行包已下载。";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "请先设置访问码。" : "无法下载月度数据执行包。";
+  }
+});
+
 document.getElementById("download-publishing-closeout-zh")?.addEventListener("click", async () => {
   const message = document.getElementById("metric-message");
   try {
