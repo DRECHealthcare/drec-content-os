@@ -3379,6 +3379,16 @@ const requiredSnippets = [
     text: "data-simple-download-handoff",
   },
   {
+    name: "web simple operator safe action center copy",
+    file: "web",
+    text: "安全操作中心",
+  },
+  {
+    name: "web simple operator no auto meta publish copy",
+    file: "web",
+    text: "系统不会自动发到 Facebook / Instagram",
+  },
+  {
     name: "web simple operator scheduled queue fallback",
     file: "web",
     text: "loopScheduledQueue",
@@ -3402,6 +3412,16 @@ const requiredSnippets = [
     name: "web simple operator reel handoff endpoint",
     file: "web",
     text: "/video/manual-reel-handoff.zh.md",
+  },
+  {
+    name: "web manual publish record label",
+    file: "web",
+    text: "记录人工发布",
+  },
+  {
+    name: "web manual publish prompt safety copy",
+    file: "web",
+    text: "这里不会自动发帖",
   },
   {
     name: "web publishing closeout renderer",

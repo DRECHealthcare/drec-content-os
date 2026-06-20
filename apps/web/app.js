@@ -2444,14 +2444,17 @@ function renderSimpleOperator(data) {
   const scheduledQueue = Number(summary.scheduled_queue || loopScheduledQueue || 0);
   const percent = Number(completion.percent || 0);
   const firstCycle = Number(completion.first_cycle_percent || 0);
-  let title = "今天只看这里";
+  let eyebrow = "安全操作中心";
+  let title = "今天只按这里";
   let body = translateText(nextAction.body || "系统正在判断下一步。");
   let status = `${percent || "?"}% 总体 · ${firstCycle || "?"}% 第一轮`;
   let actions = `
-    <button type="button" data-simple-refresh>刷新状态</button>
+    <button class="primary" type="button" data-simple-refresh>刷新状态</button>
   `;
+  let safetyNote = "这里不会发布到 Facebook / Instagram。";
 
   if (readyAssets > 0 && queueTotal === 0) {
+    eyebrow = "下一步：安全入队";
     title = `${readyAssets} 条内容已安全通过，可以入队`;
     body = `已有 ${readyAssets} 条通用内容是 approved + safety clear。执行入队只会放进审核队列，不会发布到 Meta。`;
     status = "安全通过，可以进入发布队列";
@@ -2460,6 +2463,7 @@ function renderSimpleOperator(data) {
       <button type="button" data-simple-open-assets>打开素材页查看</button>
     `;
   } else if (queueTotal > 0 && scheduledQueue === 0) {
+    eyebrow = "下一步：审核或排程";
     title = "内容已在队列，下一步是审核/排程";
     body = `队列里已有 ${queueTotal} 条内容。下一步去审核队列或排程页继续。`;
     status = "已入队，等待排程";
@@ -2468,8 +2472,9 @@ function renderSimpleOperator(data) {
       <button type="button" data-simple-open-scheduler>打开排程</button>
     `;
   } else if (scheduledQueue > 0) {
-    title = "已排程，下一步只做交接和人工确认";
-    body = `已有 ${scheduledQueue} 条内容进入排程。这里的按钮只会下载交接资料或打开页面，不会发布到 Facebook / Instagram。`;
+    eyebrow = "下一步：人工发布交接";
+    title = "已排程，不要点发布";
+    body = `已有 ${scheduledQueue} 条内容进入排程。现在只下载交接资料给真人检查和手动发布；系统不会自动发到 Facebook / Instagram。`;
     status = "已排程 · 未发布";
     actions = `
       <button class="primary" type="button" data-simple-open-scheduler>打开排程</button>
@@ -2478,18 +2483,19 @@ function renderSimpleOperator(data) {
       <button type="button" data-simple-download-post-publish>下载发布后下一步</button>
       <button type="button" data-simple-download-post-metrics>下载数据记录表</button>
     `;
+    safetyNote = "安全锁：我不会点测试 Facebook、测试 Instagram 或记录已发布。";
   }
 
   container.innerHTML = `
     <div class="simple-operator-copy">
-      <span>${escapeHtml(status)}</span>
+      <span>${escapeHtml(eyebrow)} · ${escapeHtml(status)}</span>
       <h2>${escapeHtml(title)}</h2>
       <p>${escapeHtml(body)}</p>
     </div>
     <div class="simple-operator-actions">
       ${actions}
     </div>
-    <small>日常操作先用这里。下面的详细区域只是给我排查和高级操作用。</small>
+    <small>${escapeHtml(safetyNote)} 下面的详细区域是高级工具，平时不用找。</small>
   `;
 }
 
@@ -5090,7 +5096,7 @@ async function runAssetBatchAction(button, path, label) {
 }
 
 async function recordPublishedItem(itemId, button, options = {}) {
-  const postId = window.prompt("Paste the Meta post ID after you publish this item.");
+  const postId = window.prompt("只有你已经手动发布到 Facebook/IG 后才填写。这里不会自动发帖；请粘贴真实 Meta post ID。");
   if (!postId || !postId.trim()) return;
   const message = document.getElementById("queue-message");
   const originalText = button.textContent;
@@ -5106,11 +5112,11 @@ async function recordPublishedItem(itemId, button, options = {}) {
       const data = await fetchJson("/publishing-handoff");
       renderHandoff(data);
     }
-    message.textContent = "Published item recorded.";
+    message.textContent = "人工发布记录已保存。系统没有自动发帖。";
   } catch {
     button.disabled = false;
     button.textContent = originalText;
-    message.textContent = "Could not record published item.";
+    message.textContent = "无法保存人工发布记录。";
   }
 }
 
@@ -5392,7 +5398,7 @@ function queueCard(item, mode) {
     <div class="queue-actions">
       <button type="button" data-edit-queue="${escapeHtml(item.id)}" ${canEdit ? "" : "disabled"}>Edit Item</button>
       <button type="button" data-schedule-next="${escapeHtml(item.id)}" ${canQuickSchedule ? "" : "disabled"}>Suggest Slot</button>
-      <button type="button" data-mark-published="${escapeHtml(item.id)}" ${canMarkPublished ? "" : "disabled"}>Mark Published</button>
+      <button type="button" data-mark-published="${escapeHtml(item.id)}" ${canMarkPublished ? "" : "disabled"}>记录人工发布</button>
       <button type="button" data-cancel-queue-item="${escapeHtml(item.id)}" ${canCancel ? "" : "disabled"}>Cancel Item</button>
     </div>
   `;
