@@ -98,6 +98,7 @@ const requiredRoutes = [
   "GET /operations/monthly-carousel-doctor-triage",
   "GET /operations/monthly-carousel-doctor-triage.zh.md",
   "GET /operations/monthly-carousel-doctor-triage.csv",
+  "GET /operations/monthly-carousel-doctor-handoff-pack.zip",
   "POST /operations/import-doctor-replies",
   "GET /operations/approval-cockpit",
   "GET /operations/approval-cockpit.md",
@@ -2836,14 +2837,34 @@ const requiredSnippets = [
     text: "data-download-dashboard-monthly-doctor-triage",
   },
   {
+    name: "web dashboard monthly doctor handoff action",
+    file: "web",
+    text: "data-download-dashboard-monthly-doctor-handoff",
+  },
+  {
     name: "web monthly doctor triage action",
     file: "web",
     text: "download-monthly-carousel-doctor-triage",
   },
   {
+    name: "web monthly doctor handoff action",
+    file: "web",
+    text: "download-monthly-carousel-doctor-handoff-pack",
+  },
+  {
     name: "monthly carousel doctor triage route",
     file: "main",
     text: "monthly_carousel_doctor_triage_payload",
+  },
+  {
+    name: "monthly carousel doctor handoff zip route",
+    file: "main",
+    text: "/operations/monthly-carousel-doctor-handoff-pack.zip",
+  },
+  {
+    name: "monthly carousel doctor handoff zip safety",
+    file: "main",
+    text: "不会批准、修改、挂载媒体、入队、排程、发布、记录 post ID",
   },
   {
     name: "monthly carousel doctor triage safety",

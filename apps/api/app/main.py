@@ -10324,6 +10324,269 @@ async def operations_monthly_carousel_doctor_reply_templates_zh(_: None = Depend
     )
 
 
+def monthly_carousel_doctor_decision_worksheet_csv_text(payload: dict):
+    output = StringIO()
+    fieldnames = [
+        "topic_id",
+        "asset_id",
+        "brief_id",
+        "topic",
+        "planned_posting_date",
+        "notion_overall_status",
+        "notion_image_status",
+        "notion_caption_status",
+        "current_safety",
+        "current_review",
+        "detector_status",
+        "slide_count",
+        "png_zip_url",
+        "preview_url",
+        "doctor_check_educational_not_diagnostic",
+        "doctor_check_no_guaranteed_outcome",
+        "doctor_check_no_medication_instruction",
+        "doctor_check_mandarin_accurate",
+        "doctor_check_cta_appropriate",
+        "reviewer_safety_decision",
+        "reviewer_review_decision",
+        "use_polished_copy",
+        "reviewer_name",
+        "review_notes",
+        "copy_to_review",
+        "doctor_reply_template",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for item in payload.get("items") or []:
+        writer.writerow(
+            {
+                "topic_id": item.get("topic_id") or "",
+                "asset_id": item.get("asset_id") or "",
+                "brief_id": item.get("brief_id") or "",
+                "topic": item.get("topic") or "",
+                "planned_posting_date": item.get("planned_posting_date") or "",
+                "notion_overall_status": item.get("overall_status") or "",
+                "notion_image_status": item.get("carousel_image_status") or "",
+                "notion_caption_status": item.get("caption_status") or "",
+                "current_safety": item.get("compliance_status") or "",
+                "current_review": item.get("review_status") or "",
+                "detector_status": item.get("detector_status") or "",
+                "slide_count": item.get("slide_count") or "",
+                "png_zip_url": item.get("png_zip_url") or "",
+                "preview_url": item.get("preview_url") or "",
+                "doctor_check_educational_not_diagnostic": "",
+                "doctor_check_no_guaranteed_outcome": "",
+                "doctor_check_no_medication_instruction": "",
+                "doctor_check_mandarin_accurate": "",
+                "doctor_check_cta_appropriate": "",
+                "reviewer_safety_decision": "",
+                "reviewer_review_decision": "",
+                "use_polished_copy": "no",
+                "reviewer_name": "",
+                "review_notes": "",
+                "copy_to_review": item.get("caption_preview") or "",
+                "doctor_reply_template": "\n".join(
+                    [
+                        f"Asset ID: {item.get('asset_id') or ''}",
+                        "Decision: approve / needs edits / reject",
+                        "Safety: clear / needs review / blocked",
+                        "Use polished copy: no",
+                        "Notes:",
+                    ]
+                ),
+            }
+        )
+    return output.getvalue()
+
+
+def monthly_carousel_doctor_handoff_triage_markdown(payload: dict):
+    source = payload.get("source") or {}
+    level_counts = payload.get("level_counts") or {}
+    lines = [
+        "# DREC 月度 Carousel 医生交接快速判定",
+        "",
+        f"- Notion 来源：{source.get('name')}",
+        f"- 月度刷新日：每月 {source.get('monthly_refresh_day')} 日",
+        f"- 本包素材数：{payload.get('asset_count')}",
+        f"- 高优先注意：{level_counts.get('high_attention', 0)}",
+        f"- 中等注意：{level_counts.get('medium_attention', 0)}",
+        f"- 常规医生审核：{level_counts.get('doctor_review_required', 0)}",
+        "",
+        "这个 ZIP 只读，不会批准、修改、入队、排程、发布、更新 Notion 或调用 Meta。",
+        "",
+        "## 安全线",
+        "",
+        *markdown_list(payload.get("safety")),
+        "",
+        "## 快速判定清单",
+        "",
+    ]
+    for index, item in enumerate(payload.get("items") or [], start=1):
+        lines.extend(
+            [
+                f"### {index}. {item.get('topic_id')} · {item.get('topic')}",
+                "",
+                f"- Asset ID：`{item.get('asset_id')}`",
+                f"- 快速判定级别：`{item.get('triage_level')}`",
+                f"- Risk flags：{item.get('risk_flag_text')}",
+                f"- PNG ZIP：`{item.get('png_zip_url')}`",
+                f"- 封面预览：`{item.get('preview_url')}`",
+                "",
+                "医生重点看：",
+                "",
+                *markdown_list(item.get("doctor_focus")),
+                "",
+                "如果批准，复制：",
+                "",
+                "```text",
+                item.get("if_approved_template") or "",
+                "```",
+                "",
+                "如果需要修改，复制：",
+                "",
+                "```text",
+                item.get("if_needs_edits_template") or "",
+                "```",
+                "",
+            ]
+        )
+    return "\n".join(lines)
+
+
+@app.get("/operations/monthly-carousel-doctor-handoff-pack.zip")
+async def operations_monthly_carousel_doctor_handoff_pack_zip(_: None = Depends(require_access_token)):
+    generated_at = datetime.now(timezone.utc).isoformat()
+    triage_payload = await monthly_carousel_doctor_triage_payload()
+    review_payload = await monthly_carousel_review_payload()
+    source = triage_payload.get("source") or {}
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr(
+            "README.zh.md",
+            "\n".join(
+                [
+                    "# DREC 月度 Carousel 医生交接 ZIP",
+                    "",
+                    f"- 生成时间：{generated_at}",
+                    f"- Notion 来源：{source.get('name')}",
+                    f"- 月度刷新日：每月 {source.get('monthly_refresh_day')} 日",
+                    f"- 素材数：{triage_payload.get('asset_count')}",
+                    "",
+                    "用途：把本月医生审核需要的短版判定、回复模板、CSV 表和素材下载链接放在一个包里。",
+                    "",
+                    "安全线：这个 ZIP 只读，不会批准、修改、挂载媒体、入队、排程、发布、记录 post ID、更新 Notion 或调用 Meta。",
+                    "",
+                    "建议顺序：",
+                    "",
+                    "1. 先看 `01-doctor-triage.zh.md`。",
+                    "2. 需要细读时看 `02-doctor-review-summary.zh.md`。",
+                    "3. 医生回复可用 `03-doctor-reply-templates.zh.md`。",
+                    "4. 助理记录可用 `04-doctor-decision-worksheet.csv`。",
+                    "5. 图片素材下载链接在 `05-png-review-links.csv`；完整图片 ZIP 仍由系统端点 `/operations/monthly-carousel-png-assets.zip` 下载。",
+                    "",
+                    "只有医生明确写 `Decision: approve` 且 `Safety: clear`，才可以进入后续导入和制作步骤。",
+                ]
+            ),
+        )
+        archive.writestr("01-doctor-triage.zh.md", monthly_carousel_doctor_handoff_triage_markdown(triage_payload))
+        archive.writestr(
+            "02-doctor-review-summary.zh.md",
+            "\n".join(
+                [
+                    "# DREC 月度 Carousel 医生审核摘要",
+                    "",
+                    "本文件只读，不会批准、入队、排程、发布或调用 Meta。",
+                    "",
+                    f"- 素材数：{review_payload.get('asset_count')}",
+                    f"- 等待审核：{review_payload.get('pending_review_count')}",
+                    f"- 检测器已 clear、可优先人工审核：{review_payload.get('ready_for_human_count')}",
+                    "",
+                    "## 审核规则",
+                    "",
+                    *markdown_list(review_payload.get("rules")),
+                    "",
+                    "## 每条内容",
+                    "",
+                    *[
+                        "\n".join(
+                            [
+                                f"### {index}. {item.get('topic_id')} · {item.get('topic')}",
+                                "",
+                                f"- Asset ID：`{item.get('asset_id')}`",
+                                f"- 计划日期：{item.get('planned_posting_date') or '未标注'}",
+                                f"- 状态：Safety `{item.get('compliance_status')}` / Review `{item.get('review_status')}` / Detector `{item.get('detector_status')}`",
+                                f"- PNG ZIP：`{item.get('png_zip_url')}`",
+                                "",
+                                "Slide 标题：",
+                                "",
+                                *markdown_list((item.get("slide_titles") or [])[:10], "- 暂无 slide 标题。"),
+                                "",
+                                "文案预览：",
+                                "",
+                                item.get("caption_preview") or "暂无文案。",
+                            ]
+                        )
+                        for index, item in enumerate(review_payload.get("items") or [], start=1)
+                    ],
+                ]
+            ),
+        )
+        archive.writestr(
+            "03-doctor-reply-templates.zh.md",
+            "\n".join(
+                [
+                    "# DREC 月度医生回复模板",
+                    "",
+                    "复制对应 block 给医生填写。未明确 approve + clear 的项目不要推进。",
+                    "",
+                    "```text",
+                    *[
+                        "\n".join(
+                            [
+                                f"--- {index} / {len(review_payload.get('items') or [])} ---",
+                                f"Topic ID: {item.get('topic_id')}",
+                                f"Topic: {item.get('topic')}",
+                                f"Asset ID: {item.get('asset_id')}",
+                                "Decision: approve / needs edits / reject",
+                                "Safety: clear / needs review / blocked",
+                                "Use polished copy: no",
+                                "Notes:",
+                                "",
+                            ]
+                        )
+                        for index, item in enumerate(review_payload.get("items") or [], start=1)
+                    ],
+                    "```",
+                ]
+            ),
+        )
+        archive.writestr("04-doctor-decision-worksheet.csv", monthly_carousel_doctor_decision_worksheet_csv_text(review_payload))
+        output = StringIO()
+        writer = csv.DictWriter(
+            output,
+            fieldnames=["topic_id", "asset_id", "topic", "png_zip_url", "preview_url", "triage_level", "risk_flag_text"],
+        )
+        writer.writeheader()
+        for item in triage_payload.get("items") or []:
+            writer.writerow(
+                {
+                    "topic_id": item.get("topic_id") or "",
+                    "asset_id": item.get("asset_id") or "",
+                    "topic": item.get("topic") or "",
+                    "png_zip_url": item.get("png_zip_url") or "",
+                    "preview_url": item.get("preview_url") or "",
+                    "triage_level": item.get("triage_level") or "",
+                    "risk_flag_text": item.get("risk_flag_text") or "",
+                }
+            )
+        archive.writestr("05-png-review-links.csv", output.getvalue())
+    buffer.seek(0)
+    return Response(
+        buffer.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-doctor-handoff-pack.zip"'},
+    )
+
+
 @app.get("/operations/monthly-carousel-png-assets.zip")
 async def operations_monthly_carousel_png_assets_zip(_: None = Depends(require_access_token)):
     assets = await monthly_carousel_asset_list()
@@ -10584,78 +10847,8 @@ async def operations_monthly_carousel_status_board_zh(_: None = Depends(require_
 @app.get("/operations/monthly-carousel-doctor-decision-worksheet.csv")
 async def operations_monthly_carousel_doctor_decision_worksheet_csv(_: None = Depends(require_access_token)):
     payload = await monthly_carousel_review_payload()
-    output = StringIO()
-    fieldnames = [
-        "topic_id",
-        "asset_id",
-        "brief_id",
-        "topic",
-        "planned_posting_date",
-        "notion_overall_status",
-        "notion_image_status",
-        "notion_caption_status",
-        "current_safety",
-        "current_review",
-        "detector_status",
-        "slide_count",
-        "png_zip_url",
-        "preview_url",
-        "doctor_check_educational_not_diagnostic",
-        "doctor_check_no_guaranteed_outcome",
-        "doctor_check_no_medication_instruction",
-        "doctor_check_mandarin_accurate",
-        "doctor_check_cta_appropriate",
-        "reviewer_safety_decision",
-        "reviewer_review_decision",
-        "use_polished_copy",
-        "reviewer_name",
-        "review_notes",
-        "copy_to_review",
-        "doctor_reply_template",
-    ]
-    writer = csv.DictWriter(output, fieldnames=fieldnames)
-    writer.writeheader()
-    for item in payload.get("items") or []:
-        writer.writerow(
-            {
-                "topic_id": item.get("topic_id") or "",
-                "asset_id": item.get("asset_id") or "",
-                "brief_id": item.get("brief_id") or "",
-                "topic": item.get("topic") or "",
-                "planned_posting_date": item.get("planned_posting_date") or "",
-                "notion_overall_status": item.get("overall_status") or "",
-                "notion_image_status": item.get("carousel_image_status") or "",
-                "notion_caption_status": item.get("caption_status") or "",
-                "current_safety": item.get("compliance_status") or "",
-                "current_review": item.get("review_status") or "",
-                "detector_status": item.get("detector_status") or "",
-                "slide_count": item.get("slide_count") or "",
-                "png_zip_url": item.get("png_zip_url") or "",
-                "preview_url": item.get("preview_url") or "",
-                "doctor_check_educational_not_diagnostic": "",
-                "doctor_check_no_guaranteed_outcome": "",
-                "doctor_check_no_medication_instruction": "",
-                "doctor_check_mandarin_accurate": "",
-                "doctor_check_cta_appropriate": "",
-                "reviewer_safety_decision": "",
-                "reviewer_review_decision": "",
-                "use_polished_copy": "no",
-                "reviewer_name": "",
-                "review_notes": "",
-                "copy_to_review": item.get("caption_preview") or "",
-                "doctor_reply_template": "\n".join(
-                    [
-                        f"Asset ID: {item.get('asset_id') or ''}",
-                        "Decision: approve / needs edits / reject",
-                        "Safety: clear / needs review / blocked",
-                        "Use polished copy: no",
-                        "Notes:",
-                    ]
-                ),
-            }
-        )
     return Response(
-        output.getvalue(),
+        monthly_carousel_doctor_decision_worksheet_csv_text(payload),
         media_type="text/csv",
         headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-doctor-decision-worksheet.csv"'},
     )
@@ -11293,8 +11486,9 @@ async def monthly_carousel_action_pack_payload():
         primary_action = {
             "key": "doctor_review",
             "title": "先完成医生审核与 Safety clear",
-            "detail": "先下载医生快速判定包；需要细读时再打开医生审核总包和 PNG ZIP。医生明确 Decision: approve 与 Safety: clear 后再导入 CSV。",
-            "download": "/operations/monthly-carousel-doctor-triage.zh.md",
+            "detail": "先下载医生交接 ZIP；里面包含快速判定、回复模板、审核表和 PNG 下载链接。医生明确 Decision: approve 与 Safety: clear 后再导入 CSV。",
+            "download": "/operations/monthly-carousel-doctor-handoff-pack.zip",
+            "triage": "/operations/monthly-carousel-doctor-triage.zh.md",
             "full_review": "/operations/monthly-carousel-doctor-review.zh.md",
             "worksheet": "/operations/monthly-carousel-doctor-decision-worksheet.csv",
             "import": "/operations/import-monthly-carousel-doctor-worksheet",
@@ -11372,6 +11566,7 @@ async def monthly_carousel_action_pack_payload():
         "items": items,
         "links": {
             "monthly_ops_cockpit": "/operations/monthly-carousel-ops-cockpit.zh.md",
+            "doctor_handoff_pack": "/operations/monthly-carousel-doctor-handoff-pack.zip",
             "doctor_triage_pack": "/operations/monthly-carousel-doctor-triage.zh.md",
             "doctor_triage_csv": "/operations/monthly-carousel-doctor-triage.csv",
             "doctor_review_pack": "/operations/monthly-carousel-doctor-review.zh.md",
@@ -11431,8 +11626,8 @@ def monthly_carousel_next_action_detail(item: dict):
             "priority": 20,
             "action_key": "doctor_safety_clear",
             "action_zh": "送医生审核并取得 Safety clear",
-            "operator_action": "先下载医生快速判定包；医生需要细读时再下载审核总包、PNG ZIP 和医生审核表。医生明确 approve 与 clear 后，再导入 CSV。",
-            "download": "/operations/monthly-carousel-doctor-triage.zh.md",
+            "operator_action": "先下载医生交接 ZIP；医生需要细读时再打开审核总包和 PNG 下载链接。医生明确 approve 与 clear 后，再导入 CSV。",
+            "download": "/operations/monthly-carousel-doctor-handoff-pack.zip",
             "safety_note": "医生未 clear 前只可 review，不可进入制作或入队。",
         }
     if gate_status == "waiting_final_media" or stage == "needs_production":
