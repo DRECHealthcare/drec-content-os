@@ -607,6 +607,10 @@ Object.assign(uiZh, {
   "Could not download monthly carousel action pack.": "无法下载月度 Carousel 下一步操作包。",
   "Monthly carousel ops cockpit downloaded.": "月度 Carousel 运营驾驶舱已下载。",
   "Could not download monthly carousel ops cockpit.": "无法下载月度 Carousel 运营驾驶舱。",
+  "Monthly carousel next-action queue downloaded.": "月度 Carousel 行动队列已下载。",
+  "Could not download monthly carousel next-action queue.": "无法下载月度 Carousel 行动队列。",
+  "Monthly carousel next-action CSV downloaded.": "月度 Carousel 行动 CSV 已下载。",
+  "Could not download monthly carousel next-action CSV.": "无法下载月度 Carousel 行动 CSV。",
   "Choose the monthly doctor worksheet CSV first.": "请先选择月度医生审核表 CSV。",
   "Previewing monthly doctor worksheet...": "正在预览月度医生审核表...",
   "Importing monthly doctor worksheet...": "正在导入月度医生审核表...",
@@ -5372,6 +5376,26 @@ document.getElementById("download-monthly-carousel-ops-cockpit")?.addEventListen
     message.textContent = translateText("Monthly carousel ops cockpit downloaded.");
   } catch (error) {
     message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download monthly carousel ops cockpit.");
+  }
+});
+
+document.getElementById("download-monthly-carousel-next-action-queue")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/monthly-carousel-next-action-queue.zh.md", "drec-monthly-carousel-next-action-queue-zh.md", "text/markdown");
+    message.textContent = translateText("Monthly carousel next-action queue downloaded.");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download monthly carousel next-action queue.");
+  }
+});
+
+document.getElementById("download-monthly-carousel-next-action-queue-csv")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/monthly-carousel-next-action-queue.csv", "drec-monthly-carousel-next-action-queue.csv", "text/csv");
+    message.textContent = translateText("Monthly carousel next-action CSV downloaded.");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download monthly carousel next-action CSV.");
   }
 });
 

@@ -9824,6 +9824,8 @@ async def monthly_carousel_action_pack_payload():
             "monthly_next_plan_handback_csv": "/operations/monthly-carousel-next-plan-handback.csv",
             "monthly_acceptance_audit": "/operations/monthly-carousel-acceptance-audit.zh.md",
             "monthly_acceptance_audit_csv": "/operations/monthly-carousel-acceptance-audit.csv",
+            "monthly_next_action_queue": "/operations/monthly-carousel-next-action-queue.zh.md",
+            "monthly_next_action_queue_csv": "/operations/monthly-carousel-next-action-queue.csv",
             "status_board": "/operations/monthly-carousel-status-board.zh.md",
             "pre_schedule_gate": "/operations/pre-schedule-gate.md",
             "review_to_schedule": "/operations/review-to-schedule-pack.zh.md",
@@ -9833,6 +9835,144 @@ async def monthly_carousel_action_pack_payload():
             "It does not approve, attach media, queue, schedule, publish, or call Meta.",
             "Use Topic ID and Asset ID as identifiers; do not create duplicate Notion topics.",
             "Only doctor-approved, safety-clear, final-media-ready, visual-QA-passed items may become ready_to_queue.",
+        ],
+    }
+
+
+def monthly_carousel_next_action_detail(item: dict):
+    stage = item.get("stage") or ""
+    gate_status = item.get("gate_status") or ""
+    queue_blockers = item.get("queue_blockers") or []
+    blocker_text = "; ".join(zh_monthly_queue_blocker(blocker) for blocker in queue_blockers) if queue_blockers else ""
+
+    if gate_status == "blocked_copy_safety" or stage == "needs_copy_safety_review":
+        return {
+            "priority": 10,
+            "action_key": "copy_safety_fix",
+            "action_zh": "先修正文案安全阻碍",
+            "operator_action": "打开医生审核/安全审核包，删除或改写被标记的承诺、诊断、停药、恐吓或直接销售表达，再重新审核。",
+            "download": "/operations/monthly-carousel-doctor-review.zh.md",
+            "safety_note": "未修正前不会批准、入队、排程或发布。",
+        }
+    if gate_status == "waiting_doctor_safety_clear" or stage in {"needs_safety_clearance", "doctor_review"}:
+        return {
+            "priority": 20,
+            "action_key": "doctor_safety_clear",
+            "action_zh": "送医生审核并取得 Safety clear",
+            "operator_action": "下载医生审核总包、PNG ZIP 和医生审核表；医生明确 approve 与 clear 后，再导入 CSV。",
+            "download": "/operations/monthly-carousel-doctor-review.zh.md",
+            "safety_note": "医生未 clear 前只可 review，不可进入制作或入队。",
+        }
+    if gate_status == "waiting_final_media" or stage == "needs_production":
+        return {
+            "priority": 30,
+            "action_key": "final_media",
+            "action_zh": "补最终图片/媒体 URL",
+            "operator_action": "下载月度制作设计表，填 final media URL、rights note、设计备注和制作状态；先 preview，再 import。",
+            "download": "/operations/monthly-carousel-production-design-worksheet.csv",
+            "safety_note": "没有最终媒体链接时，不会入队或排程。",
+        }
+    if gate_status == "waiting_visual_qa" or stage == "needs_visual_qa":
+        return {
+            "priority": 40,
+            "action_key": "visual_qa",
+            "action_zh": "完成视觉 QA",
+            "operator_action": "确认手机可读、Slide 1 只有 hook、Slides 2+ 有解释文字、视觉不恐吓不夸张；通过后把 visual_qa_status 标为 passed。",
+            "download": "/operations/monthly-carousel-production-qa-pack.zh.md",
+            "safety_note": "视觉 QA 未通过时，不会入队。",
+        }
+    if gate_status == "ready_to_queue" or stage == "ready_for_queue" or item.get("can_queue"):
+        return {
+            "priority": 50,
+            "action_key": "queue_ready",
+            "action_zh": "预览并加入月度队列",
+            "operator_action": "下载入队检查表，只处理 ready_to_queue 项目；入队后仍需队列审核、Pre-Schedule Gate 和 Schedule Audit。",
+            "download": "/operations/monthly-carousel-queue-readiness.zh.md",
+            "safety_note": "入队不是发布。",
+        }
+    if stage == "queue_review":
+        return {
+            "priority": 60,
+            "action_key": "queue_review",
+            "action_zh": "审核队列草稿",
+            "operator_action": "下载队列审核 CSV 和决定表，确认 caption、媒体、医生审核和安全状态后再 approve。",
+            "download": "/operations/monthly-carousel-review-queue.csv",
+            "safety_note": "队列审核未通过时，不进入排程。",
+        }
+    if stage == "ready_to_schedule":
+        return {
+            "priority": 70,
+            "action_key": "schedule_gate",
+            "action_zh": "运行排程前检查",
+            "operator_action": "下载 Pre-Schedule Gate 和月度排程表，确认发布时间、平台、媒体、人工批准都完整后，再导入排程。",
+            "download": "/operations/monthly-carousel-schedule-execution-pack.zh.md",
+            "safety_note": "Meta live 发布仍需额外开关通过。",
+        }
+    if stage == "scheduled":
+        return {
+            "priority": 80,
+            "action_key": "publish_handoff",
+            "action_zh": "等待发布交接",
+            "operator_action": "按发布交接包记录 scheduled time、platform、post ID 和 dry-run/live 结果。",
+            "download": "/operations/monthly-carousel-publishing-handoff.zh.md",
+            "safety_note": "未完成 Meta readiness 前保持人工或 dry run。",
+        }
+    if stage == "published":
+        return {
+            "priority": 90,
+            "action_key": "metrics",
+            "action_zh": "记录发布后数据",
+            "operator_action": "下载 metrics template，回填 reach、engagement、save/share、评论和学习备注。",
+            "download": "/operations/monthly-carousel-metrics-template.csv",
+            "safety_note": "只记录数据，不改原始主题。",
+        }
+    return {
+        "priority": 999,
+        "action_key": "monitor",
+        "action_zh": "监控状态",
+        "operator_action": item.get("queue_next_action") or item.get("next_action") or "查看状态板，等待上游审核、制作、排程或外部资料。",
+        "download": "/operations/monthly-carousel-status-board.zh.md",
+        "safety_note": blocker_text or "保持只读观察。",
+    }
+
+
+async def monthly_carousel_next_action_queue_payload():
+    action_pack = await monthly_carousel_action_pack_payload()
+    rows = []
+    for item in action_pack.get("items") or []:
+        detail = monthly_carousel_next_action_detail(item)
+        rows.append({
+            **detail,
+            "topic_id": item.get("topic_id") or "",
+            "topic": item.get("topic") or "",
+            "asset_id": item.get("asset_id") or "",
+            "stage": item.get("stage") or "",
+            "stage_zh": monthly_carousel_action_stage_label(item.get("stage")),
+            "gate_status": item.get("gate_status") or "",
+            "gate_status_zh": zh_monthly_queue_gate_status(item.get("gate_status")),
+            "review_status": item.get("review_status") or "",
+            "compliance_status": item.get("compliance_status") or "",
+            "detector_status": item.get("detector_status") or "",
+            "visual_qa_status": item.get("visual_qa_status") or "",
+            "media_count": item.get("media_count") or 0,
+            "queue_blockers": "; ".join(zh_monthly_queue_blocker(blocker) for blocker in item.get("queue_blockers") or []),
+        })
+    rows.sort(key=lambda row: (row.get("priority", 999), str(row.get("topic_id") or ""), str(row.get("asset_id") or "")))
+    return {
+        "source": action_pack.get("source"),
+        "mode": "read_only_monthly_next_action_queue",
+        "asset_count": action_pack.get("asset_count", 0),
+        "stage_counts": action_pack.get("stage_counts") or {},
+        "gate_counts": action_pack.get("gate_counts") or {},
+        "primary_action": action_pack.get("primary_action") or {},
+        "rows": rows,
+        "top_three": rows[:3],
+        "links": action_pack.get("links") or {},
+        "safety": [
+            "This next-action queue is read-only.",
+            "It does not approve, attach media, queue, schedule, publish, or call Meta.",
+            "Do not create duplicate Notion rows; use Topic ID and Asset ID only.",
+            "Any item without doctor approval, safety clear, final media, and visual QA will not be treated as ready to publish.",
         ],
     }
 
@@ -9903,6 +10043,127 @@ async def operations_monthly_carousel_action_pack_zh(_: None = Depends(require_a
         "\n".join(lines),
         media_type="text/markdown",
         headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-action-pack-zh.md"'},
+    )
+
+
+@app.get("/operations/monthly-carousel-next-action-queue")
+async def operations_monthly_carousel_next_action_queue(_: None = Depends(require_access_token)):
+    return await monthly_carousel_next_action_queue_payload()
+
+
+@app.get("/operations/monthly-carousel-next-action-queue.zh.md")
+async def operations_monthly_carousel_next_action_queue_zh(_: None = Depends(require_access_token)):
+    payload = await monthly_carousel_next_action_queue_payload()
+    source = payload.get("source") or {}
+    primary = payload.get("primary_action") or {}
+    lines = [
+        "# DREC 月度 Carousel 行动队列",
+        "",
+        f"- Notion 来源：{source.get('name')}",
+        f"- 月度刷新日：每月 {source.get('monthly_refresh_day')} 日",
+        f"- 月度内容数：{payload.get('asset_count')}",
+        "",
+        "这是一份只读优先级清单：不会批准、挂载媒体、入队、排程、发布或调用 Meta。",
+        "",
+        "## 今天只做前三件",
+        "",
+    ]
+    top_three = payload.get("top_three") or []
+    if top_three:
+        for row in top_three:
+            lines.extend([
+                f"### P{row.get('priority')} · {row.get('action_zh')}",
+                "",
+                f"- Topic ID：`{row.get('topic_id')}`",
+                f"- Asset ID：`{row.get('asset_id')}`",
+                f"- 主题：{row.get('topic')}",
+                f"- 当前状态：{row.get('stage_zh')} / {row.get('gate_status_zh')}",
+                f"- 该做什么：{row.get('operator_action')}",
+                f"- 下载：`{row.get('download')}`",
+                f"- 安全线：{row.get('safety_note')}",
+                "",
+            ])
+    else:
+        lines.extend(["- 暂无可行动项目。", ""])
+    lines.extend([
+        "## 当前主动作",
+        "",
+        f"- 动作：{primary.get('title')}",
+        f"- 说明：{primary.get('detail')}",
+        f"- 下载：`{primary.get('download') or 'n/a'}`",
+        "",
+        "## 全部行动队列",
+        "",
+    ])
+    for row in payload.get("rows") or []:
+        lines.extend([
+            f"### P{row.get('priority')} · {row.get('topic_id')} · {row.get('action_zh')}",
+            "",
+            f"- Asset ID：`{row.get('asset_id')}`",
+            f"- 主题：{row.get('topic')}",
+            f"- 阶段：{row.get('stage_zh')} / `{row.get('stage') or 'n/a'}`",
+            f"- 入队检查：{row.get('gate_status_zh')} / `{row.get('gate_status') or 'n/a'}`",
+            f"- 审核状态：Review `{row.get('review_status') or 'n/a'}` / Safety `{row.get('compliance_status') or 'n/a'}` / Detector `{row.get('detector_status') or 'n/a'}`",
+            f"- 媒体：{row.get('media_count')} URL；Visual QA `{row.get('visual_qa_status') or 'n/a'}`",
+            f"- 阻碍：{row.get('queue_blockers') or '无'}",
+            f"- 下一步：{row.get('operator_action')}",
+            f"- 下载：`{row.get('download')}`",
+            f"- 安全线：{row.get('safety_note')}",
+            "",
+        ])
+    lines.extend([
+        "## 不要做",
+        "",
+        "- 不要新建重复 Notion topic。",
+        "- 不要把等待医生审核、等待 Safety clear、等待最终媒体或等待 Visual QA 的内容手动发布。",
+        "- 不要使用 miracle cure、guaranteed reversal、一定逆转、停药承诺或直接课程销售语言。",
+        "- Meta live 发布开关未通过前，不要改成自动 live 发布。",
+        "",
+        "## 安全线",
+        "",
+        *markdown_list(payload.get("safety")),
+        "",
+    ])
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-next-action-queue-zh.md"'},
+    )
+
+
+@app.get("/operations/monthly-carousel-next-action-queue.csv")
+async def operations_monthly_carousel_next_action_queue_csv(_: None = Depends(require_access_token)):
+    payload = await monthly_carousel_next_action_queue_payload()
+    fieldnames = [
+        "priority",
+        "action_key",
+        "action_zh",
+        "topic_id",
+        "topic",
+        "asset_id",
+        "stage",
+        "stage_zh",
+        "gate_status",
+        "gate_status_zh",
+        "review_status",
+        "compliance_status",
+        "detector_status",
+        "visual_qa_status",
+        "media_count",
+        "queue_blockers",
+        "download",
+        "operator_action",
+        "safety_note",
+    ]
+    output = StringIO()
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for row in payload.get("rows") or []:
+        writer.writerow({field: row.get(field, "") for field in fieldnames})
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-next-action-queue.csv"'},
     )
 
 
