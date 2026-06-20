@@ -113,6 +113,14 @@ const uiZh = {
   "Download Pipeline Board": "下载流程看板",
   "Download Audit Trail": "下载审计记录",
   "Download Launch Evidence": "下载上线证据",
+  "Safe auto-advance": "安全自动推进",
+  "Running safe first-publish auto-advance...": "正在运行首发安全自动推进...",
+  "Safe first-publish auto-advance completed.": "首发安全自动推进已完成。",
+  "Could not run safe first-publish auto-advance.": "无法运行首发安全自动推进。",
+  "Executed Steps": "执行步骤",
+  "Changed State": "已改变状态",
+  "Stopped At": "停止位置",
+  "After Next Step": "之后下一步",
   "Monthly carousel acceptance audit downloaded.": "月度 Carousel 验收审计已下载。",
   "Could not download monthly carousel acceptance audit.": "无法下载月度 Carousel 验收审计。",
   "Monthly carousel acceptance CSV downloaded.": "月度 Carousel 验收 CSV 已下载。",
@@ -1823,6 +1831,43 @@ function renderFirstCycleRehearsal(data) {
   `;
 }
 
+function renderFirstPublishSafeAdvanceLoop(data) {
+  const container = document.getElementById("first-publish-safe-advance-loop");
+  if (!container) return;
+  const next = data.after_next_step || {};
+  const actions = data.actions || [];
+  container.innerHTML = `
+    <article class="learning-card wide-learning ${escapeHtml(data.stop_reason || "waiting")}">
+      <h3>${escapeHtml(translateText("Safe auto-advance"))}</h3>
+      <p>${escapeHtml(data.message || "")}</p>
+      <small>${escapeHtml(data.mode || "first_publish_safe_advance_loop")}</small>
+      <div class="summary-row">
+        <span>${escapeHtml(translateText("Executed Steps"))} ${Number(data.executed_steps || 0)}</span>
+        <span>${escapeHtml(translateText("Changed State"))} ${Number(data.advanced_count || 0)}</span>
+        <span>${escapeHtml(translateText("Stopped At"))} ${escapeHtml(data.stop_reason || "")}</span>
+      </div>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>${escapeHtml(translateText("After Next Step"))}</h3>
+      <p>${escapeHtml(translateText(next.label || data.after_overall_status || ""))}</p>
+      <small>${escapeHtml(translateText(next.detail || ""))}</small>
+      <ul>${actions.map((item) => `
+        <li>
+          <strong>${escapeHtml(item.action || "unknown")}</strong>
+          ${item.advanced ? "changed" : "stopped"}
+          <br><small>${escapeHtml(item.message || "")}</small>
+        </li>
+      `).join("") || `<li>${escapeHtml(translateText("No safe action was available."))}</li>`}</ul>
+    </article>
+    ${Array.isArray(data.safety) && data.safety.length ? `
+      <article class="learning-card wide-learning">
+        <h3>${escapeHtml(translateText("Safety"))}</h3>
+        <ul>${data.safety.map((item) => `<li>${escapeHtml(translateText(item))}</li>`).join("")}</ul>
+      </article>
+    ` : ""}
+  `;
+}
+
 async function runFirstCycleRehearsal() {
   const message = document.getElementById("test-path-message");
   if (message) message.textContent = translateText("Running first cycle dry-run rehearsal...");
@@ -1844,8 +1889,33 @@ async function runFirstCycleRehearsal() {
   }
 }
 
+async function runFirstPublishSafeAdvanceLoop() {
+  const message = document.getElementById("test-path-message");
+  const container = document.getElementById("first-publish-safe-advance-loop");
+  if (message) message.textContent = translateText("Running safe first-publish auto-advance...");
+  if (container) container.innerHTML = "";
+  try {
+    const data = await fetchJson("/operations/first-publish-safe-advance-loop?dry_run=false&max_steps=8", {
+      method: "POST",
+    });
+    renderFirstPublishSafeAdvanceLoop(data);
+    if (message) message.textContent = `${translateText("Safe first-publish auto-advance completed.")} ${data.stop_reason || ""}`;
+    await Promise.all([loadFirstPublishReadiness(), loadLoopStatus(), loadAssets(), loadPublishQueue(), loadPreScheduleGate()]);
+  } catch (error) {
+    if (message) {
+      message.textContent = error.message === "Access token required"
+        ? translateText("Set the access token first.")
+        : translateText("Could not run safe first-publish auto-advance.");
+    }
+  }
+}
+
 document.getElementById("run-first-cycle-rehearsal")?.addEventListener("click", async () => {
   await runFirstCycleRehearsal();
+});
+
+document.getElementById("run-first-publish-safe-advance-loop")?.addEventListener("click", async () => {
+  await runFirstPublishSafeAdvanceLoop();
 });
 
 document.getElementById("first-publish-readiness")?.addEventListener("click", async (event) => {

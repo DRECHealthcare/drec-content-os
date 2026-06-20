@@ -2906,6 +2906,62 @@ async def operations_first_publish_advance(
     return result
 
 
+@app.post("/operations/first-publish-safe-advance-loop")
+async def operations_first_publish_safe_advance_loop(
+    request: Request,
+    dry_run: bool = True,
+    max_steps: int = 6,
+    session: dict = Depends(require_schedule_access),
+):
+    step_limit = max(1, min(int(max_steps or 1), 10))
+    actions = []
+    stop_reason = "step_limit_reached"
+    for _ in range(step_limit):
+        step = await operations_first_publish_advance(request, dry_run=dry_run, session=session)
+        actions.append(
+            {
+                "action": step.get("action"),
+                "advanced": bool(step.get("advanced")),
+                "message": step.get("message"),
+                "planned": step.get("planned"),
+                "next_step": step.get("next_step"),
+            }
+        )
+        if dry_run:
+            stop_reason = "dry_run_preview_only"
+            break
+        if step.get("action") in {"needs_asset_review", "needs_queue_review", "needs_review_approved_queue"}:
+            stop_reason = step.get("action")
+            break
+        if step.get("action") == "meta_dry_run":
+            stop_reason = "meta_dry_run_completed"
+            break
+        if not step.get("advanced"):
+            stop_reason = step.get("action") or "manual_gate_or_no_action"
+            break
+    after = await first_publish_readiness_payload()
+    return {
+        "mode": "first_publish_safe_advance_loop",
+        "dry_run": dry_run,
+        "max_steps": step_limit,
+        "executed_steps": len(actions),
+        "advanced_count": sum(1 for item in actions if item.get("advanced")),
+        "stop_reason": stop_reason,
+        "actions": actions,
+        "after_next_step": after.get("next_step"),
+        "after_overall_status": after.get("overall_status"),
+        "message": (
+            f"Safe advance loop ran {len(actions)} step(s); {sum(1 for item in actions if item.get('advanced'))} changed state; stopped at {stop_reason}."
+        ),
+        "safety": [
+            "This loop never approves an asset or queue item.",
+            "It never publishes live Meta posts.",
+            "It only repeats existing safe mechanical steps after required human gates are already satisfied.",
+            "It stops at doctor/human review, queue review, Meta dry-run, no-op, or the step limit.",
+        ],
+    }
+
+
 @app.post("/operations/first-cycle-dry-run-rehearsal")
 async def operations_first_cycle_dry_run_rehearsal(
     request: Request,
