@@ -2448,11 +2448,11 @@ function renderSimpleOperator(data) {
 
   if (readyAssets > 0 && queueTotal === 0) {
     title = `${readyAssets} 条内容已安全通过，可以入队`;
-    body = `已有 ${readyAssets} 条内容是 approved + safety clear。先预览，再执行入队；不会发布到 Meta。`;
+    body = `已有 ${readyAssets} 条通用内容是 approved + safety clear。执行入队只会放进审核队列，不会发布到 Meta。`;
     status = "安全通过，可以进入发布队列";
     actions = `
-      <button class="primary" type="button" data-simple-preview-queue>1. 预览可入队内容</button>
-      <button type="button" data-simple-run-queue>2. 执行月度入队</button>
+      <button class="primary" type="button" data-simple-run-ready-assets>执行安全入队</button>
+      <button type="button" data-simple-open-assets>打开素材页查看</button>
     `;
   } else if (queueTotal > 0 && scheduledQueue === 0) {
     title = "内容已在队列，下一步是审核/排程";
@@ -5705,13 +5705,13 @@ document.getElementById("refresh-workflow").addEventListener("click", async () =
 });
 
 document.getElementById("simple-operator")?.addEventListener("click", async (event) => {
-  const previewQueue = event.target.closest("[data-simple-preview-queue]");
-  const runQueue = event.target.closest("[data-simple-run-queue]");
+  const runReadyAssets = event.target.closest("[data-simple-run-ready-assets]");
+  const openAssets = event.target.closest("[data-simple-open-assets]");
   const openReview = event.target.closest("[data-simple-open-review]");
   const openScheduler = event.target.closest("[data-simple-open-scheduler]");
   const downloadHandoff = event.target.closest("[data-simple-download-handoff]");
   const refresh = event.target.closest("[data-simple-refresh]");
-  if (!previewQueue && !runQueue && !openReview && !openScheduler && !downloadHandoff && !refresh) return;
+  if (!runReadyAssets && !openAssets && !openReview && !openScheduler && !downloadHandoff && !refresh) return;
   if (refresh) {
     await loadLoopStatus();
     await loadDashboardMonthlyActionQueue();
@@ -5725,14 +5725,17 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
     showScreen("scheduler");
     return;
   }
+  if (openAssets) {
+    showScreen("assets");
+    return;
+  }
   if (downloadHandoff) {
     await downloadProtectedFile("/operations/monthly-carousel-publishing-handoff.zh.md", "drec-monthly-carousel-publishing-handoff-zh.md", "text/markdown");
     return;
   }
   showScreen("assets");
-  const target = document.getElementById("asset-media-attachment-preview") || document.getElementById("monthly-carousel-status-board");
-  target?.scrollIntoView({ behavior: "smooth", block: "start" });
-  await runMonthlyCarouselQueueReady({ dryRun: Boolean(previewQueue) });
+  await runAssetBatchAction(runReadyAssets, "/assets/queue-ready?limit=20", "Queue ready assets");
+  showScreen("review");
   await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit()]);
 });
 
