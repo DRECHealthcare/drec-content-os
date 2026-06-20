@@ -2742,6 +2742,21 @@ const requiredSnippets = [
     text: "security-count",
   },
   {
+    name: "web security gate smoke summary",
+    file: "web",
+    text: "securityGateSummary",
+  },
+  {
+    name: "web security gate service role smoke copy",
+    file: "web",
+    text: "需运行 service-role smoke",
+  },
+  {
+    name: "web security gate missing key copy",
+    file: "web",
+    text: "缺 service-role key",
+  },
+  {
     name: "web rls plan action",
     file: "web",
     text: "download-rls-plan",

@@ -2499,6 +2499,14 @@ function renderSimpleOperator(data) {
   `;
 }
 
+function securityGateSummary(security = {}) {
+  const smokeStatus = (security.service_role_smoke || {}).status || "missing";
+  if (security.rls_hardening_ready) return "RLS 可加固 · smoke recent";
+  if (security.service_role_key !== "configured") return `缺 service-role key · smoke ${smokeStatus}`;
+  if (smokeStatus !== "recent") return `需运行 service-role smoke · ${smokeStatus}`;
+  return security.overall_status || "安全门槛需检查";
+}
+
 async function loadLoopStatus() {
   try {
     const data = await fetchJson("/workflow/status");
@@ -2517,7 +2525,7 @@ async function loadLoopStatus() {
     document.getElementById("asset-count").textContent = `${readyAssets} ready of ${totalAssets} asset(s)`;
     document.getElementById("media-count").textContent = `${loop.media_count || 0} media item(s)`;
     document.getElementById("outcome-count").textContent = `${loop.outcome_count || 0} outcome(s) · ${loop.weight_count || 0} active weight(s)`;
-    document.getElementById("security-count").textContent = security.rls_hardening_ready ? "RLS hardening ready" : "Needs service-role key";
+    document.getElementById("security-count").textContent = securityGateSummary(security);
     document.getElementById("automation-count").textContent = `${automation.ready_count || 0} ready · ${automation.blocked_count || 0} blocked`;
     renderSimpleOperator(data);
     renderWorkflowNext(data.workflow || loop);
