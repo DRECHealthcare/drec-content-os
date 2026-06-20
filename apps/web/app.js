@@ -270,6 +270,9 @@ const uiZh = {
   "Download Production Inbox": "下载制作回复箱",
   "下载中文制作回复收件箱": "下载中文制作回复收件箱",
   "Download Design Worksheet": "下载设计工作表",
+  "Monthly Production CSV": "月度制作 CSV",
+  "Preview Monthly Production": "预览月度制作表",
+  "Import Monthly Production": "导入月度制作表",
   "Design CSV": "设计 CSV",
   "Review CSV": "审核 CSV",
   "Media CSV": "媒体 CSV",
@@ -595,6 +598,13 @@ Object.assign(uiZh, {
   "Could not download monthly carousel production worksheet.": "无法下载月度 Carousel 制作设计表。",
   "Monthly carousel queue readiness downloaded.": "月度 Carousel 入队检查表已下载。",
   "Could not download monthly carousel queue readiness.": "无法下载月度 Carousel 入队检查表。",
+  "Choose the monthly carousel production worksheet CSV first.": "请先选择月度 Carousel 制作设计表 CSV。",
+  "Previewing monthly carousel production worksheet...": "正在预览月度 Carousel 制作设计表...",
+  "Importing monthly carousel production worksheet...": "正在导入月度 Carousel 制作设计表...",
+  "Monthly carousel production worksheet previewed.": "月度 Carousel 制作设计表已预览。",
+  "Monthly carousel production worksheet imported.": "月度 Carousel 制作设计表已导入。",
+  "Could not preview monthly carousel production worksheet.": "无法预览月度 Carousel 制作设计表。",
+  "Could not import monthly carousel production worksheet.": "无法导入月度 Carousel 制作设计表。",
   "Could not download first publish readiness.": "无法下载首次发布准备包。",
   "Could not run risk audit.": "无法运行风险检查。",
   "Could not download snapshot.": "无法下载快照。",
@@ -5751,26 +5761,44 @@ async function importProductionReplies({ dryRun }) {
   }
 }
 
-async function uploadProductionDesignWorksheet({ dryRun }) {
+async function uploadProductionDesignWorksheet({
+  dryRun,
+  source = "production",
+  fileInputId = "production-design-worksheet-file",
+}) {
   const message = document.getElementById("media-message");
-  const fileInput = document.getElementById("production-design-worksheet-file");
+  const isMonthly = source === "monthly_carousel";
+  const fileInput = document.getElementById(fileInputId);
   const file = fileInput?.files?.[0];
   if (!file) {
-    message.textContent = "Choose a production design worksheet CSV first.";
+    message.textContent = isMonthly
+      ? translateText("Choose the monthly carousel production worksheet CSV first.")
+      : "Choose a production design worksheet CSV first.";
     return;
   }
   const body = new FormData();
   body.append("file", file);
   body.append("dry_run", dryRun ? "true" : "false");
-  message.textContent = dryRun ? "Previewing design worksheet..." : "Importing design worksheet...";
+  message.textContent = dryRun
+    ? (isMonthly ? translateText("Previewing monthly carousel production worksheet...") : "Previewing design worksheet...")
+    : (isMonthly ? translateText("Importing monthly carousel production worksheet...") : "Importing design worksheet...");
   try {
-    const data = await fetchForm("/operations/import-production-design-worksheet", body);
+    const endpoint = isMonthly
+      ? "/operations/import-monthly-carousel-production-design-worksheet"
+      : "/operations/import-production-design-worksheet";
+    const data = await fetchForm(endpoint, body);
     if (!dryRun) fileInput.value = "";
-    message.textContent = data.message || (dryRun ? "Design worksheet previewed." : "Design worksheet imported.");
+    message.textContent = data.message || (dryRun
+      ? (isMonthly ? translateText("Monthly carousel production worksheet previewed.") : "Design worksheet previewed.")
+      : (isMonthly ? translateText("Monthly carousel production worksheet imported.") : "Design worksheet imported."));
     renderAssetMediaAttachmentPreview(data);
-    if (!dryRun) await Promise.all([loadAssets(), loadDoctorSendQueue(), loadDoctorReplyInboxPack(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadPreScheduleGate(), loadLoopStatus()]);
+    if (!dryRun) await Promise.all([loadAssets(), loadDoctorSendQueue(), loadDoctorReplyInboxPack(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadMonthlyCarouselStatusBoard(), loadPreScheduleGate(), loadLoopStatus()]);
   } catch (error) {
-    message.textContent = error.message === "Access token required" ? "Set the access token first." : dryRun ? "Could not preview design worksheet." : "Could not import design worksheet.";
+    message.textContent = error.message === "Access token required"
+      ? translateText("Set the access token first.")
+      : dryRun
+        ? (isMonthly ? translateText("Could not preview monthly carousel production worksheet.") : "Could not preview design worksheet.")
+        : (isMonthly ? translateText("Could not import monthly carousel production worksheet.") : "Could not import design worksheet.");
   }
 }
 
@@ -5830,6 +5858,22 @@ document.getElementById("preview-production-replies")?.addEventListener("click",
 
 document.getElementById("import-production-replies")?.addEventListener("click", async () => {
   await importProductionReplies({ dryRun: false });
+});
+
+document.getElementById("preview-monthly-carousel-production-worksheet")?.addEventListener("click", async () => {
+  await uploadProductionDesignWorksheet({
+    dryRun: true,
+    source: "monthly_carousel",
+    fileInputId: "monthly-carousel-production-worksheet-file",
+  });
+});
+
+document.getElementById("import-monthly-carousel-production-worksheet")?.addEventListener("click", async () => {
+  await uploadProductionDesignWorksheet({
+    dryRun: false,
+    source: "monthly_carousel",
+    fileInputId: "monthly-carousel-production-worksheet-file",
+  });
 });
 
 document.getElementById("preview-production-design-worksheet")?.addEventListener("click", async () => {

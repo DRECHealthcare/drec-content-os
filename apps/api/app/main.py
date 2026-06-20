@@ -11713,13 +11713,13 @@ async def decode_asset_media_attachments_csv(file: UploadFile):
         raise HTTPException(status_code=400, detail="Asset media attachment CSV must be UTF-8 text.") from exc
 
 
-@app.post("/operations/import-asset-media-attachments")
-async def import_asset_media_attachments(
-    file: UploadFile = File(...),
-    dry_run: bool = Form(True),
-    session: dict = Depends(require_review_access),
+async def process_asset_media_attachment_csv(
+    csv_text: str,
+    dry_run: bool,
+    session: dict,
+    source_label: str = "asset media attachment",
+    allowed_asset_ids: set[str] | None = None,
 ):
-    csv_text = await decode_asset_media_attachments_csv(file)
     reader = csv.DictReader(StringIO(csv_text))
     required = {"asset_id", "new_media_urls"}
     headers = set(reader.fieldnames or [])
@@ -11734,6 +11734,9 @@ async def import_asset_media_attachments(
         asset_id = (row.get("asset_id") or "").strip()
         if not asset_id:
             skipped.append({"row": index, "reason": "Missing asset_id."})
+            continue
+        if allowed_asset_ids is not None and asset_id not in allowed_asset_ids:
+            skipped.append({"row": index, "asset_id": asset_id, "reason": "Asset is not part of the monthly carousel source of truth."})
             continue
         media_urls = parse_media_url_cell(row.get("new_media_urls"))
         if not media_urls:
@@ -11754,7 +11757,7 @@ async def import_asset_media_attachments(
         producer_name = (row.get("producer_name") or "").strip()
         rights_note = (row.get("rights_note") or "").strip()
         notes = (row.get("production_notes") or "").strip()
-        reason_parts = ["CSV media/design attachment import."]
+        reason_parts = [f"{source_label} CSV media/design attachment import."]
         if producer_name:
             reason_parts.append(f"Producer: {producer_name}.")
         if rights_note:
@@ -11797,9 +11800,9 @@ async def import_asset_media_attachments(
         "imported": imported,
         "skipped": skipped,
         "message": (
-            f"Previewed {len(planned)} asset media attachment(s), {len(skipped)} skipped."
+            f"Previewed {len(planned)} {source_label} row(s), {len(skipped)} skipped."
             if dry_run
-            else f"Imported {len(imported)} asset media attachment(s), {len(skipped)} skipped."
+            else f"Imported {len(imported)} {source_label} row(s), {len(skipped)} skipped."
         ),
         "safety": [
             "Importing media/design URLs does not approve assets.",
@@ -11807,6 +11810,21 @@ async def import_asset_media_attachments(
             "Human safety approval and pre-schedule checks still apply.",
         ],
     }
+
+
+@app.post("/operations/import-asset-media-attachments")
+async def import_asset_media_attachments(
+    file: UploadFile = File(...),
+    dry_run: bool = Form(True),
+    session: dict = Depends(require_review_access),
+):
+    csv_text = await decode_asset_media_attachments_csv(file)
+    return await process_asset_media_attachment_csv(
+        csv_text=csv_text,
+        dry_run=dry_run,
+        session=session,
+        source_label="asset media attachment",
+    )
 
 
 @app.post("/operations/import-production-replies")
@@ -11911,13 +11929,49 @@ async def import_production_design_worksheet(
     dry_run: bool = Form(True),
     session: dict = Depends(require_review_access),
 ):
-    result = await import_asset_media_attachments(file=file, dry_run=dry_run, session=session)
+    csv_text = await decode_asset_media_attachments_csv(file)
+    result = await process_asset_media_attachment_csv(
+        csv_text=csv_text,
+        dry_run=dry_run,
+        session=session,
+        source_label="production design worksheet",
+    )
     result["source"] = "production_design_worksheet"
     result["message"] = (
         f"Previewed {result.get('planned_count', 0)} production design worksheet row(s), {result.get('skipped_count', 0)} skipped."
         if dry_run
         else f"Imported {result.get('imported_count', 0)} production design worksheet row(s), {result.get('skipped_count', 0)} skipped."
     )
+    return result
+
+
+@app.post("/operations/import-monthly-carousel-production-design-worksheet")
+async def import_monthly_carousel_production_design_worksheet(
+    file: UploadFile = File(...),
+    dry_run: bool = Form(True),
+    session: dict = Depends(require_review_access),
+):
+    csv_text = await decode_asset_media_attachments_csv(file)
+    monthly_assets = await monthly_carousel_asset_list()
+    allowed_asset_ids = {str(asset.get("id")) for asset in monthly_assets if asset.get("id")}
+    result = await process_asset_media_attachment_csv(
+        csv_text=csv_text,
+        dry_run=dry_run,
+        session=session,
+        source_label="monthly carousel production design worksheet",
+        allowed_asset_ids=allowed_asset_ids,
+    )
+    result["source"] = "monthly_carousel_production_design_worksheet"
+    result["message"] = (
+        f"Previewed {result.get('planned_count', 0)} monthly carousel production row(s), {result.get('skipped_count', 0)} skipped."
+        if dry_run
+        else f"Imported {result.get('imported_count', 0)} monthly carousel production row(s), {result.get('skipped_count', 0)} skipped."
+    )
+    result["safety"] = [
+        *result.get("safety", []),
+        "Monthly import accepts only assets from the Notion monthly carousel source of truth.",
+        "Monthly import still does not approve, queue, schedule, publish, or call Meta.",
+    ]
     return result
 
 
