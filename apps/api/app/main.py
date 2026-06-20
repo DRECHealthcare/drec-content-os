@@ -8801,6 +8801,124 @@ async def operations_monthly_carousel_production_design_worksheet_csv(_: None = 
     )
 
 
+@app.get("/operations/monthly-carousel-production-qa-pack.zh.md")
+async def operations_monthly_carousel_production_qa_pack_zh(_: None = Depends(require_access_token)):
+    generated_at = datetime.now(timezone.utc).isoformat()
+    assets = await monthly_carousel_asset_list()
+    source = NOTION_CAROUSEL_SOURCE
+    ready_count = sum(1 for asset in assets if asset.get("review_status") == "approved" and asset.get("compliance_status") == "clear")
+    lines = [
+        "# DREC 月度 Carousel 制作 QA 包",
+        "",
+        f"生成时间：{generated_at}",
+        f"Notion 来源：{source.get('name')}",
+        f"月度刷新日：每月 {source.get('monthly_refresh_day')} 日",
+        f"月度内容数：{len(assets)}",
+        f"医生审核已 approve + Safety clear：{ready_count}",
+        "",
+        "用途：给设计/制作人员确认最终图片、公开媒体 URL、版权/使用权和视觉 QA。本文件只读，不会批准、挂载媒体、入队、排程、发布或调用 Meta。",
+        "",
+        "## 使用顺序",
+        "",
+        "1. 只有医生明确 `Decision: approve` 且 `Safety: clear` 的项目，才可以当作正式制作输入。",
+        "2. 下载月度制作设计表 CSV，填 `new_media_urls`、`visual_qa_status`、`rights_note`、`producer_name`。",
+        "3. 先 Preview Monthly Production，确认只影响本月 Topic ID。",
+        "4. 确认无误后 Import Monthly Production。",
+        "5. 导入后仍需入队检查、队列审核、排程检查和发布交接。",
+        "",
+        "## 视觉 QA 标准",
+        "",
+        "- 手机上可读：标题、正文、底部提示不重叠、不太小。",
+        "- Slide 1 只保留封面 hook 和视觉元素，不放解释正文。",
+        "- Slide 2 起保留 Big Title、Explanation Text、Highlighted Keywords、Visual Element、Bottom Takeaway/Teaser。",
+        "- 不出现奇迹疗法、保证逆转、恐吓、儿童化、过度装饰、直接卖课。",
+        "- DREC 蓝 / 绿 / 青绿色医疗风格一致。",
+        "- 医生批准后的医学含义不可被设计改写。",
+        "- 最终媒体 URL 必须是可公开访问或可被发布系统读取的链接。",
+        "",
+        "## 制作回复格式",
+        "",
+        "若不用 CSV，也可以按这个格式回传给团队，再由团队填入月度制作设计表：",
+        "",
+        "```text",
+        "Asset ID: 对应 Asset ID",
+        "Media URLs: https://...",
+        "Visual QA: passed / pending / needs_work",
+        "Rights: 已确认可用于 DREC organic social / 需补充说明",
+        "Producer: 负责人姓名",
+        "Notes: 制作或修改说明",
+        "```",
+        "",
+        "## 本月制作清单",
+        "",
+    ]
+    if not assets:
+        lines.extend(["- 暂无月度 carousel 内容。", ""])
+    for index, asset in enumerate(assets, start=1):
+        metadata = asset.get("metadata") or {}
+        notion_source = metadata.get("notion_source") or {}
+        topic_id = monthly_carousel_topic_id(asset) or ""
+        approved_clear = asset.get("review_status") == "approved" and asset.get("compliance_status") == "clear"
+        slides = metadata.get("slides") or []
+        media_urls = [url for url in asset.get("media_urls") or [] if url]
+        item = {
+            "asset_id": asset.get("id"),
+            "brief_id": asset.get("brief_id"),
+            "topic": metadata.get("topic") or topic_id,
+            "channel": asset.get("channel"),
+            "format": asset.get("format"),
+            "caption_preview": feedback_excerpt(asset.get("caption") or "", 320),
+        }
+        lines.extend(
+            [
+                f"### {index}. {topic_id} · {metadata.get('topic') or topic_id}",
+                "",
+                f"- Asset ID：`{asset.get('id')}`",
+                f"- Brief ID：`{asset.get('brief_id')}`",
+                f"- 计划日期：{notion_source.get('planned_posting_date') or '未标注'}",
+                f"- 制作 gate：{'可正式制作' if approved_clear else '等待医生 approve + Safety clear'}",
+                f"- 当前审核：Review `{asset.get('review_status') or 'n/a'}` / Safety `{asset.get('compliance_status') or 'n/a'}`",
+                f"- Slide 数量：{len(slides)}",
+                f"- 当前媒体 URL 数：{len(media_urls)}",
+                f"- 当前 Visual QA：`{metadata.get('latest_visual_qa_status') or 'pending'}`",
+                f"- PNG ZIP：`/assets/{asset.get('id')}/carousel-png-assets.zip`",
+                f"- 封面预览：`/assets/{asset.get('id')}/carousel-preview/1.png`",
+                f"- Canvas：1080x1350 carousel slides；保持手机可读。",
+                f"- 视觉方向：{asset_visual_direction(asset)}",
+                f"- 模板建议：{production_template_suggestion(item)}",
+                f"- 制作任务：Use generated monthly carousel PNGs as first review files. If redesigning, keep Mandarin explanation-led layout and DREC medical style.",
+                "",
+                "可复制制作回复：",
+                "",
+                "```text",
+                f"Asset ID: {asset.get('id')}",
+                "Media URLs:",
+                "Visual QA: passed / pending / needs_work",
+                "Rights:",
+                "Producer:",
+                "Notes:",
+                "```",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## 安全线",
+            "",
+            "- 这个 QA 包不等于医生批准。",
+            "- 制作人员回复不等于发布批准。",
+            "- 没有 approve + Safety clear 的项目，不要进入正式发布队列。",
+            "- 没有 final media URL 和 visual QA passed 的项目，不要进入月度入队。",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-production-qa-pack-zh.md"'},
+    )
+
+
 def monthly_carousel_queue_readiness_item(asset: dict, queue_items: list[dict]):
     metadata = asset.get("metadata") or {}
     notion_source = metadata.get("notion_source") or {}
@@ -9168,6 +9286,7 @@ async def monthly_carousel_action_pack_payload():
             "png_assets_zip": "/operations/monthly-carousel-png-assets.zip",
             "doctor_worksheet": "/operations/monthly-carousel-doctor-decision-worksheet.csv",
             "production_worksheet": "/operations/monthly-carousel-production-design-worksheet.csv",
+            "production_qa_pack": "/operations/monthly-carousel-production-qa-pack.zh.md",
             "queue_readiness": "/operations/monthly-carousel-queue-readiness.zh.md",
             "monthly_queue_ready_action": "/operations/monthly-carousel-queue-ready",
             "monthly_review_queue": "/operations/monthly-carousel-review-queue.csv",
