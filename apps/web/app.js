@@ -250,6 +250,9 @@ const uiZh = {
   "Download Reply Inbox": "下载回复收件箱",
   "下载中文医生回复收件箱": "下载中文医生回复收件箱",
   "Download Doctor Worksheet": "下载医生工作表",
+  "Monthly Doctor CSV": "月度医生 CSV",
+  "Preview Monthly Doctor": "预览月度医生表",
+  "Import Monthly Doctor": "导入月度医生表",
   "Download Approval Cockpit": "下载审批驾驶舱",
   "下载中文审批控制台": "下载中文审批控制台",
   "Download Rewrite Pack": "下载改写包",
@@ -580,6 +583,13 @@ Object.assign(uiZh, {
   "Could not download monthly carousel status CSV.": "无法下载月度 Carousel 状态 CSV。",
   "Monthly carousel doctor worksheet downloaded.": "月度医生审核表已下载。",
   "Could not download monthly carousel doctor worksheet.": "无法下载月度医生审核表。",
+  "Choose the monthly doctor worksheet CSV first.": "请先选择月度医生审核表 CSV。",
+  "Previewing monthly doctor worksheet...": "正在预览月度医生审核表...",
+  "Importing monthly doctor worksheet...": "正在导入月度医生审核表...",
+  "Monthly doctor worksheet previewed.": "月度医生审核表已预览。",
+  "Monthly doctor worksheet imported.": "月度医生审核表已导入。",
+  "Could not preview monthly doctor worksheet.": "无法预览月度医生审核表。",
+  "Could not import monthly doctor worksheet.": "无法导入月度医生审核表。",
   "Could not download first publish readiness.": "无法下载首次发布准备包。",
   "Could not run risk audit.": "无法运行风险检查。",
   "Could not download snapshot.": "无法下载快照。",
@@ -5599,30 +5609,41 @@ function renderAssetMediaAttachmentPreview(data) {
   `;
 }
 
-async function uploadAssetReviewDecisions({ dryRun }) {
+async function uploadAssetReviewDecisions({ dryRun, fileInputId = "asset-review-decisions-file", allowPastedCsv = true, source = "review" }) {
   const message = document.getElementById("media-message");
-  const fileInput = document.getElementById("asset-review-decisions-file");
+  const fileInput = document.getElementById(fileInputId);
   const textInput = document.getElementById("asset-review-decisions-text");
   const file = fileInput?.files?.[0];
-  const pastedCsv = textInput?.value?.trim() || "";
+  const pastedCsv = allowPastedCsv ? (textInput?.value?.trim() || "") : "";
   if (!file && !pastedCsv) {
-    message.textContent = "Choose a review decision CSV or paste decision CSV text first.";
+    message.textContent = translateText(source === "monthly_doctor" ? "Choose the monthly doctor worksheet CSV first." : "Choose a review decision CSV or paste decision CSV text first.");
     return;
   }
   const body = new FormData();
-  const uploadFile = file || new File([pastedCsv], "pasted-asset-review-decisions.csv", { type: "text/csv" });
+  const uploadFile = file || new File([pastedCsv], source === "monthly_doctor" ? "monthly-carousel-doctor-worksheet.csv" : "pasted-asset-review-decisions.csv", { type: "text/csv" });
   body.append("file", uploadFile);
   body.append("dry_run", dryRun ? "true" : "false");
-  message.textContent = dryRun ? "Previewing review decisions..." : "Importing review decisions...";
+  message.textContent = dryRun
+    ? translateText(source === "monthly_doctor" ? "Previewing monthly doctor worksheet..." : "Previewing review decisions...")
+    : translateText(source === "monthly_doctor" ? "Importing monthly doctor worksheet..." : "Importing review decisions...");
   try {
-    const data = await fetchForm("/operations/import-asset-review-decisions", body);
+    const endpoint = source === "monthly_doctor"
+      ? "/operations/import-monthly-carousel-doctor-worksheet"
+      : "/operations/import-asset-review-decisions";
+    const data = await fetchForm(endpoint, body);
     if (!dryRun) fileInput.value = "";
     if (!dryRun && !file && textInput) textInput.value = "";
-    message.textContent = data.message || (dryRun ? "Review decisions previewed." : "Review decisions imported.");
+    message.textContent = data.message || (dryRun
+      ? translateText(source === "monthly_doctor" ? "Monthly doctor worksheet previewed." : "Review decisions previewed.")
+      : translateText(source === "monthly_doctor" ? "Monthly doctor worksheet imported." : "Review decisions imported."));
     renderAssetReviewDecisionPreview(data);
-    if (!dryRun) await Promise.all([loadAssets(), loadDoctorSendQueue(), loadDoctorReplyInboxPack(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
+    if (!dryRun) await Promise.all([loadAssets(), loadDoctorSendQueue(), loadDoctorReplyInboxPack(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadMonthlyCarouselStatusBoard(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
   } catch (error) {
-    message.textContent = error.message === "Access token required" ? "Set the access token first." : dryRun ? "Could not preview review decisions." : "Could not import review decisions.";
+    message.textContent = error.message === "Access token required"
+      ? translateText("Set the access token first.")
+      : dryRun
+        ? translateText(source === "monthly_doctor" ? "Could not preview monthly doctor worksheet." : "Could not preview review decisions.")
+        : translateText(source === "monthly_doctor" ? "Could not import monthly doctor worksheet." : "Could not import review decisions.");
   }
 }
 
@@ -5734,6 +5755,24 @@ document.getElementById("preview-asset-review-decisions")?.addEventListener("cli
 
 document.getElementById("import-asset-review-decisions")?.addEventListener("click", async () => {
   await uploadAssetReviewDecisions({ dryRun: false });
+});
+
+document.getElementById("preview-monthly-carousel-doctor-worksheet")?.addEventListener("click", async () => {
+  await uploadAssetReviewDecisions({
+    dryRun: true,
+    fileInputId: "monthly-carousel-doctor-worksheet-file",
+    allowPastedCsv: false,
+    source: "monthly_doctor",
+  });
+});
+
+document.getElementById("import-monthly-carousel-doctor-worksheet")?.addEventListener("click", async () => {
+  await uploadAssetReviewDecisions({
+    dryRun: false,
+    fileInputId: "monthly-carousel-doctor-worksheet-file",
+    allowPastedCsv: false,
+    source: "monthly_doctor",
+  });
 });
 
 document.getElementById("preview-asset-review-decisions-text")?.addEventListener("click", async () => {

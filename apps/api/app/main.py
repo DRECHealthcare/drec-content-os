@@ -11786,6 +11786,28 @@ async def import_asset_review_decisions(
     }
 
 
+@app.post("/operations/import-monthly-carousel-doctor-worksheet")
+async def import_monthly_carousel_doctor_worksheet(
+    file: UploadFile = File(...),
+    dry_run: bool = Form(True),
+    session: dict = Depends(require_review_access),
+):
+    result = await import_asset_review_decisions(file=file, dry_run=dry_run, session=session)
+    result["source"] = "monthly_carousel_doctor_worksheet"
+    result["message"] = (
+        f"Previewed {result.get('planned_count', 0)} monthly doctor worksheet row(s), {result.get('skipped_count', 0)} skipped."
+        if dry_run
+        else f"Imported {result.get('imported_count', 0)} monthly doctor worksheet row(s), {result.get('skipped_count', 0)} skipped."
+    )
+    result["safety"] = [
+        "Monthly doctor worksheet import only applies reviewer safety/review decisions.",
+        "Approval still requires Safety: clear before review can become approved.",
+        "It does not attach media, queue, schedule, publish, or call Meta.",
+        "Use Topic ID only for human tracking; Asset ID remains the import key.",
+    ]
+    return result
+
+
 @app.post("/operations/import-doctor-replies")
 async def import_doctor_replies(
     payload: DoctorReplyImportIn,
