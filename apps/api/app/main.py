@@ -1580,9 +1580,7 @@ async def security_access_control_pack(session: dict = Depends(require_admin_acc
     )
 
 
-@app.get("/security/service-role-install-pack.md")
-async def security_service_role_install_pack(_: None = Depends(require_admin_access)):
-    security = await strict_security_status_payload()
+def service_role_install_pack_markdown(security: dict):
     generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
     commands = [
         "# 1. In Supabase Dashboard, copy the service_role key for this project.",
@@ -1640,8 +1638,14 @@ async def security_service_role_install_pack(_: None = Depends(require_admin_acc
         "- Do not apply strict RLS until the service-role key is installed and live smoke passes.",
         "- Do not enable real Meta jobs until Meta readiness, scheduler heartbeat, and service-role security are green.",
     ]
+    return "\n".join(lines)
+
+
+@app.get("/security/service-role-install-pack.md")
+async def security_service_role_install_pack(_: None = Depends(require_admin_access)):
+    security = await strict_security_status_payload()
     return Response(
-        "\n".join(lines),
+        service_role_install_pack_markdown(security),
         media_type="text/markdown",
         headers={"Content-Disposition": 'attachment; filename="drec-service-role-install-pack.md"'},
     )
@@ -23287,6 +23291,7 @@ def today_safe_operator_pack_readme(payload: dict):
         "3. `03-post-publish-next-steps.json`：发布后要回填 ID 和数据的清单。",
         "4. `04-post-publish-metrics-template.csv`：发布 7 天后再填写，不要提前导入。",
         "5. `05-schedule-audit.json`：排程阻碍和提醒。",
+        "6. `08-service-role-install-pack.md`：解除 93% 卡点的 Supabase service-role 安装步骤。",
         "",
         "## 下一步",
         "",
@@ -23320,6 +23325,7 @@ async def operations_today_safe_operator_pack_zip(_: None = Depends(require_acce
             "workflow": payload.get("workflow") or {},
             "automation": payload.get("automation") or {},
         }, ensure_ascii=False, indent=2, default=str))
+        archive.writestr("08-service-role-install-pack.md", service_role_install_pack_markdown(payload.get("security") or {}))
     return Response(
         buffer.getvalue(),
         media_type="application/zip",

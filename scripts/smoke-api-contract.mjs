@@ -3428,6 +3428,16 @@ const requiredSnippets = [
     text: "/operations/today-safe-operator-pack.zip",
   },
   {
+    name: "today safe pack includes service role guide",
+    file: "main",
+    text: "08-service-role-install-pack.md",
+  },
+  {
+    name: "today safe pack service role blocker copy",
+    file: "main",
+    text: "解除 93% 卡点",
+  },
+  {
     name: "web simple operator today safe pack copy",
     file: "web",
     text: "下载今日安全包",
