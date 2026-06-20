@@ -9803,6 +9803,110 @@ async def monthly_carousel_review_payload():
     }
 
 
+MONTHLY_DOCTOR_TRIAGE_TERMS = [
+    ("guaranteed_outcome", ["一定逆转", "保证逆转", "保证", "永久治愈", "永远痊愈", "根治"]),
+    ("medication_instruction", ["停药", "减药", "换药", "不用吃药", "自行调整药"]),
+    ("fear_based", ["可怕", "恐怖", "马上会", "一定会恶化"]),
+    ("sales_pressure", ["立刻报名", "限时优惠", "课程名额", "马上购买"]),
+]
+
+
+def monthly_doctor_triage_item(item: dict):
+    caption = item.get("caption_preview") or ""
+    slide_titles = item.get("slide_titles") or []
+    titles = " ".join([str(title or "") for title in slide_titles])
+    combined = f"{item.get('topic') or ''} {titles} {caption}"
+    flags = []
+    for key, terms in MONTHLY_DOCTOR_TRIAGE_TERMS:
+        matched = [term for term in terms if term in combined]
+        if matched:
+            flags.append({"key": key, "matched_terms": matched})
+    if item.get("detector_status") == "flagged":
+        flags.append({"key": "detector_flagged", "matched_terms": ["content safety detector flagged"]})
+    elif item.get("detector_status") in {"pending", "warn"} or item.get("findings"):
+        flags.append({"key": "detector_review", "matched_terms": ["manual medical review required"]})
+    slide_count = int(item.get("slide_count") or 0)
+    if slide_count < 2 or slide_count > 10:
+        flags.append({"key": "carousel_structure", "matched_terms": [f"{slide_count} slides"]})
+    if item.get("carousel_image_status") not in {"Ready for Review", "Approved"}:
+        flags.append({"key": "notion_image_status", "matched_terms": [item.get("carousel_image_status") or "missing"]})
+
+    doctor_focus = [
+        "医学意思是否准确，是否没有诊断、处方或个人治疗建议。",
+        "是否没有保证逆转、一定痊愈、直接卖课或恐吓表达。",
+        "中文是否适合 50 岁左右华语读者，解释是否清楚。",
+        "Slide 1 是否只做 hook；Slides 2+ 是否保留解释文字和 takeaway。",
+    ]
+    if flags:
+        doctor_focus.insert(0, "先处理 risk_flags；有不确定就写 needs edits 或 Safety: needs review。")
+
+    triage_level = "doctor_review_required"
+    high_attention = {"guaranteed_outcome", "medication_instruction", "detector_flagged"}
+    if any(flag.get("key") in high_attention for flag in flags):
+        triage_level = "high_attention"
+    elif len(flags) >= 2:
+        triage_level = "medium_attention"
+
+    risk_flag_text = "; ".join(
+        f"{flag.get('key')}: {', '.join(flag.get('matched_terms') or [])}"
+        for flag in flags
+    )
+    asset_id = item.get("asset_id") or ""
+    return {
+        "topic_id": item.get("topic_id") or "",
+        "asset_id": asset_id,
+        "brief_id": item.get("brief_id") or "",
+        "topic": item.get("topic") or "",
+        "planned_posting_date": item.get("planned_posting_date") or "",
+        "triage_level": triage_level,
+        "risk_flags": flags,
+        "risk_flag_text": risk_flag_text or "none_detected_by_triage; doctor still reviews medical meaning",
+        "doctor_focus": doctor_focus,
+        "safe_default_decision": "Do not approve by default. Doctor must explicitly set Decision and Safety.",
+        "if_approved_template": "\n".join([
+            f"Asset ID: {asset_id}",
+            "Decision: approve",
+            "Safety: clear",
+            "Use polished copy: no",
+            "Notes: 已审核医学意思、中文清楚度、无保证疗效/停药指示/恐吓表达。",
+        ]),
+        "if_needs_edits_template": "\n".join([
+            f"Asset ID: {asset_id}",
+            "Decision: needs edits",
+            "Safety: needs review",
+            "Use polished copy: no",
+            "Notes: 请写明需要修改的 slide / 句子 / 医学表述。",
+        ]),
+        "slide_titles": slide_titles,
+        "caption_preview": item.get("caption_preview") or "",
+        "png_zip_url": item.get("png_zip_url") or "",
+        "preview_url": item.get("preview_url") or "",
+    }
+
+
+async def monthly_carousel_doctor_triage_payload():
+    review_payload = await monthly_carousel_review_payload()
+    items = [monthly_doctor_triage_item(item) for item in review_payload.get("items") or []]
+    level_counts = {}
+    for item in items:
+        level = item.get("triage_level") or "unknown"
+        level_counts[level] = level_counts.get(level, 0) + 1
+    return {
+        "source": review_payload.get("source"),
+        "mode": "read_only_monthly_doctor_triage",
+        "asset_count": len(items),
+        "level_counts": level_counts,
+        "items": items,
+        "next_step": "Send this short triage pack first. Use the full doctor review pack only for items that need detailed reading.",
+        "safety": [
+            "This triage pack is read-only.",
+            "It does not approve, edit, attach media, queue, schedule, publish, update Notion, or call Meta.",
+            "No item is approved by default; doctor must explicitly reply Decision: approve and Safety: clear.",
+            "If unsure, keep the item in review and ask for edits.",
+        ],
+    }
+
+
 def monthly_carousel_item_stage(asset: dict, detector: dict, queue_items: list[dict]):
     review_status = asset.get("review_status") or "draft"
     compliance_status = asset.get("compliance_status") or "pending"
@@ -9937,6 +10041,136 @@ async def monthly_carousel_status_payload():
 @app.get("/operations/monthly-carousel-doctor-review")
 async def operations_monthly_carousel_doctor_review(_: None = Depends(require_access_token)):
     return await monthly_carousel_review_payload()
+
+
+@app.get("/operations/monthly-carousel-doctor-triage")
+async def operations_monthly_carousel_doctor_triage(_: None = Depends(require_access_token)):
+    return await monthly_carousel_doctor_triage_payload()
+
+
+@app.get("/operations/monthly-carousel-doctor-triage.csv")
+async def operations_monthly_carousel_doctor_triage_csv(_: None = Depends(require_access_token)):
+    payload = await monthly_carousel_doctor_triage_payload()
+    output = StringIO()
+    fieldnames = [
+        "topic_id",
+        "asset_id",
+        "brief_id",
+        "topic",
+        "planned_posting_date",
+        "triage_level",
+        "risk_flag_text",
+        "safe_default_decision",
+        "png_zip_url",
+        "preview_url",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for item in payload.get("items") or []:
+        writer.writerow({field: item.get(field, "") for field in fieldnames})
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-doctor-triage.csv"'},
+    )
+
+
+@app.get("/operations/monthly-carousel-doctor-triage.zh.md")
+async def operations_monthly_carousel_doctor_triage_zh(_: None = Depends(require_access_token)):
+    generated_at = datetime.now(timezone.utc).isoformat()
+    payload = await monthly_carousel_doctor_triage_payload()
+    source = payload.get("source") or {}
+    level_counts = payload.get("level_counts") or {}
+    lines = [
+        "# DREC 月度 Carousel 医生快速判定包",
+        "",
+        f"- 生成时间：{generated_at}",
+        f"- Notion 来源：{source.get('name')}",
+        f"- 月度刷新日：每月 {source.get('monthly_refresh_day')} 日",
+        f"- 本包素材数：{payload.get('asset_count')}",
+        f"- 高优先注意：{level_counts.get('high_attention', 0)}",
+        f"- 中等注意：{level_counts.get('medium_attention', 0)}",
+        f"- 常规医生审核：{level_counts.get('doctor_review_required', 0)}",
+        "",
+        "用途：这是给医生或助理先看的短版判定包。它只读，不会批准、修改、入队、排程、发布、更新 Notion 或调用 Meta。",
+        "",
+        "## 安全线",
+        "",
+        *markdown_list(payload.get("safety")),
+        "",
+        "## 医生只需要二选一回复",
+        "",
+        "批准时：",
+        "",
+        "```text",
+        "Asset ID: 对应素材 ID",
+        "Decision: approve",
+        "Safety: clear",
+        "Use polished copy: no",
+        "Notes: 已审核医学意思、中文清楚度、无保证疗效/停药指示/恐吓表达。",
+        "```",
+        "",
+        "需要修改时：",
+        "",
+        "```text",
+        "Asset ID: 对应素材 ID",
+        "Decision: needs edits",
+        "Safety: needs review",
+        "Use polished copy: no",
+        "Notes: 写明需要修改的 slide / 句子 / 医学表述。",
+        "```",
+        "",
+        "## 快速判定清单",
+        "",
+    ]
+    if not payload.get("items"):
+        lines.extend(["- 暂无从 Notion 月度计划生成的 carousel 资产。", ""])
+    for index, item in enumerate(payload.get("items") or [], start=1):
+        lines.extend(
+            [
+                f"### {index}. {item.get('topic_id')} · {item.get('topic')}",
+                "",
+                f"- Asset ID：`{item.get('asset_id')}`",
+                f"- Brief ID：`{item.get('brief_id')}`",
+                f"- 计划日期：{item.get('planned_posting_date') or '未标注'}",
+                f"- 快速判定级别：`{item.get('triage_level')}`",
+                f"- Risk flags：{item.get('risk_flag_text')}",
+                f"- 默认决定：{item.get('safe_default_decision')}",
+                f"- 下载 PNG ZIP：`{item.get('png_zip_url')}`",
+                f"- 预览封面：`{item.get('preview_url')}`",
+                "",
+                "医生重点看：",
+                "",
+                *markdown_list(item.get("doctor_focus")),
+                "",
+                "Slide 标题：",
+                "",
+                *markdown_list((item.get("slide_titles") or [])[:10], "- 暂无 slide 标题。"),
+                "",
+                "文案预览：",
+                "",
+                item.get("caption_preview") or "暂无文案。",
+                "",
+                "如果批准，复制：",
+                "",
+                "```text",
+                item.get("if_approved_template") or "",
+                "```",
+                "",
+                "如果需要修改，复制：",
+                "",
+                "```text",
+                item.get("if_needs_edits_template") or "",
+                "```",
+                "",
+            ]
+        )
+    lines.extend(["## 下一步", "", f"- {payload.get('next_step')}", ""])
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-doctor-triage-zh.md"'},
+    )
 
 
 @app.get("/operations/monthly-carousel-doctor-review.zh.md")
@@ -11059,8 +11293,9 @@ async def monthly_carousel_action_pack_payload():
         primary_action = {
             "key": "doctor_review",
             "title": "先完成医生审核与 Safety clear",
-            "detail": "下载医生审核总包、PNG ZIP 和月度医生审核表；医生明确 Decision: approve 与 Safety: clear 后再导入 CSV。",
-            "download": "/operations/monthly-carousel-doctor-review.zh.md",
+            "detail": "先下载医生快速判定包；需要细读时再打开医生审核总包和 PNG ZIP。医生明确 Decision: approve 与 Safety: clear 后再导入 CSV。",
+            "download": "/operations/monthly-carousel-doctor-triage.zh.md",
+            "full_review": "/operations/monthly-carousel-doctor-review.zh.md",
             "worksheet": "/operations/monthly-carousel-doctor-decision-worksheet.csv",
             "import": "/operations/import-monthly-carousel-doctor-worksheet",
         }
@@ -11137,6 +11372,8 @@ async def monthly_carousel_action_pack_payload():
         "items": items,
         "links": {
             "monthly_ops_cockpit": "/operations/monthly-carousel-ops-cockpit.zh.md",
+            "doctor_triage_pack": "/operations/monthly-carousel-doctor-triage.zh.md",
+            "doctor_triage_csv": "/operations/monthly-carousel-doctor-triage.csv",
             "doctor_review_pack": "/operations/monthly-carousel-doctor-review.zh.md",
             "doctor_reply_templates": "/operations/monthly-carousel-doctor-reply-templates.zh.md",
             "png_assets_zip": "/operations/monthly-carousel-png-assets.zip",
@@ -11194,8 +11431,8 @@ def monthly_carousel_next_action_detail(item: dict):
             "priority": 20,
             "action_key": "doctor_safety_clear",
             "action_zh": "送医生审核并取得 Safety clear",
-            "operator_action": "下载医生审核总包、PNG ZIP 和医生审核表；医生明确 approve 与 clear 后，再导入 CSV。",
-            "download": "/operations/monthly-carousel-doctor-review.zh.md",
+            "operator_action": "先下载医生快速判定包；医生需要细读时再下载审核总包、PNG ZIP 和医生审核表。医生明确 approve 与 clear 后，再导入 CSV。",
+            "download": "/operations/monthly-carousel-doctor-triage.zh.md",
             "safety_note": "医生未 clear 前只可 review，不可进入制作或入队。",
         }
     if gate_status == "waiting_final_media" or stage == "needs_production":

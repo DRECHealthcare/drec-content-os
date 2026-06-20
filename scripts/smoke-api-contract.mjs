@@ -95,6 +95,9 @@ const requiredRoutes = [
   "GET /operations/monthly-carousel-action-queue",
   "GET /operations/monthly-carousel-action-queue.zh.md",
   "GET /operations/monthly-carousel-action-queue.csv",
+  "GET /operations/monthly-carousel-doctor-triage",
+  "GET /operations/monthly-carousel-doctor-triage.zh.md",
+  "GET /operations/monthly-carousel-doctor-triage.csv",
   "POST /operations/import-doctor-replies",
   "GET /operations/approval-cockpit",
   "GET /operations/approval-cockpit.md",
@@ -2826,6 +2829,31 @@ const requiredSnippets = [
     name: "web dashboard monthly doctor review action",
     file: "web",
     text: "download-dashboard-monthly-doctor-review",
+  },
+  {
+    name: "web dashboard monthly doctor triage action",
+    file: "web",
+    text: "data-download-dashboard-monthly-doctor-triage",
+  },
+  {
+    name: "web monthly doctor triage action",
+    file: "web",
+    text: "download-monthly-carousel-doctor-triage",
+  },
+  {
+    name: "monthly carousel doctor triage route",
+    file: "main",
+    text: "monthly_carousel_doctor_triage_payload",
+  },
+  {
+    name: "monthly carousel doctor triage safety",
+    file: "main",
+    text: "No item is approved by default",
+  },
+  {
+    name: "monthly carousel doctor triage endpoint",
+    file: "main",
+    text: "/operations/monthly-carousel-doctor-triage.zh.md",
   },
   {
     name: "web dashboard monthly png action",
