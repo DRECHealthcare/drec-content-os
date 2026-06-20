@@ -1190,6 +1190,7 @@ function refreshProtectedData() {
   loadKb();
   loadBriefs();
   loadNotionCarouselSource();
+  loadDashboardNotionRefreshStatus();
   loadAssets();
   loadMediaAssets();
   loadOutcomes();
@@ -2689,6 +2690,50 @@ function renderNotionMonthlyRefreshStatus(data) {
       ` : ""}
     </article>
   `;
+}
+
+function renderDashboardNotionRefreshStatus(data) {
+  const container = document.getElementById("dashboard-notion-refresh-status");
+  if (!container) return;
+  const statusLabel = {
+    refresh_due_today: "今天是 Notion 月度刷新日",
+    no_local_monthly_assets: "还没有本月 Notion 内容",
+    needs_rescan_after_refresh: "本月刷新后需要重新扫描",
+    local_source_needs_cleanup: "Topic ID 需要先清理",
+    local_cycle_active: "本月 Notion 内容已进入系统",
+  }[data.status] || data.status || "检查中";
+  const duplicateCount = (data.duplicate_topic_ids || []).length;
+  const missingTopicCount = Number(data.missing_topic_id_count || 0);
+  const health = duplicateCount || missingTopicCount ? "blocked" : data.status === "local_cycle_active" ? "done" : "open";
+  container.innerHTML = `
+    <article class="learning-card wide-learning ${escapeHtml(health)}" data-dashboard-notion-refresh-status>
+      <h3>Notion 月度刷新</h3>
+      <p>${escapeHtml(statusLabel)}</p>
+      <small>本轮 ${escapeHtml(data.active_cycle_start || "")} · 下次 ${escapeHtml(data.next_refresh_date || "")}</small>
+      <div class="summary-row">
+        <span>本地月度内容 ${Number(data.local_monthly_asset_count || 0)}</span>
+        <span>本轮导入 ${Number(data.imported_since_refresh_count || 0)}</span>
+        <span>重复 Topic ID ${duplicateCount}</span>
+        <span>缺 Topic ID ${missingTopicCount}</span>
+      </div>
+      <p>${escapeHtml(data.next_action || "")}</p>
+      <div class="learning-actions">
+        <button type="button" data-open-notion-monthly-workbench>打开月度工作台</button>
+        <button type="button" data-download-dashboard-notion-refresh>下载刷新清单</button>
+      </div>
+    </article>
+  `;
+}
+
+async function loadDashboardNotionRefreshStatus() {
+  const container = document.getElementById("dashboard-notion-refresh-status");
+  if (!container) return;
+  try {
+    const data = await fetchJson("/notion/monthly-refresh-status");
+    renderDashboardNotionRefreshStatus(data);
+  } catch (error) {
+    container.innerHTML = `<p class="status-note">${escapeHtml(error.message === "Access token required" ? "Set the access token first." : "Could not load Notion monthly refresh status.")}</p>`;
+  }
 }
 
 function renderNotionCarouselCsvImport(data) {
@@ -7108,6 +7153,26 @@ document.getElementById("download-notion-carousel-template")?.addEventListener("
   }
 });
 
+document.getElementById("dashboard-notion-refresh-status")?.addEventListener("click", async (event) => {
+  const openWorkbench = event.target.closest("[data-open-notion-monthly-workbench]");
+  const downloadWorkbench = event.target.closest("[data-download-dashboard-notion-refresh]");
+  if (!openWorkbench && !downloadWorkbench) return;
+  if (openWorkbench) {
+    showScreen("plan");
+    const card = document.getElementById("notion-carousel-source");
+    card?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+  const message = document.getElementById("test-path-message");
+  if (message) message.textContent = "Preparing Notion monthly refresh pack...";
+  try {
+    await downloadProtectedFile("/notion/monthly-refresh-workbench.zh.md", "drec-notion-monthly-refresh-workbench.zh.md", "text/markdown");
+    if (message) message.textContent = "Notion monthly refresh pack downloaded.";
+  } catch (error) {
+    if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download Notion monthly refresh pack.";
+  }
+});
+
 async function uploadNotionCarouselCsv({ dryRun }) {
   const message = document.getElementById("plan-message");
   const fileInput = document.getElementById("notion-carousel-csv-file");
@@ -9176,6 +9241,7 @@ document.getElementById("outcome-form").addEventListener("submit", async (event)
 storeAccessTokenFromUrl();
 loadLoopStatus();
 loadLaunchReadiness();
+loadDashboardNotionRefreshStatus();
 loadKb();
 loadBriefs();
 loadNotionCarouselSource();

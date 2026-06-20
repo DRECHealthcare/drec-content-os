@@ -2707,6 +2707,16 @@ const requiredSnippets = [
     text: "data-notion-carousel-source",
   },
   {
+    name: "web dashboard notion refresh card",
+    file: "web",
+    text: "data-dashboard-notion-refresh-status",
+  },
+  {
+    name: "web dashboard notion refresh action",
+    file: "web",
+    text: "download-dashboard-notion-refresh",
+  },
+  {
     name: "web notion carousel source action",
     file: "web",
     text: "refresh-notion-carousel-source",
