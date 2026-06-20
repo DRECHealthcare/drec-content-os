@@ -8446,6 +8446,90 @@ async def operations_monthly_carousel_doctor_decision_worksheet_csv(_: None = De
     )
 
 
+@app.get("/operations/monthly-carousel-production-design-worksheet.csv")
+async def operations_monthly_carousel_production_design_worksheet_csv(_: None = Depends(require_access_token)):
+    assets = await monthly_carousel_asset_list()
+    output = StringIO()
+    fieldnames = [
+        "topic_id",
+        "asset_id",
+        "brief_id",
+        "topic",
+        "planned_posting_date",
+        "approval_gate_status",
+        "current_safety",
+        "current_review",
+        "detector_status",
+        "slide_count",
+        "png_zip_url",
+        "preview_url",
+        "canvas_spec",
+        "visual_direction",
+        "media_task",
+        "template_suggestion",
+        "image_prompt",
+        "rights_check",
+        "visual_qa_checklist",
+        "publishing_gate_note",
+        "new_media_urls",
+        "visual_qa_status",
+        "rights_note",
+        "producer_name",
+        "production_notes",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for asset in assets:
+        metadata = asset.get("metadata") or {}
+        notion_source = metadata.get("notion_source") or {}
+        topic_id = monthly_carousel_topic_id(asset) or ""
+        caption = asset.get("caption") or ""
+        detector = check_text(caption)
+        approved_clear = asset.get("review_status") == "approved" and asset.get("compliance_status") == "clear"
+        item = {
+            "asset_id": asset.get("id"),
+            "brief_id": asset.get("brief_id"),
+            "topic": metadata.get("topic") or topic_id,
+            "channel": asset.get("channel"),
+            "format": asset.get("format"),
+            "caption_preview": feedback_excerpt(caption, 320),
+        }
+        writer.writerow(
+            {
+                "topic_id": topic_id,
+                "asset_id": asset.get("id") or "",
+                "brief_id": asset.get("brief_id") or "",
+                "topic": metadata.get("topic") or topic_id,
+                "planned_posting_date": notion_source.get("planned_posting_date") or "",
+                "approval_gate_status": "approved_clear" if approved_clear else "waiting_doctor_safety_clear",
+                "current_safety": asset.get("compliance_status") or "",
+                "current_review": asset.get("review_status") or "",
+                "detector_status": detector.get("status") or "",
+                "slide_count": len(metadata.get("slides") or []),
+                "png_zip_url": f"/assets/{asset.get('id')}/carousel-png-assets.zip",
+                "preview_url": f"/assets/{asset.get('id')}/carousel-preview/1.png",
+                "canvas_spec": "1080x1350 carousel slides; keep text readable on mobile; use 7-slide DREC educational structure.",
+                "visual_direction": asset_visual_direction(asset),
+                "media_task": "Use generated monthly carousel PNGs as the first review files. If redesigning, keep Mandarin explanation-led layout and DREC blue/green/teal medical style.",
+                "template_suggestion": production_template_suggestion(item),
+                "image_prompt": production_image_prompt(item),
+                "rights_check": "Generated DREC carousel assets may be used for internal review. Before publishing, confirm final files are approved, public/accessible, and free of unlicensed patient-identifiable content.",
+                "visual_qa_checklist": "All 7 slides legible on phone; Slide 1 cover hook only; Slides 2+ have title/body/highlights/visual/takeaway; no miracle cure/guarantee/course-selling; DREC style consistent; doctor-approved copy unchanged.",
+                "publishing_gate_note": "Do not queue, schedule, publish, or call Meta until doctor/human Safety: clear and Decision: approve are imported.",
+                "new_media_urls": "",
+                "visual_qa_status": "pending",
+                "rights_note": "",
+                "producer_name": "",
+                "production_notes": "",
+            }
+        )
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-production-design-worksheet.csv"'},
+    )
+
+
 def doctor_approval_item_lines(item: dict, index: int):
     blockers = item.get("blockers") or []
     return [

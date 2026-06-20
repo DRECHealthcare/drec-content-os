@@ -253,6 +253,7 @@ const uiZh = {
   "Monthly Doctor CSV": "月度医生 CSV",
   "Preview Monthly Doctor": "预览月度医生表",
   "Import Monthly Doctor": "导入月度医生表",
+  "下载月度制作设计表": "下载月度制作设计表",
   "Download Approval Cockpit": "下载审批驾驶舱",
   "下载中文审批控制台": "下载中文审批控制台",
   "Download Rewrite Pack": "下载改写包",
@@ -590,6 +591,8 @@ Object.assign(uiZh, {
   "Monthly doctor worksheet imported.": "月度医生审核表已导入。",
   "Could not preview monthly doctor worksheet.": "无法预览月度医生审核表。",
   "Could not import monthly doctor worksheet.": "无法导入月度医生审核表。",
+  "Monthly carousel production worksheet downloaded.": "月度 Carousel 制作设计表已下载。",
+  "Could not download monthly carousel production worksheet.": "无法下载月度 Carousel 制作设计表。",
   "Could not download first publish readiness.": "无法下载首次发布准备包。",
   "Could not run risk audit.": "无法运行风险检查。",
   "Could not download snapshot.": "无法下载快照。",
@@ -5445,6 +5448,16 @@ document.getElementById("download-production-design-worksheet")?.addEventListene
     message.textContent = "Production design worksheet downloaded.";
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download design worksheet.";
+  }
+});
+
+document.getElementById("download-monthly-carousel-production-worksheet")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/monthly-carousel-production-design-worksheet.csv", "drec-monthly-carousel-production-design-worksheet.csv", "text/csv");
+    message.textContent = translateText("Monthly carousel production worksheet downloaded.");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download monthly carousel production worksheet.");
   }
 });
 
