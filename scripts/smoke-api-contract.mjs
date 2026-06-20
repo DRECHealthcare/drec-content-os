@@ -3438,6 +3438,16 @@ const requiredSnippets = [
     text: "解除 93% 卡点",
   },
   {
+    name: "today safe pack includes completion audit",
+    file: "main",
+    text: "09-project-completion-audit.json",
+  },
+  {
+    name: "today safe pack includes unblock board",
+    file: "main",
+    text: "10-project-unblock-board.json",
+  },
+  {
     name: "web simple operator today safe pack copy",
     file: "web",
     text: "下载今日安全包",

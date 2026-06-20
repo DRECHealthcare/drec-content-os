@@ -23235,6 +23235,8 @@ async def today_safe_operator_pack_payload():
     audit = await schedule_audit_payload()
     closeout = await publishing_closeout_payload(100)
     post_publish = await post_publish_next_steps_payload()
+    project_completion = await project_completion_audit_payload()
+    project_unblock = await project_unblock_board_payload()
     return {
         "generated_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
         "loop": loop,
@@ -23246,6 +23248,8 @@ async def today_safe_operator_pack_payload():
         "schedule_audit": audit,
         "closeout": closeout,
         "post_publish": post_publish,
+        "project_completion": project_completion,
+        "project_unblock": project_unblock,
     }
 
 
@@ -23259,6 +23263,9 @@ def today_safe_operator_pack_readme(payload: dict):
     audit = payload.get("schedule_audit") or {}
     closeout = payload.get("closeout") or {}
     post_publish = payload.get("post_publish") or {}
+    project_completion = payload.get("project_completion") or {}
+    project_unblock = payload.get("project_unblock") or {}
+    project_score = (project_completion.get("completion") or {}).get("percent") or completion.get("percent", "?")
     queue_rows = loop.get("queue") or []
     queue_text = ", ".join(f"{item.get('status')}: {item.get('count')}" for item in queue_rows) or "无队列数据"
     security_smoke = (security.get("service_role_smoke") or {}).get("status") or "missing"
@@ -23275,13 +23282,14 @@ def today_safe_operator_pack_readme(payload: dict):
         "",
         "## 现在状态",
         "",
-        f"- 总进度：{completion.get('percent', '?')}%",
+        f"- 总进度：{project_score}%",
         f"- 队列：{queue_text}",
         f"- 可交接发布项目：{handoff.get('ready_count', 0)}",
         f"- 月度 Carousel 可交接项目：{monthly.get('ready_count', 0)}",
         f"- 排程检查：{zh_schedule_audit_status(audit.get('overall_status'))}",
         f"- 发布后可回填项目：{post_publish.get('ready_to_publish_count', 0)}",
         f"- 安全门槛：{security.get('overall_status')} / service-role smoke: {security_smoke}",
+        f"- 项目解锁：ready {project_unblock.get('ready_count', 0)} / blocked {project_unblock.get('blocked_count', 0)}",
         f"- Meta 自动发布：关闭；只允许 dry run 和人工交接。",
         "",
         "## 你真正要看的文件",
@@ -23292,6 +23300,8 @@ def today_safe_operator_pack_readme(payload: dict):
         "4. `04-post-publish-metrics-template.csv`：发布 7 天后再填写，不要提前导入。",
         "5. `05-schedule-audit.json`：排程阻碍和提醒。",
         "6. `08-service-role-install-pack.md`：解除 93% 卡点的 Supabase service-role 安装步骤。",
+        "7. `09-project-completion-audit.json`：当前完成度、扣分项和证据。",
+        "8. `10-project-unblock-board.json`：从 93% 继续往完成走的真实证据清单。",
         "",
         "## 下一步",
         "",
@@ -23326,6 +23336,8 @@ async def operations_today_safe_operator_pack_zip(_: None = Depends(require_acce
             "automation": payload.get("automation") or {},
         }, ensure_ascii=False, indent=2, default=str))
         archive.writestr("08-service-role-install-pack.md", service_role_install_pack_markdown(payload.get("security") or {}))
+        archive.writestr("09-project-completion-audit.json", json.dumps(payload.get("project_completion") or {}, ensure_ascii=False, indent=2, default=str))
+        archive.writestr("10-project-unblock-board.json", json.dumps(payload.get("project_unblock") or {}, ensure_ascii=False, indent=2, default=str))
     return Response(
         buffer.getvalue(),
         media_type="application/zip",
