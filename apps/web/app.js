@@ -113,6 +113,10 @@ const uiZh = {
   "Download Pipeline Board": "下载流程看板",
   "Download Audit Trail": "下载审计记录",
   "Download Launch Evidence": "下载上线证据",
+  "Monthly carousel acceptance audit downloaded.": "月度 Carousel 验收审计已下载。",
+  "Could not download monthly carousel acceptance audit.": "无法下载月度 Carousel 验收审计。",
+  "Monthly carousel acceptance CSV downloaded.": "月度 Carousel 验收 CSV 已下载。",
+  "Could not download monthly carousel acceptance CSV.": "无法下载月度 Carousel 验收 CSV。",
   "Download Operator Pack": "下载操作员包",
   "Refresh Sense Brief": "刷新洞察简报",
   "Download Sense Brief": "下载洞察简报",
@@ -4998,6 +5002,26 @@ document.getElementById("download-launch-evidence")?.addEventListener("click", a
     message.textContent = "Launch evidence downloaded.";
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download launch evidence.";
+  }
+});
+
+document.getElementById("download-monthly-carousel-acceptance-audit")?.addEventListener("click", async () => {
+  const message = document.getElementById("test-path-message");
+  try {
+    await downloadProtectedFile("/operations/monthly-carousel-acceptance-audit.zh.md", "drec-monthly-carousel-acceptance-audit-zh.md", "text/markdown");
+    message.textContent = translateText("Monthly carousel acceptance audit downloaded.");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download monthly carousel acceptance audit.");
+  }
+});
+
+document.getElementById("download-monthly-carousel-acceptance-audit-csv")?.addEventListener("click", async () => {
+  const message = document.getElementById("test-path-message");
+  try {
+    await downloadProtectedFile("/operations/monthly-carousel-acceptance-audit.csv", "drec-monthly-carousel-acceptance-audit.csv", "text/csv");
+    message.textContent = translateText("Monthly carousel acceptance CSV downloaded.");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download monthly carousel acceptance CSV.");
   }
 });
 

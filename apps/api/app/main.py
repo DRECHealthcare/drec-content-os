@@ -9822,6 +9822,8 @@ async def monthly_carousel_action_pack_payload():
             "monthly_metrics_execution_pack": "/operations/monthly-carousel-metrics-execution-pack.zh.md",
             "monthly_next_plan_handback": "/operations/monthly-carousel-next-plan-handback.zh.md",
             "monthly_next_plan_handback_csv": "/operations/monthly-carousel-next-plan-handback.csv",
+            "monthly_acceptance_audit": "/operations/monthly-carousel-acceptance-audit.zh.md",
+            "monthly_acceptance_audit_csv": "/operations/monthly-carousel-acceptance-audit.csv",
             "status_board": "/operations/monthly-carousel-status-board.zh.md",
             "pre_schedule_gate": "/operations/pre-schedule-gate.md",
             "review_to_schedule": "/operations/review-to-schedule-pack.zh.md",
@@ -10038,6 +10040,242 @@ async def operations_monthly_carousel_ops_cockpit_zh(_: None = Depends(require_a
         "\n".join(lines),
         media_type="text/markdown",
         headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-ops-cockpit-zh.md"'},
+    )
+
+
+def monthly_acceptance_gate(key: str, label: str, status: str, evidence: str, next_step: str):
+    return {
+        "key": key,
+        "label": label,
+        "status": status,
+        "evidence": evidence,
+        "next_step": next_step,
+    }
+
+
+def zh_acceptance_status(value: str | None):
+    return {
+        "ready": "已可用",
+        "waiting": "等待真实流程证据",
+        "blocked": "阻塞",
+        "manual_only": "可人工使用，自动化未开启",
+    }.get(value or "", value or "未知")
+
+
+async def monthly_carousel_acceptance_audit_payload():
+    loop = await build_loop_status()
+    workflow = build_workflow_guidance(loop)
+    security = security_status_payload()
+    automation = await automation_status_payload()
+    completion = build_completion_status(loop, workflow, security, automation)
+    action_pack = await monthly_carousel_action_pack_payload()
+    closeout = await monthly_carousel_learning_closeout_payload()
+    handback = await monthly_carousel_next_plan_handback_payload()
+    schedule_audit = await schedule_audit_payload()
+    risk = await content_risk_audit_payload()
+    launch = await launch_readiness_payload()
+    meta = await meta_readiness(None)
+    stage_counts = action_pack.get("stage_counts") or {}
+    gate_counts = action_pack.get("gate_counts") or {}
+    links = action_pack.get("links") or {}
+    asset_count = int(action_pack.get("asset_count") or 0)
+    monthly_queue_ready = int(gate_counts.get("ready_to_queue") or 0)
+    learning_complete = int(closeout.get("learning_complete_count") or 0)
+    waiting_metrics = int(closeout.get("waiting_metrics_count") or 0)
+    waiting_rollup = int(closeout.get("waiting_rollup_count") or 0)
+    candidates = handback.get("candidate_topics") or []
+    gates = [
+        monthly_acceptance_gate(
+            "notion_source",
+            "Notion monthly source of truth",
+            "ready" if asset_count else "waiting",
+            f"{asset_count} monthly carousel asset(s) loaded from the Notion monthly source.",
+            "Refresh or import the monthly Notion source after the 19th if no assets are visible.",
+        ),
+        monthly_acceptance_gate(
+            "doctor_review",
+            "Doctor review handoff",
+            "waiting" if gate_counts.get("waiting_doctor_safety_clear") else "ready",
+            f"Doctor pack, reply templates, PNG ZIP, and decision worksheet are available. Waiting doctor/safety count: {gate_counts.get('waiting_doctor_safety_clear', 0)}.",
+            "Get explicit Decision: approve and Safety: clear before production or queueing.",
+        ),
+        monthly_acceptance_gate(
+            "production_qa",
+            "Production and visual QA",
+            "waiting" if stage_counts.get("needs_production") or gate_counts.get("waiting_final_media") or gate_counts.get("waiting_visual_qa") else "ready",
+            f"Production worksheet and QA pack are available. Waiting media: {gate_counts.get('waiting_final_media', 0)}; waiting visual QA: {gate_counts.get('waiting_visual_qa', 0)}.",
+            "Attach final media URL, rights note, and visual QA passed before queueing.",
+        ),
+        monthly_acceptance_gate(
+            "queue_gate",
+            "Queue readiness and gated queueing",
+            "ready" if monthly_queue_ready else "waiting",
+            f"Queue readiness and queue execution pack are available. Ready to queue now: {monthly_queue_ready}.",
+            "Only queue ready_to_queue items, then run queue review before scheduling.",
+        ),
+        monthly_acceptance_gate(
+            "schedule_gate",
+            "Scheduling worksheet and audit",
+            "blocked" if schedule_audit.get("overall_status") == "blocked" else "ready",
+            f"Schedule worksheet, schedule execution pack, and audit are available. Audit: {schedule_audit.get('overall_status')} with {schedule_audit.get('block_count', 0)} block(s).",
+            "Run Schedule Audit after importing planned slots and before publishing handoff.",
+        ),
+        monthly_acceptance_gate(
+            "publishing_handoff",
+            "Publishing handoff",
+            "manual_only",
+            "Monthly publishing handoff is available; Meta live publishing remains separately gated.",
+            "Use manual handoff or dry run until Meta readiness and live switches are green.",
+        ),
+        monthly_acceptance_gate(
+            "metrics_learning",
+            "Metrics and learning closeout",
+            "ready" if learning_complete or waiting_metrics or waiting_rollup else "waiting",
+            f"Metrics template, metrics execution pack, and learning closeout are available. Waiting metrics: {waiting_metrics}; waiting rollup: {waiting_rollup}; complete: {learning_complete}.",
+            "After publishing, record post ID, enter real 7-day metrics, and roll up outcomes.",
+        ),
+        monthly_acceptance_gate(
+            "next_month_handback",
+            "Learning handback to next month",
+            "ready" if candidates else "waiting",
+            f"Next-plan handback and candidate CSV are available. Candidate topics: {len(candidates)}.",
+            "After the monthly Notion refresh, check Topic ID and topic duplicates before adding any candidate.",
+        ),
+        monthly_acceptance_gate(
+            "risk_launch",
+            "Risk and launch evidence",
+            "blocked" if risk.get("overall_status") == "blocked" else "ready" if launch.get("can_use_for_manual_ops") else "waiting",
+            f"Launch readiness: {launch.get('overall_status')}; risk audit: {risk.get('overall_status')} ({risk.get('block_count', 0)} block / {risk.get('warn_count', 0)} warn).",
+            "Keep manual workflow only if any risk block or launch blocker appears.",
+        ),
+        monthly_acceptance_gate(
+            "meta_live",
+            "Meta live automation",
+            "ready" if meta.get("overall_status") == "ready_for_worker_testing" else "waiting",
+            f"Meta readiness: {meta.get('overall_status')}. Live publishing switches remain independent.",
+            "Run Meta preflight and controlled dry runs before any live publishing switch.",
+        ),
+    ]
+    ready_count = sum(1 for gate in gates if gate.get("status") in {"ready", "manual_only"})
+    blocked_count = sum(1 for gate in gates if gate.get("status") == "blocked")
+    waiting_count = sum(1 for gate in gates if gate.get("status") == "waiting")
+    return {
+        "source": action_pack.get("source"),
+        "mode": "read_only_monthly_acceptance_audit",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "completion": completion,
+        "ready_count": ready_count,
+        "waiting_count": waiting_count,
+        "blocked_count": blocked_count,
+        "gates": gates,
+        "links": {
+            **links,
+            "monthly_ops_cockpit": "/operations/monthly-carousel-ops-cockpit.zh.md",
+            "monthly_acceptance_audit": "/operations/monthly-carousel-acceptance-audit.zh.md",
+            "monthly_acceptance_audit_csv": "/operations/monthly-carousel-acceptance-audit.csv",
+            "launch_evidence": "/operations/launch-evidence.md",
+            "risk_audit": "/operations/risk-audit",
+            "meta_preflight": "/meta/preflight-audit.md",
+        },
+        "next_step": next(
+            (gate.get("next_step") for gate in gates if gate.get("status") == "blocked"),
+            next((gate.get("next_step") for gate in gates if gate.get("status") == "waiting"), "Run one full manual monthly cycle and save launch evidence."),
+        ),
+        "safety": [
+            "This audit is read-only and does not approve, import, queue, schedule, publish, update Notion, or call Meta.",
+            "Acceptance requires real human or doctor evidence for approval, production, publishing, metrics, and learning.",
+            "Do not treat dry-run or generated files as proof of live posting.",
+            "Meta live automation remains off until preflight, scheduler, schedule audit, risk, launch, and live-switch gates are all green.",
+        ],
+    }
+
+
+@app.get("/operations/monthly-carousel-acceptance-audit")
+async def operations_monthly_carousel_acceptance_audit(_: None = Depends(require_access_token)):
+    return await monthly_carousel_acceptance_audit_payload()
+
+
+@app.get("/operations/monthly-carousel-acceptance-audit.csv")
+async def operations_monthly_carousel_acceptance_audit_csv(_: None = Depends(require_access_token)):
+    payload = await monthly_carousel_acceptance_audit_payload()
+    output = StringIO()
+    fieldnames = ["key", "label", "status", "status_zh", "evidence", "next_step"]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for gate in payload.get("gates") or []:
+        writer.writerow({
+            "key": gate.get("key") or "",
+            "label": gate.get("label") or "",
+            "status": gate.get("status") or "",
+            "status_zh": zh_acceptance_status(gate.get("status")),
+            "evidence": gate.get("evidence") or "",
+            "next_step": gate.get("next_step") or "",
+        })
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-acceptance-audit.csv"'},
+    )
+
+
+@app.get("/operations/monthly-carousel-acceptance-audit.zh.md")
+async def operations_monthly_carousel_acceptance_audit_zh(_: None = Depends(require_access_token)):
+    payload = await monthly_carousel_acceptance_audit_payload()
+    source = payload.get("source") or {}
+    completion = payload.get("completion") or {}
+    lines = [
+        "# DREC 月度 Carousel 验收审计",
+        "",
+        f"生成时间：{payload.get('generated_at')}",
+        f"Notion 来源：{source.get('name')}",
+        f"月度刷新日：每月 {source.get('monthly_refresh_day')} 日",
+        "",
+        "用途：用当前系统证据判断月度 carousel 工作流哪些部分已经可用、哪些仍等待真实操作证据。本文件只读，不会批准、导入、入队、排程、发布、写 Notion 或调用 Meta。",
+        "",
+        "## 当前完成度证据",
+        "",
+        f"- 系统完成度：{completion.get('percent')}%",
+        f"- 首轮闭环完成度：{completion.get('first_cycle_percent')}%",
+        f"- 当前下一要求：{completion.get('next_requirement')}",
+        f"- 验收 ready/manual-only：{payload.get('ready_count')}",
+        f"- 验收 waiting：{payload.get('waiting_count')}",
+        f"- 验收 blocked：{payload.get('blocked_count')}",
+        "",
+        "## 验收项目",
+        "",
+    ]
+    for gate in payload.get("gates") or []:
+        lines.extend(
+            [
+                f"### {gate.get('label')}",
+                "",
+                f"- 状态：`{gate.get('status')}`（{zh_acceptance_status(gate.get('status'))}）",
+                f"- 证据：{gate.get('evidence')}",
+                f"- 下一步：{gate.get('next_step')}",
+                "",
+            ]
+        )
+    links = payload.get("links") or {}
+    lines.extend(
+        [
+            "## 关键证据链接",
+            "",
+            *markdown_list([f"{key}: `{value}`" for key, value in links.items()]),
+            "",
+            "## 总下一步",
+            "",
+            f"- {payload.get('next_step')}",
+            "",
+            "## 安全线",
+            "",
+            *markdown_list(payload.get("safety")),
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-acceptance-audit-zh.md"'},
     )
 
 
