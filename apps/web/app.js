@@ -603,6 +603,10 @@ Object.assign(uiZh, {
   "Could not download project completion audit.": "无法下载项目完成度审计。",
   "Project completion CSV downloaded.": "项目完成度 CSV 已下载。",
   "Could not download project completion CSV.": "无法下载项目完成度 CSV。",
+  "Project unblock board downloaded.": "项目解锁清单已下载。",
+  "Could not download project unblock board.": "无法下载项目解锁清单。",
+  "Project unblock CSV downloaded.": "项目解锁 CSV 已下载。",
+  "Could not download project unblock CSV.": "无法下载项目解锁 CSV。",
   "Running service-role smoke test...": "正在运行 service-role smoke test...",
   "Service-role smoke test passed.": "Service-role smoke test 已通过。",
   "Service-role key is still missing.": "Service-role key 仍未安装。",
@@ -5411,6 +5415,26 @@ document.getElementById("download-project-completion-audit-csv")?.addEventListen
     message.textContent = translateText("Project completion CSV downloaded.");
   } catch (error) {
     message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download project completion CSV.");
+  }
+});
+
+document.getElementById("download-project-unblock-board")?.addEventListener("click", async () => {
+  const message = document.getElementById("test-path-message");
+  try {
+    await downloadProtectedFile("/operations/project-unblock-board.zh.md", "drec-project-unblock-board-zh.md", "text/markdown");
+    message.textContent = translateText("Project unblock board downloaded.");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download project unblock board.");
+  }
+});
+
+document.getElementById("download-project-unblock-board-csv")?.addEventListener("click", async () => {
+  const message = document.getElementById("test-path-message");
+  try {
+    await downloadProtectedFile("/operations/project-unblock-board.csv", "drec-project-unblock-board.csv", "text/csv");
+    message.textContent = translateText("Project unblock CSV downloaded.");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download project unblock CSV.");
   }
 });
 

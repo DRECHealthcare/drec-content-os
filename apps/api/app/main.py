@@ -24467,6 +24467,99 @@ async def project_completion_audit_payload():
     }
 
 
+async def project_unblock_board_payload():
+    audit = await project_completion_audit_payload()
+    completion = audit.get("completion") or {}
+    workflow_summary = audit.get("workflow_summary") or {}
+    automation_summary = audit.get("automation_summary") or {}
+    security = audit.get("security") or {}
+    launch = audit.get("launch") or {}
+    meta = audit.get("meta") or {}
+    monthly = audit.get("monthly_acceptance") or {}
+
+    ready_assets = int(workflow_summary.get("queue_ready_asset_count") or automation_summary.get("ready_assets") or 0)
+    queue_total = int(workflow_summary.get("queue_total") or automation_summary.get("queue_total") or 0)
+    scheduled_queue = int(automation_summary.get("scheduled_queue") or 0)
+    service_role_ready = bool(security.get("rls_hardening_ready"))
+    rows = [
+        {
+            "gate": "doctor_or_human_approval",
+            "status": "ready" if ready_assets else "blocked",
+            "blocker": "" if ready_assets else "First asset still needs explicit doctor or human approval.",
+            "current_status": f"{ready_assets} approved clear asset(s); {workflow_summary.get('asset_count', 0)} asset(s) exist.",
+            "required_action": "Open Assets, collect explicit doctor/human approval, and import only Decision: approve + Safety: clear.",
+            "required_evidence": "At least one asset has review_status=approved, compliance_status=clear, reviewer identity, and review notes/source.",
+            "link": "/operations/first-publish-doctor-review-sheet.zh.md",
+            "safe_auto_action": "/operations/first-publish-safe-advance-loop?dry_run=false&max_steps=8 after approval evidence exists.",
+        },
+        {
+            "gate": "publishing_queue",
+            "status": "ready" if queue_total else "blocked",
+            "blocker": "" if queue_total else "Publishing queue is empty until one approved clear asset is queued.",
+            "current_status": f"{queue_total} queue item(s); {ready_assets} asset(s) ready for queue.",
+            "required_action": "Queue one approved, compliance-clear asset with final caption and required media/design attached.",
+            "required_evidence": "publish_queue contains one item linked to the approved asset with compliance_status=clear.",
+            "link": "/operations/review-to-schedule-pack-zh.md",
+            "safe_auto_action": "/operations/first-publish-safe-advance-loop?dry_run=false&max_steps=8 can queue only when gates are green.",
+        },
+        {
+            "gate": "supabase_service_role",
+            "status": "ready" if service_role_ready else "blocked",
+            "blocker": "" if service_role_ready else "Supabase service-role key is missing, so strict RLS hardening is not complete.",
+            "current_status": security.get("next_step") or security.get("overall_status") or "Unknown security state.",
+            "required_action": "Add SUPABASE_SERVICE_ROLE_KEY to Fly, run the service-role smoke test, then apply strict RLS only after the smoke passes.",
+            "required_evidence": "Fly secret SUPABASE_SERVICE_ROLE_KEY is deployed and /security/service-role-smoke-test reports passed.",
+            "link": "/security/service-role-install-pack.md",
+            "safe_auto_action": "/security/service-role-smoke-test validates access without touching publishing data.",
+        },
+        {
+            "gate": "first_scheduled_item",
+            "status": "ready" if scheduled_queue else "blocked",
+            "blocker": "" if scheduled_queue else "No reviewed item has been scheduled yet.",
+            "current_status": f"{scheduled_queue} scheduled item(s); {queue_total} queue item(s).",
+            "required_action": "After queue review approval, choose one MYT planned slot and run the schedule audit.",
+            "required_evidence": "publish_queue.status=scheduled with planned_slot, compliance_status=clear, and latest queue review approval.",
+            "link": "/operations/pre-schedule-gate.md",
+            "safe_auto_action": "/operations/schedule-audit.md confirms scheduled state before handoff or Meta dry run.",
+        },
+    ]
+    blocked_rows = [row for row in rows if row.get("status") != "ready"]
+    return {
+        "mode": "read_only_project_unblock_board",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "completion": {
+            "percent": completion.get("percent"),
+            "first_cycle_percent": completion.get("first_cycle_percent"),
+            "readiness": audit.get("readiness"),
+            "method": completion.get("method"),
+        },
+        "blocked_count": len(blocked_rows),
+        "ready_count": len(rows) - len(blocked_rows),
+        "rows": rows,
+        "next_action": (blocked_rows[0].get("required_action") if blocked_rows else "Run final publish, metrics, and learning closeout evidence."),
+        "context": {
+            "launch_status": launch.get("overall_status"),
+            "meta_status": meta.get("overall_status"),
+            "monthly_ready_count": monthly.get("ready_count"),
+            "monthly_waiting_count": monthly.get("waiting_count"),
+            "monthly_blocked_count": monthly.get("blocked_count"),
+        },
+        "links": {
+            "project_completion_audit": "/operations/project-completion-audit.zh.md",
+            "first_publish_readiness": "/operations/first-publish-readiness.zh.md",
+            "doctor_review_sheet": "/operations/first-publish-doctor-review-sheet.zh.md",
+            "review_to_schedule": "/operations/review-to-schedule-pack-zh.md",
+            "pre_schedule_gate": "/operations/pre-schedule-gate.md",
+            "service_role_pack": "/security/service-role-install-pack.md",
+        },
+        "safety": [
+            "This board is read-only and does not approve, import, queue, schedule, publish, update Notion, store secrets, or call Meta.",
+            "Safe auto actions remain gated and stop before any missing human approval, media, scheduling, security, or live publishing evidence.",
+            "Completion stays below full launch until the required evidence is present in current system state.",
+        ],
+    }
+
+
 def build_workflow_guidance(loop):
     total_queue = total_queue_count(loop.get("queue"))
     brief_count = int(loop.get("brief_count") or 0)
@@ -24724,6 +24817,96 @@ async def operations_project_completion_audit_zh(_: None = Depends(require_acces
         "\n".join(lines),
         media_type="text/markdown",
         headers={"Content-Disposition": 'attachment; filename="drec-project-completion-audit-zh.md"'},
+    )
+
+
+@app.get("/operations/project-unblock-board")
+async def operations_project_unblock_board(_: None = Depends(require_access_token)):
+    return await project_unblock_board_payload()
+
+
+@app.get("/operations/project-unblock-board.csv")
+async def operations_project_unblock_board_csv(_: None = Depends(require_access_token)):
+    payload = await project_unblock_board_payload()
+    output = StringIO()
+    fieldnames = [
+        "gate",
+        "status",
+        "blocker",
+        "current_status",
+        "required_action",
+        "required_evidence",
+        "link",
+        "safe_auto_action",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for row in payload.get("rows") or []:
+        writer.writerow({key: row.get(key) or "" for key in fieldnames})
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-project-unblock-board.csv"'},
+    )
+
+
+@app.get("/operations/project-unblock-board.zh.md")
+async def operations_project_unblock_board_zh(_: None = Depends(require_access_token)):
+    payload = await project_unblock_board_payload()
+    completion = payload.get("completion") or {}
+    context = payload.get("context") or {}
+    lines = [
+        "# DREC 项目解锁清单",
+        "",
+        f"生成时间：{payload.get('generated_at')}",
+        "",
+        "用途：把当前项目没有到 100% 的原因拆成可执行、可验证的步骤。本文件只读，不会批准、导入、入队、排程、发布、写 Notion、保存 secret 或调用 Meta。",
+        "",
+        "## 当前进度",
+        "",
+        f"- 整体完成度：{completion.get('percent')}%",
+        f"- 首轮发布闭环：{completion.get('first_cycle_percent')}%",
+        f"- Readiness：`{completion.get('readiness')}`",
+        f"- 已解锁：{payload.get('ready_count')}",
+        f"- 仍阻塞：{payload.get('blocked_count')}",
+        f"- 下一步：{payload.get('next_action')}",
+        "",
+        "## 外部状态",
+        "",
+        f"- Launch：`{context.get('launch_status')}`",
+        f"- Meta：`{context.get('meta_status')}`",
+        f"- 月度验收：ready/manual {context.get('monthly_ready_count')}；waiting {context.get('monthly_waiting_count')}；blocked {context.get('monthly_blocked_count')}",
+        "",
+        "## 解锁项目",
+        "",
+    ]
+    for index, row in enumerate(payload.get("rows") or [], start=1):
+        lines.extend([
+            f"### {index}. `{row.get('gate')}`",
+            "",
+            f"- 状态：`{row.get('status')}`",
+            f"- 当前情况：{row.get('current_status')}",
+            f"- 阻塞原因：{row.get('blocker') or '无'}",
+            f"- 需要做什么：{row.get('required_action')}",
+            f"- 通过标准：{row.get('required_evidence')}",
+            f"- 相关入口：`{row.get('link')}`",
+            f"- 安全自动动作：`{row.get('safe_auto_action')}`",
+            "",
+        ])
+    lines.extend([
+        "## 相关链接",
+        "",
+        *markdown_list([f"{key}: `{value}`" for key, value in (payload.get("links") or {}).items()]),
+        "",
+        "## 安全线",
+        "",
+        *markdown_list(payload.get("safety")),
+        "",
+    ])
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-project-unblock-board-zh.md"'},
     )
 
 
