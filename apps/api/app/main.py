@@ -8366,6 +8366,86 @@ async def operations_monthly_carousel_status_board_zh(_: None = Depends(require_
     )
 
 
+@app.get("/operations/monthly-carousel-doctor-decision-worksheet.csv")
+async def operations_monthly_carousel_doctor_decision_worksheet_csv(_: None = Depends(require_access_token)):
+    payload = await monthly_carousel_review_payload()
+    output = StringIO()
+    fieldnames = [
+        "topic_id",
+        "asset_id",
+        "brief_id",
+        "topic",
+        "planned_posting_date",
+        "notion_overall_status",
+        "notion_image_status",
+        "notion_caption_status",
+        "current_safety",
+        "current_review",
+        "detector_status",
+        "slide_count",
+        "png_zip_url",
+        "preview_url",
+        "doctor_check_educational_not_diagnostic",
+        "doctor_check_no_guaranteed_outcome",
+        "doctor_check_no_medication_instruction",
+        "doctor_check_mandarin_accurate",
+        "doctor_check_cta_appropriate",
+        "reviewer_safety_decision",
+        "reviewer_review_decision",
+        "use_polished_copy",
+        "reviewer_name",
+        "review_notes",
+        "copy_to_review",
+        "doctor_reply_template",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for item in payload.get("items") or []:
+        writer.writerow(
+            {
+                "topic_id": item.get("topic_id") or "",
+                "asset_id": item.get("asset_id") or "",
+                "brief_id": item.get("brief_id") or "",
+                "topic": item.get("topic") or "",
+                "planned_posting_date": item.get("planned_posting_date") or "",
+                "notion_overall_status": item.get("overall_status") or "",
+                "notion_image_status": item.get("carousel_image_status") or "",
+                "notion_caption_status": item.get("caption_status") or "",
+                "current_safety": item.get("compliance_status") or "",
+                "current_review": item.get("review_status") or "",
+                "detector_status": item.get("detector_status") or "",
+                "slide_count": item.get("slide_count") or "",
+                "png_zip_url": item.get("png_zip_url") or "",
+                "preview_url": item.get("preview_url") or "",
+                "doctor_check_educational_not_diagnostic": "",
+                "doctor_check_no_guaranteed_outcome": "",
+                "doctor_check_no_medication_instruction": "",
+                "doctor_check_mandarin_accurate": "",
+                "doctor_check_cta_appropriate": "",
+                "reviewer_safety_decision": "",
+                "reviewer_review_decision": "",
+                "use_polished_copy": "no",
+                "reviewer_name": "",
+                "review_notes": "",
+                "copy_to_review": item.get("caption_preview") or "",
+                "doctor_reply_template": "\n".join(
+                    [
+                        f"Asset ID: {item.get('asset_id') or ''}",
+                        "Decision: approve / needs edits / reject",
+                        "Safety: clear / needs review / blocked",
+                        "Use polished copy: no",
+                        "Notes:",
+                    ]
+                ),
+            }
+        )
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-doctor-decision-worksheet.csv"'},
+    )
+
+
 def doctor_approval_item_lines(item: dict, index: int):
     blockers = item.get("blockers") or []
     return [
