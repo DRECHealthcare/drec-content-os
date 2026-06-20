@@ -234,6 +234,29 @@ header span { color: var(--muted); font-size: 12px; }
   color: #052E2A;
 }
 
+.simple-extra-actions {
+  flex-basis: 100%;
+  text-align: right;
+}
+
+.simple-extra-actions summary {
+  color: var(--navy);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.simple-extra-actions[open] {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.simple-extra-actions[open] summary {
+  flex-basis: 100%;
+}
+
 .advanced-actions {
   margin-top: 14px;
   border-top: 1px solid var(--line);
@@ -248,6 +271,18 @@ header span { color: var(--muted); font-size: 12px; }
 
 .advanced-actions .learning-actions {
   margin-top: 12px;
+}
+
+.dashboard-advanced-tools {
+  min-width: min(100%, 420px);
+  align-self: flex-start;
+}
+
+.dashboard-advanced-tools summary {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #FFF;
 }
 
 .launch-use-card {

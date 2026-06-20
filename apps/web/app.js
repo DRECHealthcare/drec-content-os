@@ -87,6 +87,9 @@ const uiZh = {
   "First Cycle": "首轮发布",
   "Main blockers": "主要阻碍",
   "Next Best Action": "下一步最佳动作",
+  "Download today's safe pack": "下载今日安全包",
+  "Download Safe Pack": "下载安全包",
+  "Review the read-only handoff pack. Do not publish or record a post ID until a human actually posts.": "查看只读交接包；真人真正手动发布前，不要发布，也不要记录 post ID。",
   "Follow the first open step to move one post through the full system.": "按第一个未完成步骤，把一条内容走完整个系统。",
   "Refresh": "刷新",
   "Waiting for API": "等待系统连接",
@@ -2473,16 +2476,19 @@ function renderSimpleOperator(data) {
     `;
   } else if (scheduledQueue > 0) {
     eyebrow = "下一步：人工发布交接";
-    title = "已排程，我帮你打包安全资料";
-    body = `已有 ${scheduledQueue} 条内容进入排程。先下载今日安全包给真人检查；系统不会自动发到 Facebook / Instagram。`;
+    title = "现在只需要下载安全包";
+    body = `已有 ${scheduledQueue} 条内容排好时间。点下面这个按钮，拿给真人检查；系统不会自动发到 Facebook / Instagram，也不会记录已发布。`;
     status = "已排程 · 未发布";
     actions = `
       <button class="primary" type="button" data-simple-download-today-pack>下载今日安全包</button>
-      <button type="button" data-simple-open-scheduler>打开排程</button>
-      <button type="button" data-simple-download-handoff>下载发布交接包</button>
-      <button type="button" data-simple-download-reel>下载 Reel 制作包</button>
-      <button type="button" data-simple-download-post-publish>下载发布后下一步</button>
-      <button type="button" data-simple-download-post-metrics>下载数据记录表</button>
+      <button type="button" data-simple-open-scheduler>查看排程</button>
+      <details class="simple-extra-actions">
+        <summary>其他下载</summary>
+        <button type="button" data-simple-download-handoff>发布交接包</button>
+        <button type="button" data-simple-download-reel>Reel 制作包</button>
+        <button type="button" data-simple-download-post-publish>发布后下一步</button>
+        <button type="button" data-simple-download-post-metrics>数据记录表</button>
+      </details>
     `;
     safetyNote = "安全锁：我不会点测试 Facebook、测试 Instagram 或记录已发布。";
   }
