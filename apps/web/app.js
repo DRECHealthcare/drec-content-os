@@ -2773,6 +2773,8 @@ function renderDashboardMonthlyActionQueue(data) {
         <button type="button" data-download-dashboard-monthly-png-assets>下载全部 PNG</button>
         <button type="button" data-download-dashboard-monthly-doctor-worksheet>下载医生审核表</button>
         <button type="button" data-fill-dashboard-doctor-reply-template>填写医生回复模板</button>
+        <button type="button" data-preview-dashboard-doctor-reply-safe>预览医生回复安全导入</button>
+        <button type="button" data-import-dashboard-doctor-reply-safe>导入回复并安全推进</button>
         <button type="button" data-download-dashboard-monthly-production-worksheet>下载制作设计表</button>
         <button type="button" data-download-dashboard-monthly-production-qa>下载制作 QA 包</button>
         <button type="button" data-fill-dashboard-production-reply-template>填写制作回复模板</button>
@@ -7264,6 +7266,8 @@ document.getElementById("dashboard-monthly-action-queue")?.addEventListener("cli
   const downloadPngAssets = event.target.closest("[data-download-dashboard-monthly-png-assets]");
   const downloadDoctorWorksheet = event.target.closest("[data-download-dashboard-monthly-doctor-worksheet]");
   const fillDoctorReplyTemplate = event.target.closest("[data-fill-dashboard-doctor-reply-template]");
+  const previewDoctorReplySafe = event.target.closest("[data-preview-dashboard-doctor-reply-safe]");
+  const importDoctorReplySafe = event.target.closest("[data-import-dashboard-doctor-reply-safe]");
   const downloadProductionWorksheet = event.target.closest("[data-download-dashboard-monthly-production-worksheet]");
   const downloadProductionQa = event.target.closest("[data-download-dashboard-monthly-production-qa]");
   const fillProductionReplyTemplate = event.target.closest("[data-fill-dashboard-production-reply-template]");
@@ -7285,7 +7289,7 @@ document.getElementById("dashboard-monthly-action-queue")?.addEventListener("cli
   const downloadNextPlanCsv = event.target.closest("[data-download-dashboard-monthly-next-plan-csv]");
   const downloadQueue = event.target.closest("[data-download-dashboard-monthly-action-queue]");
   const downloadCsv = event.target.closest("[data-download-dashboard-monthly-action-csv]");
-  if (!openAssets && !downloadDoctorReview && !downloadPngAssets && !downloadDoctorWorksheet && !fillDoctorReplyTemplate && !downloadProductionWorksheet && !downloadProductionQa && !fillProductionReplyTemplate && !downloadQueueReadiness && !downloadQueueExecution && !previewQueueReady && !runQueueReady && !previewSafeAdvance && !runSafeAdvance && !downloadScheduleWorksheet && !downloadSchedulePack && !downloadScheduleAudit && !downloadPublishingHandoff && !downloadMetricsTemplate && !downloadMetricsPack && !downloadLearningCloseout && !downloadLearningCsv && !downloadNextPlanHandback && !downloadNextPlanCsv && !downloadQueue && !downloadCsv) return;
+  if (!openAssets && !downloadDoctorReview && !downloadPngAssets && !downloadDoctorWorksheet && !fillDoctorReplyTemplate && !previewDoctorReplySafe && !importDoctorReplySafe && !downloadProductionWorksheet && !downloadProductionQa && !fillProductionReplyTemplate && !downloadQueueReadiness && !downloadQueueExecution && !previewQueueReady && !runQueueReady && !previewSafeAdvance && !runSafeAdvance && !downloadScheduleWorksheet && !downloadSchedulePack && !downloadScheduleAudit && !downloadPublishingHandoff && !downloadMetricsTemplate && !downloadMetricsPack && !downloadLearningCloseout && !downloadLearningCsv && !downloadNextPlanHandback && !downloadNextPlanCsv && !downloadQueue && !downloadCsv) return;
   if (openAssets) {
     showScreen("assets");
     const card = document.getElementById("monthly-carousel-status-board");
@@ -7313,6 +7317,14 @@ document.getElementById("dashboard-monthly-action-queue")?.addEventListener("cli
     } catch (error) {
       if (message) message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : "Could not load doctor reply template.";
     }
+    return;
+  }
+  if (previewDoctorReplySafe || importDoctorReplySafe) {
+    showScreen("assets");
+    const textInput = document.getElementById("doctor-reply-text");
+    textInput?.scrollIntoView({ behavior: "smooth", block: "center" });
+    await importDoctorRepliesAndSafeAdvance({ dryRun: Boolean(previewDoctorReplySafe) });
+    await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit()]);
     return;
   }
   if (fillProductionReplyTemplate) {

@@ -2763,6 +2763,21 @@ const requiredSnippets = [
     text: "fill-dashboard-doctor-reply-template",
   },
   {
+    name: "web dashboard doctor reply safe preview action",
+    file: "web",
+    text: "preview-dashboard-doctor-reply-safe",
+  },
+  {
+    name: "web dashboard doctor reply safe import action",
+    file: "web",
+    text: "import-dashboard-doctor-reply-safe",
+  },
+  {
+    name: "web dashboard doctor reply safe intake helper",
+    file: "web",
+    text: "importDoctorRepliesAndSafeAdvance",
+  },
+  {
     name: "web dashboard doctor reply inbox endpoint",
     file: "web",
     text: "/operations/doctor-reply-inbox-pack",
