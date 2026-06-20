@@ -12767,6 +12767,285 @@ async def first_cycle_sprint_pack_payload():
     }
 
 
+async def first_cycle_evidence_workbench_payload():
+    completion = await project_completion_audit_payload()
+    sprint = await first_cycle_sprint_pack_payload()
+    handoff = await first_cycle_handoff_payload()
+    approval = await approval_cockpit_payload()
+    production = await post_approval_production_payload()
+    pre_schedule = await pre_schedule_gate_payload()
+    items = sprint.get("sprint_items") or []
+    selected = items[0] if items else {}
+    recommended = handoff.get("recommended_step") or {}
+    next_action = {
+        "label": "送第一条内容给医生审核",
+        "screen": "assets",
+        "target": "Doctor Reply Text",
+        "action": "复制医生审核文案，发给医生；收到回复后贴回 Doctor Reply Text，先 Preview 再 Import。",
+    }
+    if approval.get("ready_count", 0):
+        next_action = {
+            "label": "导入医生/人工审核回复",
+            "screen": "assets",
+            "target": "Doctor Reply Text",
+            "action": "确保回复里有 Decision: approve 与 Safety: clear；先 Preview Doctor Reply，再 Import Doctor Reply。",
+        }
+    if production.get("needs_media_count", 0):
+        next_action = {
+            "label": "补制作/媒体证据",
+            "screen": "assets",
+            "target": "Production Reply Text 或 Media CSV",
+            "action": "填入最终媒体 URL、rights note、Visual QA；先 Preview Production Reply，再 Import。",
+        }
+    if pre_schedule.get("ready_to_schedule_count", 0):
+        next_action = {
+            "label": "进入排程前检查",
+            "screen": "review",
+            "target": "Pre-Schedule Gate",
+            "action": "运行队列审核与 Pre-Schedule Gate，通过后再安排发布时间。",
+        }
+    proof_fields = [
+        {
+            "key": "doctor_decision",
+            "label": "医生/人工决定",
+            "required": True,
+            "accepted_values": "Decision: approve；Safety: clear",
+            "capture_target": "Doctor Reply Text / import-doctor-replies",
+        },
+        {
+            "key": "reviewer_name",
+            "label": "审核者姓名",
+            "required": True,
+            "accepted_values": "医生或负责人姓名",
+            "capture_target": "Reviewer Name",
+        },
+        {
+            "key": "media_url",
+            "label": "最终媒体 URL",
+            "required": True,
+            "accepted_values": "公开或可发布的图片/视频 URL",
+            "capture_target": "Production Reply Text / Media CSV",
+        },
+        {
+            "key": "visual_qa",
+            "label": "视觉 QA",
+            "required": True,
+            "accepted_values": "passed",
+            "capture_target": "Production Reply Text / Production worksheet",
+        },
+        {
+            "key": "queue_review",
+            "label": "队列审核",
+            "required": True,
+            "accepted_values": "approved",
+            "capture_target": "Review Queue Decisions CSV",
+        },
+        {
+            "key": "planned_time",
+            "label": "计划发布时间",
+            "required": True,
+            "accepted_values": "YYYY-MM-DD HH:MM with platform",
+            "capture_target": "Schedule worksheet",
+        },
+        {
+            "key": "external_post_id",
+            "label": "发布后 Post ID",
+            "required": True,
+            "accepted_values": "Meta post id or manual label",
+            "capture_target": "Scheduler Record Published",
+        },
+        {
+            "key": "metrics",
+            "label": "7 天数据",
+            "required": True,
+            "accepted_values": "reach, saves, shares, comments, leads/spend if any",
+            "capture_target": "Metrics CSV / Performance",
+        },
+    ]
+    doctor_copy = "\n".join(
+        [
+            f"Review: {selected.get('topic') or 'Untitled asset'}",
+            f"Asset ID: {selected.get('asset_id') or ''}",
+            f"Channel / format: {selected.get('channel') or ''} / {selected.get('format') or ''}",
+            "",
+            "请审核以下中文医学教育内容：",
+            "",
+            selected.get("copy_to_review") or "No copy available.",
+            "",
+            "请按这个格式回复：",
+            selected.get("doctor_reply_template") or "",
+        ]
+    ) if selected else ""
+    production_copy = "\n".join(
+        [
+            f"Production: {selected.get('topic') or 'Untitled asset'}",
+            f"Asset ID: {selected.get('asset_id') or ''}",
+            "",
+            f"Task: {selected.get('production_task') or 'Prepare approved media/design after doctor approval.'}",
+            f"Visual direction: {selected.get('visual_direction') or 'Use safe DREC educational visual treatment.'}",
+            f"Rights check: {selected.get('rights_check') or 'Use only approved/licensed/owned media.'}",
+            "",
+            "Reply format:",
+            selected.get("production_reply_template") or "",
+        ]
+    ) if selected else ""
+    return {
+        "phase": "first_cycle_evidence_workbench",
+        "mode": "read_only_evidence_capture",
+        "completion_percent": (completion.get("completion") or {}).get("percent"),
+        "first_cycle_percent": (completion.get("completion") or {}).get("first_cycle_percent"),
+        "next_action": next_action,
+        "recommended_step": recommended,
+        "selected_asset": {
+            "asset_id": selected.get("asset_id") or "",
+            "topic": selected.get("topic") or "",
+            "channel": selected.get("channel") or "",
+            "format": selected.get("format") or "",
+        },
+        "doctor_copy": doctor_copy,
+        "doctor_reply_template": selected.get("doctor_reply_template") or "",
+        "production_copy": production_copy,
+        "production_reply_template": selected.get("production_reply_template") or "",
+        "proof_fields": proof_fields,
+        "summary": {
+            "ready_for_doctor_review": sprint.get("ready_for_doctor_review", 0),
+            "waiting_approval": sprint.get("waiting_approval", 0),
+            "needs_media": sprint.get("needs_media", 0),
+            "ready_to_schedule": sprint.get("ready_to_schedule", 0),
+            "can_approve_after_human_review": (handoff.get("summary") or {}).get("can_approve_after_human_review", 0),
+            "ready_to_queue": (handoff.get("summary") or {}).get("ready_to_queue", 0),
+            "queue_total": (handoff.get("summary") or {}).get("queue_total", 0),
+        },
+        "links": {
+            "first_cycle_sprint_pack": "/operations/first-cycle-sprint-pack.zh.md",
+            "first_cycle_handoff": "/operations/first-cycle-handoff.zh.md",
+            "doctor_review_bridge": "/operations/doctor-review-bridge.zh.md",
+            "doctor_reply_inbox": "/operations/doctor-reply-inbox-pack.zh.md",
+            "production_reply_inbox": "/operations/production-reply-inbox-pack.zh.md",
+            "review_to_schedule": "/operations/review-to-schedule-pack.zh.md",
+            "project_completion_audit": "/operations/project-completion-audit.zh.md",
+        },
+        "safety": [
+            "This workbench is read-only.",
+            "It does not approve, attach media, queue, schedule, publish, update Notion, or call Meta.",
+            "Only explicit Decision: approve and Safety: clear may move an item toward approval.",
+            "Production evidence does not replace medical review.",
+            "Meta live publishing remains off until separate readiness and live-switch gates are green.",
+        ],
+    }
+
+
+@app.get("/operations/first-cycle-evidence-workbench")
+async def operations_first_cycle_evidence_workbench(_: None = Depends(require_access_token)):
+    return await first_cycle_evidence_workbench_payload()
+
+
+@app.get("/operations/first-cycle-evidence-workbench.csv")
+async def operations_first_cycle_evidence_workbench_csv(_: None = Depends(require_access_token)):
+    payload = await first_cycle_evidence_workbench_payload()
+    output = StringIO()
+    fieldnames = ["key", "label", "required", "accepted_values", "capture_target", "asset_id", "topic"]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    selected = payload.get("selected_asset") or {}
+    for item in payload.get("proof_fields") or []:
+        writer.writerow({
+            "key": item.get("key") or "",
+            "label": item.get("label") or "",
+            "required": item.get("required"),
+            "accepted_values": item.get("accepted_values") or "",
+            "capture_target": item.get("capture_target") or "",
+            "asset_id": selected.get("asset_id") or "",
+            "topic": selected.get("topic") or "",
+        })
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-first-cycle-evidence-workbench.csv"'},
+    )
+
+
+@app.get("/operations/first-cycle-evidence-workbench.zh.md")
+async def operations_first_cycle_evidence_workbench_zh(_: None = Depends(require_access_token)):
+    payload = await first_cycle_evidence_workbench_payload()
+    selected = payload.get("selected_asset") or {}
+    next_action = payload.get("next_action") or {}
+    summary = payload.get("summary") or {}
+    lines = [
+        "# DREC 首轮证据采集工作台",
+        "",
+        "用途：把第一轮从医生审核、制作证据、入队、排程、发布 ID、数据回填需要收集的证明放在同一张表里。本文件只读，不会批准、导入、入队、排程、发布、写 Notion 或调用 Meta。",
+        "",
+        "## 当前下一步",
+        "",
+        f"- 动作：{next_action.get('label')}",
+        f"- 页面：{next_action.get('screen')}",
+        f"- 填写位置：{next_action.get('target')}",
+        f"- 做法：{next_action.get('action')}",
+        "",
+        "## 当前选中素材",
+        "",
+        f"- Asset ID：`{selected.get('asset_id') or 'n/a'}`",
+        f"- 主题：{selected.get('topic') or '暂无'}",
+        f"- 频道 / 格式：{selected.get('channel') or 'n/a'} / {selected.get('format') or 'n/a'}",
+        "",
+        "## 证据进度",
+        "",
+        f"- 项目完成度：{payload.get('completion_percent')}%",
+        f"- 首轮闭环：{payload.get('first_cycle_percent')}%",
+        f"- 可送医生审核：{summary.get('ready_for_doctor_review')}",
+        f"- 等待批准：{summary.get('waiting_approval')}",
+        f"- 需要媒体/设计：{summary.get('needs_media')}",
+        f"- 可入队：{summary.get('ready_to_queue')}",
+        f"- 队列总数：{summary.get('queue_total')}",
+        "",
+        "## 需要采集的证明",
+        "",
+    ]
+    for item in payload.get("proof_fields") or []:
+        lines.extend([
+            f"### {item.get('label')}",
+            "",
+            f"- 必须：{'是' if item.get('required') else '否'}",
+            f"- 接受值：{item.get('accepted_values')}",
+            f"- 填写位置：{item.get('capture_target')}",
+            "",
+        ])
+    if payload.get("doctor_copy"):
+        lines.extend([
+            "## 可复制给医生的审核内容",
+            "",
+            "```",
+            payload.get("doctor_copy") or "",
+            "```",
+            "",
+        ])
+    if payload.get("production_copy"):
+        lines.extend([
+            "## 医生批准后的制作任务",
+            "",
+            "```",
+            payload.get("production_copy") or "",
+            "```",
+            "",
+        ])
+    lines.extend([
+        "## 关键链接",
+        "",
+        *markdown_list([f"{key}: `{value}`" for key, value in (payload.get("links") or {}).items()]),
+        "",
+        "## 安全线",
+        "",
+        *markdown_list(payload.get("safety")),
+        "",
+    ])
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-first-cycle-evidence-workbench-zh.md"'},
+    )
+
+
 @app.get("/operations/first-cycle-sprint-pack")
 async def operations_first_cycle_sprint_pack(_: None = Depends(require_access_token)):
     return await first_cycle_sprint_pack_payload()
