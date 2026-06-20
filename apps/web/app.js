@@ -626,6 +626,8 @@ Object.assign(uiZh, {
   "Could not download monthly carousel production worksheet.": "无法下载月度 Carousel 制作设计表。",
   "Monthly carousel production QA pack downloaded.": "月度 Carousel 制作 QA 包已下载。",
   "Could not download monthly carousel production QA pack.": "无法下载月度 Carousel 制作 QA 包。",
+  "Monthly carousel evidence bridge downloaded.": "月度 Carousel 证据桥接表已下载。",
+  "Could not download monthly carousel evidence bridge.": "无法下载月度 Carousel 证据桥接表。",
   "Monthly carousel queue readiness downloaded.": "月度 Carousel 入队检查表已下载。",
   "Could not download monthly carousel queue readiness.": "无法下载月度 Carousel 入队检查表。",
   "Monthly carousel queue execution pack downloaded.": "月度 Carousel 入队执行包已下载。",
@@ -663,6 +665,13 @@ Object.assign(uiZh, {
   "Monthly carousel production worksheet imported.": "月度 Carousel 制作设计表已导入。",
   "Could not preview monthly carousel production worksheet.": "无法预览月度 Carousel 制作设计表。",
   "Could not import monthly carousel production worksheet.": "无法导入月度 Carousel 制作设计表。",
+  "Choose the monthly carousel evidence bridge CSV first.": "请先选择月度 Carousel 证据桥接表 CSV。",
+  "Previewing monthly carousel evidence bridge...": "正在预览月度 Carousel 证据桥接表...",
+  "Importing monthly carousel evidence bridge...": "正在导入月度 Carousel 证据桥接表...",
+  "Monthly carousel evidence bridge previewed.": "月度 Carousel 证据桥接表已预览。",
+  "Monthly carousel evidence bridge imported.": "月度 Carousel 证据桥接表已导入。",
+  "Could not preview monthly carousel evidence bridge.": "无法预览月度 Carousel 证据桥接表。",
+  "Could not import monthly carousel evidence bridge.": "无法导入月度 Carousel 证据桥接表。",
   "Could not download first publish readiness.": "无法下载首次发布准备包。",
   "Could not run risk audit.": "无法运行风险检查。",
   "Could not download snapshot.": "无法下载快照。",
@@ -5750,6 +5759,16 @@ document.getElementById("download-monthly-carousel-production-qa-pack")?.addEven
   }
 });
 
+document.getElementById("download-monthly-carousel-evidence-bridge")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/monthly-carousel-evidence-bridge.csv", "drec-monthly-carousel-evidence-bridge.csv", "text/csv");
+    message.textContent = translateText("Monthly carousel evidence bridge downloaded.");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download monthly carousel evidence bridge.");
+  }
+});
+
 document.getElementById("download-monthly-carousel-queue-readiness")?.addEventListener("click", async () => {
   const message = document.getElementById("media-message");
   try {
@@ -6115,6 +6134,38 @@ async function uploadProductionDesignWorksheet({
   }
 }
 
+async function uploadMonthlyCarouselEvidenceBridge({ dryRun }) {
+  const message = document.getElementById("media-message");
+  const fileInput = document.getElementById("monthly-carousel-evidence-bridge-file");
+  const file = fileInput?.files?.[0];
+  if (!file) {
+    message.textContent = translateText("Choose the monthly carousel evidence bridge CSV first.");
+    return;
+  }
+  const body = new FormData();
+  body.append("file", file);
+  body.append("dry_run", dryRun ? "true" : "false");
+  message.textContent = dryRun
+    ? translateText("Previewing monthly carousel evidence bridge...")
+    : translateText("Importing monthly carousel evidence bridge...");
+  try {
+    const data = await fetchForm("/operations/import-monthly-carousel-evidence-bridge", body);
+    if (!dryRun) fileInput.value = "";
+    message.textContent = data.message || (dryRun
+      ? translateText("Monthly carousel evidence bridge previewed.")
+      : translateText("Monthly carousel evidence bridge imported."));
+    renderAssetReviewDecisionPreview(data);
+    renderAssetMediaAttachmentPreview(data);
+    if (!dryRun) await Promise.all([loadAssets(), loadFirstCycleEvidenceWorkbench(), loadDoctorSendQueue(), loadDoctorReplyInboxPack(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadMonthlyCarouselStatusBoard(), loadPreScheduleGate(), loadLoopStatus(), loadLearningSummary()]);
+  } catch (error) {
+    message.textContent = error.message === "Access token required"
+      ? translateText("Set the access token first.")
+      : dryRun
+        ? translateText("Could not preview monthly carousel evidence bridge.")
+        : translateText("Could not import monthly carousel evidence bridge.");
+  }
+}
+
 async function runMonthlyCarouselQueueReady({ dryRun }) {
   const message = document.getElementById("media-message");
   message.textContent = dryRun ? "Previewing monthly queue..." : "Queueing monthly ready items...";
@@ -6216,6 +6267,14 @@ document.getElementById("import-monthly-carousel-production-worksheet")?.addEven
     source: "monthly_carousel",
     fileInputId: "monthly-carousel-production-worksheet-file",
   });
+});
+
+document.getElementById("preview-monthly-carousel-evidence-bridge")?.addEventListener("click", async () => {
+  await uploadMonthlyCarouselEvidenceBridge({ dryRun: true });
+});
+
+document.getElementById("import-monthly-carousel-evidence-bridge")?.addEventListener("click", async () => {
+  await uploadMonthlyCarouselEvidenceBridge({ dryRun: false });
 });
 
 document.getElementById("preview-production-design-worksheet")?.addEventListener("click", async () => {

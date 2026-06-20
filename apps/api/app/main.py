@@ -9257,6 +9257,66 @@ async def operations_monthly_carousel_production_design_worksheet_csv(_: None = 
     )
 
 
+@app.get("/operations/monthly-carousel-evidence-bridge.csv")
+async def operations_monthly_carousel_evidence_bridge_csv(_: None = Depends(require_access_token)):
+    status_payload = await monthly_carousel_status_payload()
+    output = StringIO()
+    fieldnames = [
+        "topic_id",
+        "asset_id",
+        "topic",
+        "planned_posting_date",
+        "stage",
+        "current_safety",
+        "current_review",
+        "detector_status",
+        "notion_overall_status",
+        "notion_image_status",
+        "notion_caption_status",
+        "doctor_decision",
+        "doctor_safety",
+        "reviewer_name",
+        "review_notes",
+        "new_media_urls",
+        "visual_qa_status",
+        "rights_note",
+        "producer_name",
+        "production_notes",
+        "safe_use_note",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for item in status_payload.get("items") or []:
+        writer.writerow({
+            "topic_id": item.get("topic_id") or "",
+            "asset_id": item.get("asset_id") or "",
+            "topic": item.get("topic") or "",
+            "planned_posting_date": item.get("planned_posting_date") or "",
+            "stage": item.get("stage") or "",
+            "current_safety": item.get("compliance_status") or "",
+            "current_review": item.get("review_status") or "",
+            "detector_status": item.get("detector_status") or "",
+            "notion_overall_status": item.get("notion_overall_status") or "",
+            "notion_image_status": item.get("notion_image_status") or "",
+            "notion_caption_status": item.get("notion_caption_status") or "",
+            "doctor_decision": "",
+            "doctor_safety": "",
+            "reviewer_name": "",
+            "review_notes": "",
+            "new_media_urls": "",
+            "visual_qa_status": "pending",
+            "rights_note": "",
+            "producer_name": "",
+            "production_notes": "",
+            "safe_use_note": "Bridge import can apply doctor review decisions and media evidence, but it never queues, schedules, publishes, updates Notion, or calls Meta. Approval requires doctor_decision=approve and doctor_safety=clear.",
+        })
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-evidence-bridge.csv"'},
+    )
+
+
 @app.get("/operations/monthly-carousel-production-qa-pack.zh.md")
 async def operations_monthly_carousel_production_qa_pack_zh(_: None = Depends(require_access_token)):
     generated_at = datetime.now(timezone.utc).isoformat()
@@ -14109,6 +14169,140 @@ async def import_monthly_carousel_production_design_worksheet(
         "Monthly import still does not approve, queue, schedule, publish, or call Meta.",
     ]
     return result
+
+
+@app.post("/operations/import-monthly-carousel-evidence-bridge")
+async def import_monthly_carousel_evidence_bridge(
+    file: UploadFile = File(...),
+    dry_run: bool = Form(True),
+    session: dict = Depends(require_review_access),
+):
+    csv_text = await decode_asset_review_decisions_csv(file)
+    reader = csv.DictReader(StringIO(csv_text))
+    required = {"asset_id"}
+    headers = set(reader.fieldnames or [])
+    if not required.issubset(headers):
+        missing = sorted(required - headers)
+        raise HTTPException(status_code=400, detail={"message": "Monthly evidence bridge CSV is missing required columns.", "missing": missing})
+
+    monthly_assets = await monthly_carousel_asset_list()
+    allowed_asset_ids = {str(asset.get("id")) for asset in monthly_assets if asset.get("id")}
+    planned = []
+    imported = []
+    skipped = []
+    for index, row in enumerate(reader, start=2):
+        asset_id = (row.get("asset_id") or "").strip()
+        if not asset_id:
+            skipped.append({"row": index, "reason": "Missing asset_id."})
+            continue
+        if asset_id not in allowed_asset_ids:
+            skipped.append({"row": index, "asset_id": asset_id, "reason": "Asset is not part of the monthly carousel source of truth."})
+            continue
+        existing = await asset_by_id(asset_id)
+        if existing is None:
+            skipped.append({"row": index, "asset_id": asset_id, "reason": "Asset not found."})
+            continue
+
+        doctor_safety = normalize_review_safety_decision(row.get("doctor_safety") or row.get("reviewer_safety_decision"))
+        doctor_decision = normalize_asset_review_decision(row.get("doctor_decision") or row.get("reviewer_review_decision"))
+        if doctor_safety == "invalid" or doctor_decision == "invalid":
+            skipped.append({"row": index, "asset_id": asset_id, "reason": "Doctor decisions must use safety clear/pending/flagged and review approved/review/rejected."})
+            continue
+        target_safety = doctor_safety or existing.get("compliance_status")
+        if doctor_decision == "approved" and target_safety != "clear":
+            skipped.append({"row": index, "asset_id": asset_id, "reason": "Approval requires doctor_safety=clear or an already clear asset."})
+            continue
+
+        media_urls = parse_media_url_cell(row.get("new_media_urls"))
+        invalid_urls = [url for url in media_urls if not str(url).startswith("http")]
+        if invalid_urls:
+            skipped.append({"row": index, "asset_id": asset_id, "reason": "Media URLs must start with http or https.", "invalid_urls": invalid_urls})
+            continue
+        visual_qa_status = normalize_visual_qa_status(row.get("visual_qa_status")) if media_urls or row.get("visual_qa_status") else None
+        if visual_qa_status == "invalid":
+            skipped.append({"row": index, "asset_id": asset_id, "reason": "visual_qa_status must be pending, passed, or needs_work."})
+            continue
+        reviewer_name = (row.get("reviewer_name") or "").strip()
+        review_notes = (row.get("review_notes") or "").strip()
+        producer_name = (row.get("producer_name") or "").strip()
+        rights_note = (row.get("rights_note") or "").strip()
+        production_notes = (row.get("production_notes") or "").strip()
+        if doctor_safety is None and doctor_decision is None and not media_urls and not review_notes and not production_notes:
+            skipped.append({"row": index, "asset_id": asset_id, "reason": "No doctor decision, media URL, or notes provided."})
+            continue
+
+        plan = {
+            "row": index,
+            "asset_id": asset_id,
+            "topic": row.get("topic") or (existing.get("metadata") or {}).get("topic") or "",
+            "target_safety": doctor_safety or "",
+            "target_review": doctor_decision or "",
+            "new_media_count": len(media_urls),
+            "visual_qa_status": visual_qa_status or "",
+            "reviewer_name": reviewer_name,
+            "producer_name": producer_name,
+        }
+        if dry_run:
+            planned.append(plan)
+            continue
+
+        applied = []
+        review_reason_parts = ["Monthly evidence bridge doctor decision import."]
+        if reviewer_name:
+            review_reason_parts.append(f"Reviewer: {reviewer_name}.")
+        if review_notes:
+            review_reason_parts.append(f"Notes: {review_notes}")
+        review_reason = " ".join(review_reason_parts)
+        if doctor_safety is not None and doctor_safety != existing.get("compliance_status"):
+            await update_asset_compliance(asset_id, AssetComplianceIn(compliance_status=doctor_safety, reason=review_reason), session)
+            applied.append(f"safety:{doctor_safety}")
+        if doctor_decision is not None and doctor_decision != existing.get("review_status"):
+            await update_asset_status(asset_id, AssetStatusIn(review_status=doctor_decision, reason=review_reason), session)
+            applied.append(f"review:{doctor_decision}")
+        if media_urls:
+            media_reason_parts = ["Monthly evidence bridge media/design import."]
+            if producer_name:
+                media_reason_parts.append(f"Producer: {producer_name}.")
+            if rights_note:
+                media_reason_parts.append(f"Rights: {rights_note}.")
+            if production_notes:
+                media_reason_parts.append(f"Notes: {production_notes}")
+            result = await update_asset_media(
+                asset_id,
+                AssetMediaIn(
+                    media_urls=media_urls,
+                    reason=" ".join(media_reason_parts),
+                    visual_qa_status=visual_qa_status or "pending",
+                    rights_note=rights_note or None,
+                    sync_draft_queue=True,
+                ),
+                session,
+            )
+            applied.append(f"media:{len(media_urls)}")
+            if result.get("synced_queue_count"):
+                applied.append(f"synced_queue:{result.get('synced_queue_count')}")
+        imported.append({**plan, "applied": applied or ["note_only"]})
+    return {
+        "dry_run": dry_run,
+        "source": "monthly_carousel_evidence_bridge",
+        "planned_count": len(planned),
+        "imported_count": len(imported),
+        "skipped_count": len(skipped),
+        "planned": planned,
+        "imported": imported,
+        "skipped": skipped,
+        "message": (
+            f"Previewed {len(planned)} monthly evidence bridge row(s), {len(skipped)} skipped."
+            if dry_run
+            else f"Imported {len(imported)} monthly evidence bridge row(s), {len(skipped)} skipped."
+        ),
+        "safety": [
+            "Bridge import can apply doctor/human review decisions and media/design evidence.",
+            "Approval still requires doctor_safety=clear before doctor_decision=approve.",
+            "Bridge import does not queue, schedule, publish, update Notion, or call Meta.",
+            "Monthly bridge accepts only assets from the Notion monthly carousel source of truth.",
+        ],
+    }
 
 
 def normalize_review_safety_decision(value: str | None):
