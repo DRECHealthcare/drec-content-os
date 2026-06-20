@@ -73,6 +73,7 @@ DEFAULT_PLAN_TOPICS = [
 ]
 
 SCHEDULER_HEARTBEAT_RECENT_MINUTES = 6 * 60
+SERVICE_ROLE_SMOKE_RECENT_MINUTES = 7 * 24 * 60
 
 LEARNING_TOPIC_LIBRARY = {
     "reel": "用60秒解释一个常被误会的血糖指标",
@@ -585,10 +586,63 @@ async def latest_scheduler_heartbeat():
     }
 
 
+async def latest_service_role_smoke():
+    row = await fetch_row(
+        """
+        select id, module, ref_type, ref_id, action, reason, tags, created_at
+        from feedback
+        where module = 'security'
+          and ref_type = 'service_role'
+          and action = 'heartbeat'
+        order by created_at desc
+        limit 1
+        """
+    )
+    if row is None and supabase_rest.configured():
+        try:
+            rows = await supabase_rest.select(
+                "feedback",
+                {
+                    "select": "id,module,ref_type,ref_id,action,reason,tags,created_at",
+                    "module": "eq.security",
+                    "ref_type": "eq.service_role",
+                    "action": "eq.heartbeat",
+                    "order": "created_at.desc",
+                    "limit": "1",
+                },
+            )
+        except Exception:
+            rows = []
+        row = rows[0] if rows else None
+    if not row:
+        return {
+            "status": "missing",
+            "last_seen_at": None,
+            "age_minutes": None,
+            "detail": "No service-role smoke heartbeat has been recorded yet.",
+        }
+    created_at = parse_datetime(row.get("created_at"))
+    age_minutes = None
+    if created_at:
+        age_minutes = round((datetime.now(timezone.utc) - created_at).total_seconds() / 60, 1)
+    status = "recent" if age_minutes is not None and age_minutes <= SERVICE_ROLE_SMOKE_RECENT_MINUTES else "stale"
+    return {
+        "status": status,
+        "last_seen_at": row.get("created_at"),
+        "age_minutes": age_minutes,
+        "detail": (
+            f"Service-role smoke heartbeat recorded {age_minutes} minute(s) ago."
+            if age_minutes is not None
+            else "Service-role smoke heartbeat exists but its timestamp could not be parsed."
+        ),
+        "item": row,
+    }
+
+
 @app.get("/meta/setup-checklist")
 async def meta_setup_checklist(_: None = Depends(require_access_token)):
     readiness = await meta_readiness(None)
-    security = security_status_payload()
+    security = await strict_security_status_payload()
     scheduler_heartbeat = await latest_scheduler_heartbeat()
     oauth_guide = meta_oauth_guide_payload()
     missing_env = [check for check in readiness.get("env_checks", []) if not check.get("configured")]
@@ -1146,7 +1200,7 @@ async def meta_preflight_audit_payload():
     launch = await launch_readiness_payload()
     risk = await content_risk_audit_payload()
     schedule = await schedule_audit_payload()
-    security = security_status_payload()
+    security = await strict_security_status_payload()
     access_policy = access_policy_payload()
     token_status = (readiness.get("token_check") or {}).get("status")
     meta_status = "ready" if token_status == "ready" and readiness.get("overall_status") == "ready_for_worker_testing" else "review" if readiness.get("overall_status") == "ready_for_worker_testing" else "blocked"
@@ -1308,14 +1362,51 @@ def security_status_payload():
     }
 
 
+async def strict_security_status_payload():
+    security = security_status_payload()
+    smoke = await latest_service_role_smoke()
+    has_service_role = security.get("service_role_key") == "configured"
+    has_supabase_rest = security.get("supabase_rest") == "configured"
+    smoke_recent = smoke.get("status") == "recent"
+    strict_ready = bool(has_service_role and has_supabase_rest and smoke_recent)
+    if strict_ready:
+        overall_status = "ready_for_rls_hardening"
+        next_step = "Run live smoke, then apply the RLS hardening plan."
+    elif not has_service_role:
+        overall_status = "needs_service_role_key"
+        next_step = "Add SUPABASE_SERVICE_ROLE_KEY to Fly, then run the service-role smoke test."
+    elif not has_supabase_rest:
+        overall_status = "supabase_rest_missing"
+        next_step = "Confirm SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set on Fly."
+    else:
+        overall_status = "needs_service_role_smoke"
+        next_step = "Run /security/service-role-smoke-test with an admin token before strict RLS hardening."
+    checks = list(security.get("checks") or [])
+    checks.append(
+        {
+            "label": "Recent service-role smoke test passed",
+            "status": "ready" if smoke_recent else smoke.get("status", "missing"),
+        }
+    )
+    return {
+        **security,
+        "overall_status": overall_status,
+        "rls_hardening_ready": strict_ready,
+        "service_role_smoke": smoke,
+        "service_role_smoke_recent_minutes": SERVICE_ROLE_SMOKE_RECENT_MINUTES,
+        "checks": checks,
+        "next_step": next_step,
+    }
+
+
 @app.get("/security/status")
 async def security_status(_: None = Depends(require_access_token)):
-    return security_status_payload()
+    return await strict_security_status_payload()
 
 
 @app.post("/security/service-role-smoke-test")
 async def security_service_role_smoke_test(session: dict = Depends(require_admin_access)):
-    security = security_status_payload()
+    security = await strict_security_status_payload()
     if not settings.supabase_service_role_key:
         return {
             "mode": "service_role_smoke_test",
@@ -1380,7 +1471,7 @@ async def security_service_role_smoke_test(session: dict = Depends(require_admin
         "mode": "service_role_smoke_test",
         "status": "passed",
         "passed": True,
-        "security": security_status_payload(),
+        "security": await strict_security_status_payload(),
         "feedback_id": (inserted or {}).get("id"),
         "ref_id": marker,
         "message": "Server-side Supabase service-role REST write succeeded.",
@@ -1491,7 +1582,7 @@ async def security_access_control_pack(session: dict = Depends(require_admin_acc
 
 @app.get("/security/service-role-install-pack.md")
 async def security_service_role_install_pack(_: None = Depends(require_admin_access)):
-    security = security_status_payload()
+    security = await strict_security_status_payload()
     generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
     commands = [
         "# 1. In Supabase Dashboard, copy the service_role key for this project.",
@@ -1518,6 +1609,7 @@ async def security_service_role_install_pack(_: None = Depends(require_admin_acc
         f"- Status: {security.get('overall_status')}",
         f"- Supabase REST: {security.get('supabase_rest')}",
         f"- Service-role key: {security.get('service_role_key')}",
+        f"- Service-role smoke: {(security.get('service_role_smoke') or {}).get('status')}",
         f"- Browser Supabase access: {security.get('direct_browser_supabase')}",
         f"- Next step: {security.get('next_step')}",
         "",
@@ -1537,7 +1629,7 @@ async def security_service_role_install_pack(_: None = Depends(require_admin_acc
         "## Success Evidence",
         "",
         "- `fly secrets list -a drec-content-os-api` shows `SUPABASE_SERVICE_ROLE_KEY` deployed.",
-        "- `/security/status` returns `ready_for_rls_hardening`.",
+        "- `/security/status` returns `ready_for_rls_hardening` and `service_role_smoke.status=recent`.",
         "- `/security/service-role-smoke-test` returns `passed` and records one feedback audit heartbeat.",
         "- `npm run smoke:live` passes against the Fly URL.",
         "- Only after those checks, use `Download RLS Plan` and apply `supabase/migrations/20260617040906_strict_server_only_rls.sql`.",
@@ -1557,7 +1649,7 @@ async def security_service_role_install_pack(_: None = Depends(require_admin_acc
 
 @app.get("/security/rls-hardening-plan.md")
 async def security_rls_hardening_plan(_: None = Depends(require_admin_access)):
-    security = security_status_payload()
+    security = await strict_security_status_payload()
     migration = "supabase/migrations/20260617040906_strict_server_only_rls.sql"
     lines = [
         "# DREC Content OS RLS Hardening Plan",
@@ -1569,6 +1661,7 @@ async def security_rls_hardening_plan(_: None = Depends(require_admin_access)):
         f"- Status: {security.get('overall_status')}",
         f"- Supabase REST: {security.get('supabase_rest')}",
         f"- Service-role key: {security.get('service_role_key')}",
+        f"- Service-role smoke: {(security.get('service_role_smoke') or {}).get('status')}",
         f"- Direct browser Supabase: {security.get('direct_browser_supabase')}",
         f"- Next step: {security.get('next_step')}",
         "",
@@ -1580,7 +1673,7 @@ async def security_rls_hardening_plan(_: None = Depends(require_admin_access)):
         "",
         "## Apply Gate",
         "",
-        "- `GET /security/status` must return `ready_for_rls_hardening`.",
+        "- `GET /security/status` must return `ready_for_rls_hardening` with `service_role_smoke.status=recent`.",
         "- `DREC_ACCESS_TOKEN=\"...\" npm run smoke:live` must pass immediately before applying.",
         "- Keep the Supabase SQL editor open so the migration can be reverted manually if needed.",
         "",
@@ -1609,7 +1702,7 @@ async def automation_status_payload():
     loop = await build_loop_status()
     workflow = build_workflow_guidance(loop)
     meta = await meta_readiness(None)
-    security = security_status_payload()
+    security = await strict_security_status_payload()
     scheduler_heartbeat = await latest_scheduler_heartbeat()
     total_queue = total_queue_count(loop.get("queue"))
     scheduled_queue = sum(
@@ -1835,7 +1928,7 @@ async def launch_readiness_payload():
     loop = await build_loop_status()
     workflow = build_workflow_guidance(loop)
     automation = await automation_status_payload()
-    security = security_status_payload()
+    security = await strict_security_status_payload()
     meta = await meta_readiness(None)
     risk = await content_risk_audit_payload()
     automation_gates = {gate.get("key"): gate for gate in automation.get("gates", [])}
@@ -4929,7 +5022,7 @@ async def operations_scheduler_dry_run_self_check(
 async def operations_scheduler_activation_pack(_: None = Depends(require_access_token)):
     setup = await meta_setup_checklist(None)
     automation = await automation_status_payload()
-    security = security_status_payload()
+    security = await strict_security_status_payload()
     risk = await content_risk_audit_payload()
     scheduler = setup.get("scheduler_setup", {})
     nightly_scheduler = setup.get("nightly_metrics_scheduler", {})
@@ -5561,7 +5654,7 @@ async def operations_launch_evidence(_: None = Depends(require_access_token)):
     launch = await launch_readiness_payload()
     checklist = await test_run_checklist_payload()
     automation = await automation_status_payload()
-    security = security_status_payload()
+    security = await strict_security_status_payload()
     risk = await content_risk_audit_payload()
     meta = await meta_setup_checklist(None)
     next_step = checklist.get("next_step") or {}
@@ -6125,7 +6218,7 @@ async def operations_cycle_evidence_ledger_csv(_: None = Depends(require_access_
 
 async def external_setup_board_payload():
     launch = await launch_readiness_payload()
-    security = security_status_payload()
+    security = await strict_security_status_payload()
     meta = await meta_readiness(None)
     scheduler = await scheduler_health_payload()
     workflow = await workflow_status(None)
@@ -8294,7 +8387,7 @@ def recovery_table_line(name, rows, backup_source, restore_note):
 async def operations_backup_recovery_pack(_: None = Depends(require_access_token)):
     automation = await automation_status_payload()
     launch = await launch_readiness_payload()
-    security = security_status_payload()
+    security = await strict_security_status_payload()
     meta = await meta_readiness(None)
     briefs = await snapshot_select(
         "content_briefs",
@@ -11579,7 +11672,7 @@ def zh_acceptance_status(value: str | None):
 async def monthly_carousel_acceptance_audit_payload():
     loop = await build_loop_status()
     workflow = build_workflow_guidance(loop)
-    security = security_status_payload()
+    security = await strict_security_status_payload()
     automation = await automation_status_payload()
     completion = build_completion_status(loop, workflow, security, automation)
     action_pack = await monthly_carousel_action_pack_payload()
@@ -14665,7 +14758,7 @@ async def today_runbook_payload():
     pre_schedule = await pre_schedule_gate_payload()
     schedule_audit = await schedule_audit_payload()
     automation = await automation_status_payload()
-    security = security_status_payload()
+    security = await strict_security_status_payload()
     meta = await meta_readiness(None)
 
     recommended = first_cycle.get("recommended_step") or {}
@@ -16839,7 +16932,7 @@ async def operations_operator_pack(_: None = Depends(require_access_token)):
     test_run = await test_run_checklist_payload()
     workflow = await workflow_status(None)
     automation = await automation_status_payload()
-    security = security_status_payload()
+    security = await strict_security_status_payload()
     meta = await meta_readiness(None)
     setup = await meta_setup_checklist(None)
     oauth = setup.get("oauth_guide", {})
@@ -25641,7 +25734,7 @@ def build_completion_status(loop, workflow, security, automation):
     if not queue_total:
         blockers.append("Publishing queue is empty until one approved clear asset is queued.")
     if not strict_security_ready:
-        blockers.append("Supabase service-role key is missing, so strict RLS hardening is not complete.")
+        blockers.append(security.get("next_step") or "Supabase service-role security evidence is incomplete.")
     if scheduled_queue == 0:
         blockers.append("No reviewed item has been scheduled yet.")
     return {
@@ -25661,7 +25754,7 @@ def build_completion_status(loop, workflow, security, automation):
 async def project_completion_audit_payload():
     loop = await build_loop_status()
     workflow = build_workflow_guidance(loop)
-    security = security_status_payload()
+    security = await strict_security_status_payload()
     automation = await automation_status_payload()
     completion = build_completion_status(loop, workflow, security, automation)
     launch = await launch_readiness_payload()
@@ -25770,7 +25863,7 @@ async def project_unblock_board_payload():
         {
             "gate": "supabase_service_role",
             "status": "ready" if service_role_ready else "blocked",
-            "blocker": "" if service_role_ready else "Supabase service-role key is missing, so strict RLS hardening is not complete.",
+            "blocker": "" if service_role_ready else security.get("next_step") or "Supabase service-role security evidence is incomplete.",
             "current_status": security.get("next_step") or security.get("overall_status") or "Unknown security state.",
             "required_action": "Add SUPABASE_SERVICE_ROLE_KEY to Fly, run the service-role smoke test, then apply strict RLS only after the smoke passes.",
             "required_evidence": "Fly secret SUPABASE_SERVICE_ROLE_KEY is deployed and /security/service-role-smoke-test reports passed.",
@@ -25991,7 +26084,7 @@ def build_workflow_guidance(loop):
 async def workflow_status(_: None = Depends(require_access_token)):
     loop = await build_loop_status()
     workflow = build_workflow_guidance(loop)
-    security = security_status_payload()
+    security = await strict_security_status_payload()
     automation = await automation_status_payload()
     workflow["completion"] = build_completion_status(loop, workflow, security, automation)
     return {

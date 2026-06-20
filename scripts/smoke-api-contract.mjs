@@ -447,6 +447,26 @@ const requiredSnippets = [
     text: "ready_for_rls_hardening",
   },
   {
+    name: "security service role smoke evidence",
+    file: "main",
+    text: "latest_service_role_smoke",
+  },
+  {
+    name: "security service role smoke gate",
+    file: "main",
+    text: "needs_service_role_smoke",
+  },
+  {
+    name: "security service role smoke freshness",
+    file: "main",
+    text: "SERVICE_ROLE_SMOKE_RECENT_MINUTES",
+  },
+  {
+    name: "security rls requires recent smoke",
+    file: "main",
+    text: "service_role_smoke.status=recent",
+  },
+  {
     name: "security access policy route",
     file: "main",
     text: "/security/access-policy",
