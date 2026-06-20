@@ -715,12 +715,12 @@ const requiredSnippets = [
   {
     name: "workflow handoff next action after scheduling",
     file: "main",
-    text: "Use publishing handoff",
+    text: "Download today's safe pack",
   },
   {
-    name: "workflow handoff manual publish safety",
+    name: "workflow handoff no-publish safety",
     file: "main",
-    text: "publish manually only after human confirmation",
+    text: "Do not publish or record a post ID until a human actually posts.",
   },
   {
     name: "notion carousel source payload",

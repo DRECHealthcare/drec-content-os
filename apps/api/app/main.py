@@ -26145,7 +26145,7 @@ def build_workflow_guidance(loop):
             workflow_step(
                 "done",
                 "Review and schedule",
-                f"{scheduled_queue} item(s) are scheduled and ready for manual publishing handoff.",
+                f"{scheduled_queue} item(s) are scheduled and ready for read-only handoff review.",
                 "scheduler",
                 "Open Scheduler",
             )
@@ -26153,10 +26153,10 @@ def build_workflow_guidance(loop):
         steps.append(
             workflow_step(
                 "open" if not published_queue else "done",
-                "Use publishing handoff",
-                "Download the handoff, publish manually only after human confirmation, then record the post ID.",
+                "Download today's safe pack",
+                "Review the read-only handoff pack. Do not publish or record a post ID until a human actually posts.",
                 "scheduler",
-                "Build Handoff",
+                "Download Safe Pack",
             )
         )
     else:
