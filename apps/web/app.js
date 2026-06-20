@@ -7303,7 +7303,7 @@ document.getElementById("dashboard-monthly-action-queue")?.addEventListener("cli
       const data = await fetchJson("/operations/doctor-reply-inbox-pack");
       const template = data.reply_paste_template || (data.reply_items || []).map((item) => item.reply_template || "").filter(Boolean).join("\n\n");
       if (!template) {
-        if (message) message.textContent = "No doctor reply template is ready yet. Download the doctor review pack first.";
+        if (message) message.textContent = "现在没有待医生回复的内容。当前下一步是预览可入队内容，确认后执行月度入队。";
         return;
       }
       showScreen("assets");
