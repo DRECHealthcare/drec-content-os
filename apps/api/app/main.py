@@ -9379,6 +9379,7 @@ async def monthly_carousel_action_pack_payload():
             "monthly_review_queue_decisions": "/operations/monthly-carousel-review-queue-decisions.csv",
             "monthly_review_queue_decision_import": "/operations/import-monthly-carousel-review-queue-decisions",
             "monthly_schedule_worksheet": "/operations/monthly-carousel-schedule-worksheet.csv",
+            "monthly_schedule_execution_pack": "/operations/monthly-carousel-schedule-execution-pack.zh.md",
             "monthly_schedule_import": "/operations/import-monthly-carousel-schedule-worksheet",
             "monthly_publishing_handoff": "/operations/monthly-carousel-publishing-handoff.zh.md",
             "status_board": "/operations/monthly-carousel-status-board.zh.md",
@@ -18142,6 +18143,149 @@ async def publish_queue_schedule_worksheet_csv(_: None = Depends(require_access_
 async def operations_monthly_carousel_schedule_worksheet_csv(_: None = Depends(require_access_token)):
     rows = await monthly_carousel_queue_items()
     return await schedule_worksheet_csv_response(rows, "drec-monthly-carousel-schedule-worksheet.csv")
+
+
+@app.get("/operations/monthly-carousel-schedule-execution-pack.zh.md")
+async def operations_monthly_carousel_schedule_execution_pack_zh(_: None = Depends(require_access_token)):
+    monthly_items = await monthly_carousel_queue_items()
+    asset_lookup = {str(asset.get("id")): asset for asset in await monthly_carousel_asset_list()}
+    pre_schedule = await pre_schedule_gate_payload()
+    audit = await schedule_audit_payload()
+    ready = []
+    blocked = []
+    scheduled = []
+    for item in monthly_items:
+        asset = asset_lookup.get(str(item.get("asset_id") or "")) or {}
+        state, blockers = review_queue_state(item)
+        media_urls = [url for url in item.get("media_urls") or [] if url]
+        enriched = {
+            **item,
+            "topic_id": monthly_carousel_topic_id(asset),
+            "topic": (asset.get("metadata") or {}).get("topic") or item.get("format") or "Untitled",
+            "review_queue_state": state,
+            "media_count": len(media_urls),
+            "schedule_blockers": list(blockers),
+        }
+        if item.get("status") == "scheduled":
+            scheduled.append(enriched)
+            continue
+        if state != "ready_to_schedule":
+            blocked.append(enriched)
+            continue
+        if not media_urls:
+            enriched["schedule_blockers"].append("Needs approved media/design URL before scheduling.")
+            blocked.append(enriched)
+            continue
+        ready.append(enriched)
+    source = NOTION_CAROUSEL_SOURCE
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    lines = [
+        "# DREC 月度 Carousel 排程执行包",
+        "",
+        f"生成时间：{generated_at}",
+        f"Notion 来源：{source.get('name')}",
+        f"月度刷新日：每月 {source.get('monthly_refresh_day')} 日",
+        "",
+        "用途：在导入「月度排程表」前，确认本月 Notion carousel 队列中哪些项目可以排程。本文件只读，不会排程、发布或调用 Meta。",
+        "",
+        "## 当前状态",
+        "",
+        f"- 月度队列项目：{len(monthly_items)}",
+        f"- 可填写并导入排程：{len(ready)}",
+        f"- 已排程：{len(scheduled)}",
+        f"- 暂不可排程：{len(blocked)}",
+        f"- Pre-Schedule Gate 可排程总数：{pre_schedule.get('ready_to_schedule_count')}",
+        f"- 全局 Schedule Audit：{zh_schedule_audit_status(audit.get('overall_status'))}",
+        f"- 排程阻碍：{audit.get('block_count', 0)}",
+        f"- 排程提醒：{audit.get('warn_count', 0)}",
+        "",
+        "## 正确操作顺序",
+        "",
+        "1. 先下载「月度排程表」。",
+        "2. 只填写本文件列为“可排程”的项目；保留或调整 planned_slot。",
+        "3. 先点「预览月度排程」，确认 planned / skipped 数量。",
+        "4. 只有 preview 正确时，才点「导入月度排程」。",
+        "5. 导入后马上下载 Schedule Audit；有 block 就先修正，不要做发布交接。",
+        "6. Schedule Audit 通过后，再下载「月度发布交接包」。",
+        "",
+        "## 排程规则",
+        "",
+        "- 只排程 draft + compliance clear + 人工队列审核 approve 的项目。",
+        "- 视觉内容必须有最终媒体或设计 URL。",
+        "- planned_slot 必须至少在 30 分钟以后。",
+        "- 不排周日。",
+        "- 同平台内容建议至少相隔 90 分钟；冲突会被跳过或被 Schedule Audit 标记。",
+        "- 排程不是发布；Meta 正式自动发布仍保持关闭。",
+        "",
+        "## 可排程项目",
+        "",
+    ]
+    if ready:
+        for index, item in enumerate(ready[:60], start=1):
+            lines.extend(
+                [
+                    f"### {index}. {item.get('topic_id') or 'n/a'} · {item.get('topic')}",
+                    "",
+                    f"- 队列 ID：`{item.get('id')}`",
+                    f"- 素材 ID：`{item.get('asset_id') or 'n/a'}`",
+                    f"- 平台 / 格式：{item.get('channel')} / {item.get('format')}",
+                    f"- 状态：{item.get('status')} / Safety `{item.get('compliance_status')}` / Review `{zh_review_queue_state(item.get('review_queue_state'))}`",
+                    f"- 媒体数量：{item.get('media_count')}",
+                    f"- 建议动作：填写 planned_slot 后先预览，再导入。",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["- 目前没有可排程项目。通常需要先完成：入队 → 队列审核 approve → 媒体/设计 URL。", ""])
+    lines.extend(["## 已排程项目", ""])
+    if scheduled:
+        for index, item in enumerate(scheduled[:60], start=1):
+            lines.extend(
+                [
+                    f"### {index}. {item.get('topic_id') or 'n/a'} · {item.get('topic')}",
+                    "",
+                    f"- 队列 ID：`{item.get('id')}`",
+                    f"- 计划发布时间：{item.get('planned_slot') or '未设置'}",
+                    f"- 下一步：看 Schedule Audit；通过后进入月度发布交接包。",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["- 目前没有已排程的月度项目。", ""])
+    lines.extend(["## 暂不可排程项目", ""])
+    if blocked:
+        for index, item in enumerate(blocked[:80], start=1):
+            blockers = [zh_review_schedule_blocker(blocker) for blocker in item.get("schedule_blockers") or []]
+            lines.extend(
+                [
+                    f"### {index}. {item.get('topic_id') or 'n/a'} · {item.get('topic')}",
+                    "",
+                    f"- 队列 ID：`{item.get('id')}`",
+                    f"- 状态：{item.get('status')} / Safety `{item.get('compliance_status')}` / Review `{zh_review_queue_state(item.get('review_queue_state'))}`",
+                    f"- 媒体数量：{item.get('media_count')}",
+                    f"- 阻碍：{'; '.join(blockers) if blockers else '无'}",
+                    f"- 下一步：先解决阻碍，不要手动绕过排程导入。",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["- 暂无不可排程项目。", ""])
+    lines.extend(
+        [
+            "## 安全线",
+            "",
+            "- 这个文件不会修改系统。",
+            "- 月度排程导入只会设置 planned_slot 和 scheduled 状态。",
+            "- 导入不会发布、不会调用 Meta、不会记录 external post ID。",
+            "- 有 skipped 或 audit block 时，先回到对应 gate 修正。",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-schedule-execution-pack-zh.md"'},
+    )
 
 
 def normalize_schedule_decision(value: str | None):
