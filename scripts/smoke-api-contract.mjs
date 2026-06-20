@@ -2742,6 +2742,16 @@ const requiredSnippets = [
     text: "download-dashboard-monthly-doctor-worksheet",
   },
   {
+    name: "web dashboard doctor reply fill action",
+    file: "web",
+    text: "fill-dashboard-doctor-reply-template",
+  },
+  {
+    name: "web dashboard doctor reply inbox endpoint",
+    file: "web",
+    text: "/operations/doctor-reply-inbox-pack",
+  },
+  {
     name: "web notion carousel source action",
     file: "web",
     text: "refresh-notion-carousel-source",
