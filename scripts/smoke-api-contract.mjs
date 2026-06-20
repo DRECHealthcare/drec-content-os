@@ -2792,6 +2792,36 @@ const requiredSnippets = [
     text: "download-dashboard-monthly-publishing-handoff",
   },
   {
+    name: "web dashboard monthly metrics template action",
+    file: "web",
+    text: "download-dashboard-monthly-metrics-template",
+  },
+  {
+    name: "web dashboard monthly metrics pack action",
+    file: "web",
+    text: "download-dashboard-monthly-metrics-pack",
+  },
+  {
+    name: "web dashboard monthly learning closeout action",
+    file: "web",
+    text: "download-dashboard-monthly-learning-closeout",
+  },
+  {
+    name: "web dashboard monthly learning csv action",
+    file: "web",
+    text: "download-dashboard-monthly-learning-csv",
+  },
+  {
+    name: "web dashboard monthly next plan handback action",
+    file: "web",
+    text: "download-dashboard-monthly-next-plan-handback",
+  },
+  {
+    name: "web dashboard monthly next plan csv action",
+    file: "web",
+    text: "download-dashboard-monthly-next-plan-csv",
+  },
+  {
     name: "web notion carousel source action",
     file: "web",
     text: "refresh-notion-carousel-source",

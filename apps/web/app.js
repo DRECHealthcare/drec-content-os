@@ -2778,6 +2778,12 @@ function renderDashboardMonthlyActionQueue(data) {
         <button type="button" data-download-dashboard-monthly-schedule-pack>下载排程执行包</button>
         <button type="button" data-download-dashboard-schedule-audit>下载排程检查</button>
         <button type="button" data-download-dashboard-monthly-publishing-handoff>下载发布交接包</button>
+        <button type="button" data-download-dashboard-monthly-metrics-template>下载月度数据表</button>
+        <button type="button" data-download-dashboard-monthly-metrics-pack>下载数据执行包</button>
+        <button type="button" data-download-dashboard-monthly-learning-closeout>下载月度数据复盘</button>
+        <button type="button" data-download-dashboard-monthly-learning-csv>下载月度复盘 CSV</button>
+        <button type="button" data-download-dashboard-monthly-next-plan-handback>下载学习回流包</button>
+        <button type="button" data-download-dashboard-monthly-next-plan-csv>下载下月主题 CSV</button>
         <button type="button" data-download-dashboard-monthly-action-queue>下载月度行动队列</button>
         <button type="button" data-download-dashboard-monthly-action-csv>下载行动 CSV</button>
       </div>
@@ -7246,9 +7252,15 @@ document.getElementById("dashboard-monthly-action-queue")?.addEventListener("cli
   const downloadSchedulePack = event.target.closest("[data-download-dashboard-monthly-schedule-pack]");
   const downloadScheduleAudit = event.target.closest("[data-download-dashboard-schedule-audit]");
   const downloadPublishingHandoff = event.target.closest("[data-download-dashboard-monthly-publishing-handoff]");
+  const downloadMetricsTemplate = event.target.closest("[data-download-dashboard-monthly-metrics-template]");
+  const downloadMetricsPack = event.target.closest("[data-download-dashboard-monthly-metrics-pack]");
+  const downloadLearningCloseout = event.target.closest("[data-download-dashboard-monthly-learning-closeout]");
+  const downloadLearningCsv = event.target.closest("[data-download-dashboard-monthly-learning-csv]");
+  const downloadNextPlanHandback = event.target.closest("[data-download-dashboard-monthly-next-plan-handback]");
+  const downloadNextPlanCsv = event.target.closest("[data-download-dashboard-monthly-next-plan-csv]");
   const downloadQueue = event.target.closest("[data-download-dashboard-monthly-action-queue]");
   const downloadCsv = event.target.closest("[data-download-dashboard-monthly-action-csv]");
-  if (!openAssets && !downloadDoctorReview && !downloadPngAssets && !downloadDoctorWorksheet && !fillDoctorReplyTemplate && !downloadProductionWorksheet && !downloadProductionQa && !fillProductionReplyTemplate && !downloadScheduleWorksheet && !downloadSchedulePack && !downloadScheduleAudit && !downloadPublishingHandoff && !downloadQueue && !downloadCsv) return;
+  if (!openAssets && !downloadDoctorReview && !downloadPngAssets && !downloadDoctorWorksheet && !fillDoctorReplyTemplate && !downloadProductionWorksheet && !downloadProductionQa && !fillProductionReplyTemplate && !downloadScheduleWorksheet && !downloadSchedulePack && !downloadScheduleAudit && !downloadPublishingHandoff && !downloadMetricsTemplate && !downloadMetricsPack && !downloadLearningCloseout && !downloadLearningCsv && !downloadNextPlanHandback && !downloadNextPlanCsv && !downloadQueue && !downloadCsv) return;
   if (openAssets) {
     showScreen("assets");
     const card = document.getElementById("monthly-carousel-status-board");
@@ -7391,6 +7403,66 @@ document.getElementById("dashboard-monthly-action-queue")?.addEventListener("cli
         preparing: "Preparing monthly carousel publishing handoff...",
         done: "Monthly carousel publishing handoff downloaded.",
         failed: "Could not download monthly carousel publishing handoff.",
+      };
+    }
+    if (downloadMetricsTemplate) {
+      return {
+        path: "/operations/monthly-carousel-metrics-template.csv",
+        filename: "drec-monthly-carousel-metrics-template.csv",
+        type: "text/csv",
+        preparing: "Preparing monthly metrics template...",
+        done: "Monthly carousel metrics template downloaded.",
+        failed: "Could not download monthly carousel metrics template.",
+      };
+    }
+    if (downloadMetricsPack) {
+      return {
+        path: "/operations/monthly-carousel-metrics-execution-pack.zh.md",
+        filename: "drec-monthly-carousel-metrics-execution-pack-zh.md",
+        type: "text/markdown",
+        preparing: "Preparing monthly metrics execution pack...",
+        done: "Monthly carousel metrics execution pack downloaded.",
+        failed: "Could not download monthly carousel metrics execution pack.",
+      };
+    }
+    if (downloadLearningCloseout) {
+      return {
+        path: "/operations/monthly-carousel-learning-closeout.zh.md",
+        filename: "drec-monthly-carousel-learning-closeout-zh.md",
+        type: "text/markdown",
+        preparing: "Preparing monthly learning closeout...",
+        done: "Monthly carousel learning closeout downloaded.",
+        failed: "Could not download monthly carousel learning closeout.",
+      };
+    }
+    if (downloadLearningCsv) {
+      return {
+        path: "/operations/monthly-carousel-learning-closeout.csv",
+        filename: "drec-monthly-carousel-learning-closeout.csv",
+        type: "text/csv",
+        preparing: "Preparing monthly learning CSV...",
+        done: "Monthly carousel learning CSV downloaded.",
+        failed: "Could not download monthly carousel learning CSV.",
+      };
+    }
+    if (downloadNextPlanHandback) {
+      return {
+        path: "/operations/monthly-carousel-next-plan-handback.zh.md",
+        filename: "drec-monthly-carousel-next-plan-handback-zh.md",
+        type: "text/markdown",
+        preparing: "Preparing monthly next-plan handback...",
+        done: "Monthly carousel next-plan handback downloaded.",
+        failed: "Could not download monthly carousel next-plan handback.",
+      };
+    }
+    if (downloadNextPlanCsv) {
+      return {
+        path: "/operations/monthly-carousel-next-plan-handback.csv",
+        filename: "drec-monthly-carousel-next-plan-handback.csv",
+        type: "text/csv",
+        preparing: "Preparing monthly next-plan CSV...",
+        done: "Monthly carousel next-plan CSV downloaded.",
+        failed: "Could not download monthly carousel next-plan CSV.",
       };
     }
     if (downloadCsv) {
