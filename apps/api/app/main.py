@@ -2541,6 +2541,25 @@ async def public_first_publish_generated_slide_png(asset_id: str, slide_number: 
     )
 
 
+@app.get("/public/assets/{asset_id}/slides/{slide_number}.png")
+async def public_generated_slide_png(asset_id: str, slide_number: int):
+    asset = await asset_by_id(asset_id)
+    if not first_publish_asset_is_approved_clear(asset):
+        raise HTTPException(
+            status_code=404,
+            detail="Generated media URLs are available only after human approval and safety clear.",
+        )
+    slides = first_publish_slide_items(asset)
+    if slide_number < 1 or slide_number > len(slides):
+        raise HTTPException(status_code=404, detail="Slide not found.")
+    data = first_publish_slide_png(asset, slides[slide_number - 1], slide_number, len(slides))
+    return Response(
+        content=data,
+        media_type="image/png",
+        headers={"Cache-Control": "public, max-age=3600"},
+    )
+
+
 ASSET_REVIEW_DECISION_FIELDS = [
     "asset_id",
     "brief_id",
@@ -19294,7 +19313,7 @@ async def update_asset_media(
             set media_urls = $2,
                 updated_at = now()
             where asset_id = $1
-              and status = 'draft'
+              and status in ('draft', 'scheduled')
             returning id, asset_id, channel, format, caption, media_urls, planned_slot, status,
                       compliance_status, external_post_id, created_at
             """,
@@ -19305,7 +19324,7 @@ async def update_asset_media(
             synced_rows = await supabase_rest.update(
                 "publish_queue",
                 {"media_urls": media_urls},
-                {"asset_id": f"eq.{asset_id}", "status": "eq.draft"},
+                {"asset_id": f"eq.{asset_id}", "status": "in.(draft,scheduled)"},
             )
         synced_queue_items = synced_rows or []
     await save_feedback(
@@ -21696,6 +21715,28 @@ def pre_schedule_production_blockers(item: dict):
     return blockers
 
 
+def media_url_is_video(url: str):
+    lowered = url.lower().split("?", 1)[0]
+    return lowered.endswith((".mp4", ".mov", ".m4v"))
+
+
+def visual_media_blockers(item: dict):
+    blockers = []
+    fmt = item.get("format")
+    media_urls = [url for url in item.get("media_urls") or [] if url]
+    if fmt in {"carousel", "single", "reel", "story"} and not media_urls:
+        blockers.append("Visual format needs a public media URL before handoff or Meta dispatch.")
+        return blockers
+    unsupported_media = [url for url in media_urls if not str(url).startswith("http")]
+    if unsupported_media:
+        blockers.append("Private media needs a public/signed publishing URL before Meta can receive it.")
+    if fmt == "carousel" and not 2 <= len(media_urls) <= 10:
+        blockers.append("Carousel needs 2 to 10 media URLs.")
+    if fmt == "reel" and not any(media_url_is_video(str(url)) for url in media_urls):
+        blockers.append("Reel needs a public video URL.")
+    return blockers
+
+
 async def pre_schedule_gate_payload():
     queue_items = await fetch_publish_queue_items(200)
     production = await post_approval_production_payload()
@@ -22218,6 +22259,15 @@ async def schedule_publish_queue_next_slot(item_id: str, _: None = Depends(requi
         raise HTTPException(status_code=422, detail="Cancelled items cannot be rescheduled. Create a new queue item instead.")
     if existing.get("compliance_status") != "clear":
         raise HTTPException(status_code=422, detail="Only compliance-clear items can be scheduled.")
+    media_blockers = visual_media_blockers(existing)
+    if media_blockers:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "message": "Queue item needs approved public media before scheduling.",
+                "blockers": media_blockers,
+            },
+        )
 
     suggestion = await suggest_publish_slot(existing.get("channel") or "facebook", ignore_item_id=item_id)
     planned_slot = parse_datetime(suggestion.get("suggested_slot"))
@@ -22264,6 +22314,15 @@ async def schedule_review_approved_queue(limit: int = 20, _: None = Depends(requ
                 "item_id": item.get("id"),
                 "status": "skipped",
                 "detail": "Item must be draft, compliance-clear, and review-approved.",
+            })
+            continue
+        media_blockers = visual_media_blockers(item)
+        if media_blockers:
+            results.append({
+                "item_id": item.get("id"),
+                "status": "skipped",
+                "detail": "Item needs approved public media before scheduling.",
+                "blockers": media_blockers,
             })
             continue
         scheduled = await schedule_publish_queue_next_slot(str(item.get("id")))
@@ -22413,6 +22472,7 @@ async def publishing_handoff(_: None = Depends(require_access_token)):
             blockers.append("Needs compliance clear.")
         if not item.get("planned_slot"):
             blockers.append("Needs a planned publish time.")
+        blockers.extend(visual_media_blockers(item))
         return blockers
 
     ready = []
@@ -22479,6 +22539,7 @@ def monthly_handoff_blockers(item: dict):
         blockers.append("Needs compliance clear.")
     if not item.get("planned_slot"):
         blockers.append("Needs a planned publish time.")
+    blockers.extend(visual_media_blockers(item))
     return blockers
 
 
@@ -22569,6 +22630,9 @@ def zh_handoff_blocker(value: str):
         "Needs compliance clear.": "需要安全/合规状态为 clear。",
         "Needs a planned publish time.": "需要计划发布时间。",
         "Needs final caption.": "需要最终版文案。",
+        "Visual format needs a public media URL before handoff or Meta dispatch.": "视觉内容需要公开媒体链接后，才可以交接或做 Meta 发送检查。",
+        "Carousel needs 2 to 10 media URLs.": "轮播需要 2 到 10 个媒体链接。",
+        "Reel needs a public video URL.": "Reel 需要公开视频链接。",
         "No Facebook scheduled compliance-clear item is ready.": "没有可用于 Facebook 的已排程且安全通过项目。",
         "No Instagram scheduled compliance-clear item is ready.": "没有可用于 Instagram 的已排程且安全通过项目。",
         "Only Facebook items are supported by this worker.": "这个 worker 只支持 Facebook 项目。",
@@ -22843,16 +22907,12 @@ def facebook_dispatch_blockers(item: dict | None, readiness: dict):
         blockers.append("Item already has an external Meta post ID.")
     if readiness.get("overall_status") != "ready_for_worker_testing":
         blockers.append("Meta credentials or permissions are not ready.")
-    media_urls = [url for url in item.get("media_urls") or [] if url]
-    unsupported_media = [url for url in media_urls if not str(url).startswith("http")]
-    if unsupported_media:
-        blockers.append("Private media needs a public/signed publishing URL before Meta can receive it.")
+    blockers.extend(visual_media_blockers(item))
     return blockers
 
 
 def is_video_url(url: str):
-    lowered = url.lower().split("?", 1)[0]
-    return lowered.endswith((".mp4", ".mov", ".m4v"))
+    return media_url_is_video(url)
 
 
 async def next_instagram_publish_item(item_id: str | None = None):
