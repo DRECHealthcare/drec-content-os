@@ -2776,6 +2776,12 @@ function renderDashboardMonthlyActionQueue(data) {
         <button type="button" data-download-dashboard-monthly-production-worksheet>下载制作设计表</button>
         <button type="button" data-download-dashboard-monthly-production-qa>下载制作 QA 包</button>
         <button type="button" data-fill-dashboard-production-reply-template>填写制作回复模板</button>
+        <button type="button" data-download-dashboard-monthly-queue-readiness>下载入队检查表</button>
+        <button type="button" data-download-dashboard-monthly-queue-execution>下载入队执行包</button>
+        <button type="button" data-preview-dashboard-monthly-queue-ready>预览可入队内容</button>
+        <button type="button" data-run-dashboard-monthly-queue-ready>执行月度入队</button>
+        <button type="button" data-preview-dashboard-monthly-safe-advance>预览安全推进</button>
+        <button type="button" data-run-dashboard-monthly-safe-advance>执行安全推进</button>
         <button type="button" data-download-dashboard-monthly-schedule-worksheet>下载月度排程表</button>
         <button type="button" data-download-dashboard-monthly-schedule-pack>下载排程执行包</button>
         <button type="button" data-download-dashboard-schedule-audit>下载排程检查</button>
@@ -7261,6 +7267,12 @@ document.getElementById("dashboard-monthly-action-queue")?.addEventListener("cli
   const downloadProductionWorksheet = event.target.closest("[data-download-dashboard-monthly-production-worksheet]");
   const downloadProductionQa = event.target.closest("[data-download-dashboard-monthly-production-qa]");
   const fillProductionReplyTemplate = event.target.closest("[data-fill-dashboard-production-reply-template]");
+  const downloadQueueReadiness = event.target.closest("[data-download-dashboard-monthly-queue-readiness]");
+  const downloadQueueExecution = event.target.closest("[data-download-dashboard-monthly-queue-execution]");
+  const previewQueueReady = event.target.closest("[data-preview-dashboard-monthly-queue-ready]");
+  const runQueueReady = event.target.closest("[data-run-dashboard-monthly-queue-ready]");
+  const previewSafeAdvance = event.target.closest("[data-preview-dashboard-monthly-safe-advance]");
+  const runSafeAdvance = event.target.closest("[data-run-dashboard-monthly-safe-advance]");
   const downloadScheduleWorksheet = event.target.closest("[data-download-dashboard-monthly-schedule-worksheet]");
   const downloadSchedulePack = event.target.closest("[data-download-dashboard-monthly-schedule-pack]");
   const downloadScheduleAudit = event.target.closest("[data-download-dashboard-schedule-audit]");
@@ -7273,7 +7285,7 @@ document.getElementById("dashboard-monthly-action-queue")?.addEventListener("cli
   const downloadNextPlanCsv = event.target.closest("[data-download-dashboard-monthly-next-plan-csv]");
   const downloadQueue = event.target.closest("[data-download-dashboard-monthly-action-queue]");
   const downloadCsv = event.target.closest("[data-download-dashboard-monthly-action-csv]");
-  if (!openAssets && !downloadDoctorReview && !downloadPngAssets && !downloadDoctorWorksheet && !fillDoctorReplyTemplate && !downloadProductionWorksheet && !downloadProductionQa && !fillProductionReplyTemplate && !downloadScheduleWorksheet && !downloadSchedulePack && !downloadScheduleAudit && !downloadPublishingHandoff && !downloadMetricsTemplate && !downloadMetricsPack && !downloadLearningCloseout && !downloadLearningCsv && !downloadNextPlanHandback && !downloadNextPlanCsv && !downloadQueue && !downloadCsv) return;
+  if (!openAssets && !downloadDoctorReview && !downloadPngAssets && !downloadDoctorWorksheet && !fillDoctorReplyTemplate && !downloadProductionWorksheet && !downloadProductionQa && !fillProductionReplyTemplate && !downloadQueueReadiness && !downloadQueueExecution && !previewQueueReady && !runQueueReady && !previewSafeAdvance && !runSafeAdvance && !downloadScheduleWorksheet && !downloadSchedulePack && !downloadScheduleAudit && !downloadPublishingHandoff && !downloadMetricsTemplate && !downloadMetricsPack && !downloadLearningCloseout && !downloadLearningCsv && !downloadNextPlanHandback && !downloadNextPlanCsv && !downloadQueue && !downloadCsv) return;
   if (openAssets) {
     showScreen("assets");
     const card = document.getElementById("monthly-carousel-status-board");
@@ -7326,6 +7338,18 @@ document.getElementById("dashboard-monthly-action-queue")?.addEventListener("cli
     }
     return;
   }
+  if (previewQueueReady || runQueueReady || previewSafeAdvance || runSafeAdvance) {
+    showScreen("assets");
+    const target = document.getElementById("monthly-carousel-status-board") || document.getElementById("asset-media-attachment-preview");
+    target?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (previewQueueReady || runQueueReady) {
+      await runMonthlyCarouselQueueReady({ dryRun: Boolean(previewQueueReady) });
+    } else {
+      await runMonthlyCarouselSafeAdvance({ dryRun: Boolean(previewSafeAdvance) });
+    }
+    await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit()]);
+    return;
+  }
   const message = document.getElementById("test-path-message");
   const downloadConfig = (() => {
     if (downloadDoctorReview) {
@@ -7376,6 +7400,26 @@ document.getElementById("dashboard-monthly-action-queue")?.addEventListener("cli
         preparing: "Preparing monthly production QA pack...",
         done: "Monthly carousel production QA pack downloaded.",
         failed: "Could not download monthly carousel production QA pack.",
+      };
+    }
+    if (downloadQueueReadiness) {
+      return {
+        path: "/operations/monthly-carousel-queue-readiness.zh.md",
+        filename: "drec-monthly-carousel-queue-readiness-zh.md",
+        type: "text/markdown",
+        preparing: "Preparing monthly queue readiness pack...",
+        done: "Monthly carousel queue readiness pack downloaded.",
+        failed: "Could not download monthly carousel queue readiness pack.",
+      };
+    }
+    if (downloadQueueExecution) {
+      return {
+        path: "/operations/monthly-carousel-queue-execution-pack.zh.md",
+        filename: "drec-monthly-carousel-queue-execution-pack-zh.md",
+        type: "text/markdown",
+        preparing: "Preparing monthly queue execution pack...",
+        done: "Monthly carousel queue execution pack downloaded.",
+        failed: "Could not download monthly carousel queue execution pack.",
       };
     }
     if (downloadScheduleWorksheet) {

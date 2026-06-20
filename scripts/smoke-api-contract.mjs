@@ -2788,6 +2788,46 @@ const requiredSnippets = [
     text: "/operations/production-reply-inbox-pack",
   },
   {
+    name: "web dashboard monthly queue readiness action",
+    file: "web",
+    text: "download-dashboard-monthly-queue-readiness",
+  },
+  {
+    name: "web dashboard monthly queue execution action",
+    file: "web",
+    text: "download-dashboard-monthly-queue-execution",
+  },
+  {
+    name: "web dashboard monthly queue preview action",
+    file: "web",
+    text: "preview-dashboard-monthly-queue-ready",
+  },
+  {
+    name: "web dashboard monthly queue run action",
+    file: "web",
+    text: "run-dashboard-monthly-queue-ready",
+  },
+  {
+    name: "web dashboard monthly safe advance preview action",
+    file: "web",
+    text: "preview-dashboard-monthly-safe-advance",
+  },
+  {
+    name: "web dashboard monthly safe advance run action",
+    file: "web",
+    text: "run-dashboard-monthly-safe-advance",
+  },
+  {
+    name: "web dashboard monthly queue readiness endpoint",
+    file: "web",
+    text: "/operations/monthly-carousel-queue-readiness.zh.md",
+  },
+  {
+    name: "web dashboard monthly queue execution endpoint",
+    file: "web",
+    text: "/operations/monthly-carousel-queue-execution-pack.zh.md",
+  },
+  {
     name: "web dashboard monthly schedule worksheet action",
     file: "web",
     text: "download-dashboard-monthly-schedule-worksheet",
