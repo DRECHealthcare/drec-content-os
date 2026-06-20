@@ -11289,6 +11289,11 @@ async def operations_monthly_carousel_next_action_queue(_: None = Depends(requir
     return await monthly_carousel_next_action_queue_payload()
 
 
+@app.get("/operations/monthly-carousel-action-queue")
+async def operations_monthly_carousel_action_queue_alias(_: None = Depends(require_access_token)):
+    return await monthly_carousel_next_action_queue_payload()
+
+
 @app.get("/operations/monthly-carousel-next-action-queue.zh.md")
 async def operations_monthly_carousel_next_action_queue_zh(_: None = Depends(require_access_token)):
     payload = await monthly_carousel_next_action_queue_payload()
@@ -11369,6 +11374,11 @@ async def operations_monthly_carousel_next_action_queue_zh(_: None = Depends(req
     )
 
 
+@app.get("/operations/monthly-carousel-action-queue.zh.md")
+async def operations_monthly_carousel_action_queue_zh_alias(_: None = Depends(require_access_token)):
+    return await operations_monthly_carousel_next_action_queue_zh()
+
+
 @app.get("/operations/monthly-carousel-next-action-queue.csv")
 async def operations_monthly_carousel_next_action_queue_csv(_: None = Depends(require_access_token)):
     payload = await monthly_carousel_next_action_queue_payload()
@@ -11403,6 +11413,11 @@ async def operations_monthly_carousel_next_action_queue_csv(_: None = Depends(re
         media_type="text/csv",
         headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-next-action-queue.csv"'},
     )
+
+
+@app.get("/operations/monthly-carousel-action-queue.csv")
+async def operations_monthly_carousel_action_queue_csv_alias(_: None = Depends(require_access_token)):
+    return await operations_monthly_carousel_next_action_queue_csv()
 
 
 @app.get("/operations/monthly-carousel-ops-cockpit.zh.md")
