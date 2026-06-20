@@ -99,6 +99,9 @@ const requiredRoutes = [
   "GET /operations/monthly-carousel-doctor-triage.zh.md",
   "GET /operations/monthly-carousel-doctor-triage.csv",
   "GET /operations/monthly-carousel-doctor-handoff-pack.zip",
+  "GET /operations/monthly-carousel-doctor-import-rules",
+  "GET /operations/monthly-carousel-doctor-import-rules.zh.md",
+  "GET /operations/monthly-carousel-doctor-import-rules.csv",
   "POST /operations/import-doctor-replies",
   "GET /operations/approval-cockpit",
   "GET /operations/approval-cockpit.md",
@@ -2852,9 +2855,34 @@ const requiredSnippets = [
     text: "download-monthly-carousel-doctor-handoff-pack",
   },
   {
+    name: "web monthly doctor import rules action",
+    file: "web",
+    text: "download-monthly-carousel-doctor-import-rules",
+  },
+  {
+    name: "web dashboard monthly doctor import rules action",
+    file: "web",
+    text: "data-download-dashboard-monthly-doctor-import-rules",
+  },
+  {
     name: "monthly carousel doctor triage route",
     file: "main",
     text: "monthly_carousel_doctor_triage_payload",
+  },
+  {
+    name: "monthly doctor import rules route",
+    file: "main",
+    text: "/operations/monthly-carousel-doctor-import-rules.zh.md",
+  },
+  {
+    name: "monthly doctor import rules zip inclusion",
+    file: "main",
+    text: "06-import-validation-rules.zh.md",
+  },
+  {
+    name: "monthly doctor import rules safety",
+    file: "main",
+    text: "It does not approve, modify, attach media, queue, schedule, publish, update Notion, record post IDs, or call Meta.",
   },
   {
     name: "monthly carousel doctor handoff zip route",

@@ -10482,6 +10482,7 @@ async def operations_monthly_carousel_doctor_handoff_pack_zip(_: None = Depends(
                     "3. 医生回复可用 `03-doctor-reply-templates.zh.md`。",
                     "4. 助理记录可用 `04-doctor-decision-worksheet.csv`；若要 approve，`reviewer_name`、`review_notes` 和五个 `doctor_check_*` 栏位都必须填写 yes/pass。",
                     "5. 图片素材下载链接在 `05-png-review-links.csv`；完整图片 ZIP 仍由系统端点 `/operations/monthly-carousel-png-assets.zip` 下载。",
+                    "6. 导入前规则在 `06-import-validation-rules.zh.md`；不符合规则的 approve/clear 会被 dry-run 和 import 跳过。",
                     "",
                     "只有医生明确写 `Decision: approve` 且 `Safety: clear`，才可以进入后续导入和制作步骤。",
                     "导入时系统仍会检查 evidence，不会因为 CSV 误填 approve 就绕过医生审核门槛。",
@@ -10580,6 +10581,7 @@ async def operations_monthly_carousel_doctor_handoff_pack_zip(_: None = Depends(
                 }
             )
         archive.writestr("05-png-review-links.csv", output.getvalue())
+        archive.writestr("06-import-validation-rules.zh.md", monthly_doctor_import_rules_markdown())
     buffer.seek(0)
     return Response(
         buffer.getvalue(),
@@ -11570,6 +11572,8 @@ async def monthly_carousel_action_pack_payload():
             "doctor_handoff_pack": "/operations/monthly-carousel-doctor-handoff-pack.zip",
             "doctor_triage_pack": "/operations/monthly-carousel-doctor-triage.zh.md",
             "doctor_triage_csv": "/operations/monthly-carousel-doctor-triage.csv",
+            "doctor_import_rules": "/operations/monthly-carousel-doctor-import-rules.zh.md",
+            "doctor_import_rules_csv": "/operations/monthly-carousel-doctor-import-rules.csv",
             "doctor_review_pack": "/operations/monthly-carousel-doctor-review.zh.md",
             "doctor_reply_templates": "/operations/monthly-carousel-doctor-reply-templates.zh.md",
             "png_assets_zip": "/operations/monthly-carousel-png-assets.zip",
@@ -16225,6 +16229,133 @@ MONTHLY_DOCTOR_CHECK_FIELDS = [
 def is_affirmative_review_check(value: str | None):
     text = (value or "").strip().lower().replace("_", " ").replace("-", " ")
     return text in {"yes", "y", "true", "pass", "passed", "clear", "ok", "checked", "done", "是", "通过", "已检查"}
+
+
+def monthly_doctor_import_rules_payload():
+    return {
+        "mode": "read_only_monthly_doctor_import_rules",
+        "applies_to": "/operations/import-monthly-carousel-doctor-worksheet",
+        "source_of_truth": NOTION_CAROUSEL_SOURCE,
+        "identifier_rules": [
+            "Asset ID is the import key.",
+            "Topic ID is for human tracking only.",
+            "Rows for assets outside the monthly Notion carousel source of truth are skipped.",
+        ],
+        "approval_required_fields": [
+            "reviewer_safety_decision=clear",
+            "reviewer_review_decision=approved",
+            "reviewer_name",
+            "review_notes",
+            *MONTHLY_DOCTOR_CHECK_FIELDS,
+        ],
+        "accepted_yes_values": ["yes", "y", "true", "pass", "passed", "clear", "ok", "checked", "done", "是", "通过", "已检查"],
+        "decision_values": {
+            "reviewer_safety_decision": {
+                "clear": ["clear", "safety clear", "safe", "approved clear", "yes", "y"],
+                "pending": ["pending", "keep pending", "rewrite", "needs work", "needs rewrite", "review", "needs review"],
+                "flagged": ["flag", "flagged", "unsafe", "block", "blocked", "no", "n"],
+            },
+            "reviewer_review_decision": {
+                "approved": ["approve", "approved", "yes", "y"],
+                "review": ["review", "needs work", "needs edits", "needs edit", "rewrite", "pending", "keep pending"],
+                "rejected": ["reject", "rejected", "no", "n"],
+            },
+        },
+        "skip_rules": [
+            "Missing asset_id.",
+            "Asset is not part of the monthly carousel source of truth.",
+            "Invalid safety or review decision value.",
+            "Approval without Safety clear.",
+            "Approval without reviewer_name.",
+            "Approval without review_notes.",
+            "Approval without every doctor_check_* field marked yes/pass.",
+        ],
+        "safe_import_sequence": [
+            "Download doctor handoff ZIP.",
+            "Doctor reviews PNGs and Mandarin copy.",
+            "Assistant fills worksheet with reviewer_name, review_notes, and every doctor_check_* field.",
+            "Run Preview Monthly Doctor Worksheet first.",
+            "Only import if preview shows planned rows and no unexpected skipped rows.",
+        ],
+        "safety": [
+            "This rules pack is read-only.",
+            "It does not approve, modify, attach media, queue, schedule, publish, update Notion, record post IDs, or call Meta.",
+            "Detector clear is not doctor approval.",
+            "Dry-run preview is required before import.",
+        ],
+    }
+
+
+def monthly_doctor_import_rules_markdown():
+    payload = monthly_doctor_import_rules_payload()
+    lines = [
+        "# DREC 月度医生审核导入规则",
+        "",
+        "这个文件只读，不会批准、修改、挂载媒体、入队、排程、发布、更新 Notion、记录 post ID 或调用 Meta。",
+        "",
+        "## 适用范围",
+        "",
+        f"- 导入端点：`{payload.get('applies_to')}`",
+        f"- Notion 来源：{(payload.get('source_of_truth') or {}).get('name')}",
+        f"- 唯一追踪：`{(payload.get('source_of_truth') or {}).get('unique_id_property')}` + Asset ID",
+        "",
+        "## Approve 必填",
+        "",
+        "如果某一行要把内容批准为可进入后续制作/入队，必须同时满足：",
+        "",
+        *markdown_list(payload.get("approval_required_fields")),
+        "",
+        "五个医生检查栏位都要填 yes/pass：",
+        "",
+        *markdown_list(MONTHLY_DOCTOR_CHECK_FIELDS),
+        "",
+        "## 会被跳过的情况",
+        "",
+        *markdown_list(payload.get("skip_rules")),
+        "",
+        "## 安全导入顺序",
+        "",
+        *markdown_list(payload.get("safe_import_sequence")),
+        "",
+        "## 安全线",
+        "",
+        *markdown_list(payload.get("safety")),
+        "",
+    ]
+    return "\n".join(lines)
+
+
+@app.get("/operations/monthly-carousel-doctor-import-rules")
+async def operations_monthly_carousel_doctor_import_rules(_: None = Depends(require_access_token)):
+    return monthly_doctor_import_rules_payload()
+
+
+@app.get("/operations/monthly-carousel-doctor-import-rules.zh.md")
+async def operations_monthly_carousel_doctor_import_rules_zh(_: None = Depends(require_access_token)):
+    return Response(
+        monthly_doctor_import_rules_markdown(),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-doctor-import-rules-zh.md"'},
+    )
+
+
+@app.get("/operations/monthly-carousel-doctor-import-rules.csv")
+async def operations_monthly_carousel_doctor_import_rules_csv(_: None = Depends(require_access_token)):
+    payload = monthly_doctor_import_rules_payload()
+    output = StringIO()
+    writer = csv.DictWriter(output, fieldnames=["rule_type", "field", "requirement"])
+    writer.writeheader()
+    for item in payload.get("approval_required_fields") or []:
+        writer.writerow({"rule_type": "approval_required_field", "field": item, "requirement": "Required for approve."})
+    for item in payload.get("skip_rules") or []:
+        writer.writerow({"rule_type": "skip_rule", "field": "", "requirement": item})
+    for item in payload.get("accepted_yes_values") or []:
+        writer.writerow({"rule_type": "accepted_yes_value", "field": "doctor_check_*", "requirement": item})
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-doctor-import-rules.csv"'},
+    )
 
 
 async def process_asset_review_decisions_csv(

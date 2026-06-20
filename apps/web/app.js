@@ -643,6 +643,8 @@ Object.assign(uiZh, {
   "Could not import Notion carousel CSV.": "无法导入 Notion Carousel CSV。",
   "Monthly carousel doctor handoff ZIP downloaded.": "月度 Carousel 医生交接 ZIP 已下载。",
   "Could not download monthly carousel doctor handoff ZIP.": "无法下载月度 Carousel 医生交接 ZIP。",
+  "Monthly carousel doctor import rules downloaded.": "月度 Carousel 医生导入规则已下载。",
+  "Could not download monthly carousel doctor import rules.": "无法下载月度 Carousel 医生导入规则。",
   "Monthly carousel doctor triage pack downloaded.": "月度 Carousel 医生快速判定包已下载。",
   "Could not download monthly carousel doctor triage pack.": "无法下载月度 Carousel 医生快速判定包。",
   "Monthly carousel doctor review pack downloaded.": "月度 Carousel 医生审核总包已下载。",
@@ -2869,6 +2871,7 @@ function renderDashboardMonthlyActionQueue(data) {
         <div class="learning-actions">
           <button type="button" data-open-monthly-assets-review>打开月度素材审核</button>
         <button type="button" data-download-dashboard-monthly-doctor-review>下载医生审核总包</button>
+        <button type="button" data-download-dashboard-monthly-doctor-import-rules>下载医生导入规则</button>
         <button type="button" data-download-dashboard-monthly-png-assets>下载全部 PNG</button>
         <button type="button" data-download-dashboard-monthly-doctor-worksheet>下载医生审核表</button>
         <button type="button" data-fill-dashboard-doctor-reply-template>填写医生回复模板</button>
@@ -6290,6 +6293,16 @@ document.getElementById("download-monthly-carousel-doctor-handoff-pack")?.addEve
   }
 });
 
+document.getElementById("download-monthly-carousel-doctor-import-rules")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/monthly-carousel-doctor-import-rules.zh.md", "drec-monthly-carousel-doctor-import-rules-zh.md", "text/markdown");
+    message.textContent = translateText("Monthly carousel doctor import rules downloaded.");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download monthly carousel doctor import rules.");
+  }
+});
+
 document.getElementById("download-monthly-carousel-doctor-triage")?.addEventListener("click", async () => {
   const message = document.getElementById("media-message");
   try {
@@ -7459,6 +7472,7 @@ document.getElementById("dashboard-monthly-action-queue")?.addEventListener("cli
   const openAssets = event.target.closest("[data-open-monthly-assets-review]");
   const downloadDoctorHandoff = event.target.closest("[data-download-dashboard-monthly-doctor-handoff]");
   const downloadDoctorTriage = event.target.closest("[data-download-dashboard-monthly-doctor-triage]");
+  const downloadDoctorImportRules = event.target.closest("[data-download-dashboard-monthly-doctor-import-rules]");
   const downloadDoctorReview = event.target.closest("[data-download-dashboard-monthly-doctor-review]");
   const downloadPngAssets = event.target.closest("[data-download-dashboard-monthly-png-assets]");
   const downloadDoctorWorksheet = event.target.closest("[data-download-dashboard-monthly-doctor-worksheet]");
@@ -7486,7 +7500,7 @@ document.getElementById("dashboard-monthly-action-queue")?.addEventListener("cli
   const downloadNextPlanCsv = event.target.closest("[data-download-dashboard-monthly-next-plan-csv]");
   const downloadQueue = event.target.closest("[data-download-dashboard-monthly-action-queue]");
   const downloadCsv = event.target.closest("[data-download-dashboard-monthly-action-csv]");
-  if (!openAssets && !downloadDoctorHandoff && !downloadDoctorTriage && !downloadDoctorReview && !downloadPngAssets && !downloadDoctorWorksheet && !fillDoctorReplyTemplate && !previewDoctorReplySafe && !importDoctorReplySafe && !downloadProductionWorksheet && !downloadProductionQa && !fillProductionReplyTemplate && !downloadQueueReadiness && !downloadQueueExecution && !previewQueueReady && !runQueueReady && !previewSafeAdvance && !runSafeAdvance && !downloadScheduleWorksheet && !downloadSchedulePack && !downloadScheduleAudit && !downloadPublishingHandoff && !downloadMetricsTemplate && !downloadMetricsPack && !downloadLearningCloseout && !downloadLearningCsv && !downloadNextPlanHandback && !downloadNextPlanCsv && !downloadQueue && !downloadCsv) return;
+  if (!openAssets && !downloadDoctorHandoff && !downloadDoctorTriage && !downloadDoctorImportRules && !downloadDoctorReview && !downloadPngAssets && !downloadDoctorWorksheet && !fillDoctorReplyTemplate && !previewDoctorReplySafe && !importDoctorReplySafe && !downloadProductionWorksheet && !downloadProductionQa && !fillProductionReplyTemplate && !downloadQueueReadiness && !downloadQueueExecution && !previewQueueReady && !runQueueReady && !previewSafeAdvance && !runSafeAdvance && !downloadScheduleWorksheet && !downloadSchedulePack && !downloadScheduleAudit && !downloadPublishingHandoff && !downloadMetricsTemplate && !downloadMetricsPack && !downloadLearningCloseout && !downloadLearningCsv && !downloadNextPlanHandback && !downloadNextPlanCsv && !downloadQueue && !downloadCsv) return;
   if (openAssets) {
     showScreen("assets");
     const card = document.getElementById("monthly-carousel-status-board");
@@ -7579,6 +7593,16 @@ document.getElementById("dashboard-monthly-action-queue")?.addEventListener("cli
         preparing: "Preparing monthly doctor triage pack...",
         done: "Monthly carousel doctor triage pack downloaded.",
         failed: "Could not download monthly carousel doctor triage pack.",
+      };
+    }
+    if (downloadDoctorImportRules) {
+      return {
+        path: "/operations/monthly-carousel-doctor-import-rules.zh.md",
+        filename: "drec-monthly-carousel-doctor-import-rules-zh.md",
+        type: "text/markdown",
+        preparing: "Preparing monthly doctor import rules...",
+        done: "Monthly carousel doctor import rules downloaded.",
+        failed: "Could not download monthly carousel doctor import rules.",
       };
     }
     if (downloadDoctorReview) {
