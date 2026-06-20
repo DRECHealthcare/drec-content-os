@@ -6621,6 +6621,222 @@ async def operations_monthly_carousel_metrics_execution_pack_zh(_: None = Depend
     )
 
 
+async def monthly_carousel_next_plan_handback_payload():
+    closeout = await monthly_carousel_learning_closeout_payload()
+    learning_topics = await learning_recommended_topics("zh", 8)
+    insights = await outcome_insights()
+    complete_items = [
+        item for item in closeout.get("items") or [] if item.get("closeout_stage") == "learning_complete"
+    ]
+    waiting_learning = [
+        item
+        for item in closeout.get("items") or []
+        if item.get("closeout_stage") in {"waiting_metrics", "waiting_rollup"}
+    ]
+    existing_topic_ids = {
+        str(item.get("topic_id") or "").strip()
+        for item in closeout.get("items") or []
+        if item.get("topic_id")
+    }
+    existing_topics = {
+        re.sub(r"\s+", " ", str(item.get("topic") or "").strip())
+        for item in closeout.get("items") or []
+        if item.get("topic")
+    }
+    candidates = []
+    for item in complete_items[:10]:
+        topic = item.get("topic") or item.get("topic_id") or "月度内容复盘主题"
+        candidates.append(
+            {
+                "candidate": f"延伸复盘：{topic}",
+                "reason": f"Topic ID {item.get('topic_id')} 已完成学习闭环；分数 {item.get('outcome_score') or 'n/a'}，收藏 {item.get('outcome_saves') or 0}，分享 {item.get('outcome_shares') or 0}。",
+                "source": "monthly_learning_complete",
+                "related_topic_id": item.get("topic_id") or "",
+                "duplicate_warning": "check_existing_topic_id_and_topic_before_adding",
+            }
+        )
+    for signal in (insights.get("top_signals") or [])[:8]:
+        label = signal.get("label") or f"{signal.get('dimension')}: {signal.get('key')}"
+        candidates.append(
+            {
+                "candidate": topic_from_signal(str(signal.get("key") or label), "zh"),
+                "reason": f"{label} 表现信号：平均分 {signal.get('avg_score') or 'n/a'}，收藏 {signal.get('saves_total') or 0}，分享 {signal.get('shares_total') or 0}。",
+                "source": "outcome_signal",
+                "related_topic_id": "",
+                "duplicate_warning": "check_against_current_Notion_month",
+            }
+        )
+    learning_reasons = learning_topics.get("reasons") or []
+    for index, topic in enumerate(learning_topics.get("topics") or [], start=1):
+        candidates.append(
+            {
+                "candidate": topic,
+                "reason": learning_reasons[index - 1] if index <= len(learning_reasons) else "来自当前学习推荐或默认安全主题。",
+                "source": "learning_recommended_topics",
+                "related_topic_id": "",
+                "duplicate_warning": "check_against_current_Notion_month",
+            }
+        )
+    deduped = []
+    seen = set()
+    for candidate in candidates:
+        key = re.sub(r"\s+", " ", str(candidate.get("candidate") or "").strip())
+        if not key or key in seen or key in existing_topics:
+            continue
+        seen.add(key)
+        deduped.append(candidate)
+        if len(deduped) >= 12:
+            break
+    month_refresh_day = (closeout.get("source") or {}).get("monthly_refresh_day") or 19
+    return {
+        "source": closeout.get("source"),
+        "mode": "read_only_monthly_learning_handback",
+        "asset_count": closeout.get("asset_count"),
+        "learning_complete_count": len(complete_items),
+        "waiting_learning_count": len(waiting_learning),
+        "existing_topic_id_count": len(existing_topic_ids),
+        "existing_topic_ids": sorted(existing_topic_ids),
+        "candidate_topics": deduped,
+        "learning_topics": learning_topics,
+        "outcome_insights": insights,
+        "next_month_refresh_day": month_refresh_day,
+        "next_step": (
+            "Finish metrics and rollup for current monthly carousel posts before trusting next-month topic recommendations."
+            if waiting_learning
+            else "Use the candidate CSV as planning input after the monthly Notion refresh, then check Topic ID duplicates before adding rows."
+        ),
+        "guardrails": [
+            "This handback is read-only and does not create Notion rows.",
+            "Do not create duplicate topics; compare Topic ID and topic text before adding anything to Notion.",
+            "Use candidates as planning inputs only; every new row still needs slide plan, doctor review, production QA, queue review, and scheduling gates.",
+            "Keep Mandarin-first educational tone for adults around 50; no miracle cure, guaranteed reversal, fear-based, or direct course-selling language.",
+            "Slide 1 remains cover hook only; Slides 2 onward need title, explanation, highlighted keywords, visual element, and takeaway.",
+        ],
+    }
+
+
+@app.get("/operations/monthly-carousel-next-plan-handback.csv")
+async def operations_monthly_carousel_next_plan_handback_csv(_: None = Depends(require_access_token)):
+    payload = await monthly_carousel_next_plan_handback_payload()
+    output = StringIO()
+    fieldnames = [
+        "candidate_topic",
+        "reason",
+        "source",
+        "related_topic_id",
+        "duplicate_warning",
+        "monthly_refresh_day",
+        "notion_action",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for item in payload.get("candidate_topics") or []:
+        writer.writerow(
+            {
+                "candidate_topic": item.get("candidate") or "",
+                "reason": item.get("reason") or "",
+                "source": item.get("source") or "",
+                "related_topic_id": item.get("related_topic_id") or "",
+                "duplicate_warning": item.get("duplicate_warning") or "",
+                "monthly_refresh_day": payload.get("next_month_refresh_day") or "",
+                "notion_action": "review_only_do_not_auto_create_duplicate_rows",
+            }
+        )
+    if not payload.get("candidate_topics"):
+        writer.writerow(
+            {
+                "candidate_topic": "No candidate topic yet.",
+                "reason": payload.get("next_step") or "",
+                "source": "instructions",
+                "related_topic_id": "",
+                "duplicate_warning": "finish_metrics_rollup_first",
+                "monthly_refresh_day": payload.get("next_month_refresh_day") or "",
+                "notion_action": "continue_current_month_workflow",
+            }
+        )
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-next-plan-handback.csv"'},
+    )
+
+
+@app.get("/operations/monthly-carousel-next-plan-handback.zh.md")
+async def operations_monthly_carousel_next_plan_handback_zh(_: None = Depends(require_access_token)):
+    payload = await monthly_carousel_next_plan_handback_payload()
+    source = payload.get("source") or {}
+    insights = payload.get("outcome_insights") or {}
+    lines = [
+        "# DREC 月度 Carousel 学习回流到下月计划",
+        "",
+        f"生成时间：{datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}",
+        f"Notion 来源：{source.get('name')}",
+        f"月度刷新日：每月 {payload.get('next_month_refresh_day')} 日",
+        "",
+        "用途：把本月发布后的表现数据、outcome 和学习信号，整理成下个月 Notion 计划的候选输入。本文件只读，不会创建 Notion row、不会改 Topic ID、不会批准、排程、发布或调用 Meta。",
+        "",
+        "## 当前学习状态",
+        "",
+        f"- 本月内容数：{payload.get('asset_count')}",
+        f"- 已完成学习闭环：{payload.get('learning_complete_count')}",
+        f"- 还在等 metrics / rollup：{payload.get('waiting_learning_count')}",
+        f"- 已存在 Topic ID：{payload.get('existing_topic_id_count')}",
+        f"- 学习样本：{insights.get('sample_size', 0)}",
+        "",
+        "## 下月候选主题",
+        "",
+    ]
+    candidates = payload.get("candidate_topics") or []
+    if candidates:
+        for index, item in enumerate(candidates, start=1):
+            lines.extend(
+                [
+                    f"### {index}. {item.get('candidate')}",
+                    "",
+                    f"- 来源：{item.get('source')}",
+                    f"- 相关 Topic ID：{item.get('related_topic_id') or '无'}",
+                    f"- 理由：{item.get('reason')}",
+                    f"- 重复检查：{item.get('duplicate_warning')}",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["- 暂无候选主题。请先完成当前月度内容的发布、metrics 和 rollup。", ""])
+    lines.extend(
+        [
+            "## 使用方式",
+            "",
+            "1. 每月 19 号 Notion 刷新后，先下载本文件和 CSV。",
+            "2. 逐条检查候选主题是否和现有 Topic ID / Topic 重复；不要创建重复主题。",
+            "3. 只把通过人工检查的主题作为 Notion 新计划输入。",
+            "4. 新 row 仍必须完整填写 Carousel Slide Plan，并走医生审核、制作 QA、入队、排程和发布 gate。",
+            "5. 若本月还没有 outcome，不要强行调整方向；继续使用默认安全教育主题。",
+            "",
+            "## 内容安全提醒",
+            "",
+            "- Mandarin-first，给约 50 岁华人成人看得懂。",
+            "- 做文字解释型教育 carousel，不做空洞口号。",
+            "- Slide 1 只放 cover hook 和视觉，不放解释正文。",
+            "- 不写 miracle cure、一定逆转、保证改善、恐吓并发症或直接卖课。",
+            "- 视觉继续用 DREC 蓝 / 绿 / teal 医疗风，不要 cartoonish 或吓人。",
+            "",
+            "## 下一步",
+            "",
+            f"- {payload.get('next_step')}",
+            "",
+            "## 安全线",
+            "",
+            *markdown_list(payload.get("guardrails")),
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-next-plan-handback-zh.md"'},
+    )
+
+
 def snapshot_row(record_type, item_id="", status="", channel="", fmt="", title="", created_at="", detail=""):
     return {
         "record_type": record_type,
@@ -9603,6 +9819,8 @@ async def monthly_carousel_action_pack_payload():
             "monthly_publishing_handoff": "/operations/monthly-carousel-publishing-handoff.zh.md",
             "monthly_metrics_template": "/operations/monthly-carousel-metrics-template.csv",
             "monthly_metrics_execution_pack": "/operations/monthly-carousel-metrics-execution-pack.zh.md",
+            "monthly_next_plan_handback": "/operations/monthly-carousel-next-plan-handback.zh.md",
+            "monthly_next_plan_handback_csv": "/operations/monthly-carousel-next-plan-handback.csv",
             "status_board": "/operations/monthly-carousel-status-board.zh.md",
             "pre_schedule_gate": "/operations/pre-schedule-gate.md",
             "review_to_schedule": "/operations/review-to-schedule-pack.zh.md",

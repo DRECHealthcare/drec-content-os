@@ -7757,6 +7757,26 @@ document.getElementById("download-learning-snapshot")?.addEventListener("click",
   }
 });
 
+document.getElementById("download-monthly-carousel-next-plan-handback")?.addEventListener("click", async () => {
+  const message = document.getElementById("weight-message");
+  try {
+    await downloadProtectedFile("/operations/monthly-carousel-next-plan-handback.zh.md", "drec-monthly-carousel-next-plan-handback-zh.md", "text/markdown");
+    message.textContent = "月度学习回流包已下载。";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "请先设置访问码。" : "无法下载月度学习回流包。";
+  }
+});
+
+document.getElementById("download-monthly-carousel-next-plan-handback-csv")?.addEventListener("click", async () => {
+  const message = document.getElementById("weight-message");
+  try {
+    await downloadProtectedFile("/operations/monthly-carousel-next-plan-handback.csv", "drec-monthly-carousel-next-plan-handback.csv", "text/csv");
+    message.textContent = "下月候选主题 CSV 已下载。";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "请先设置访问码。" : "无法下载下月候选主题 CSV。";
+  }
+});
+
 document.getElementById("refresh-quarterly-memo")?.addEventListener("click", async () => {
   const message = document.getElementById("weight-message");
   message.textContent = "Refreshing quarterly memo...";
