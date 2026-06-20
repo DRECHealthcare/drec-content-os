@@ -14572,7 +14572,7 @@ def normalize_review_safety_decision(value: str | None):
         return None
     if text in {"clear", "safety clear", "safe", "approved clear", "yes", "y"}:
         return "clear"
-    if text in {"pending", "keep pending", "rewrite", "needs work", "needs rewrite", "review"}:
+    if text in {"pending", "keep pending", "rewrite", "needs work", "needs rewrite", "review", "needs review"}:
         return "pending"
     if text in {"flag", "flagged", "unsafe", "block", "blocked", "no", "n"}:
         return "flagged"
@@ -14585,7 +14585,7 @@ def normalize_asset_review_decision(value: str | None):
         return None
     if text in {"approve", "approved", "yes", "y"}:
         return "approved"
-    if text in {"review", "needs work", "rewrite", "pending", "keep pending"}:
+    if text in {"review", "needs work", "needs edits", "needs edit", "rewrite", "pending", "keep pending"}:
         return "review"
     if text in {"reject", "rejected", "no", "n"}:
         return "rejected"
@@ -14916,6 +14916,37 @@ async def import_doctor_replies(
             "Doctor reply import records review and safety decisions, and can apply polished copy only when the doctor explicitly says yes with Decision: approve and Safety: clear.",
             "It does not queue, schedule, publish, send Meta requests, or attach media/design.",
             "Approval still requires Safety: clear before review can become approved.",
+        ],
+    }
+
+
+@app.post("/operations/import-doctor-replies-and-safe-advance")
+async def import_doctor_replies_and_safe_advance(
+    payload: DoctorReplyImportIn,
+    max_actions: int = 20,
+    session: dict = Depends(require_schedule_access),
+):
+    reply_result = await import_doctor_replies(payload, session)
+    advance_result = await operations_monthly_carousel_safe_advance(
+        dry_run=payload.dry_run,
+        max_actions=max_actions,
+        _=None,
+    )
+    return {
+        "dry_run": payload.dry_run,
+        "mode": "doctor_reply_safe_intake",
+        "reply_import": reply_result,
+        "safe_advance": advance_result,
+        "message": (
+            f"Previewed doctor reply intake and {advance_result.get('action_count', 0)} safe advance action(s)."
+            if payload.dry_run
+            else f"Imported doctor reply intake and ran {advance_result.get('action_count', 0)} safe advance action(s)."
+        ),
+        "safety": [
+            "This combined action does not approve anything unless the pasted doctor reply explicitly says Decision: approve and Safety: clear.",
+            "The safe advance step only queues assets that already pass doctor approval, safety clear, final media, visual QA, and copy detector gates.",
+            "It only schedules queue items that are already draft, compliance-clear, and human review-approved.",
+            "It never publishes to Meta; Meta remains dry-run only inside the safety check.",
         ],
     }
 

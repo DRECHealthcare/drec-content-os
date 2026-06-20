@@ -6148,6 +6148,61 @@ async function importDoctorReplies({ dryRun }) {
   }
 }
 
+async function importDoctorRepliesAndSafeAdvance({ dryRun }) {
+  const message = document.getElementById("media-message");
+  const textInput = document.getElementById("doctor-reply-text");
+  const reviewerInput = document.getElementById("doctor-reply-reviewer");
+  const replyText = textInput?.value?.trim() || "";
+  if (!replyText) {
+    message.textContent = "Paste the doctor reply text first.";
+    return;
+  }
+  message.textContent = dryRun
+    ? translateText("Previewing doctor reply and safe advance...")
+    : translateText("Importing doctor reply and running safe advance...");
+  try {
+    const data = await fetchJson(`/operations/import-doctor-replies-and-safe-advance?max_actions=20`, {
+      method: "POST",
+      body: JSON.stringify({
+        reply_text: replyText,
+        dry_run: dryRun,
+        reviewer_name: reviewerInput?.value?.trim() || "",
+      }),
+    });
+    if (!dryRun) textInput.value = "";
+    message.textContent = data.message || (dryRun
+      ? translateText("Doctor reply safe intake previewed.")
+      : translateText("Doctor reply safe intake completed."));
+    renderAssetReviewDecisionPreview(data.reply_import || data);
+    renderMonthlySafeAdvanceResult(data.safe_advance || {});
+    if (!dryRun) {
+      await Promise.all([
+        loadAssets(),
+        loadFirstCycleEvidenceWorkbench(),
+        loadDoctorSendQueue(),
+        loadDoctorReplyInboxPack(),
+        loadDoctorReviewPolishPack(),
+        loadFirstCycleSprintPack(),
+        loadFirstCycleHandoff(),
+        loadApprovalCockpit(),
+        loadPostApprovalProduction(),
+        loadMonthlyCarouselStatusBoard(),
+        loadPreScheduleGate(),
+        loadPublishQueue(),
+        loadLoopStatus(),
+        loadLearningSummary(),
+        loadProjectCompletionAudit(),
+      ]);
+    }
+  } catch (error) {
+    message.textContent = error.message === "Access token required"
+      ? translateText("Set the access token first.")
+      : dryRun
+        ? translateText("Could not preview doctor reply safe intake.")
+        : translateText("Could not run doctor reply safe intake.");
+  }
+}
+
 async function uploadAssetMediaAttachments({ dryRun }) {
   const message = document.getElementById("media-message");
   const fileInput = document.getElementById("asset-media-attachments-file");
@@ -6356,6 +6411,14 @@ document.getElementById("preview-doctor-replies")?.addEventListener("click", asy
 
 document.getElementById("import-doctor-replies")?.addEventListener("click", async () => {
   await importDoctorReplies({ dryRun: false });
+});
+
+document.getElementById("preview-doctor-replies-safe-advance")?.addEventListener("click", async () => {
+  await importDoctorRepliesAndSafeAdvance({ dryRun: true });
+});
+
+document.getElementById("import-doctor-replies-safe-advance")?.addEventListener("click", async () => {
+  await importDoctorRepliesAndSafeAdvance({ dryRun: false });
 });
 
 document.getElementById("preview-asset-media-attachments")?.addEventListener("click", async () => {
