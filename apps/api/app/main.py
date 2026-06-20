@@ -10892,6 +10892,9 @@ async def operations_monthly_carousel_safe_advance(
         state, blockers = review_queue_state(item)
         if state != "ready_to_schedule":
             continue
+        pre_schedule_blockers = pre_schedule_production_blockers(item)
+        if pre_schedule_blockers:
+            continue
         if dry_run:
             suggestion = await suggest_publish_slot(item.get("channel") or "facebook", ignore_item_id=str(item.get("id")))
             actions.append(
@@ -10902,7 +10905,7 @@ async def operations_monthly_carousel_safe_advance(
                     "asset_id": item.get("asset_id"),
                     "suggested_slot": suggestion.get("suggested_slot"),
                     "suggested_slot_myt": suggestion.get("local_slot"),
-                    "detail": "Queue item is draft, compliance-clear, and review-approved.",
+                    "detail": "Queue item passes queue review and pre-schedule production checks.",
                 }
             )
         else:
@@ -15374,6 +15377,53 @@ async def import_monthly_carousel_review_queue_decisions(
         "It still does not schedule, publish, or call Meta.",
     ]
     return result
+
+
+@app.post("/operations/import-monthly-carousel-review-queue-decisions-and-safe-advance")
+async def import_monthly_carousel_review_queue_decisions_and_safe_advance(
+    file: UploadFile = File(...),
+    dry_run: bool = Form(True),
+    max_actions: int = Form(20),
+    session: dict = Depends(require_schedule_access),
+):
+    csv_text = await decode_review_queue_decisions_csv(file)
+    monthly_items = await monthly_carousel_queue_items()
+    allowed_queue_ids = {str(item.get("id")) for item in monthly_items if item.get("id")}
+    import_result = await process_review_queue_decisions_csv(
+        csv_text=csv_text,
+        dry_run=dry_run,
+        session=session,
+        source_label="monthly carousel review queue decision",
+        allowed_queue_ids=allowed_queue_ids,
+    )
+    import_result["source"] = "monthly_carousel_review_queue_decision_safe_intake"
+    import_result["message"] = (
+        f"Previewed {import_result.get('planned_count', 0)} monthly queue decision row(s), {import_result.get('skipped_count', 0)} skipped."
+        if dry_run
+        else f"Imported {import_result.get('imported_count', 0)} monthly queue decision row(s), {import_result.get('skipped_count', 0)} skipped."
+    )
+    advance_result = await operations_monthly_carousel_safe_advance(
+        dry_run=dry_run,
+        max_actions=max_actions,
+        _=None,
+    )
+    return {
+        "dry_run": dry_run,
+        "mode": "monthly_queue_review_safe_intake",
+        "queue_review_import": import_result,
+        "safe_advance": advance_result,
+        "message": (
+            f"Previewed monthly queue review intake and {advance_result.get('action_count', 0)} safe advance action(s)."
+            if dry_run
+            else f"Imported monthly queue review intake and ran {advance_result.get('action_count', 0)} safe advance action(s)."
+        ),
+        "safety": [
+            "This combined action only records explicit monthly queue review decisions from the uploaded CSV.",
+            "It accepts only queue items created from the Notion monthly carousel source of truth.",
+            "The safe advance step schedules only queue items that pass queue review and pre-schedule production checks.",
+            "It never publishes to Meta; Meta remains dry-run only inside the safety check.",
+        ],
+    }
 
 
 def editorial_qa_flags(item: dict):

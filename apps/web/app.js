@@ -7981,6 +7981,7 @@ async function uploadReviewQueueDecisions({
   source = "review_queue",
   fileInputId = "review-queue-decisions-file",
   allowPastedCsv = true,
+  safeAdvance = false,
 }) {
   const message = document.getElementById("queue-message");
   const isMonthly = source === "monthly_carousel";
@@ -8002,23 +8003,27 @@ async function uploadReviewQueueDecisions({
     ? (isMonthly ? translateText("Previewing monthly carousel queue decisions...") : "Previewing queue decisions...")
     : (isMonthly ? translateText("Importing monthly carousel queue decisions...") : "Importing queue decisions...");
   try {
-    const endpoint = isMonthly
-      ? "/operations/import-monthly-carousel-review-queue-decisions"
-      : "/operations/import-review-queue-decisions";
+    const endpoint = isMonthly && safeAdvance
+      ? "/operations/import-monthly-carousel-review-queue-decisions-and-safe-advance"
+      : isMonthly
+        ? "/operations/import-monthly-carousel-review-queue-decisions"
+        : "/operations/import-review-queue-decisions";
+    if (safeAdvance) body.append("max_actions", "20");
     const data = await fetchForm(endpoint, body);
     if (!dryRun) fileInput.value = "";
     if (!dryRun && !file && textInput) textInput.value = "";
     message.textContent = data.message || (dryRun
       ? (isMonthly ? translateText("Monthly carousel queue decisions previewed.") : "Queue decisions previewed.")
       : (isMonthly ? translateText("Monthly carousel queue decisions imported.") : "Queue decisions imported."));
-    renderReviewQueueDecisionPreview(data);
-    if (!dryRun) await Promise.all([loadPublishQueue(), loadPreScheduleGate(), loadLoopStatus()]);
+    renderReviewQueueDecisionPreview(data.queue_review_import || data);
+    if (data.safe_advance) renderMonthlySafeAdvanceResult(data.safe_advance);
+    if (!dryRun) await Promise.all([loadPublishQueue(), loadPreScheduleGate(), loadMonthlyCarouselStatusBoard(), loadLoopStatus(), loadProjectCompletionAudit()]);
   } catch (error) {
     message.textContent = error.message === "Access token required"
       ? translateText("Set the access token first.")
       : dryRun
-        ? (isMonthly ? translateText("Could not preview monthly carousel queue decisions.") : "Could not preview queue decisions.")
-        : (isMonthly ? translateText("Could not import monthly carousel queue decisions.") : "Could not import queue decisions.");
+        ? (safeAdvance ? translateText("Could not preview monthly queue decision safe intake.") : (isMonthly ? translateText("Could not preview monthly carousel queue decisions.") : "Could not preview queue decisions."))
+        : (safeAdvance ? translateText("Could not import monthly queue decision safe intake.") : (isMonthly ? translateText("Could not import monthly carousel queue decisions.") : "Could not import queue decisions."));
   }
 }
 
@@ -8045,6 +8050,26 @@ document.getElementById("import-monthly-carousel-review-queue-decisions")?.addEv
     source: "monthly_carousel",
     fileInputId: "monthly-carousel-review-queue-decisions-file",
     allowPastedCsv: false,
+  });
+});
+
+document.getElementById("preview-monthly-carousel-review-queue-safe-advance")?.addEventListener("click", async () => {
+  await uploadReviewQueueDecisions({
+    dryRun: true,
+    source: "monthly_carousel",
+    fileInputId: "monthly-carousel-review-queue-decisions-file",
+    allowPastedCsv: false,
+    safeAdvance: true,
+  });
+});
+
+document.getElementById("import-monthly-carousel-review-queue-safe-advance")?.addEventListener("click", async () => {
+  await uploadReviewQueueDecisions({
+    dryRun: false,
+    source: "monthly_carousel",
+    fileInputId: "monthly-carousel-review-queue-decisions-file",
+    allowPastedCsv: false,
+    safeAdvance: true,
   });
 });
 
