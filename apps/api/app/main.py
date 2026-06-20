@@ -16642,9 +16642,20 @@ def notion_monthly_refresh_workbench_payload():
 async def notion_monthly_refresh_status_payload():
     workbench = notion_monthly_refresh_workbench_payload()
     assets = await monthly_carousel_asset_list()
+    all_assets = await fetch_asset_list(500)
     active_start = datetime.fromisoformat(workbench["active_cycle_start"]).replace(tzinfo=MYT)
     active_start_utc = active_start.astimezone(timezone.utc)
     topic_ids = [monthly_carousel_topic_id(asset) for asset in assets if monthly_carousel_topic_id(asset)]
+    topic_id_counts: dict[str, int] = {}
+    for topic_id in topic_ids:
+        topic_id_counts[topic_id] = topic_id_counts.get(topic_id, 0) + 1
+    duplicate_topic_ids = sorted([topic_id for topic_id, count in topic_id_counts.items() if count > 1])
+    notion_carousel_without_topic = [
+        asset for asset in all_assets
+        if asset.get("format") == "carousel"
+        and ((asset.get("metadata") or {}).get("notion_source") or {})
+        and not monthly_carousel_topic_id(asset)
+    ]
     created_dates = [parse_datetime(asset.get("created_at")) for asset in assets]
     created_dates = [date for date in created_dates if date]
     imported_since_refresh = [
@@ -16662,9 +16673,37 @@ async def notion_monthly_refresh_status_payload():
         image_status_counts[image_status] = image_status_counts.get(image_status, 0) + 1
         overall_status_counts[overall_status] = overall_status_counts.get(overall_status, 0) + 1
         caption_status_counts[caption_status] = caption_status_counts.get(caption_status, 0) + 1
+    diagnostics = []
+    if duplicate_topic_ids:
+        diagnostics.append({
+            "status": "blocked",
+            "label": "Duplicate Topic ID detected",
+            "detail": ", ".join(duplicate_topic_ids),
+        })
+    if notion_carousel_without_topic:
+        diagnostics.append({
+            "status": "blocked",
+            "label": "Notion carousel asset missing Topic ID",
+            "detail": f"{len(notion_carousel_without_topic)} asset(s) have notion_source metadata but no Topic ID.",
+        })
+    if imported_since_refresh:
+        diagnostics.append({
+            "status": "ready",
+            "label": "Current cycle import evidence",
+            "detail": f"{len(imported_since_refresh)} asset(s) created after {workbench.get('active_cycle_start')} MYT.",
+        })
+    else:
+        diagnostics.append({
+            "status": "waiting",
+            "label": "Current cycle import evidence",
+            "detail": "No local monthly carousel asset was created after the active refresh date.",
+        })
     if workbench.get("status") == "refresh_due_today":
         status = "refresh_due_today"
         next_action = "Open the Notion database today, confirm refreshed rows, then import/sync existing rows by Topic ID."
+    elif duplicate_topic_ids or notion_carousel_without_topic:
+        status = "local_source_needs_cleanup"
+        next_action = "Fix local Topic ID problems before creating images, captions, or queue items for this monthly cycle."
     elif not assets:
         status = "no_local_monthly_assets"
         next_action = "Import/sync the current Notion monthly rows before generating carousel images or captions."
@@ -16685,6 +16724,9 @@ async def notion_monthly_refresh_status_payload():
         "imported_since_refresh_count": len(imported_since_refresh),
         "latest_local_import_at": latest_local_import_at,
         "topic_ids": topic_ids,
+        "duplicate_topic_ids": duplicate_topic_ids,
+        "missing_topic_id_count": len(notion_carousel_without_topic),
+        "diagnostics": diagnostics,
         "image_status_counts": image_status_counts,
         "overall_status_counts": overall_status_counts,
         "caption_status_counts": caption_status_counts,
@@ -16693,6 +16735,8 @@ async def notion_monthly_refresh_status_payload():
             f"Active monthly cycle starts on {workbench.get('active_cycle_start')} MYT.",
             f"{len(assets)} non-published local monthly carousel asset(s) are visible.",
             f"{len(imported_since_refresh)} local monthly asset(s) were created after this cycle start.",
+            f"{len(duplicate_topic_ids)} duplicate Topic ID value(s) were detected locally.",
+            f"{len(notion_carousel_without_topic)} Notion carousel asset(s) are missing Topic ID.",
             "This check is read-only and does not query, edit, create, schedule, publish, or call Meta.",
         ],
         "safety": [

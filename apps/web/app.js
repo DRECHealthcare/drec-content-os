@@ -2371,9 +2371,11 @@ function renderNotionMonthlyRefreshStatus(data) {
     refresh_due_today: "今天是刷新日，请先复核 Notion",
     no_local_monthly_assets: "本地还没有月度内容",
     needs_rescan_after_refresh: "建议重新扫描 Notion",
+    local_source_needs_cleanup: "本地 Topic ID 需要清理",
     local_cycle_active: "本轮月度内容已在系统内",
   }[data.status] || data.status || "未知";
   const topicIds = data.topic_ids || [];
+  const diagnostics = data.diagnostics || [];
   return `
     <article class="learning-card wide-learning" data-notion-refresh-status>
       <h3>Notion 月度刷新状态</h3>
@@ -2386,9 +2388,21 @@ function renderNotionMonthlyRefreshStatus(data) {
       </div>
       <ul>
         <li><strong>最新本地导入</strong> ${escapeHtml(data.latest_local_import_at || "暂无")}</li>
+        <li><strong>重复 Topic ID</strong> ${escapeHtml((data.duplicate_topic_ids || []).join(", ") || "无")}</li>
+        <li><strong>缺 Topic ID</strong> ${Number(data.missing_topic_id_count || 0)}</li>
         <li><strong>Topic ID</strong> ${escapeHtml(topicIds.slice(0, 20).join(", ") || "暂无")}</li>
         <li><strong>下一步</strong> ${escapeHtml(data.next_action || "")}</li>
       </ul>
+      ${diagnostics.length ? `
+        <h4>刷新诊断</h4>
+        <ul>${diagnostics.map((item) => `
+          <li>
+            <strong>${escapeHtml(item.status || "")}</strong>
+            ${escapeHtml(item.label || "")}
+            <br><small>${escapeHtml(item.detail || "")}</small>
+          </li>
+        `).join("")}</ul>
+      ` : ""}
     </article>
   `;
 }
