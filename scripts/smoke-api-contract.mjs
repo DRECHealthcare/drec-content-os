@@ -2099,7 +2099,7 @@ const requiredSnippets = [
   {
     name: "asset review decisions import dry run",
     file: "main",
-    text: "Previewed {len(planned)} asset review decision(s)",
+    text: "Previewed {len(planned)} {source_label}(s)",
   },
   {
     name: "asset review decisions safety approval guard",
@@ -2865,6 +2865,26 @@ const requiredSnippets = [
     name: "monthly carousel doctor handoff zip safety",
     file: "main",
     text: "不会批准、修改、挂载媒体、入队、排程、发布、记录 post ID",
+  },
+  {
+    name: "monthly doctor worksheet strict evidence gate",
+    file: "main",
+    text: "strict_doctor_checks=True",
+  },
+  {
+    name: "monthly doctor worksheet checklist fields",
+    file: "main",
+    text: "MONTHLY_DOCTOR_CHECK_FIELDS",
+  },
+  {
+    name: "monthly doctor worksheet source of truth gate",
+    file: "main",
+    text: "Asset is not part of the monthly carousel source of truth.",
+  },
+  {
+    name: "monthly doctor worksheet approval evidence copy",
+    file: "main",
+    text: "Monthly approval requires reviewer_name, review_notes, and all doctor_check_* fields marked yes/pass.",
   },
   {
     name: "monthly carousel doctor triage safety",

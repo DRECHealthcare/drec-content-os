@@ -10480,10 +10480,11 @@ async def operations_monthly_carousel_doctor_handoff_pack_zip(_: None = Depends(
                     "1. 先看 `01-doctor-triage.zh.md`。",
                     "2. 需要细读时看 `02-doctor-review-summary.zh.md`。",
                     "3. 医生回复可用 `03-doctor-reply-templates.zh.md`。",
-                    "4. 助理记录可用 `04-doctor-decision-worksheet.csv`。",
+                    "4. 助理记录可用 `04-doctor-decision-worksheet.csv`；若要 approve，`reviewer_name`、`review_notes` 和五个 `doctor_check_*` 栏位都必须填写 yes/pass。",
                     "5. 图片素材下载链接在 `05-png-review-links.csv`；完整图片 ZIP 仍由系统端点 `/operations/monthly-carousel-png-assets.zip` 下载。",
                     "",
                     "只有医生明确写 `Decision: approve` 且 `Safety: clear`，才可以进入后续导入和制作步骤。",
+                    "导入时系统仍会检查 evidence，不会因为 CSV 误填 approve 就绕过医生审核门槛。",
                 ]
             ),
         )
@@ -16212,13 +16213,28 @@ async def decode_asset_review_decisions_csv(file: UploadFile):
         raise HTTPException(status_code=400, detail="Asset review decision CSV must be UTF-8 text.") from exc
 
 
-@app.post("/operations/import-asset-review-decisions")
-async def import_asset_review_decisions(
-    file: UploadFile = File(...),
-    dry_run: bool = Form(True),
-    session: dict = Depends(require_review_access),
+MONTHLY_DOCTOR_CHECK_FIELDS = [
+    "doctor_check_educational_not_diagnostic",
+    "doctor_check_no_guaranteed_outcome",
+    "doctor_check_no_medication_instruction",
+    "doctor_check_mandarin_accurate",
+    "doctor_check_cta_appropriate",
+]
+
+
+def is_affirmative_review_check(value: str | None):
+    text = (value or "").strip().lower().replace("_", " ").replace("-", " ")
+    return text in {"yes", "y", "true", "pass", "passed", "clear", "ok", "checked", "done", "是", "通过", "已检查"}
+
+
+async def process_asset_review_decisions_csv(
+    csv_text: str,
+    dry_run: bool,
+    session: dict,
+    source_label: str = "asset review decision",
+    allowed_asset_ids: set[str] | None = None,
+    strict_doctor_checks: bool = False,
 ):
-    csv_text = await decode_asset_review_decisions_csv(file)
     reader = csv.DictReader(StringIO(csv_text))
     required = {"asset_id", "reviewer_safety_decision", "reviewer_review_decision"}
     headers = set(reader.fieldnames or [])
@@ -16233,6 +16249,9 @@ async def import_asset_review_decisions(
         asset_id = (row.get("asset_id") or "").strip()
         if not asset_id:
             skipped.append({"row": index, "reason": "Missing asset_id."})
+            continue
+        if allowed_asset_ids is not None and asset_id not in allowed_asset_ids:
+            skipped.append({"row": index, "asset_id": asset_id, "reason": "Asset is not part of the monthly carousel source of truth."})
             continue
         safety_decision = normalize_review_safety_decision(row.get("reviewer_safety_decision"))
         review_decision = normalize_asset_review_decision(row.get("reviewer_review_decision"))
@@ -16252,6 +16271,25 @@ async def import_asset_review_decisions(
         if review_decision == "approved" and target_safety != "clear":
             skipped.append({"row": index, "asset_id": asset_id, "reason": "Approval requires reviewer_safety_decision=clear or an already clear asset."})
             continue
+        if strict_doctor_checks and review_decision == "approved":
+            missing_evidence = []
+            if not reviewer_name:
+                missing_evidence.append("reviewer_name")
+            if not notes:
+                missing_evidence.append("review_notes")
+            failed_checks = [field for field in MONTHLY_DOCTOR_CHECK_FIELDS if not is_affirmative_review_check(row.get(field))]
+            if failed_checks:
+                missing_evidence.extend(failed_checks)
+            if missing_evidence:
+                skipped.append(
+                    {
+                        "row": index,
+                        "asset_id": asset_id,
+                        "reason": "Monthly approval requires reviewer_name, review_notes, and all doctor_check_* fields marked yes/pass.",
+                        "missing_evidence": missing_evidence,
+                    }
+                )
+                continue
         reason_parts = ["CSV reviewer decision import."]
         if reviewer_name:
             reason_parts.append(f"Reviewer: {reviewer_name}.")
@@ -16302,11 +16340,30 @@ async def import_asset_review_decisions(
         "imported": imported,
         "skipped": skipped,
         "message": (
-            f"Previewed {len(planned)} asset review decision(s), {len(skipped)} skipped."
+            f"Previewed {len(planned)} {source_label}(s), {len(skipped)} skipped."
             if dry_run
-            else f"Imported {len(imported)} asset review decision(s), {len(skipped)} skipped."
+            else f"Imported {len(imported)} {source_label}(s), {len(skipped)} skipped."
         ),
+        "safety": [
+            "Review decision import does not attach media, queue, schedule, publish, or call Meta.",
+            "Approval requires Safety: clear before review can become approved.",
+        ],
     }
+
+
+@app.post("/operations/import-asset-review-decisions")
+async def import_asset_review_decisions(
+    file: UploadFile = File(...),
+    dry_run: bool = Form(True),
+    session: dict = Depends(require_review_access),
+):
+    csv_text = await decode_asset_review_decisions_csv(file)
+    return await process_asset_review_decisions_csv(
+        csv_text=csv_text,
+        dry_run=dry_run,
+        session=session,
+        source_label="asset review decision",
+    )
 
 
 @app.post("/operations/import-monthly-carousel-doctor-worksheet")
@@ -16315,7 +16372,17 @@ async def import_monthly_carousel_doctor_worksheet(
     dry_run: bool = Form(True),
     session: dict = Depends(require_review_access),
 ):
-    result = await import_asset_review_decisions(file=file, dry_run=dry_run, session=session)
+    csv_text = await decode_asset_review_decisions_csv(file)
+    monthly_assets = await monthly_carousel_asset_list()
+    allowed_asset_ids = {str(asset.get("id")) for asset in monthly_assets if asset.get("id")}
+    result = await process_asset_review_decisions_csv(
+        csv_text=csv_text,
+        dry_run=dry_run,
+        session=session,
+        source_label="monthly doctor worksheet row",
+        allowed_asset_ids=allowed_asset_ids,
+        strict_doctor_checks=True,
+    )
     result["source"] = "monthly_carousel_doctor_worksheet"
     result["message"] = (
         f"Previewed {result.get('planned_count', 0)} monthly doctor worksheet row(s), {result.get('skipped_count', 0)} skipped."
@@ -16325,6 +16392,8 @@ async def import_monthly_carousel_doctor_worksheet(
     result["safety"] = [
         "Monthly doctor worksheet import only applies reviewer safety/review decisions.",
         "Approval still requires Safety: clear before review can become approved.",
+        "Monthly approval also requires reviewer_name, review_notes, and all doctor_check_* fields marked yes/pass.",
+        "Monthly import accepts only assets from the Notion monthly carousel source of truth.",
         "It does not attach media, queue, schedule, publish, or call Meta.",
         "Use Topic ID only for human tracking; Asset ID remains the import key.",
     ]
