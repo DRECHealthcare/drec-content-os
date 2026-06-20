@@ -241,6 +241,7 @@ const uiZh = {
   "Download Doctor Bridge": "下载医生沟通桥",
   "下载中文医生审核桥接包": "下载中文医生审核桥接包",
   "下载月度 Carousel 医生审核总包": "下载月度 Carousel 医生审核总包",
+  "下载月度 Carousel 全部图片 ZIP": "下载月度 Carousel 全部图片 ZIP",
   "Download Send Queue": "下载发送队列",
   "Download Doctor Polish": "下载医生润色包",
   "Download Reply Inbox": "下载回复收件箱",
@@ -568,6 +569,8 @@ Object.assign(uiZh, {
   "Could not download first publish doctor review sheet.": "无法下载首发医生审核单。",
   "Monthly carousel doctor review pack downloaded.": "月度 Carousel 医生审核总包已下载。",
   "Could not download monthly carousel doctor review pack.": "无法下载月度 Carousel 医生审核总包。",
+  "Monthly carousel PNG ZIP downloaded.": "月度 Carousel 全部图片 ZIP 已下载。",
+  "Could not download monthly carousel PNG ZIP.": "无法下载月度 Carousel 全部图片 ZIP。",
   "Could not download first publish readiness.": "无法下载首次发布准备包。",
   "Could not run risk audit.": "无法运行风险检查。",
   "Could not download snapshot.": "无法下载快照。",
@@ -5118,6 +5121,16 @@ document.getElementById("download-monthly-carousel-doctor-review-zh")?.addEventL
     message.textContent = translateText("Monthly carousel doctor review pack downloaded.");
   } catch (error) {
     message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download monthly carousel doctor review pack.");
+  }
+});
+
+document.getElementById("download-monthly-carousel-png-assets")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/monthly-carousel-png-assets.zip", "drec-monthly-carousel-png-assets.zip", "application/zip");
+    message.textContent = translateText("Monthly carousel PNG ZIP downloaded.");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download monthly carousel PNG ZIP.");
   }
 });
 

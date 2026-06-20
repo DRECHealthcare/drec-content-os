@@ -7886,7 +7886,7 @@ def monthly_carousel_sort_key(asset: dict):
     return (int(match.group(1)) if match else 9999, topic_id, asset.get("created_at") or "")
 
 
-async def monthly_carousel_review_payload():
+async def monthly_carousel_asset_list():
     assets = await fetch_asset_list(200)
     carousel_assets = [
         asset
@@ -7896,6 +7896,11 @@ async def monthly_carousel_review_payload():
         and (asset.get("review_status") or "") != "rejected"
     ]
     carousel_assets.sort(key=monthly_carousel_sort_key)
+    return carousel_assets
+
+
+async def monthly_carousel_review_payload():
+    carousel_assets = await monthly_carousel_asset_list()
     items = []
     for asset in carousel_assets:
         metadata = asset.get("metadata") or {}
@@ -8045,6 +8050,96 @@ async def operations_monthly_carousel_doctor_review_zh(_: None = Depends(require
         "\n".join(lines),
         media_type="text/markdown",
         headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-doctor-review-zh.md"'},
+    )
+
+
+@app.get("/operations/monthly-carousel-png-assets.zip")
+async def operations_monthly_carousel_png_assets_zip(_: None = Depends(require_access_token)):
+    assets = await monthly_carousel_asset_list()
+    if not assets:
+        raise HTTPException(status_code=404, detail="No monthly carousel assets are available for PNG rendering.")
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr(
+            "README.md",
+            "\n".join(
+                [
+                    "# DREC Monthly Carousel PNG Assets",
+                    "",
+                    "This ZIP contains generated 1080x1350 PNG review files for the monthly Notion carousel batch.",
+                    "It is read-only and does not approve, queue, schedule, publish, or call Meta.",
+                    "Use these files for doctor/design review, then upload only final approved files to approved media storage before publishing.",
+                    "",
+                    f"Source: {NOTION_CAROUSEL_SOURCE.get('name')}",
+                    f"Monthly refresh day: {NOTION_CAROUSEL_SOURCE.get('monthly_refresh_day')}",
+                    f"Asset count: {len(assets)}",
+                ]
+            ),
+        )
+        output = StringIO()
+        writer = csv.DictWriter(
+            output,
+            fieldnames=[
+                "topic_id",
+                "asset_id",
+                "topic",
+                "slide_count",
+                "review_status",
+                "compliance_status",
+                "folder",
+            ],
+        )
+        writer.writeheader()
+        for asset in assets:
+            topic_id = monthly_carousel_topic_id(asset) or "DC000"
+            metadata = asset.get("metadata") or {}
+            topic = metadata.get("topic") or topic_id
+            folder = f"{topic_id}-carousel"
+            slides = first_publish_slide_items(asset)
+            writer.writerow(
+                {
+                    "topic_id": topic_id,
+                    "asset_id": asset.get("id") or "",
+                    "topic": topic,
+                    "slide_count": len(slides),
+                    "review_status": asset.get("review_status") or "",
+                    "compliance_status": asset.get("compliance_status") or "",
+                    "folder": folder,
+                }
+            )
+            archive.writestr(
+                f"{folder}/README.md",
+                "\n".join(
+                    [
+                        f"# {topic_id} {topic}",
+                        "",
+                        f"Asset ID: {asset.get('id')}",
+                        f"Brief ID: {asset.get('brief_id')}",
+                        f"Review / safety: {asset.get('review_status') or 'n/a'} / {asset.get('compliance_status') or 'n/a'}",
+                        f"Slides: {len(slides)}",
+                        "",
+                        "Doctor reply template:",
+                        "",
+                        f"Asset ID: {asset.get('id')}",
+                        "Decision: approve / needs edits / reject",
+                        "Safety: clear / needs review / blocked",
+                        "Use polished copy: no",
+                        "Notes:",
+                        "",
+                    ]
+                ),
+            )
+            for index, slide in enumerate(slides, start=1):
+                archive.writestr(
+                    f"{folder}/slides/{topic_id}-slide-{index:02d}.png",
+                    first_publish_slide_png(asset, slide, index, len(slides)),
+                )
+        archive.writestr("monthly-carousel-index.csv", output.getvalue())
+    buffer.seek(0)
+    return Response(
+        buffer.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-png-assets.zip"'},
     )
 
 
