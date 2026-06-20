@@ -23224,6 +23224,73 @@ def post_publish_metrics_template_csv(payload: dict):
     return output.getvalue()
 
 
+def today_safe_project_completion_snapshot(loop: dict, workflow: dict, security: dict, automation: dict):
+    completion = workflow.get("completion") or build_completion_status(loop, workflow, security, automation)
+    return {
+        "mode": "read_only_today_safe_completion_snapshot",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "completion": completion,
+        "workflow_summary": workflow.get("summary") or {},
+        "security": {
+            "overall_status": security.get("overall_status"),
+            "service_role_key": security.get("service_role_key"),
+            "service_role_smoke": security.get("service_role_smoke"),
+            "rls_hardening_ready": security.get("rls_hardening_ready"),
+            "next_step": security.get("next_step"),
+        },
+        "automation_summary": (automation or {}).get("summary") or {},
+        "next_actions": completion.get("blockers") or [completion.get("next_requirement")],
+        "safety": [
+            "This snapshot is generated from already-loaded workflow evidence.",
+            "It does not run heavy audits, publish, schedule, record post IDs, store secrets, or call Meta live publishing.",
+            "Full completion still requires real service-role smoke evidence and real human/manual publish evidence.",
+        ],
+    }
+
+
+def today_safe_project_unblock_snapshot(completion_snapshot: dict):
+    completion = completion_snapshot.get("completion") or {}
+    security = completion_snapshot.get("security") or {}
+    summary = completion_snapshot.get("workflow_summary") or {}
+    automation = completion_snapshot.get("automation_summary") or {}
+    rows = [
+        {
+            "gate": "supabase_service_role",
+            "status": "ready" if security.get("rls_hardening_ready") else "blocked",
+            "required_action": security.get("next_step") or "Add SUPABASE_SERVICE_ROLE_KEY to Fly, then run the service-role smoke test.",
+            "required_evidence": "Fly secret SUPABASE_SERVICE_ROLE_KEY is deployed and service_role_smoke.status is recent.",
+            "link": "/security/service-role-install-pack.md",
+        },
+        {
+            "gate": "first_publish_cycle",
+            "status": "ready" if int(summary.get("published_queue") or automation.get("published_queue") or 0) else "waiting",
+            "required_action": "Do not record post ID until a human actually posts. After real manual publishing, record the external post ID and later metrics.",
+            "required_evidence": "publish_queue.status=published with external_post_id after real human/manual publish, then metrics and learning closeout.",
+            "link": "/operations/post-publish-next-steps.zh.md",
+        },
+    ]
+    ready = [row for row in rows if row.get("status") == "ready"]
+    waiting = [row for row in rows if row.get("status") == "waiting"]
+    blocked = [row for row in rows if row.get("status") == "blocked"]
+    return {
+        "mode": "read_only_today_safe_unblock_snapshot",
+        "generated_at": completion_snapshot.get("generated_at"),
+        "completion": {
+            "percent": completion.get("percent"),
+            "first_cycle_percent": completion.get("first_cycle_percent"),
+            "next_requirement": completion.get("next_requirement"),
+        },
+        "ready_count": len(ready),
+        "waiting_count": len(waiting),
+        "blocked_count": len(blocked),
+        "rows": rows,
+        "safety": [
+            "This unblock snapshot is read-only.",
+            "It does not approve, publish, record post IDs, store secrets, or call Meta.",
+        ],
+    }
+
+
 async def today_safe_operator_pack_payload():
     loop = await build_loop_status()
     workflow = build_workflow_guidance(loop)
@@ -23235,8 +23302,8 @@ async def today_safe_operator_pack_payload():
     audit = await schedule_audit_payload()
     closeout = await publishing_closeout_payload(100)
     post_publish = await post_publish_next_steps_payload()
-    project_completion = await project_completion_audit_payload()
-    project_unblock = await project_unblock_board_payload()
+    project_completion = today_safe_project_completion_snapshot(loop, workflow, security, automation)
+    project_unblock = today_safe_project_unblock_snapshot(project_completion)
     return {
         "generated_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
         "loop": loop,
@@ -23289,7 +23356,7 @@ def today_safe_operator_pack_readme(payload: dict):
         f"- 排程检查：{zh_schedule_audit_status(audit.get('overall_status'))}",
         f"- 发布后可回填项目：{post_publish.get('ready_to_publish_count', 0)}",
         f"- 安全门槛：{security.get('overall_status')} / service-role smoke: {security_smoke}",
-        f"- 项目解锁：ready {project_unblock.get('ready_count', 0)} / blocked {project_unblock.get('blocked_count', 0)}",
+        f"- 项目解锁：ready {project_unblock.get('ready_count', 0)} / waiting {project_unblock.get('waiting_count', 0)} / blocked {project_unblock.get('blocked_count', 0)}",
         f"- Meta 自动发布：关闭；只允许 dry run 和人工交接。",
         "",
         "## 你真正要看的文件",
