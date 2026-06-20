@@ -25183,7 +25183,7 @@ async def project_unblock_board_payload():
             "current_status": f"{queue_total} queue item(s); {ready_assets} asset(s) ready for queue.",
             "required_action": "Queue one approved, compliance-clear asset with final caption and required media/design attached.",
             "required_evidence": "publish_queue contains one item linked to the approved asset with compliance_status=clear.",
-            "link": "/operations/review-to-schedule-pack-zh.md",
+            "link": "/operations/review-to-schedule-pack.zh.md",
             "safe_auto_action": "/operations/first-publish-safe-advance-loop?dry_run=false&max_steps=8 can queue only when gates are green.",
         },
         {
@@ -25232,7 +25232,7 @@ async def project_unblock_board_payload():
             "project_completion_audit": "/operations/project-completion-audit.zh.md",
             "first_publish_readiness": "/operations/first-publish-readiness.zh.md",
             "doctor_review_sheet": "/operations/first-publish-doctor-review-sheet.zh.md",
-            "review_to_schedule": "/operations/review-to-schedule-pack-zh.md",
+            "review_to_schedule": "/operations/review-to-schedule-pack.zh.md",
             "pre_schedule_gate": "/operations/pre-schedule-gate.md",
             "service_role_pack": "/security/service-role-install-pack.md",
         },

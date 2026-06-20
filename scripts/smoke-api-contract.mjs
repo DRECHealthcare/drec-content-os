@@ -4688,6 +4688,14 @@ const requiredSnippets = [
   },
 ];
 
+const forbiddenSnippets = [
+  {
+    name: "project board stale review-to-schedule link",
+    file: "main",
+    text: "/operations/review-to-schedule-pack-zh.md",
+  },
+];
+
 const routePattern = /@app\.(get|post|patch|delete)\("([^"]+)"/g;
 
 function collectRoutes(source) {
@@ -4728,6 +4736,14 @@ for (const check of requiredSnippets) {
     pass(check.name);
   } else {
     failures.push(fail(check.name, "missing expected code"));
+  }
+}
+
+for (const check of forbiddenSnippets) {
+  if (sources[check.file].includes(check.text)) {
+    failures.push(fail(check.name, "forbidden stale code present"));
+  } else {
+    pass(check.name);
   }
 }
 
