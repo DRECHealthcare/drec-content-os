@@ -7894,6 +7894,7 @@ async def monthly_carousel_asset_list():
         if asset.get("format") == "carousel"
         and monthly_carousel_topic_id(asset)
         and (asset.get("review_status") or "") != "rejected"
+        and ((asset.get("metadata") or {}).get("notion_source") or {}).get("overall_status") != "Published"
     ]
     carousel_assets.sort(key=monthly_carousel_sort_key)
     return carousel_assets
@@ -8527,6 +8528,249 @@ async def operations_monthly_carousel_production_design_worksheet_csv(_: None = 
         output.getvalue(),
         media_type="text/csv",
         headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-production-design-worksheet.csv"'},
+    )
+
+
+def monthly_carousel_queue_readiness_item(asset: dict, queue_items: list[dict]):
+    metadata = asset.get("metadata") or {}
+    notion_source = metadata.get("notion_source") or {}
+    media_urls = [url for url in asset.get("media_urls") or [] if url]
+    detector = check_text(asset.get("caption") or "")
+    visual_qa_status = metadata.get("latest_visual_qa_status") or "pending"
+    queue_matches = [
+        item
+        for item in queue_items
+        if str(item.get("asset_id") or "") == str(asset.get("id") or "")
+    ]
+    active_queue = [
+        item
+        for item in queue_matches
+        if item.get("status") in {"draft", "review_approved", "scheduled", "publishing"}
+    ]
+    blockers = []
+    if detector.get("status") == "flagged":
+        blockers.append("caption_detector_flagged")
+    if asset.get("review_status") != "approved":
+        blockers.append("doctor_decision_not_approved")
+    if asset.get("compliance_status") != "clear":
+        blockers.append("doctor_safety_not_clear")
+    if not media_urls:
+        blockers.append("approved_media_missing")
+    if visual_qa_status != "passed":
+        blockers.append("visual_qa_not_passed")
+
+    if any(item.get("status") == "published" or item.get("external_post_id") for item in queue_matches):
+        gate_status = "already_published"
+        next_action = "Record post metrics and learning notes."
+        can_queue = False
+    elif active_queue:
+        gate_status = "already_in_queue"
+        next_action = "Continue queue review, pre-schedule gate, or schedule audit for the existing queue item."
+        can_queue = False
+    elif detector.get("status") == "flagged":
+        gate_status = "blocked_copy_safety"
+        next_action = "Revise flagged wording before queueing."
+        can_queue = False
+    elif asset.get("review_status") != "approved" or asset.get("compliance_status") != "clear":
+        gate_status = "waiting_doctor_safety_clear"
+        next_action = "Import doctor or human reviewer reply with Decision: approve and Safety: clear."
+        can_queue = False
+    elif not media_urls:
+        gate_status = "waiting_final_media"
+        next_action = "Attach approved final media URLs before queueing."
+        can_queue = False
+    elif visual_qa_status != "passed":
+        gate_status = "waiting_visual_qa"
+        next_action = "Mark visual QA as passed only after checking legibility, DREC style, and unchanged approved copy."
+        can_queue = False
+    else:
+        gate_status = "ready_to_queue"
+        next_action = "Safe to add to publishing queue; pre-schedule gate still applies after queue review."
+        can_queue = True
+
+    return {
+        "topic_id": monthly_carousel_topic_id(asset) or "",
+        "asset_id": asset.get("id") or "",
+        "brief_id": asset.get("brief_id") or "",
+        "topic": metadata.get("topic") or monthly_carousel_topic_id(asset) or "",
+        "planned_posting_date": notion_source.get("planned_posting_date") or "",
+        "review_status": asset.get("review_status") or "",
+        "compliance_status": asset.get("compliance_status") or "",
+        "detector_status": detector.get("status") or "",
+        "media_count": len(media_urls),
+        "visual_qa_status": visual_qa_status,
+        "queue_count": len(queue_matches),
+        "active_queue_count": len(active_queue),
+        "queue_statuses": sorted({item.get("status") or "unknown" for item in queue_matches}),
+        "gate_status": gate_status,
+        "can_queue": can_queue,
+        "blockers": blockers,
+        "next_action": next_action,
+        "caption_preview": feedback_excerpt(asset.get("caption") or "", 360),
+        "png_zip_url": f"/assets/{asset.get('id')}/carousel-png-assets.zip",
+        "preview_url": f"/assets/{asset.get('id')}/carousel-preview/1.png",
+    }
+
+
+async def monthly_carousel_queue_readiness_payload():
+    assets = await monthly_carousel_asset_list()
+    queue_items = await fetch_publish_queue_items(200)
+    items = [monthly_carousel_queue_readiness_item(asset, queue_items) for asset in assets]
+    counts = {}
+    for item in items:
+        counts[item.get("gate_status") or "unknown"] = counts.get(item.get("gate_status") or "unknown", 0) + 1
+    return {
+        "source": NOTION_CAROUSEL_SOURCE,
+        "mode": "read_only_monthly_queue_readiness",
+        "asset_count": len(items),
+        "ready_to_queue_count": counts.get("ready_to_queue", 0),
+        "already_in_queue_count": counts.get("already_in_queue", 0),
+        "blocked_count": sum(counts.get(key, 0) for key in ["blocked_copy_safety"]),
+        "waiting_count": sum(
+            counts.get(key, 0)
+            for key in ["waiting_doctor_safety_clear", "waiting_final_media", "waiting_visual_qa"]
+        ),
+        "gate_counts": counts,
+        "items": items,
+        "rules": [
+            "This monthly queue readiness report is read-only.",
+            "It does not approve, queue, schedule, publish, or call Meta.",
+            "Only Topic ID rows that are doctor-approved, safety-clear, media-ready, and visual-QA-passed can become ready_to_queue.",
+            "After queueing, queue review and the pre-schedule gate still apply before scheduling.",
+            "If Overall Status is Published in Notion, do not create duplicate topics; record learning instead.",
+        ],
+        "next_step": next(
+            (item.get("next_action") for item in items if item.get("gate_status") != "ready_to_queue"),
+            "All visible monthly carousel items are ready to queue; queue review and pre-schedule checks still apply.",
+        ),
+    }
+
+
+@app.get("/operations/monthly-carousel-queue-readiness")
+async def operations_monthly_carousel_queue_readiness(_: None = Depends(require_access_token)):
+    return await monthly_carousel_queue_readiness_payload()
+
+
+@app.get("/operations/monthly-carousel-queue-readiness.csv")
+async def operations_monthly_carousel_queue_readiness_csv(_: None = Depends(require_access_token)):
+    payload = await monthly_carousel_queue_readiness_payload()
+    output = StringIO()
+    fieldnames = [
+        "topic_id",
+        "asset_id",
+        "brief_id",
+        "topic",
+        "planned_posting_date",
+        "gate_status",
+        "can_queue",
+        "review_status",
+        "compliance_status",
+        "detector_status",
+        "media_count",
+        "visual_qa_status",
+        "queue_count",
+        "active_queue_count",
+        "queue_statuses",
+        "blockers",
+        "next_action",
+        "png_zip_url",
+        "preview_url",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for item in payload.get("items") or []:
+        writer.writerow({
+            key: (
+                ", ".join(item.get(key) or [])
+                if key in {"queue_statuses", "blockers"}
+                else item.get(key, "")
+            )
+            for key in fieldnames
+        })
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-queue-readiness.csv"'},
+    )
+
+
+def zh_monthly_queue_gate_status(value: str | None):
+    return {
+        "ready_to_queue": "可安全加入发布队列",
+        "already_in_queue": "已经在发布队列中",
+        "already_published": "已发布",
+        "blocked_copy_safety": "文案安全检测阻塞",
+        "waiting_doctor_safety_clear": "等待医生审核与安全通过",
+        "waiting_final_media": "等待最终媒体/图片链接",
+        "waiting_visual_qa": "等待视觉 QA 通过",
+    }.get(value or "", value or "未知")
+
+
+def zh_monthly_queue_blocker(value: str):
+    return {
+        "caption_detector_flagged": "文案检测器发现风险 wording",
+        "doctor_decision_not_approved": "医生/人工尚未 approve",
+        "doctor_safety_not_clear": "医生/人工尚未标记 Safety: clear",
+        "approved_media_missing": "缺少最终批准的媒体 URL",
+        "visual_qa_not_passed": "视觉 QA 尚未 passed",
+    }.get(value, value)
+
+
+@app.get("/operations/monthly-carousel-queue-readiness.zh.md")
+async def operations_monthly_carousel_queue_readiness_zh(_: None = Depends(require_access_token)):
+    payload = await monthly_carousel_queue_readiness_payload()
+    source = payload.get("source") or {}
+    gate_counts = payload.get("gate_counts") or {}
+    lines = [
+        "# DREC 月度 Carousel 入队检查",
+        "",
+        f"- Notion 来源：{source.get('name')}",
+        f"- 月度刷新日：每月 {source.get('monthly_refresh_day')} 日",
+        f"- 月度内容数：{payload.get('asset_count')}",
+        f"- 可加入发布队列：{payload.get('ready_to_queue_count')}",
+        f"- 已在队列：{payload.get('already_in_queue_count')}",
+        f"- 等待项：{payload.get('waiting_count')}",
+        f"- 阻塞项：{payload.get('blocked_count')}",
+        "",
+        "这个检查只读，不会批准、入队、排程、发布或调用 Meta。它的用途是确认本月 Notion carousel 内容是否已经通过医生审核、安全审核、最终图片和视觉 QA。",
+        "",
+        "## 阶段统计",
+        "",
+        *markdown_list([f"{zh_monthly_queue_gate_status(key)}：{value}" for key, value in sorted(gate_counts.items())], "- 暂无阶段数据。"),
+        "",
+        "## 安全规则",
+        "",
+        *markdown_list(payload.get("rules")),
+        "",
+        "## 下一步",
+        "",
+        f"- {payload.get('next_step')}",
+        "",
+        "## 每条内容",
+        "",
+    ]
+    for item in payload.get("items") or []:
+        blockers = [zh_monthly_queue_blocker(blocker) for blocker in item.get("blockers") or []]
+        lines.extend(
+            [
+                f"### {item.get('topic_id')} · {item.get('topic')}",
+                "",
+                f"- Asset ID：`{item.get('asset_id')}`",
+                f"- 计划日期：{item.get('planned_posting_date') or '未标注'}",
+                f"- 入队状态：`{item.get('gate_status')}`（{zh_monthly_queue_gate_status(item.get('gate_status'))}）",
+                f"- 是否可入队：{'是' if item.get('can_queue') else '否'}",
+                f"- 审核：Review `{item.get('review_status') or 'n/a'}` / Safety `{item.get('compliance_status') or 'n/a'}` / Detector `{item.get('detector_status') or 'n/a'}`",
+                f"- 图片：最终媒体 URL {item.get('media_count')}；Visual QA `{item.get('visual_qa_status')}`",
+                f"- 队列：{item.get('queue_count')} 条；状态 {', '.join(item.get('queue_statuses') or []) or '无'}",
+                f"- 阻碍：{'; '.join(blockers) if blockers else '无'}",
+                f"- 下一步：{item.get('next_action')}",
+                "",
+            ]
+        )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-queue-readiness-zh.md"'},
     )
 
 
