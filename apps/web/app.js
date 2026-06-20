@@ -253,6 +253,7 @@ const uiZh = {
   "Monthly Doctor CSV": "月度医生 CSV",
   "Preview Monthly Doctor": "预览月度医生表",
   "Import Monthly Doctor": "导入月度医生表",
+  "下载月度下一步操作包": "下载月度下一步操作包",
   "下载月度制作设计表": "下载月度制作设计表",
   "Download Approval Cockpit": "下载审批驾驶舱",
   "下载中文审批控制台": "下载中文审批控制台",
@@ -587,6 +588,8 @@ Object.assign(uiZh, {
   "Could not download monthly carousel status CSV.": "无法下载月度 Carousel 状态 CSV。",
   "Monthly carousel doctor worksheet downloaded.": "月度医生审核表已下载。",
   "Could not download monthly carousel doctor worksheet.": "无法下载月度医生审核表。",
+  "Monthly carousel action pack downloaded.": "月度 Carousel 下一步操作包已下载。",
+  "Could not download monthly carousel action pack.": "无法下载月度 Carousel 下一步操作包。",
   "Choose the monthly doctor worksheet CSV first.": "请先选择月度医生审核表 CSV。",
   "Previewing monthly doctor worksheet...": "正在预览月度医生审核表...",
   "Importing monthly doctor worksheet...": "正在导入月度医生审核表...",
@@ -5241,6 +5244,16 @@ document.getElementById("download-monthly-carousel-doctor-worksheet")?.addEventL
     message.textContent = translateText("Monthly carousel doctor worksheet downloaded.");
   } catch (error) {
     message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download monthly carousel doctor worksheet.");
+  }
+});
+
+document.getElementById("download-monthly-carousel-action-pack")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/monthly-carousel-action-pack.zh.md", "drec-monthly-carousel-action-pack-zh.md", "text/markdown");
+    message.textContent = translateText("Monthly carousel action pack downloaded.");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download monthly carousel action pack.");
   }
 });
 

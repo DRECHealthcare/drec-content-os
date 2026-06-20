@@ -8774,6 +8774,212 @@ async def operations_monthly_carousel_queue_readiness_zh(_: None = Depends(requi
     )
 
 
+def monthly_carousel_action_stage_label(stage: str | None):
+    return {
+        "needs_safety_clearance": "等待医生安全审核",
+        "doctor_review": "等待医生审核决定",
+        "needs_copy_safety_review": "文案安全需要修订",
+        "needs_production": "等待最终图片/媒体",
+        "needs_visual_qa": "等待视觉 QA",
+        "ready_for_queue": "可准备入队",
+        "queue_review": "等待队列审核",
+        "ready_to_schedule": "可做排程前检查",
+        "scheduled": "已排程",
+        "published": "已发布",
+    }.get(stage or "", stage or "未知")
+
+
+async def monthly_carousel_action_pack_payload():
+    status_payload = await monthly_carousel_status_payload()
+    queue_payload = await monthly_carousel_queue_readiness_payload()
+    queue_by_asset = {
+        item.get("asset_id"): item
+        for item in queue_payload.get("items") or []
+        if item.get("asset_id")
+    }
+    items = []
+    for item in status_payload.get("items") or []:
+        queue_item = queue_by_asset.get(item.get("asset_id")) or {}
+        merged = {
+            **item,
+            "gate_status": queue_item.get("gate_status") or "",
+            "can_queue": bool(queue_item.get("can_queue")),
+            "queue_blockers": queue_item.get("blockers") or [],
+            "queue_next_action": queue_item.get("next_action") or "",
+            "topic_label": f"{item.get('topic_id')} · {item.get('topic')}",
+        }
+        items.append(merged)
+
+    stage_counts = status_payload.get("stage_counts") or {}
+    gate_counts = queue_payload.get("gate_counts") or {}
+    if gate_counts.get("waiting_doctor_safety_clear", 0):
+        primary_action = {
+            "key": "doctor_review",
+            "title": "先完成医生审核与 Safety clear",
+            "detail": "下载医生审核总包、PNG ZIP 和月度医生审核表；医生明确 Decision: approve 与 Safety: clear 后再导入 CSV。",
+            "download": "/operations/monthly-carousel-doctor-review.zh.md",
+            "worksheet": "/operations/monthly-carousel-doctor-decision-worksheet.csv",
+            "import": "/operations/import-monthly-carousel-doctor-worksheet",
+        }
+    elif stage_counts.get("needs_production", 0) or gate_counts.get("waiting_final_media", 0):
+        primary_action = {
+            "key": "production",
+            "title": "补最终图片/媒体 URL",
+            "detail": "下载月度制作设计表，填入 final media URL、rights note、visual QA，再用 Monthly Production CSV 预览和导入。",
+            "download": "/operations/monthly-carousel-production-design-worksheet.csv",
+            "import": "/operations/import-monthly-carousel-production-design-worksheet",
+        }
+    elif stage_counts.get("needs_visual_qa", 0) or gate_counts.get("waiting_visual_qa", 0):
+        primary_action = {
+            "key": "visual_qa",
+            "title": "完成视觉 QA",
+            "detail": "确认每张图手机可读、Slide 1 只有 hook、Slides 2+ 保留解释结构，并把 visual_qa_status 标为 passed 后导入制作表。",
+            "download": "/operations/monthly-carousel-production-design-worksheet.csv",
+            "import": "/operations/import-monthly-carousel-production-design-worksheet",
+        }
+    elif queue_payload.get("ready_to_queue_count", 0):
+        primary_action = {
+            "key": "queue_ready",
+            "title": "可以加入发布队列",
+            "detail": "只把 ready_to_queue 的内容加入队列；入队后仍要做队列审核和 Pre-Schedule Gate。",
+            "download": "/operations/monthly-carousel-queue-readiness.zh.md",
+            "import": "/assets/{asset_id}/queue",
+        }
+    elif stage_counts.get("queue_review", 0):
+        primary_action = {
+            "key": "queue_review",
+            "title": "审核队列草稿",
+            "detail": "检查队列里的最终 caption 和媒体，人工 approve 后才可以进入排程前检查。",
+            "download": "/operations/review-to-schedule-pack.zh.md",
+        }
+    elif stage_counts.get("ready_to_schedule", 0):
+        primary_action = {
+            "key": "pre_schedule",
+            "title": "运行排程前检查",
+            "detail": "下载 Pre-Schedule Gate，确认 caption、media、human approval 都通过，再安排发布时间。",
+            "download": "/operations/pre-schedule-gate.md",
+        }
+    elif stage_counts.get("scheduled", 0):
+        primary_action = {
+            "key": "handoff",
+            "title": "等待发布交接",
+            "detail": "按计划时间做发布交接；Meta live 开关未绿灯前保持人工或 dry run。",
+            "download": "/operations/publishing-handoff.zh.md",
+        }
+    else:
+        primary_action = {
+            "key": "monitor",
+            "title": "查看状态板",
+            "detail": "当前没有可自动推进的月度项目；查看状态板确认是否已发布或等待外部回复。",
+            "download": "/operations/monthly-carousel-status-board.zh.md",
+        }
+
+    operator_sequence = [
+        "下载月度 Carousel 医生审核总包和 PNG ZIP，给医生审核。",
+        "医生明确 Decision: approve 和 Safety: clear 后，导入月度医生审核表。",
+        "下载月度制作设计表，填最终图片 URL、rights note、visual QA。",
+        "先 Preview Monthly Production，再 Import Monthly Production。",
+        "下载月度入队检查表，只处理 ready_to_queue 的内容。",
+        "入队后做队列审核、Pre-Schedule Gate、Schedule Audit。",
+        "Meta live 发布保持关闭，直到 Meta readiness、scheduler、RLS 和 live smoke 都通过。",
+    ]
+    return {
+        "source": status_payload.get("source"),
+        "mode": "read_only_monthly_action_pack",
+        "asset_count": status_payload.get("asset_count", 0),
+        "stage_counts": stage_counts,
+        "gate_counts": gate_counts,
+        "primary_action": primary_action,
+        "operator_sequence": operator_sequence,
+        "items": items,
+        "links": {
+            "doctor_review_pack": "/operations/monthly-carousel-doctor-review.zh.md",
+            "png_assets_zip": "/operations/monthly-carousel-png-assets.zip",
+            "doctor_worksheet": "/operations/monthly-carousel-doctor-decision-worksheet.csv",
+            "production_worksheet": "/operations/monthly-carousel-production-design-worksheet.csv",
+            "queue_readiness": "/operations/monthly-carousel-queue-readiness.zh.md",
+            "status_board": "/operations/monthly-carousel-status-board.zh.md",
+            "pre_schedule_gate": "/operations/pre-schedule-gate.md",
+            "review_to_schedule": "/operations/review-to-schedule-pack.zh.md",
+        },
+        "safety": [
+            "This monthly action pack is read-only.",
+            "It does not approve, attach media, queue, schedule, publish, or call Meta.",
+            "Use Topic ID and Asset ID as identifiers; do not create duplicate Notion topics.",
+            "Only doctor-approved, safety-clear, final-media-ready, visual-QA-passed items may become ready_to_queue.",
+        ],
+    }
+
+
+@app.get("/operations/monthly-carousel-action-pack")
+async def operations_monthly_carousel_action_pack(_: None = Depends(require_access_token)):
+    return await monthly_carousel_action_pack_payload()
+
+
+@app.get("/operations/monthly-carousel-action-pack.zh.md")
+async def operations_monthly_carousel_action_pack_zh(_: None = Depends(require_access_token)):
+    payload = await monthly_carousel_action_pack_payload()
+    source = payload.get("source") or {}
+    primary = payload.get("primary_action") or {}
+    lines = [
+        "# DREC 月度 Carousel 下一步操作包",
+        "",
+        f"- Notion 来源：{source.get('name')}",
+        f"- 月度刷新日：每月 {source.get('monthly_refresh_day')} 日",
+        f"- 月度内容数：{payload.get('asset_count')}",
+        "",
+        "这个操作包只读，不会批准、挂载媒体、入队、排程、发布或调用 Meta。",
+        "",
+        "## 现在先做什么",
+        "",
+        f"- 动作：{primary.get('title')}",
+        f"- 说明：{primary.get('detail')}",
+        f"- 相关下载：`{primary.get('download') or 'n/a'}`",
+        f"- 相关导入/动作：`{primary.get('import') or primary.get('worksheet') or 'n/a'}`",
+        "",
+        "## 操作顺序",
+        "",
+        *markdown_list(payload.get("operator_sequence")),
+        "",
+        "## 阶段统计",
+        "",
+        *markdown_list([f"{monthly_carousel_action_stage_label(key)}：{value}" for key, value in sorted((payload.get("stage_counts") or {}).items())], "- 暂无阶段统计。"),
+        "",
+        "## 入队检查统计",
+        "",
+        *markdown_list([f"{zh_monthly_queue_gate_status(key)}：{value}" for key, value in sorted((payload.get("gate_counts") or {}).items())], "- 暂无入队检查统计。"),
+        "",
+        "## 关键链接",
+        "",
+        *markdown_list([f"{key}: `{value}`" for key, value in (payload.get("links") or {}).items()]),
+        "",
+        "## 每条内容下一步",
+        "",
+    ]
+    for item in payload.get("items") or []:
+        blockers = [zh_monthly_queue_blocker(blocker) for blocker in item.get("queue_blockers") or []]
+        lines.extend(
+            [
+                f"### {item.get('topic_label')}",
+                "",
+                f"- Asset ID：`{item.get('asset_id')}`",
+                f"- 当前阶段：{monthly_carousel_action_stage_label(item.get('stage'))} / `{item.get('stage')}`",
+                f"- 入队状态：{zh_monthly_queue_gate_status(item.get('gate_status'))} / `{item.get('gate_status') or 'n/a'}`",
+                f"- 审核：Review `{item.get('review_status') or 'n/a'}` / Safety `{item.get('compliance_status') or 'n/a'}` / Detector `{item.get('detector_status') or 'n/a'}`",
+                f"- 图片：媒体 URL {item.get('media_count')}；Visual QA `{item.get('visual_qa_status')}`",
+                f"- 阻碍：{'; '.join(blockers) if blockers else '无'}",
+                f"- 下一步：{item.get('queue_next_action') or item.get('next_action')}",
+                "",
+            ]
+        )
+    lines.extend(["## 安全线", "", *markdown_list(payload.get("safety")), ""])
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-action-pack-zh.md"'},
+    )
+
+
 def doctor_approval_item_lines(item: dict, index: int):
     blockers = item.get("blockers") or []
     return [
