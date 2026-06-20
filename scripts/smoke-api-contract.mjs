@@ -2727,6 +2727,21 @@ const requiredSnippets = [
     text: "download-dashboard-monthly-action-queue",
   },
   {
+    name: "web dashboard monthly doctor review action",
+    file: "web",
+    text: "download-dashboard-monthly-doctor-review",
+  },
+  {
+    name: "web dashboard monthly png action",
+    file: "web",
+    text: "download-dashboard-monthly-png-assets",
+  },
+  {
+    name: "web dashboard monthly doctor worksheet action",
+    file: "web",
+    text: "download-dashboard-monthly-doctor-worksheet",
+  },
+  {
     name: "web notion carousel source action",
     file: "web",
     text: "refresh-notion-carousel-source",

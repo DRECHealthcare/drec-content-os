@@ -2767,6 +2767,9 @@ function renderDashboardMonthlyActionQueue(data) {
       ` : "<p class=\"status-note\">暂无可行动项目。</p>"}
       <div class="learning-actions">
         <button type="button" data-open-monthly-assets-review>打开月度素材审核</button>
+        <button type="button" data-download-dashboard-monthly-doctor-review>下载医生审核总包</button>
+        <button type="button" data-download-dashboard-monthly-png-assets>下载全部 PNG</button>
+        <button type="button" data-download-dashboard-monthly-doctor-worksheet>下载医生审核表</button>
         <button type="button" data-download-dashboard-monthly-action-queue>下载月度行动队列</button>
         <button type="button" data-download-dashboard-monthly-action-csv>下载行动 CSV</button>
       </div>
@@ -7224,9 +7227,12 @@ document.getElementById("dashboard-notion-refresh-status")?.addEventListener("cl
 
 document.getElementById("dashboard-monthly-action-queue")?.addEventListener("click", async (event) => {
   const openAssets = event.target.closest("[data-open-monthly-assets-review]");
+  const downloadDoctorReview = event.target.closest("[data-download-dashboard-monthly-doctor-review]");
+  const downloadPngAssets = event.target.closest("[data-download-dashboard-monthly-png-assets]");
+  const downloadDoctorWorksheet = event.target.closest("[data-download-dashboard-monthly-doctor-worksheet]");
   const downloadQueue = event.target.closest("[data-download-dashboard-monthly-action-queue]");
   const downloadCsv = event.target.closest("[data-download-dashboard-monthly-action-csv]");
-  if (!openAssets && !downloadQueue && !downloadCsv) return;
+  if (!openAssets && !downloadDoctorReview && !downloadPngAssets && !downloadDoctorWorksheet && !downloadQueue && !downloadCsv) return;
   if (openAssets) {
     showScreen("assets");
     const card = document.getElementById("monthly-carousel-status-board");
@@ -7234,20 +7240,59 @@ document.getElementById("dashboard-monthly-action-queue")?.addEventListener("cli
     return;
   }
   const message = document.getElementById("test-path-message");
-  if (message) message.textContent = downloadCsv ? "Preparing monthly action CSV..." : "Preparing monthly action queue...";
+  const downloadConfig = downloadDoctorReview
+    ? {
+        path: "/operations/monthly-carousel-doctor-review.zh.md",
+        filename: "drec-monthly-carousel-doctor-review-zh.md",
+        type: "text/markdown",
+        preparing: "Preparing monthly doctor review pack...",
+        done: "Monthly carousel doctor review pack downloaded.",
+        failed: "Could not download monthly carousel doctor review pack.",
+      }
+    : downloadPngAssets
+      ? {
+          path: "/operations/monthly-carousel-png-assets.zip",
+          filename: "drec-monthly-carousel-png-assets.zip",
+          type: "application/zip",
+          preparing: "Preparing monthly PNG ZIP...",
+          done: "Monthly carousel PNG ZIP downloaded.",
+          failed: "Could not download monthly carousel PNG ZIP.",
+        }
+      : downloadDoctorWorksheet
+        ? {
+            path: "/operations/monthly-carousel-doctor-decision-worksheet.csv",
+            filename: "drec-monthly-carousel-doctor-decision-worksheet.csv",
+            type: "text/csv",
+            preparing: "Preparing monthly doctor worksheet...",
+            done: "Monthly carousel doctor worksheet downloaded.",
+            failed: "Could not download monthly carousel doctor worksheet.",
+          }
+        : downloadCsv
+          ? {
+              path: "/operations/monthly-carousel-next-action-queue.csv",
+              filename: "drec-monthly-carousel-next-action-queue.csv",
+              type: "text/csv",
+              preparing: "Preparing monthly action CSV...",
+              done: "Monthly carousel next-action CSV downloaded.",
+              failed: "Could not download monthly carousel next-action CSV.",
+            }
+          : {
+              path: "/operations/monthly-carousel-next-action-queue.zh.md",
+              filename: "drec-monthly-carousel-next-action-queue-zh.md",
+              type: "text/markdown",
+              preparing: "Preparing monthly action queue...",
+              done: "Monthly carousel next-action queue downloaded.",
+              failed: "Could not download monthly carousel next-action queue.",
+            };
+  if (message) message.textContent = translateText(downloadConfig.preparing);
   try {
-    if (downloadCsv) {
-      await downloadProtectedFile("/operations/monthly-carousel-next-action-queue.csv", "drec-monthly-carousel-next-action-queue.csv", "text/csv");
-      if (message) message.textContent = translateText("Monthly carousel next-action CSV downloaded.");
-    } else {
-      await downloadProtectedFile("/operations/monthly-carousel-next-action-queue.zh.md", "drec-monthly-carousel-next-action-queue-zh.md", "text/markdown");
-      if (message) message.textContent = translateText("Monthly carousel next-action queue downloaded.");
-    }
+    await downloadProtectedFile(downloadConfig.path, downloadConfig.filename, downloadConfig.type);
+    if (message) message.textContent = translateText(downloadConfig.done);
   } catch (error) {
     if (message) {
       message.textContent = error.message === "Access token required"
         ? translateText("Set the access token first.")
-        : translateText(downloadCsv ? "Could not download monthly carousel next-action CSV." : "Could not download monthly carousel next-action queue.");
+        : translateText(downloadConfig.failed);
     }
   }
 });
