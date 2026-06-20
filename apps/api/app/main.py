@@ -23258,6 +23258,10 @@ def today_safe_operator_pack_readme(payload: dict):
     queue_rows = loop.get("queue") or []
     queue_text = ", ".join(f"{item.get('status')}: {item.get('count')}" for item in queue_rows) or "无队列数据"
     security_smoke = (security.get("service_role_smoke") or {}).get("status") or "missing"
+    next_body = (workflow.get("next_action") or {}).get("body") or closeout.get("next_action", {}).get("detail") or "继续人工交接，不做自动发布。"
+    next_body = {
+        "Download the handoff, publish manually only after human confirmation, then record the post ID.": "下载今日安全包或发布交接包；只有真人确认并手动发布后，才记录 post ID。",
+    }.get(next_body, next_body)
     lines = [
         "# DREC 今日安全操作包",
         "",
@@ -23286,7 +23290,7 @@ def today_safe_operator_pack_readme(payload: dict):
         "",
         "## 下一步",
         "",
-        f"- {((workflow.get('next_action') or {}).get('body') or closeout.get('next_action', {}).get('detail') or '继续人工交接，不做自动发布。')}",
+        f"- {next_body}",
         "",
         "## 安全线",
         "",
