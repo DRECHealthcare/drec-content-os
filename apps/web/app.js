@@ -240,6 +240,7 @@ const uiZh = {
   "Download Doctor Request": "下载医生请求",
   "Download Doctor Bridge": "下载医生沟通桥",
   "下载中文医生审核桥接包": "下载中文医生审核桥接包",
+  "下载月度 Carousel 医生审核总包": "下载月度 Carousel 医生审核总包",
   "Download Send Queue": "下载发送队列",
   "Download Doctor Polish": "下载医生润色包",
   "Download Reply Inbox": "下载回复收件箱",
@@ -565,6 +566,8 @@ Object.assign(uiZh, {
   "First publish readiness downloaded.": "首次发布准备包已下载。",
   "First publish doctor review sheet downloaded.": "首发医生审核单已下载。",
   "Could not download first publish doctor review sheet.": "无法下载首发医生审核单。",
+  "Monthly carousel doctor review pack downloaded.": "月度 Carousel 医生审核总包已下载。",
+  "Could not download monthly carousel doctor review pack.": "无法下载月度 Carousel 医生审核总包。",
   "Could not download first publish readiness.": "无法下载首次发布准备包。",
   "Could not run risk audit.": "无法运行风险检查。",
   "Could not download snapshot.": "无法下载快照。",
@@ -5105,6 +5108,16 @@ document.getElementById("download-doctor-review-bridge-zh")?.addEventListener("c
     message.textContent = "中文医生审核桥接包已下载。";
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "请先设置访问 token。" : "无法下载中文医生审核桥接包。";
+  }
+});
+
+document.getElementById("download-monthly-carousel-doctor-review-zh")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/monthly-carousel-doctor-review.zh.md", "drec-monthly-carousel-doctor-review-zh.md", "text/markdown");
+    message.textContent = translateText("Monthly carousel doctor review pack downloaded.");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download monthly carousel doctor review pack.");
   }
 });
 

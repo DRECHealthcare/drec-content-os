@@ -7869,6 +7869,185 @@ async def operations_approval_cockpit_markdown_zh(_: None = Depends(require_acce
     )
 
 
+def monthly_carousel_topic_id(asset: dict):
+    metadata = asset.get("metadata") or {}
+    notion_source = metadata.get("notion_source") or {}
+    topic_id = notion_source.get("topic_id") or ""
+    if not topic_id:
+        source_text = json.dumps(metadata, ensure_ascii=False)
+        match = re.search(r"\bDC\d{3}\b", source_text)
+        topic_id = match.group(0) if match else ""
+    return topic_id
+
+
+def monthly_carousel_sort_key(asset: dict):
+    topic_id = monthly_carousel_topic_id(asset)
+    match = re.search(r"(\d+)", topic_id)
+    return (int(match.group(1)) if match else 9999, topic_id, asset.get("created_at") or "")
+
+
+async def monthly_carousel_review_payload():
+    assets = await fetch_asset_list(200)
+    carousel_assets = [
+        asset
+        for asset in assets
+        if asset.get("format") == "carousel"
+        and monthly_carousel_topic_id(asset)
+        and (asset.get("review_status") or "") != "rejected"
+    ]
+    carousel_assets.sort(key=monthly_carousel_sort_key)
+    items = []
+    for asset in carousel_assets:
+        metadata = asset.get("metadata") or {}
+        slides = metadata.get("slides") or []
+        caption = asset.get("caption") or ""
+        detector = check_text(caption)
+        topic_id = monthly_carousel_topic_id(asset)
+        notion_source = metadata.get("notion_source") or {}
+        findings = [
+            f"[{finding.get('severity')}] {finding.get('rule_id')}: {finding.get('message')}"
+            for finding in detector.get("findings", [])
+        ]
+        items.append(
+            {
+                "topic_id": topic_id,
+                "asset_id": asset.get("id"),
+                "brief_id": asset.get("brief_id"),
+                "topic": metadata.get("topic") or topic_id,
+                "planned_posting_date": notion_source.get("planned_posting_date") or "",
+                "overall_status": notion_source.get("overall_status") or "",
+                "carousel_image_status": notion_source.get("carousel_image_status") or "",
+                "caption_status": notion_source.get("caption_status") or "",
+                "review_status": asset.get("review_status"),
+                "compliance_status": asset.get("compliance_status"),
+                "detector_status": detector.get("status"),
+                "detector_recommendation": detector.get("recommendation"),
+                "findings": findings,
+                "slide_count": len(slides),
+                "slide_titles": [slide.get("title") for slide in slides if slide.get("title")],
+                "caption_preview": feedback_excerpt(caption, 420),
+                "png_zip_url": f"/assets/{asset.get('id')}/carousel-png-assets.zip",
+                "svg_zip_url": f"/assets/{asset.get('id')}/carousel-assets.zip",
+                "preview_url": f"/assets/{asset.get('id')}/carousel-preview/1.png",
+            }
+        )
+    ready_for_human = [
+        item for item in items
+        if item.get("detector_status") == "clear"
+        and item.get("compliance_status") == "clear"
+        and item.get("review_status") != "approved"
+    ]
+    pending_review = [item for item in items if item.get("review_status") != "approved"]
+    return {
+        "source": NOTION_CAROUSEL_SOURCE,
+        "asset_count": len(items),
+        "ready_for_human_count": len(ready_for_human),
+        "pending_review_count": len(pending_review),
+        "approved_count": len([item for item in items if item.get("review_status") == "approved"]),
+        "items": items,
+        "rules": [
+            "This pack is read-only; it does not approve, queue, schedule, publish, or call Meta.",
+            "Doctor or human reviewer must explicitly reply with Decision and Safety.",
+            "Only approve when medical meaning, Mandarin clarity, brand fit, and safety checklist pass.",
+            "If unsure, reply needs edits or blocked instead of approve.",
+            "Use Topic ID as the unique identifier and do not create duplicate Notion topics.",
+        ],
+        "next_step": "Send this pack to the doctor, collect replies, then paste replies into the Doctor Reply Text box before importing.",
+    }
+
+
+@app.get("/operations/monthly-carousel-doctor-review")
+async def operations_monthly_carousel_doctor_review(_: None = Depends(require_access_token)):
+    return await monthly_carousel_review_payload()
+
+
+@app.get("/operations/monthly-carousel-doctor-review.zh.md")
+async def operations_monthly_carousel_doctor_review_zh(_: None = Depends(require_access_token)):
+    generated_at = datetime.now(timezone.utc).isoformat()
+    payload = await monthly_carousel_review_payload()
+    source = payload.get("source") or {}
+    lines = [
+        "# DREC 月度 Carousel 医生审核总包",
+        "",
+        f"- 生成时间：{generated_at}",
+        f"- Notion 来源：{source.get('name')}",
+        f"- 月度刷新日：每月 {source.get('monthly_refresh_day')} 日",
+        f"- 本包素材数：{payload.get('asset_count')}",
+        f"- 等待审核：{payload.get('pending_review_count')}",
+        f"- 检测器已 clear、可优先人工审核：{payload.get('ready_for_human_count')}",
+        f"- 已批准：{payload.get('approved_count')}",
+        "",
+        "本文件只读，不会批准、入队、排程、发布，也不会调用 Meta。用途是让医生一次审核本月 Notion carousel 内容。",
+        "",
+        "## 审核规则",
+        "",
+        *markdown_list(payload.get("rules")),
+        "",
+        "## 医生回复格式",
+        "",
+        "医生可以对每条内容按以下格式回复；系统可在「素材与内容资产」里的 Doctor Reply Text 预览和导入：",
+        "",
+        "```",
+        "Asset ID: 填下方对应 Asset ID",
+        "Decision: approve / needs edits / reject",
+        "Safety: clear / needs review / blocked",
+        "Use polished copy: no",
+        "Notes: 填写修改意见或批准说明",
+        "```",
+        "",
+        "## 本月审核清单",
+        "",
+    ]
+    if not payload.get("items"):
+        lines.extend(["- 暂无从 Notion 月度计划生成的 carousel 资产。", ""])
+    for index, item in enumerate(payload.get("items") or [], start=1):
+        finding_lines = item.get("findings") or ["检测器未发现明显风险；仍需人工医学审核。"]
+        slide_titles = item.get("slide_titles") or []
+        lines.extend(
+            [
+                f"### {index}. {item.get('topic_id')} · {item.get('topic')}",
+                "",
+                f"- Asset ID：`{item.get('asset_id')}`",
+                f"- Brief ID：`{item.get('brief_id')}`",
+                f"- 计划日期：{item.get('planned_posting_date') or '未标注'}",
+                f"- Notion 状态：Overall `{item.get('overall_status') or 'n/a'}` / Image `{item.get('carousel_image_status') or 'n/a'}` / Caption `{item.get('caption_status') or 'n/a'}`",
+                f"- 系统状态：Safety `{item.get('compliance_status')}` / Review `{item.get('review_status')}` / Detector `{item.get('detector_status')}`",
+                f"- Slide 数量：{item.get('slide_count')}",
+                f"- 下载 PNG ZIP：`{item.get('png_zip_url')}`",
+                f"- 预览封面：`{item.get('preview_url')}`",
+                "",
+                "Slide 标题：",
+                "",
+                *markdown_list(slide_titles[:10], "- 暂无 slide 标题。"),
+                "",
+                "检测结果：",
+                "",
+                *markdown_list(finding_lines),
+                "",
+                "文案预览：",
+                "",
+                item.get("caption_preview") or "暂无文案。",
+                "",
+                "可复制医生回复模板：",
+                "",
+                "```",
+                f"Asset ID: {item.get('asset_id')}",
+                "Decision: approve / needs edits / reject",
+                "Safety: clear / needs review / blocked",
+                "Use polished copy: no",
+                "Notes:",
+                "```",
+                "",
+            ]
+        )
+    lines.extend(["## 下一步", "", f"- {payload.get('next_step')}", ""])
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-doctor-review-zh.md"'},
+    )
+
+
 def doctor_approval_item_lines(item: dict, index: int):
     blockers = item.get("blockers") or []
     return [
