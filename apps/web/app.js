@@ -146,6 +146,9 @@ const uiZh = {
   "Schedule": "排程",
   "Build Handoff": "生成交接内容",
   "Download Publishing Handoff 中文": "下载中文发布交接包",
+  "下载月度发布交接包": "下载月度发布交接包",
+  "Monthly carousel publishing handoff downloaded.": "月度 Carousel 发布交接包已下载。",
+  "Could not download monthly carousel publishing handoff.": "无法下载月度 Carousel 发布交接包。",
   "Record Published": "记录已发布",
   "Save & Roll Up": "保存并汇总",
   "Build Report": "生成报告",
@@ -6933,6 +6936,17 @@ document.getElementById("download-publishing-handoff-zh")?.addEventListener("cli
     message.textContent = "中文发布交接包已下载。";
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "请先设置访问 token。" : "无法下载中文发布交接包。";
+  }
+});
+
+document.getElementById("download-monthly-carousel-publishing-handoff")?.addEventListener("click", async () => {
+  const message = document.getElementById("queue-message");
+  message.textContent = "Preparing monthly carousel publishing handoff...";
+  try {
+    await downloadProtectedFile("/operations/monthly-carousel-publishing-handoff.zh.md", "drec-monthly-carousel-publishing-handoff-zh.md", "text/markdown");
+    message.textContent = translateText("Monthly carousel publishing handoff downloaded.");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download monthly carousel publishing handoff.");
   }
 });
 

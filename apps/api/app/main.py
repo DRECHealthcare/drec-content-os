@@ -8904,6 +8904,7 @@ async def monthly_carousel_action_pack_payload():
             "monthly_review_queue_decision_import": "/operations/import-monthly-carousel-review-queue-decisions",
             "monthly_schedule_worksheet": "/operations/monthly-carousel-schedule-worksheet.csv",
             "monthly_schedule_import": "/operations/import-monthly-carousel-schedule-worksheet",
+            "monthly_publishing_handoff": "/operations/monthly-carousel-publishing-handoff.zh.md",
             "status_board": "/operations/monthly-carousel-status-board.zh.md",
             "pre_schedule_gate": "/operations/pre-schedule-gate.md",
             "review_to_schedule": "/operations/review-to-schedule-pack.zh.md",
@@ -18617,6 +18618,97 @@ async def publishing_handoff(_: None = Depends(require_access_token)):
     }
 
 
+def monthly_handoff_blockers(item: dict):
+    blockers = []
+    if item.get("status") != "scheduled":
+        blockers.append("Needs scheduling approval and scheduled status.")
+    if item.get("compliance_status") != "clear":
+        blockers.append("Needs compliance clear.")
+    if not item.get("planned_slot"):
+        blockers.append("Needs a planned publish time.")
+    return blockers
+
+
+async def monthly_carousel_publishing_handoff_payload():
+    rows = [
+        item
+        for item in await monthly_carousel_queue_items()
+        if item.get("status") in {"draft", "scheduled"}
+    ]
+    asset_lookup = {str(asset.get("id")): asset for asset in await monthly_carousel_asset_list()}
+    ready = []
+    blocked = []
+    for item in rows:
+        asset = asset_lookup.get(str(item.get("asset_id") or "")) or {}
+        topic_id = monthly_carousel_topic_id(asset)
+        blockers = monthly_handoff_blockers(item)
+        enriched = {**item, "topic_id": topic_id, "handoff_blockers": blockers}
+        if not blockers:
+            ready.append(enriched)
+        else:
+            blocked.append(enriched)
+    checklist = [
+        "Only publish items listed as ready in this monthly handoff.",
+        "Keep the approved caption unchanged unless it goes back through review.",
+        "After manual publishing, record the Meta post ID or manual label immediately.",
+        "Use Meta dry run only while live publishing locks remain off.",
+    ]
+    lines = [
+        "DREC Monthly Carousel Publishing Handoff",
+        "",
+        "Checklist:",
+        *[f"- {item}" for item in checklist],
+        "",
+        f"Ready to publish: {len(ready)}",
+        f"Needs review: {len(blocked)}",
+    ]
+    for index, item in enumerate(ready, start=1):
+        media_urls = [url for url in item.get("media_urls") or [] if url]
+        lines.extend(
+            [
+                "",
+                f"Ready Item {index}",
+                f"Topic ID: {item.get('topic_id') or 'n/a'}",
+                f"Channel: {item.get('channel')}",
+                f"Format: {item.get('format')}",
+                f"Planned time: {item.get('planned_slot') or 'Not set'}",
+                f"Queue ID: {item.get('id')}",
+                "Caption:",
+                item.get("caption") or "",
+            ]
+        )
+        if media_urls:
+            lines.append("Media:")
+            lines.extend([f"- {url}" for url in media_urls])
+        lines.append("After publishing: record the external post ID in DREC Content OS.")
+    if blocked:
+        lines.extend(["", "Needs Review Items:"])
+        for index, item in enumerate(blocked, start=1):
+            lines.append(f"{index}. {item.get('topic_id') or 'n/a'} · {item.get('channel')}/{item.get('format')} · {item.get('id')}")
+            lines.extend([f"   - {blocker}" for blocker in item.get("handoff_blockers") or []])
+    return {
+        "source": NOTION_CAROUSEL_SOURCE,
+        "mode": "read_only_monthly_publishing_handoff",
+        "ready_count": len(ready),
+        "blocked_count": len(blocked),
+        "checklist": checklist,
+        "ready_items": ready,
+        "needs_review": blocked,
+        "handoff_text": "\n".join(lines),
+        "safety": [
+            "This monthly handoff is read-only.",
+            "It does not schedule, publish, call Meta, or record external post IDs.",
+            "Only current monthly carousel queue items are included.",
+            "Meta live publishing remains locked unless the separate Meta readiness and live switches are green.",
+        ],
+    }
+
+
+@app.get("/operations/monthly-carousel-publishing-handoff")
+async def operations_monthly_carousel_publishing_handoff(_: None = Depends(require_access_token)):
+    return await monthly_carousel_publishing_handoff_payload()
+
+
 def zh_handoff_blocker(value: str):
     return {
         "Needs scheduling approval and scheduled status.": "需要先通过排程审批，并变成 scheduled 状态。",
@@ -18757,6 +18849,76 @@ async def operations_publishing_handoff_markdown_zh(_: None = Depends(require_ac
         "\n".join(lines),
         media_type="text/markdown",
         headers={"Content-Disposition": 'attachment; filename="drec-publishing-handoff-zh.md"'},
+    )
+
+
+@app.get("/operations/monthly-carousel-publishing-handoff.zh.md")
+async def operations_monthly_carousel_publishing_handoff_zh(_: None = Depends(require_access_token)):
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    payload = await monthly_carousel_publishing_handoff_payload()
+    audit = await schedule_audit_payload()
+    source = payload.get("source") or {}
+    ready_items = payload.get("ready_items") or []
+    blocked_items = payload.get("needs_review") or []
+    lines = [
+        "# DREC 月度 Carousel 发布交接包",
+        "",
+        f"生成时间：{generated_at}",
+        f"Notion 来源：{source.get('name')}",
+        f"月度刷新日：每月 {source.get('monthly_refresh_day')} 日",
+        "",
+        "用途：只检查本月 Notion carousel 内容中，哪些已排程并可交接发布。本文件只读，不会发布、不会排程、不会调用 Meta。",
+        "",
+        "## 当前状态",
+        "",
+        f"- 可交接发布项目：{payload.get('ready_count', 0)}",
+        f"- 仍有阻碍项目：{payload.get('blocked_count', 0)}",
+        f"- 全局排程检查：{zh_schedule_audit_status(audit.get('overall_status'))}",
+        f"- 排程阻碍：{audit.get('block_count', 0)}",
+        f"- 排程提醒：{audit.get('warn_count', 0)}",
+        "",
+        "## 操作顺序",
+        "",
+        *markdown_list([
+            "只处理本文件列为“可交接”的月度项目。",
+            "人工发布时复制 caption 和媒体链接，不要临时改文案。",
+            "发布后立即回到 Scheduler 对应项目记录 Meta post ID 或 manual label。",
+            "然后到 Performance 输入 7 天表现数据，再进入 Learning。",
+            "Meta dry run 可以测试准备度；正式自动发布锁保持关闭，直到 Meta readiness 和 live switches 都通过。",
+        ]),
+        "",
+        "## 可交接发布项目",
+        "",
+    ]
+    if ready_items:
+        for index, item in enumerate(ready_items[:40], start=1):
+            lines.extend(zh_handoff_item_lines(item, index, f"可交接 · {item.get('topic_id') or 'n/a'}"))
+    else:
+        lines.extend(["- 暂无可交接发布项目。通常需要先完成：医生审核 → 制作 QA → 入队 → 队列审核 → 月度排程。", ""])
+    lines.extend(["## 仍有阻碍项目", ""])
+    if blocked_items:
+        for index, item in enumerate(blocked_items[:40], start=1):
+            lines.extend(zh_handoff_item_lines(item, index, f"阻碍 · {item.get('topic_id') or 'n/a'}"))
+    else:
+        lines.extend(["- 暂无阻碍项目。", ""])
+    lines.extend(
+        [
+            "## 可复制交接文字",
+            "",
+            "```",
+            payload.get("handoff_text") or "暂无交接文字。",
+            "```",
+            "",
+            "## 安全线",
+            "",
+            *markdown_list(payload.get("safety")),
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-publishing-handoff-zh.md"'},
     )
 
 
