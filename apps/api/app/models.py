@@ -230,12 +230,25 @@ class OutcomeIn(BaseModel):
 
 
 class LearningWeightIn(BaseModel):
-    dimension: Literal["pillar", "hook", "format", "style", "slot", "cta", "audience"]
+    dimension: Literal[
+        "pillar",
+        "hook",
+        "hook_archetype",
+        "format",
+        "style",
+        "style_key",
+        "slot",
+        "cta",
+        "audience",
+        "audience_label",
+        "channel",
+        "funnel_stage",
+    ]
     key: str
     value: float
     previous_value: Optional[float] = None
     reason: Optional[str] = None
-    source: Literal["manual", "performance", "taste", "knowledge"] = "manual"
+    source: Literal["manual", "performance", "taste", "knowledge", "suggested_from_outcome_signal"] = "manual"
 
 
 class FeedbackIn(BaseModel):

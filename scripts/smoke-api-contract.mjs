@@ -3264,6 +3264,26 @@ const requiredSnippets = [
     text: "suggested_from_outcome_signal",
   },
   {
+    name: "api accepts suggested learning weight source",
+    file: "models",
+    text: "\"suggested_from_outcome_signal\"",
+  },
+  {
+    name: "api accepts outcome channel weight dimension",
+    file: "models",
+    text: "\"channel\"",
+  },
+  {
+    name: "api accepts outcome funnel stage weight dimension",
+    file: "models",
+    text: "\"funnel_stage\"",
+  },
+  {
+    name: "api accepts outcome audience weight dimension",
+    file: "models",
+    text: "\"audience_label\"",
+  },
+  {
     name: "web metrics template action",
     file: "web",
     text: "download-metrics-template",
