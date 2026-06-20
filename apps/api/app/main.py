@@ -8014,7 +8014,7 @@ def monthly_carousel_item_stage(asset: dict, detector: dict, queue_items: list[d
             "status": "ready",
             "next_action": "Add this approved, safety-clear asset to the publishing queue.",
         }
-    if detector.get("status") != "clear":
+    if detector.get("status") == "flagged":
         return {
             "stage": "needs_copy_safety_review",
             "status": "blocked",
