@@ -210,6 +210,7 @@ const uiZh = {
   "Download Approval Handoff": "下载审核交接包",
   "Download Review Exit Status": "下载审核出口状态",
   "Download Doctor Review Sheet": "下载首发医生审核单",
+  "Download Media Exit Pack": "下载媒体出口包",
   "Download Media Pack": "下载媒体制作包",
   "Download PNG Zip": "下载 PNG 图片包",
   "Download SVG Zip": "下载 SVG 设计包",
@@ -605,6 +606,8 @@ Object.assign(uiZh, {
   "Could not download first publish approval handoff.": "无法下载首发审核交接包。",
   "First publish review exit status downloaded.": "首发审核出口状态已下载。",
   "Could not download first publish review exit status.": "无法下载首发审核出口状态。",
+  "First publish media exit pack downloaded.": "首发媒体出口包已下载。",
+  "Could not download first publish media exit pack.": "无法下载首发媒体出口包。",
   "Project completion audit downloaded.": "项目完成度审计已下载。",
   "Could not download project completion audit.": "无法下载项目完成度审计。",
   "Project completion CSV downloaded.": "项目完成度 CSV 已下载。",
@@ -1687,6 +1690,7 @@ function renderFirstPublishReadiness(data) {
         ${nextAsset.id ? `<button type="button" data-download-first-approval-handoff>${escapeHtml(translateText("Download Approval Handoff"))}</button>` : ""}
         ${nextAsset.id ? `<button type="button" data-download-first-review-exit>${escapeHtml(translateText("Download Review Exit Status"))}</button>` : ""}
         ${nextAsset.id ? `<button type="button" data-download-first-doctor-review-sheet>${escapeHtml(translateText("Download Doctor Review Sheet"))}</button>` : ""}
+        ${nextAsset.id ? `<button type="button" data-download-first-media-exit>${escapeHtml(translateText("Download Media Exit Pack"))}</button>` : ""}
         <button type="button" data-download-first-media-pack>${escapeHtml(translateText("Download Media Pack"))}</button>
         <button type="button" data-download-first-carousel-png-zip>${escapeHtml(translateText("Download PNG Zip"))}</button>
         <button type="button" data-download-first-carousel-zip>${escapeHtml(translateText("Download SVG Zip"))}</button>
@@ -1706,6 +1710,7 @@ function renderFirstPublishReadiness(data) {
         ${nextAsset.id ? `<button type="button" data-download-first-approval-handoff>${escapeHtml(translateText("Download Approval Handoff"))}</button>` : ""}
         ${nextAsset.id ? `<button type="button" data-download-first-review-exit>${escapeHtml(translateText("Download Review Exit Status"))}</button>` : ""}
         ${nextAsset.id ? `<button type="button" data-download-first-doctor-review-sheet>${escapeHtml(translateText("Download Doctor Review Sheet"))}</button>` : ""}
+        ${nextAsset.id ? `<button type="button" data-download-first-media-exit>${escapeHtml(translateText("Download Media Exit Pack"))}</button>` : ""}
         ${nextAsset.id ? `<button type="button" data-copy-first-asset-review>${escapeHtml(translateText("Copy Doctor Review"))}</button>` : ""}
         ${nextAsset.id ? `<button type="button" data-fill-first-doctor-reply>${escapeHtml(translateText("Fill Doctor Reply Template"))}</button>` : ""}
         ${hasDecisionCsv ? `<button type="button" data-fill-first-asset-decision>${escapeHtml(translateText("Fill Asset Decision CSV"))}</button>` : ""}
@@ -1942,6 +1947,7 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
   const downloadApprovalHandoffButton = event.target.closest("[data-download-first-approval-handoff]");
   const downloadReviewExitButton = event.target.closest("[data-download-first-review-exit]");
   const downloadDoctorReviewSheetButton = event.target.closest("[data-download-first-doctor-review-sheet]");
+  const downloadMediaExitButton = event.target.closest("[data-download-first-media-exit]");
   const downloadMediaPackButton = event.target.closest("[data-download-first-media-pack]");
   const downloadCarouselPngZipButton = event.target.closest("[data-download-first-carousel-png-zip]");
   const downloadCarouselZipButton = event.target.closest("[data-download-first-carousel-zip]");
@@ -1951,7 +1957,7 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
   const copyQueueButton = event.target.closest("[data-copy-first-queue-decision]");
   const fillQueueButton = event.target.closest("[data-fill-first-queue-decision]");
   const advanceButton = event.target.closest("[data-advance-first-publish]");
-  if (!copyReviewButton && !fillDoctorReplyButton && !approveCurrentFirstAssetButton && !approveCurrentFirstQueueButton && !openAssetReviewButton && !downloadZhButton && !downloadApprovalHandoffButton && !downloadReviewExitButton && !downloadDoctorReviewSheetButton && !downloadMediaPackButton && !downloadCarouselPngZipButton && !downloadCarouselZipButton && !attachGeneratedMediaButton && !copyButton && !fillButton && !copyQueueButton && !fillQueueButton && !advanceButton) return;
+  if (!copyReviewButton && !fillDoctorReplyButton && !approveCurrentFirstAssetButton && !approveCurrentFirstQueueButton && !openAssetReviewButton && !downloadZhButton && !downloadApprovalHandoffButton && !downloadReviewExitButton && !downloadDoctorReviewSheetButton && !downloadMediaExitButton && !downloadMediaPackButton && !downloadCarouselPngZipButton && !downloadCarouselZipButton && !attachGeneratedMediaButton && !copyButton && !fillButton && !copyQueueButton && !fillQueueButton && !advanceButton) return;
   const container = document.getElementById("first-publish-readiness");
   const message = document.getElementById("test-path-message");
   if (copyReviewButton) {
@@ -2069,6 +2075,16 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
       if (message) message.textContent = "First publish doctor review sheet downloaded.";
     } catch (error) {
       if (message) message.textContent = error.message === "Access token required" ? "请先设置访问码。" : "Could not download first publish doctor review sheet.";
+    }
+    return;
+  }
+  if (downloadMediaExitButton) {
+    if (message) message.textContent = "正在下载首发媒体出口包...";
+    try {
+      await downloadProtectedFile("/operations/first-publish-media-exit-pack.zh.md", "drec-first-publish-media-exit-pack-zh.md", "text/markdown");
+      if (message) message.textContent = translateText("First publish media exit pack downloaded.");
+    } catch (error) {
+      if (message) message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download first publish media exit pack.");
     }
     return;
   }
@@ -5613,6 +5629,16 @@ document.getElementById("download-first-publish-review-exit-status")?.addEventLi
     message.textContent = translateText("First publish review exit status downloaded.");
   } catch (error) {
     message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download first publish review exit status.");
+  }
+});
+
+document.getElementById("download-first-publish-media-exit-pack")?.addEventListener("click", async () => {
+  const message = document.getElementById("test-path-message");
+  try {
+    await downloadProtectedFile("/operations/first-publish-media-exit-pack.zh.md", "drec-first-publish-media-exit-pack-zh.md", "text/markdown");
+    message.textContent = translateText("First publish media exit pack downloaded.");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download first publish media exit pack.");
   }
 });
 

@@ -4272,6 +4272,203 @@ async def operations_first_publish_review_exit_status_zh(request: Request, _: No
     )
 
 
+async def first_publish_media_exit_pack_payload(request: Request):
+    readiness = await first_publish_readiness_payload()
+    candidates = readiness.get("candidates") or {}
+    action_pack = readiness.get("action_pack") or {}
+    asset = candidates.get("next_asset") or candidates.get("approved_clear_asset") or candidates.get("ready_asset") or {}
+    if not asset:
+        return {
+            "mode": "read_only_first_publish_media_exit_pack",
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "overall_status": "blocked",
+            "asset": None,
+            "ready_count": 0,
+            "blocked_count": 1,
+            "checks": [
+                {
+                    "key": "first_publish_asset",
+                    "status": "blocked",
+                    "detail": "No first-publish asset is available.",
+                    "required_action": "Generate and save one asset before media production.",
+                }
+            ],
+            "next_action": "Generate and save one asset before media production.",
+            "safety": ["This pack is read-only and does not approve, attach, queue, schedule, publish, or call Meta."],
+        }
+    metadata = asset.get("metadata") or {}
+    slides = first_publish_slide_items(asset)
+    media_gate = action_pack.get("media_gate") or first_publish_media_gate(asset)
+    forwarded_proto = request.headers.get("x-forwarded-proto") or request.url.scheme or "https"
+    forwarded_host = request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.netloc
+    if forwarded_host.endswith(".fly.dev"):
+        forwarded_proto = "https"
+    base_url = f"{forwarded_proto}://{forwarded_host}".rstrip("/")
+    preview_links = [
+        f"{base_url}/operations/first-publish-carousel-preview/{index}.png"
+        for index, _slide in enumerate(slides, start=1)
+    ]
+    attachment_csv = first_publish_media_attachment_csv(asset).strip()
+    existing_media_count = media_url_count(asset)
+    checks = [
+        {
+            "key": "slide_plan",
+            "status": "ready" if slides else "blocked",
+            "detail": f"{len(slides)} slide(s) are available for render." if slides else "No slide plan is available.",
+            "required_action": "Rebuild the asset from the carousel slide plan." if not slides else "Review all slide text before visual QA.",
+        },
+        {
+            "key": "png_preview",
+            "status": "ready" if slides else "blocked",
+            "detail": "PNG preview links are available for every slide." if slides else "PNG previews need slides.",
+            "required_action": "Open previews or download the PNG ZIP for visual QA.",
+        },
+        {
+            "key": "png_zip",
+            "status": "ready" if slides else "blocked",
+            "detail": "Ready-to-review PNG ZIP is available." if slides else "PNG ZIP cannot be generated without slides.",
+            "required_action": "Download the ZIP, check all slides, and upload final approved files to a public approved media host.",
+        },
+        {
+            "key": "media_attachment_csv",
+            "status": "ready" if attachment_csv else "blocked",
+            "detail": "Media attachment CSV template includes placeholder URLs, QA status, rights note, producer, and notes.",
+            "required_action": "Replace placeholder URLs with final public image URLs before preview/import.",
+        },
+        {
+            "key": "approved_public_urls",
+            "status": "ready" if existing_media_count else "blocked",
+            "detail": f"{existing_media_count} media/design URL(s) are already attached." if existing_media_count else "No approved public media/design URLs are attached yet.",
+            "required_action": "Upload final approved PNG/JPG files to approved storage, then paste those URLs into the media attachment CSV.",
+        },
+        {
+            "key": "visual_qa_and_rights",
+            "status": "ready" if existing_media_count and (metadata.get("latest_visual_qa_status") == "passed") else "blocked",
+            "detail": f"Latest visual QA: {metadata.get('latest_visual_qa_status') or 'none'}; rights note: {metadata.get('latest_media_rights_note') or 'none'}.",
+            "required_action": "Set visual_qa_status=passed and add a clear rights note when importing media URLs.",
+        },
+        {
+            "key": "media_gate",
+            "status": "ready" if media_gate.get("ready") else "blocked",
+            "detail": media_gate.get("detail") or "Media gate state is unknown.",
+            "required_action": media_gate.get("action") or "Attach approved media/design URLs before queueing.",
+        },
+    ]
+    blocked = [item for item in checks if item.get("status") != "ready"]
+    return {
+        "mode": "read_only_first_publish_media_exit_pack",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "overall_status": "ready_for_queue_media_gate" if not blocked else "waiting_for_media_exit",
+        "asset": {
+            "id": asset.get("id"),
+            "topic": metadata.get("topic") or asset.get("title") or asset.get("brief_title"),
+            "channel": asset.get("channel"),
+            "format": asset.get("format"),
+            "review_status": asset.get("review_status"),
+            "compliance_status": asset.get("compliance_status"),
+            "slide_count": len(slides),
+            "media_count": existing_media_count,
+        },
+        "ready_count": len(checks) - len(blocked),
+        "blocked_count": len(blocked),
+        "checks": checks,
+        "preview_links": preview_links,
+        "attachment_csv": attachment_csv,
+        "next_action": (blocked[0].get("required_action") if blocked else "Run first-publish safe advance after human approval is also clear."),
+        "links": {
+            "png_zip": "/operations/first-publish-carousel-png-assets.zip",
+            "svg_zip": "/operations/first-publish-carousel-assets.zip",
+            "media_pack": "/operations/first-publish-media-pack.md",
+            "media_import": "/operations/import-asset-media-attachments",
+            "review_exit_status": "/operations/first-publish-review-exit-status.zh.md",
+        },
+        "safety": [
+            "This pack is read-only and does not approve, attach, queue, schedule, publish, update Notion, store secrets, or call Meta.",
+            "Only attach media URLs after human visual QA and rights confirmation.",
+            "Approval and safety clearance are separate gates; media readiness alone is not enough to queue content.",
+        ],
+    }
+
+
+@app.get("/operations/first-publish-media-exit-pack")
+async def operations_first_publish_media_exit_pack(request: Request, _: None = Depends(require_access_token)):
+    return await first_publish_media_exit_pack_payload(request)
+
+
+@app.get("/operations/first-publish-media-exit-pack.zh.md")
+async def operations_first_publish_media_exit_pack_zh(request: Request, _: None = Depends(require_access_token)):
+    payload = await first_publish_media_exit_pack_payload(request)
+    asset = payload.get("asset") or {}
+    lines = [
+        "# DREC 首发媒体出口包",
+        "",
+        f"生成时间：{payload.get('generated_at')}",
+        "",
+        "用途：检查并交接当前首发 carousel 的媒体/设计 URL gate。本文件只读，不会批准、挂载、入队、排程、发布或调用 Meta。",
+        "",
+        "## 总状态",
+        "",
+        f"- 状态：`{payload.get('overall_status')}`",
+        f"- 已准备：{payload.get('ready_count')}",
+        f"- 阻塞：{payload.get('blocked_count')}",
+        f"- 下一步：{payload.get('next_action')}",
+        "",
+        "## 当前首发内容",
+        "",
+        f"- Asset ID：`{asset.get('id') or 'n/a'}`",
+        f"- 主题：{asset.get('topic') or 'n/a'}",
+        f"- 频道 / 格式：{asset.get('channel') or 'n/a'} / {asset.get('format') or 'n/a'}",
+        f"- 安全 / 审核：{asset.get('compliance_status') or 'n/a'} / {asset.get('review_status') or 'n/a'}",
+        f"- Slide 数量：{asset.get('slide_count') or 0}",
+        f"- 已挂载媒体 URL：{asset.get('media_count') or 0}",
+        "",
+        "## 媒体出口检查",
+        "",
+    ]
+    for index, item in enumerate(payload.get("checks") or [], start=1):
+        lines.extend(
+            [
+                f"### {index}. `{item.get('key')}`",
+                "",
+                f"- 状态：`{item.get('status')}`",
+                f"- 说明：{item.get('detail')}",
+                f"- 需要动作：{item.get('required_action')}",
+                "",
+            ]
+        )
+    lines.extend(["## 图片预览链接", ""])
+    if payload.get("preview_links"):
+        lines.extend([f"- 第 {index} 张：{url}" for index, url in enumerate(payload.get("preview_links") or [], start=1)])
+    else:
+        lines.append("- 暂无预览链接。")
+    lines.extend(
+        [
+            "",
+            "## 媒体导入 CSV 模板",
+            "",
+            "把 PNG/JPG 上传到批准的公开媒体存储后，用最终 URL 替换 `new_media_urls` 的 placeholder。导入前先 Preview。",
+            "",
+            "```csv",
+            payload.get("attachment_csv") or "暂无 CSV 模板。",
+            "```",
+            "",
+            "## 相关入口",
+            "",
+            *markdown_list([f"{key}: `{value}`" for key, value in (payload.get("links") or {}).items()]),
+            "",
+            "## 安全线",
+            "",
+            *markdown_list(payload.get("safety")),
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="drec-first-publish-media-exit-pack-zh.md"'},
+    )
+
+
 @app.get("/operations/first-publish-media-pack.md")
 async def operations_first_publish_media_pack(_: None = Depends(require_access_token)):
     payload = await first_publish_readiness_payload()
