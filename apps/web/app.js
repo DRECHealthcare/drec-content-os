@@ -601,6 +601,8 @@ Object.assign(uiZh, {
   "Could not download monthly carousel doctor worksheet.": "无法下载月度医生审核表。",
   "Monthly carousel action pack downloaded.": "月度 Carousel 下一步操作包已下载。",
   "Could not download monthly carousel action pack.": "无法下载月度 Carousel 下一步操作包。",
+  "Monthly carousel ops cockpit downloaded.": "月度 Carousel 运营驾驶舱已下载。",
+  "Could not download monthly carousel ops cockpit.": "无法下载月度 Carousel 运营驾驶舱。",
   "Choose the monthly doctor worksheet CSV first.": "请先选择月度医生审核表 CSV。",
   "Previewing monthly doctor worksheet...": "正在预览月度医生审核表...",
   "Importing monthly doctor worksheet...": "正在导入月度医生审核表...",
@@ -5336,6 +5338,16 @@ document.getElementById("download-monthly-carousel-action-pack")?.addEventListen
     message.textContent = translateText("Monthly carousel action pack downloaded.");
   } catch (error) {
     message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download monthly carousel action pack.");
+  }
+});
+
+document.getElementById("download-monthly-carousel-ops-cockpit")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/monthly-carousel-ops-cockpit.zh.md", "drec-monthly-carousel-ops-cockpit-zh.md", "text/markdown");
+    message.textContent = translateText("Monthly carousel ops cockpit downloaded.");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download monthly carousel ops cockpit.");
   }
 });
 

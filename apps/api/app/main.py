@@ -9801,6 +9801,7 @@ async def monthly_carousel_action_pack_payload():
         "operator_sequence": operator_sequence,
         "items": items,
         "links": {
+            "monthly_ops_cockpit": "/operations/monthly-carousel-ops-cockpit.zh.md",
             "doctor_review_pack": "/operations/monthly-carousel-doctor-review.zh.md",
             "doctor_reply_templates": "/operations/monthly-carousel-doctor-reply-templates.zh.md",
             "png_assets_zip": "/operations/monthly-carousel-png-assets.zip",
@@ -9900,6 +9901,143 @@ async def operations_monthly_carousel_action_pack_zh(_: None = Depends(require_a
         "\n".join(lines),
         media_type="text/markdown",
         headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-action-pack-zh.md"'},
+    )
+
+
+@app.get("/operations/monthly-carousel-ops-cockpit.zh.md")
+async def operations_monthly_carousel_ops_cockpit_zh(_: None = Depends(require_access_token)):
+    action_pack = await monthly_carousel_action_pack_payload()
+    closeout = await monthly_carousel_learning_closeout_payload()
+    handback = await monthly_carousel_next_plan_handback_payload()
+    schedule_audit = await schedule_audit_payload()
+    launch = await launch_readiness_payload()
+    meta = await meta_readiness(None)
+    source = action_pack.get("source") or {}
+    primary = action_pack.get("primary_action") or {}
+    links = action_pack.get("links") or {}
+    stage_counts = action_pack.get("stage_counts") or {}
+    gate_counts = action_pack.get("gate_counts") or {}
+    closeout_stage_counts = closeout.get("stage_counts") or {}
+    candidates = handback.get("candidate_topics") or []
+    current_items = action_pack.get("items") or []
+    priority_items = [
+        item for item in current_items
+        if item.get("stage") not in {"published", "learning_complete"}
+    ][:12]
+    if not priority_items:
+        priority_items = current_items[:12]
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    lines = [
+        "# DREC 月度 Carousel 今日运营驾驶舱",
+        "",
+        f"生成时间：{generated_at}",
+        f"Notion 来源：{source.get('name')}",
+        f"月度刷新日：每月 {source.get('monthly_refresh_day')} 日",
+        "",
+        "用途：每天打开一次，确认本月 carousel 内容从医生审核、制作、入队、排程、发布、数据到下月回流的下一步。本文件只读，不会批准、导入、入队、排程、发布、写 Notion 或调用 Meta。",
+        "",
+        "## 今天先做什么",
+        "",
+        f"- 动作：{primary.get('title')}",
+        f"- 说明：{primary.get('detail')}",
+        f"- 相关下载：`{primary.get('download') or 'n/a'}`",
+        f"- 相关导入/动作：`{primary.get('import') or primary.get('worksheet') or 'n/a'}`",
+        "",
+        "## 全局安全状态",
+        "",
+        f"- Manual ops：{'可用' if launch.get('can_use_for_manual_ops') else '需检查'}",
+        f"- Meta readiness：{meta.get('overall_status')}",
+        f"- Schedule Audit：{zh_schedule_audit_status(schedule_audit.get('overall_status'))}",
+        f"- Schedule blocks / warnings：{schedule_audit.get('block_count', 0)} / {schedule_audit.get('warn_count', 0)}",
+        "",
+        "## 月度流程计数",
+        "",
+        f"- 月度内容数：{action_pack.get('asset_count')}",
+        f"- 等待录入表现数据：{closeout.get('waiting_metrics_count')}",
+        f"- 等待 rollup：{closeout.get('waiting_rollup_count')}",
+        f"- 学习闭环完成：{closeout.get('learning_complete_count')}",
+        f"- 下月候选主题：{len(candidates)}",
+        "",
+        "## 阶段统计",
+        "",
+        *markdown_list([f"{monthly_carousel_action_stage_label(key)}：{value}" for key, value in sorted(stage_counts.items())], "- 暂无阶段统计。"),
+        "",
+        "## 入队 Gate 统计",
+        "",
+        *markdown_list([f"{zh_monthly_queue_gate_status(key)}：{value}" for key, value in sorted(gate_counts.items())], "- 暂无入队 gate 统计。"),
+        "",
+        "## 数据闭环统计",
+        "",
+        *markdown_list([f"{zh_monthly_learning_stage(key)}：{value}" for key, value in sorted(closeout_stage_counts.items())], "- 暂无数据闭环统计。"),
+        "",
+        "## 今日重点内容",
+        "",
+    ]
+    if priority_items:
+        for index, item in enumerate(priority_items, start=1):
+            blockers = [zh_monthly_queue_blocker(blocker) for blocker in item.get("queue_blockers") or []]
+            lines.extend(
+                [
+                    f"### {index}. {item.get('topic_label') or item.get('topic_id') or item.get('topic')}",
+                    "",
+                    f"- Asset ID：`{item.get('asset_id')}`",
+                    f"- 阶段：{monthly_carousel_action_stage_label(item.get('stage'))} / `{item.get('stage') or 'n/a'}`",
+                    f"- 入队：{zh_monthly_queue_gate_status(item.get('gate_status'))} / `{item.get('gate_status') or 'n/a'}`",
+                    f"- 审核：Review `{item.get('review_status') or 'n/a'}` / Safety `{item.get('compliance_status') or 'n/a'}`",
+                    f"- 媒体：{item.get('media_count')}；Visual QA `{item.get('visual_qa_status') or 'n/a'}`",
+                    f"- 阻碍：{'; '.join(blockers) if blockers else '无'}",
+                    f"- 下一步：{item.get('queue_next_action') or item.get('next_action') or '查看月度下一步操作包。'}",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["- 暂无月度内容。请检查 Notion 月度刷新或导入状态。", ""])
+    lines.extend(
+        [
+            "## 今日下载顺序",
+            "",
+            f"1. 月度状态板：`{links.get('status_board')}`",
+            f"2. 月度下一步操作包：`/operations/monthly-carousel-action-pack.zh.md`",
+            f"3. 医生审核总包：`{links.get('doctor_review_pack')}`",
+            f"4. 制作 QA 包：`{links.get('production_qa_pack')}`",
+            f"5. 入队执行包：`{links.get('queue_execution_pack')}`",
+            f"6. 排程执行包：`{links.get('monthly_schedule_execution_pack')}`",
+            f"7. 发布交接包：`{links.get('monthly_publishing_handoff')}`",
+            f"8. 数据执行包：`{links.get('monthly_metrics_execution_pack')}`",
+            f"9. 学习回流包：`{links.get('monthly_next_plan_handback')}`",
+            "",
+            "## 下月回流预览",
+            "",
+        ]
+    )
+    if candidates:
+        for index, item in enumerate(candidates[:8], start=1):
+            lines.extend(
+                [
+                    f"### {index}. {item.get('candidate')}",
+                    f"- 来源：{item.get('source')}",
+                    f"- 理由：{item.get('reason')}",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["- 暂无可用候选主题。先完成当前月度内容的 metrics 和 rollup。", ""])
+    lines.extend(
+        [
+            "## 安全线",
+            "",
+            "- 这个驾驶舱只读，不会写入任何数据。",
+            "- 不要绕过医生审核、Safety clear、制作 QA、队列审核、Pre-Schedule Gate 或 Schedule Audit。",
+            "- Meta live 发布保持关闭，直到 Meta readiness 和 live switches 都通过。",
+            "- 下月主题必须先检查 Topic ID 和 Topic，避免重复。",
+            "- 内容继续保持 Mandarin-first 医疗教育风格，不写 miracle cure、一定逆转、保证改善或直接卖课。",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-ops-cockpit-zh.md"'},
     )
 
 
