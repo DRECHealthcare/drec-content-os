@@ -2428,6 +2428,63 @@ function renderWorkflowNext(data) {
   `;
 }
 
+function renderSimpleOperator(data) {
+  const container = document.getElementById("simple-operator");
+  if (!container) return;
+  const summary = data.workflow?.summary || data.summary || {};
+  const completion = data.workflow?.completion || data.completion || {};
+  const nextAction = data.workflow?.next_action || data.next_action || {};
+  const readyAssets = Number(summary.queue_ready_asset_count || 0);
+  const queueTotal = Number(summary.queue_total || 0);
+  const scheduledQueue = Number(summary.scheduled_queue || 0);
+  const percent = Number(completion.percent || 0);
+  const firstCycle = Number(completion.first_cycle_percent || 0);
+  let title = "今天只看这里";
+  let body = translateText(nextAction.body || "系统正在判断下一步。");
+  let status = `${percent || "?"}% 总体 · ${firstCycle || "?"}% 第一轮`;
+  let actions = `
+    <button type="button" data-simple-refresh>刷新状态</button>
+  `;
+
+  if (readyAssets > 0 && queueTotal === 0) {
+    title = `${readyAssets} 条内容已安全通过，可以入队`;
+    body = `已有 ${readyAssets} 条内容是 approved + safety clear。先预览，再执行入队；不会发布到 Meta。`;
+    status = "安全通过，可以进入发布队列";
+    actions = `
+      <button class="primary" type="button" data-simple-preview-queue>1. 预览可入队内容</button>
+      <button type="button" data-simple-run-queue>2. 执行月度入队</button>
+    `;
+  } else if (queueTotal > 0 && scheduledQueue === 0) {
+    title = "内容已在队列，下一步是审核/排程";
+    body = `队列里已有 ${queueTotal} 条内容。下一步去审核队列或排程页继续。`;
+    status = "已入队，等待排程";
+    actions = `
+      <button class="primary" type="button" data-simple-open-review>打开审核队列</button>
+      <button type="button" data-simple-open-scheduler>打开排程</button>
+    `;
+  } else if (scheduledQueue > 0) {
+    title = "已有内容排程，下一步是发布交接";
+    body = `已有 ${scheduledQueue} 条内容进入排程。下一步下载发布交接包，正式发布仍需要人工确认。`;
+    status = "已排程";
+    actions = `
+      <button class="primary" type="button" data-simple-open-scheduler>打开排程</button>
+      <button type="button" data-simple-download-handoff>下载发布交接包</button>
+    `;
+  }
+
+  container.innerHTML = `
+    <div class="simple-operator-copy">
+      <span>${escapeHtml(status)}</span>
+      <h2>${escapeHtml(title)}</h2>
+      <p>${escapeHtml(body)}</p>
+    </div>
+    <div class="simple-operator-actions">
+      ${actions}
+    </div>
+    <small>日常操作先用这里。下面的详细区域只是给我排查和高级操作用。</small>
+  `;
+}
+
 async function loadLoopStatus() {
   try {
     const data = await fetchJson("/workflow/status");
@@ -2448,6 +2505,7 @@ async function loadLoopStatus() {
     document.getElementById("outcome-count").textContent = `${loop.outcome_count || 0} outcome(s) · ${loop.weight_count || 0} active weight(s)`;
     document.getElementById("security-count").textContent = security.rls_hardening_ready ? "RLS hardening ready" : "Needs service-role key";
     document.getElementById("automation-count").textContent = `${automation.ready_count || 0} ready · ${automation.blocked_count || 0} blocked`;
+    renderSimpleOperator(data);
     renderWorkflowNext(data.workflow || loop);
     loadLaunchReadiness();
     loadTestRunChecklist();
@@ -2465,6 +2523,8 @@ async function loadLoopStatus() {
     document.getElementById("automation-count").textContent = message;
     const workflow = document.getElementById("workflow-next");
     if (workflow) workflow.innerHTML = `<p class="status-note">${escapeHtml(message)}</p>`;
+    const simple = document.getElementById("simple-operator");
+    if (simple) simple.innerHTML = `<p class="status-note">${escapeHtml(message)}</p>`;
   }
 }
 
@@ -2767,8 +2827,10 @@ function renderDashboardMonthlyActionQueue(data) {
           </li>
         `).join("")}</ul>
       ` : "<p class=\"status-note\">暂无可行动项目。</p>"}
-      <div class="learning-actions">
-        <button type="button" data-open-monthly-assets-review>打开月度素材审核</button>
+      <details class="advanced-actions">
+        <summary>高级工具（平时不用打开）</summary>
+        <div class="learning-actions">
+          <button type="button" data-open-monthly-assets-review>打开月度素材审核</button>
         <button type="button" data-download-dashboard-monthly-doctor-review>下载医生审核总包</button>
         <button type="button" data-download-dashboard-monthly-png-assets>下载全部 PNG</button>
         <button type="button" data-download-dashboard-monthly-doctor-worksheet>下载医生审核表</button>
@@ -2795,8 +2857,9 @@ function renderDashboardMonthlyActionQueue(data) {
         <button type="button" data-download-dashboard-monthly-next-plan-handback>下载学习回流包</button>
         <button type="button" data-download-dashboard-monthly-next-plan-csv>下载下月主题 CSV</button>
         <button type="button" data-download-dashboard-monthly-action-queue>下载月度行动队列</button>
-        <button type="button" data-download-dashboard-monthly-action-csv>下载行动 CSV</button>
-      </div>
+          <button type="button" data-download-dashboard-monthly-action-csv>下载行动 CSV</button>
+        </div>
+      </details>
     </article>
   `;
 }
@@ -5635,10 +5698,42 @@ document.getElementById("workflow-next").addEventListener("click", (event) => {
 document.getElementById("refresh-workflow").addEventListener("click", async () => {
   const button = document.getElementById("refresh-workflow");
   button.disabled = true;
-  button.textContent = "Refreshing";
+  button.textContent = "刷新中";
   await loadLoopStatus();
   button.disabled = false;
-  button.textContent = "Refresh";
+  button.textContent = "刷新";
+});
+
+document.getElementById("simple-operator")?.addEventListener("click", async (event) => {
+  const previewQueue = event.target.closest("[data-simple-preview-queue]");
+  const runQueue = event.target.closest("[data-simple-run-queue]");
+  const openReview = event.target.closest("[data-simple-open-review]");
+  const openScheduler = event.target.closest("[data-simple-open-scheduler]");
+  const downloadHandoff = event.target.closest("[data-simple-download-handoff]");
+  const refresh = event.target.closest("[data-simple-refresh]");
+  if (!previewQueue && !runQueue && !openReview && !openScheduler && !downloadHandoff && !refresh) return;
+  if (refresh) {
+    await loadLoopStatus();
+    await loadDashboardMonthlyActionQueue();
+    return;
+  }
+  if (openReview) {
+    showScreen("review");
+    return;
+  }
+  if (openScheduler) {
+    showScreen("scheduler");
+    return;
+  }
+  if (downloadHandoff) {
+    await downloadProtectedFile("/operations/monthly-carousel-publishing-handoff.zh.md", "drec-monthly-carousel-publishing-handoff-zh.md", "text/markdown");
+    return;
+  }
+  showScreen("assets");
+  const target = document.getElementById("asset-media-attachment-preview") || document.getElementById("monthly-carousel-status-board");
+  target?.scrollIntoView({ behavior: "smooth", block: "start" });
+  await runMonthlyCarouselQueueReady({ dryRun: Boolean(previewQueue) });
+  await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit()]);
 });
 
 document.getElementById("copy-test-path")?.addEventListener("click", async () => {

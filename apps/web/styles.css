@@ -180,6 +180,71 @@ header span { color: var(--muted); font-size: 12px; }
   margin-top: 14px;
 }
 
+.simple-operator {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  border-left: 6px solid var(--teal);
+  margin-bottom: 14px;
+}
+
+.simple-operator h2 {
+  margin: 4px 0 6px;
+  font-size: 22px;
+}
+
+.simple-operator p {
+  max-width: 760px;
+  color: var(--ink);
+}
+
+.simple-operator span,
+.simple-operator small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.simple-operator-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.simple-operator-actions button {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 14px;
+  background: #FFF;
+  color: var(--navy);
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.simple-operator-actions button.primary {
+  border-color: var(--teal);
+  background: var(--teal);
+  color: #052E2A;
+}
+
+.advanced-actions {
+  margin-top: 14px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+.advanced-actions summary {
+  color: var(--navy);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.advanced-actions .learning-actions {
+  margin-top: 12px;
+}
+
 .launch-use-card {
   border-left: 5px solid var(--orange);
 }
@@ -1245,6 +1310,9 @@ button[type="submit"] {
   .token-button { margin-left: auto; }
   .screen { padding: 18px; }
   .grid, .loop, .split-form, .learning-grid, .handoff-summary, .creative-preview, .weight-row, .scheduler-toolbar, .week-schedule, .workflow-steps, .test-path-list, .quick-composer, .sprint-board, .completion-bars { grid-template-columns: 1fr; }
+  .simple-operator { grid-template-columns: 1fr; }
+  .simple-operator-actions { justify-content: stretch; }
+  .simple-operator-actions button { width: 100%; white-space: normal; }
   .workflow-head, .workflow-primary { align-items: stretch; flex-direction: column; }
   .completion-head { flex-direction: column; }
   .workflow-primary button { width: 100%; }
