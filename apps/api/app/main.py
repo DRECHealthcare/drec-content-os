@@ -9162,6 +9162,91 @@ async def operations_monthly_carousel_queue_readiness_zh(_: None = Depends(requi
     )
 
 
+@app.get("/operations/monthly-carousel-queue-execution-pack.zh.md")
+async def operations_monthly_carousel_queue_execution_pack_zh(_: None = Depends(require_access_token)):
+    payload = await monthly_carousel_queue_readiness_payload()
+    source = payload.get("source") or {}
+    gate_counts = payload.get("gate_counts") or {}
+    ready_items = [item for item in payload.get("items") or [] if item.get("can_queue")]
+    blocked_items = [item for item in payload.get("items") or [] if not item.get("can_queue")]
+    lines = [
+        "# DREC 月度 Carousel 入队执行包",
+        "",
+        f"- Notion 来源：{source.get('name')}",
+        f"- 月度刷新日：每月 {source.get('monthly_refresh_day')} 日",
+        f"- 月度内容数：{payload.get('asset_count')}",
+        f"- 可入队：{len(ready_items)}",
+        f"- 不可入队 / 已在队列 / 已发布：{len(blocked_items)}",
+        "",
+        "用途：在点击「月度内容加入队列」前，确认哪些 Topic ID 真的可以进入发布队列。本文件只读，不会批准、入队、排程、发布或调用 Meta。",
+        "",
+        "## 正确操作顺序",
+        "",
+        "1. 先下载并查看「月度入队检查表」。",
+        "2. 确认可入队项目必须同时满足：医生 approve、Safety clear、最终媒体 URL、Visual QA passed、文案检测无阻碍。",
+        "3. 先点「预览月度入队」，确认 would queue / skipped 数量。",
+        "4. 只有 preview 结果正确时，才点「月度内容加入队列」。",
+        "5. 入队后还要做队列审核、Pre-Schedule Gate、Schedule Audit，不能直接排程或发布。",
+        "",
+        "## 当前 Gate 统计",
+        "",
+        *markdown_list([f"{zh_monthly_queue_gate_status(key)}：{value}" for key, value in sorted(gate_counts.items())], "- 暂无 gate 数据。"),
+        "",
+        "## 可入队项目",
+        "",
+    ]
+    if ready_items:
+        for index, item in enumerate(ready_items, start=1):
+            lines.extend(
+                [
+                    f"### {index}. {item.get('topic_id')} · {item.get('topic')}",
+                    "",
+                    f"- Asset ID：`{item.get('asset_id')}`",
+                    f"- 计划日期：{item.get('planned_posting_date') or '未标注'}",
+                    f"- 审核：Review `{item.get('review_status')}` / Safety `{item.get('compliance_status')}` / Detector `{item.get('detector_status')}`",
+                    f"- 图片：媒体 URL {item.get('media_count')}；Visual QA `{item.get('visual_qa_status')}`",
+                    f"- 入队后下一步：队列审核 → Pre-Schedule Gate → Schedule Audit。",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["- 目前没有可入队项目。", ""])
+    lines.extend(["## 暂不可入队 / 已处理项目", ""])
+    if blocked_items:
+        for index, item in enumerate(blocked_items, start=1):
+            blockers = [zh_monthly_queue_blocker(blocker) for blocker in item.get("blockers") or []]
+            lines.extend(
+                [
+                    f"### {index}. {item.get('topic_id')} · {item.get('topic')}",
+                    "",
+                    f"- Asset ID：`{item.get('asset_id')}`",
+                    f"- Gate：`{item.get('gate_status')}`（{zh_monthly_queue_gate_status(item.get('gate_status'))}）",
+                    f"- 阻碍：{'; '.join(blockers) if blockers else '无'}",
+                    f"- 下一步：{item.get('next_action')}",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["- 暂无阻碍项目。", ""])
+    lines.extend(
+        [
+            "## 安全线",
+            "",
+            "- 入队不是发布。",
+            "- 入队不代表队列审核通过。",
+            "- 入队后仍然不能绕过 Pre-Schedule Gate 和 Schedule Audit。",
+            "- Meta live 发布仍保持关闭，直到 Meta readiness 和 live switches 都通过。",
+            "- 如果 preview 显示 skipped，不要手动绕过；回到对应 gate 修正。",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-queue-execution-pack-zh.md"'},
+    )
+
+
 def monthly_carousel_action_stage_label(stage: str | None):
     return {
         "needs_safety_clearance": "等待医生安全审核",
@@ -9288,6 +9373,7 @@ async def monthly_carousel_action_pack_payload():
             "production_worksheet": "/operations/monthly-carousel-production-design-worksheet.csv",
             "production_qa_pack": "/operations/monthly-carousel-production-qa-pack.zh.md",
             "queue_readiness": "/operations/monthly-carousel-queue-readiness.zh.md",
+            "queue_execution_pack": "/operations/monthly-carousel-queue-execution-pack.zh.md",
             "monthly_queue_ready_action": "/operations/monthly-carousel-queue-ready",
             "monthly_review_queue": "/operations/monthly-carousel-review-queue.csv",
             "monthly_review_queue_decisions": "/operations/monthly-carousel-review-queue-decisions.csv",

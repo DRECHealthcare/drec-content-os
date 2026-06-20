@@ -614,6 +614,8 @@ Object.assign(uiZh, {
   "Could not download monthly carousel production QA pack.": "无法下载月度 Carousel 制作 QA 包。",
   "Monthly carousel queue readiness downloaded.": "月度 Carousel 入队检查表已下载。",
   "Could not download monthly carousel queue readiness.": "无法下载月度 Carousel 入队检查表。",
+  "Monthly carousel queue execution pack downloaded.": "月度 Carousel 入队执行包已下载。",
+  "Could not download monthly carousel queue execution pack.": "无法下载月度 Carousel 入队执行包。",
   "Monthly carousel queue preview complete.": "月度 Carousel 入队预览完成。",
   "Monthly carousel ready items queued.": "月度 Carousel 可入队内容已加入队列。",
   "Could not preview monthly carousel queue.": "无法预览月度 Carousel 入队。",
@@ -5581,6 +5583,16 @@ document.getElementById("download-monthly-carousel-queue-readiness")?.addEventLi
     message.textContent = translateText("Monthly carousel queue readiness downloaded.");
   } catch (error) {
     message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download monthly carousel queue readiness.");
+  }
+});
+
+document.getElementById("download-monthly-carousel-queue-execution-pack")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/monthly-carousel-queue-execution-pack.zh.md", "drec-monthly-carousel-queue-execution-pack-zh.md", "text/markdown");
+    message.textContent = translateText("Monthly carousel queue execution pack downloaded.");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download monthly carousel queue execution pack.");
   }
 });
 
