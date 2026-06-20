@@ -2771,6 +2771,9 @@ function renderDashboardMonthlyActionQueue(data) {
         <button type="button" data-download-dashboard-monthly-png-assets>下载全部 PNG</button>
         <button type="button" data-download-dashboard-monthly-doctor-worksheet>下载医生审核表</button>
         <button type="button" data-fill-dashboard-doctor-reply-template>填写医生回复模板</button>
+        <button type="button" data-download-dashboard-monthly-production-worksheet>下载制作设计表</button>
+        <button type="button" data-download-dashboard-monthly-production-qa>下载制作 QA 包</button>
+        <button type="button" data-fill-dashboard-production-reply-template>填写制作回复模板</button>
         <button type="button" data-download-dashboard-monthly-action-queue>下载月度行动队列</button>
         <button type="button" data-download-dashboard-monthly-action-csv>下载行动 CSV</button>
       </div>
@@ -7232,9 +7235,12 @@ document.getElementById("dashboard-monthly-action-queue")?.addEventListener("cli
   const downloadPngAssets = event.target.closest("[data-download-dashboard-monthly-png-assets]");
   const downloadDoctorWorksheet = event.target.closest("[data-download-dashboard-monthly-doctor-worksheet]");
   const fillDoctorReplyTemplate = event.target.closest("[data-fill-dashboard-doctor-reply-template]");
+  const downloadProductionWorksheet = event.target.closest("[data-download-dashboard-monthly-production-worksheet]");
+  const downloadProductionQa = event.target.closest("[data-download-dashboard-monthly-production-qa]");
+  const fillProductionReplyTemplate = event.target.closest("[data-fill-dashboard-production-reply-template]");
   const downloadQueue = event.target.closest("[data-download-dashboard-monthly-action-queue]");
   const downloadCsv = event.target.closest("[data-download-dashboard-monthly-action-csv]");
-  if (!openAssets && !downloadDoctorReview && !downloadPngAssets && !downloadDoctorWorksheet && !fillDoctorReplyTemplate && !downloadQueue && !downloadCsv) return;
+  if (!openAssets && !downloadDoctorReview && !downloadPngAssets && !downloadDoctorWorksheet && !fillDoctorReplyTemplate && !downloadProductionWorksheet && !downloadProductionQa && !fillProductionReplyTemplate && !downloadQueue && !downloadCsv) return;
   if (openAssets) {
     showScreen("assets");
     const card = document.getElementById("monthly-carousel-status-board");
@@ -7264,51 +7270,100 @@ document.getElementById("dashboard-monthly-action-queue")?.addEventListener("cli
     }
     return;
   }
+  if (fillProductionReplyTemplate) {
+    const message = document.getElementById("test-path-message");
+    if (message) message.textContent = "Loading production reply template...";
+    try {
+      const data = await fetchJson("/operations/production-reply-inbox-pack");
+      const template = data.reply_paste_template || (data.reply_items || []).map((item) => item.reply_template || "").filter(Boolean).join("\n\n");
+      if (!template) {
+        if (message) message.textContent = "No production reply template is ready yet. Doctor approval may still be pending.";
+        return;
+      }
+      showScreen("assets");
+      const textInput = document.getElementById("production-reply-text");
+      if (textInput) {
+        textInput.value = template;
+        textInput.focus();
+        textInput.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      if (message) message.textContent = "制作回复模板已填入。收到设计/媒体 URL 后，请替换实际 Media URLs / Visual QA / Rights，再先 Preview Production Reply。";
+    } catch (error) {
+      if (message) message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : "Could not load production reply template.";
+    }
+    return;
+  }
   const message = document.getElementById("test-path-message");
-  const downloadConfig = downloadDoctorReview
-    ? {
+  const downloadConfig = (() => {
+    if (downloadDoctorReview) {
+      return {
         path: "/operations/monthly-carousel-doctor-review.zh.md",
         filename: "drec-monthly-carousel-doctor-review-zh.md",
         type: "text/markdown",
         preparing: "Preparing monthly doctor review pack...",
         done: "Monthly carousel doctor review pack downloaded.",
         failed: "Could not download monthly carousel doctor review pack.",
-      }
-    : downloadPngAssets
-      ? {
-          path: "/operations/monthly-carousel-png-assets.zip",
-          filename: "drec-monthly-carousel-png-assets.zip",
-          type: "application/zip",
-          preparing: "Preparing monthly PNG ZIP...",
-          done: "Monthly carousel PNG ZIP downloaded.",
-          failed: "Could not download monthly carousel PNG ZIP.",
-        }
-      : downloadDoctorWorksheet
-        ? {
-            path: "/operations/monthly-carousel-doctor-decision-worksheet.csv",
-            filename: "drec-monthly-carousel-doctor-decision-worksheet.csv",
-            type: "text/csv",
-            preparing: "Preparing monthly doctor worksheet...",
-            done: "Monthly carousel doctor worksheet downloaded.",
-            failed: "Could not download monthly carousel doctor worksheet.",
-          }
-        : downloadCsv
-          ? {
-              path: "/operations/monthly-carousel-next-action-queue.csv",
-              filename: "drec-monthly-carousel-next-action-queue.csv",
-              type: "text/csv",
-              preparing: "Preparing monthly action CSV...",
-              done: "Monthly carousel next-action CSV downloaded.",
-              failed: "Could not download monthly carousel next-action CSV.",
-            }
-          : {
-              path: "/operations/monthly-carousel-next-action-queue.zh.md",
-              filename: "drec-monthly-carousel-next-action-queue-zh.md",
-              type: "text/markdown",
-              preparing: "Preparing monthly action queue...",
-              done: "Monthly carousel next-action queue downloaded.",
-              failed: "Could not download monthly carousel next-action queue.",
-            };
+      };
+    }
+    if (downloadPngAssets) {
+      return {
+        path: "/operations/monthly-carousel-png-assets.zip",
+        filename: "drec-monthly-carousel-png-assets.zip",
+        type: "application/zip",
+        preparing: "Preparing monthly PNG ZIP...",
+        done: "Monthly carousel PNG ZIP downloaded.",
+        failed: "Could not download monthly carousel PNG ZIP.",
+      };
+    }
+    if (downloadDoctorWorksheet) {
+      return {
+        path: "/operations/monthly-carousel-doctor-decision-worksheet.csv",
+        filename: "drec-monthly-carousel-doctor-decision-worksheet.csv",
+        type: "text/csv",
+        preparing: "Preparing monthly doctor worksheet...",
+        done: "Monthly carousel doctor worksheet downloaded.",
+        failed: "Could not download monthly carousel doctor worksheet.",
+      };
+    }
+    if (downloadProductionWorksheet) {
+      return {
+        path: "/operations/monthly-carousel-production-design-worksheet.csv",
+        filename: "drec-monthly-carousel-production-design-worksheet.csv",
+        type: "text/csv",
+        preparing: "Preparing monthly production worksheet...",
+        done: "Monthly carousel production worksheet downloaded.",
+        failed: "Could not download monthly carousel production worksheet.",
+      };
+    }
+    if (downloadProductionQa) {
+      return {
+        path: "/operations/monthly-carousel-production-qa-pack.zh.md",
+        filename: "drec-monthly-carousel-production-qa-pack-zh.md",
+        type: "text/markdown",
+        preparing: "Preparing monthly production QA pack...",
+        done: "Monthly carousel production QA pack downloaded.",
+        failed: "Could not download monthly carousel production QA pack.",
+      };
+    }
+    if (downloadCsv) {
+      return {
+        path: "/operations/monthly-carousel-next-action-queue.csv",
+        filename: "drec-monthly-carousel-next-action-queue.csv",
+        type: "text/csv",
+        preparing: "Preparing monthly action CSV...",
+        done: "Monthly carousel next-action CSV downloaded.",
+        failed: "Could not download monthly carousel next-action CSV.",
+      };
+    }
+    return {
+      path: "/operations/monthly-carousel-next-action-queue.zh.md",
+      filename: "drec-monthly-carousel-next-action-queue-zh.md",
+      type: "text/markdown",
+      preparing: "Preparing monthly action queue...",
+      done: "Monthly carousel next-action queue downloaded.",
+      failed: "Could not download monthly carousel next-action queue.",
+    };
+  })();
   if (message) message.textContent = translateText(downloadConfig.preparing);
   try {
     await downloadProtectedFile(downloadConfig.path, downloadConfig.filename, downloadConfig.type);

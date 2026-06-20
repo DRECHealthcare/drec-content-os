@@ -2752,6 +2752,26 @@ const requiredSnippets = [
     text: "/operations/doctor-reply-inbox-pack",
   },
   {
+    name: "web dashboard monthly production worksheet action",
+    file: "web",
+    text: "download-dashboard-monthly-production-worksheet",
+  },
+  {
+    name: "web dashboard monthly production qa action",
+    file: "web",
+    text: "download-dashboard-monthly-production-qa",
+  },
+  {
+    name: "web dashboard production reply fill action",
+    file: "web",
+    text: "fill-dashboard-production-reply-template",
+  },
+  {
+    name: "web dashboard production reply inbox endpoint",
+    file: "web",
+    text: "/operations/production-reply-inbox-pack",
+  },
+  {
     name: "web notion carousel source action",
     file: "web",
     text: "refresh-notion-carousel-source",
