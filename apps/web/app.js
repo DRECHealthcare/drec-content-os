@@ -1842,6 +1842,11 @@ function renderFirstPublishGateBoard(data) {
         <span>${escapeHtml(data.overall_status || "waiting")}</span>
       </div>
       <div class="learning-actions">
+        <button type="button" data-gate-board-fill-doctor-reply>${escapeHtml(translateText("Fill Doctor Reply Template"))}</button>
+        <button type="button" data-gate-board-open-assets>${escapeHtml(translateText("Open Asset Review"))}</button>
+        <button type="button" data-gate-board-download-media-exit>${escapeHtml(translateText("Download Media Exit Pack"))}</button>
+        <button type="button" data-gate-board-download-png>${escapeHtml(translateText("Download PNG Zip"))}</button>
+        <button type="button" data-gate-board-safe-advance>${escapeHtml(translateText("Advance Safe Step"))}</button>
         <button type="button" data-download-first-gate-board>${escapeHtml(translateText("Download Gate Board"))}</button>
         <button type="button" data-download-first-gate-board-csv>${escapeHtml(translateText("Download Gate CSV"))}</button>
       </div>
@@ -2290,11 +2295,51 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
 });
 
 document.getElementById("first-publish-gate-board")?.addEventListener("click", async (event) => {
+  const fillDoctorReplyButton = event.target.closest("[data-gate-board-fill-doctor-reply]");
+  const openAssetsButton = event.target.closest("[data-gate-board-open-assets]");
+  const downloadMediaExitButton = event.target.closest("[data-gate-board-download-media-exit]");
+  const downloadPngButton = event.target.closest("[data-gate-board-download-png]");
+  const safeAdvanceButton = event.target.closest("[data-gate-board-safe-advance]");
   const downloadBoardButton = event.target.closest("[data-download-first-gate-board]");
   const downloadCsvButton = event.target.closest("[data-download-first-gate-board-csv]");
-  if (!downloadBoardButton && !downloadCsvButton) return;
+  if (!fillDoctorReplyButton && !openAssetsButton && !downloadMediaExitButton && !downloadPngButton && !safeAdvanceButton && !downloadBoardButton && !downloadCsvButton) return;
   const message = document.getElementById("test-path-message");
+  if (fillDoctorReplyButton) {
+    const asset = (latestFirstPublishReadiness?.candidates || {}).next_asset;
+    if (!asset?.id) {
+      if (message) message.textContent = "No first asset is available for doctor reply import yet.";
+      return;
+    }
+    showScreen("assets");
+    const textInput = document.getElementById("doctor-reply-text");
+    if (textInput) {
+      textInput.value = firstPublishDoctorReplyTemplate(asset);
+      textInput.focus();
+      textInput.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (message) message.textContent = "医生回复模板已填入。收到医生决定后，请把 Decision / Safety 改成实际结果再预览导入。";
+    }
+    return;
+  }
+  if (openAssetsButton) {
+    showScreen("assets");
+    if (message) message.textContent = "已打开素材审核页。请选择当前首发素材继续审核。";
+    return;
+  }
+  if (safeAdvanceButton) {
+    await runFirstPublishSafeAdvanceLoop();
+    return;
+  }
   try {
+    if (downloadMediaExitButton) {
+      await downloadProtectedFile("/operations/first-publish-media-exit-pack.zh.md", "drec-first-publish-media-exit-pack-zh.md", "text/markdown");
+      if (message) message.textContent = translateText("First publish media exit pack downloaded.");
+      return;
+    }
+    if (downloadPngButton) {
+      await downloadProtectedFile("/operations/first-publish-carousel-png-assets.zip", "drec-first-publish-carousel-png-assets.zip", "application/zip");
+      if (message) message.textContent = "First publish PNG design ZIP downloaded.";
+      return;
+    }
     if (downloadBoardButton) {
       await downloadProtectedFile("/operations/first-publish-gate-board.zh.md", "drec-first-publish-gate-board-zh.md", "text/markdown");
       if (message) message.textContent = translateText("First publish gate board downloaded.");
@@ -2306,7 +2351,15 @@ document.getElementById("first-publish-gate-board")?.addEventListener("click", a
     if (message) {
       message.textContent = error.message === "Access token required"
         ? translateText("Set the access token first.")
-        : translateText(downloadBoardButton ? "Could not download first publish gate board." : "Could not download first publish gate CSV.");
+        : translateText(
+            downloadMediaExitButton
+              ? "Could not download first publish media exit pack."
+              : downloadPngButton
+                ? "Could not download first publish PNG ZIP."
+                : downloadBoardButton
+                  ? "Could not download first publish gate board."
+                  : "Could not download first publish gate CSV."
+          );
     }
   }
 });
