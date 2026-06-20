@@ -242,6 +242,8 @@ const uiZh = {
   "下载中文医生审核桥接包": "下载中文医生审核桥接包",
   "下载月度 Carousel 医生审核总包": "下载月度 Carousel 医生审核总包",
   "下载月度 Carousel 全部图片 ZIP": "下载月度 Carousel 全部图片 ZIP",
+  "下载月度 Carousel 状态板": "下载月度 Carousel 状态板",
+  "下载月度 Carousel 状态 CSV": "下载月度 Carousel 状态 CSV",
   "Download Send Queue": "下载发送队列",
   "Download Doctor Polish": "下载医生润色包",
   "Download Reply Inbox": "下载回复收件箱",
@@ -571,6 +573,10 @@ Object.assign(uiZh, {
   "Could not download monthly carousel doctor review pack.": "无法下载月度 Carousel 医生审核总包。",
   "Monthly carousel PNG ZIP downloaded.": "月度 Carousel 全部图片 ZIP 已下载。",
   "Could not download monthly carousel PNG ZIP.": "无法下载月度 Carousel 全部图片 ZIP。",
+  "Monthly carousel status board downloaded.": "月度 Carousel 状态板已下载。",
+  "Could not download monthly carousel status board.": "无法下载月度 Carousel 状态板。",
+  "Monthly carousel status CSV downloaded.": "月度 Carousel 状态 CSV 已下载。",
+  "Could not download monthly carousel status CSV.": "无法下载月度 Carousel 状态 CSV。",
   "Could not download first publish readiness.": "无法下载首次发布准备包。",
   "Could not run risk audit.": "无法运行风险检查。",
   "Could not download snapshot.": "无法下载快照。",
@@ -979,7 +985,7 @@ document.querySelectorAll("nav button").forEach((button) => {
     if (screen === "creative") loadStyleLibrary();
     if (screen === "templates") loadTemplateStudio();
     if (screen === "video") loadVideoStudio();
-    if (screen === "assets") Promise.all([loadAssets(), loadMediaAssets(), loadDoctorSendQueue(), loadDoctorReplyInboxPack(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack()]);
+    if (screen === "assets") Promise.all([loadAssets(), loadMediaAssets(), loadDoctorSendQueue(), loadDoctorReplyInboxPack(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadMonthlyCarouselStatusBoard(), loadAssetReviewSession(), loadAssetRewritePack()]);
     if (screen === "outcomes") loadOutcomes();
     if (screen === "learning") {
       loadLearningSummary();
@@ -2186,6 +2192,52 @@ async function loadNotionCarouselSource() {
     renderNotionCarouselSource(data);
   } catch {
     container.innerHTML = '<p class="status-note">Set the access token to load Notion source.</p>';
+  }
+}
+
+function renderMonthlyCarouselStatusBoard(data) {
+  const container = document.getElementById("monthly-carousel-status-board");
+  if (!container) return;
+  const stageCounts = data.stage_counts || {};
+  const items = data.items || [];
+  container.innerHTML = `
+    <article class="learning-card wide-learning">
+      <h3>月度 Carousel 状态板</h3>
+      <p>${Number(data.asset_count || 0)} topics · ${Number(data.png_count || 0)} PNG</p>
+      <small>${escapeHtml(data.next_step || "")}</small>
+      <div class="summary-row">
+        <span>可推进 ${Number(data.ready_to_move_count || 0)}</span>
+        <span>等待人工 ${Number(data.waiting_count || 0)}</span>
+        <span>阻塞 ${Number(data.blocked_count || 0)}</span>
+      </div>
+      <ul>
+        ${Object.entries(stageCounts).map(([stage, count]) => `<li><strong>${escapeHtml(stage)}</strong> ${Number(count || 0)}</li>`).join("") || "<li>暂无阶段数据。</li>"}
+      </ul>
+    </article>
+    ${items.slice(0, 15).map((item) => `
+      <article class="learning-card">
+        <h3>${escapeHtml(item.topic_id || "DC")} · ${escapeHtml(item.topic || "")}</h3>
+        <p>${escapeHtml(item.stage || "checking")} · ${escapeHtml(item.status || "waiting")}</p>
+        <small>${escapeHtml(item.next_action || "")}</small>
+        <ul>
+          <li><strong>PNG</strong> ${Number(item.png_count || 0)}/${Number(item.slide_count || 0)}</li>
+          <li><strong>Safety</strong> ${escapeHtml(item.compliance_status || "n/a")}</li>
+          <li><strong>Review</strong> ${escapeHtml(item.review_status || "n/a")}</li>
+          <li><strong>Queue</strong> ${escapeHtml((item.queue_statuses || []).join(", ") || "none")}</li>
+        </ul>
+      </article>
+    `).join("")}
+  `;
+}
+
+async function loadMonthlyCarouselStatusBoard() {
+  const container = document.getElementById("monthly-carousel-status-board");
+  if (!container) return;
+  try {
+    const data = await fetchJson("/operations/monthly-carousel-status-board");
+    renderMonthlyCarouselStatusBoard(data);
+  } catch {
+    container.innerHTML = '<p class="status-note">Set the access token to load monthly carousel status.</p>';
   }
 }
 
@@ -5131,6 +5183,26 @@ document.getElementById("download-monthly-carousel-png-assets")?.addEventListene
     message.textContent = translateText("Monthly carousel PNG ZIP downloaded.");
   } catch (error) {
     message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download monthly carousel PNG ZIP.");
+  }
+});
+
+document.getElementById("download-monthly-carousel-status-board-zh")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/monthly-carousel-status-board.zh.md", "drec-monthly-carousel-status-board-zh.md", "text/markdown");
+    message.textContent = translateText("Monthly carousel status board downloaded.");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download monthly carousel status board.");
+  }
+});
+
+document.getElementById("download-monthly-carousel-status-board-csv")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/monthly-carousel-status-board.csv", "drec-monthly-carousel-status-board.csv", "text/csv");
+    message.textContent = translateText("Monthly carousel status CSV downloaded.");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download monthly carousel status CSV.");
   }
 });
 

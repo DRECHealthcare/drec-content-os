@@ -7961,6 +7961,137 @@ async def monthly_carousel_review_payload():
     }
 
 
+def monthly_carousel_item_stage(asset: dict, detector: dict, queue_items: list[dict]):
+    review_status = asset.get("review_status") or "draft"
+    compliance_status = asset.get("compliance_status") or "pending"
+    metadata = asset.get("metadata") or {}
+    media_urls = [url for url in asset.get("media_urls") or [] if url]
+    visual_qa_status = metadata.get("latest_visual_qa_status") or "pending"
+    asset_queue = [item for item in queue_items if str(item.get("asset_id") or "") == str(asset.get("id") or "")]
+    scheduled = [item for item in asset_queue if item.get("status") == "scheduled"]
+    published = [item for item in asset_queue if item.get("status") == "published" or item.get("external_post_id")]
+    review_approved = [item for item in asset_queue if item.get("status") == "review_approved"]
+    draft_queue = [item for item in asset_queue if item.get("status") == "draft"]
+    if published:
+        return {
+            "stage": "published",
+            "status": "done",
+            "next_action": "Record 7-day metrics and learning outcome.",
+        }
+    if scheduled:
+        return {
+            "stage": "scheduled",
+            "status": "ready",
+            "next_action": "Use publishing handoff at the planned time, then record Meta post ID.",
+        }
+    if review_approved:
+        return {
+            "stage": "ready_to_schedule",
+            "status": "ready",
+            "next_action": "Run pre-schedule gate and choose the planned publishing slot.",
+        }
+    if draft_queue:
+        return {
+            "stage": "queue_review",
+            "status": "waiting",
+            "next_action": "Approve the queue item after final caption/media check.",
+        }
+    if review_status == "approved" and compliance_status == "clear":
+        if not media_urls:
+            return {
+                "stage": "needs_production",
+                "status": "waiting",
+                "next_action": "Send production handoff and attach approved image URLs.",
+            }
+        if visual_qa_status != "passed":
+            return {
+                "stage": "needs_visual_qa",
+                "status": "waiting",
+                "next_action": "Confirm visual QA passed before queueing.",
+            }
+        return {
+            "stage": "ready_for_queue",
+            "status": "ready",
+            "next_action": "Add this approved, safety-clear asset to the publishing queue.",
+        }
+    if detector.get("status") != "clear":
+        return {
+            "stage": "needs_copy_safety_review",
+            "status": "blocked",
+            "next_action": "Revise flagged wording before doctor approval.",
+        }
+    if compliance_status != "clear":
+        return {
+            "stage": "needs_safety_clearance",
+            "status": "waiting",
+            "next_action": "Doctor/human reviewer must mark Safety: clear before approval.",
+        }
+    return {
+        "stage": "doctor_review",
+        "status": "waiting",
+        "next_action": "Send to doctor and import reply with Decision: approve and Safety: clear.",
+    }
+
+
+async def monthly_carousel_status_payload():
+    assets = await monthly_carousel_asset_list()
+    queue_items = await fetch_publish_queue_items(200)
+    items = []
+    counts = {}
+    for asset in assets:
+        metadata = asset.get("metadata") or {}
+        notion_source = metadata.get("notion_source") or {}
+        slides = metadata.get("slides") or []
+        media_urls = [url for url in asset.get("media_urls") or [] if url]
+        detector = check_text(asset.get("caption") or "")
+        stage = monthly_carousel_item_stage(asset, detector, queue_items)
+        topic_id = monthly_carousel_topic_id(asset) or ""
+        counts[stage["stage"]] = counts.get(stage["stage"], 0) + 1
+        queue_matches = [item for item in queue_items if str(item.get("asset_id") or "") == str(asset.get("id") or "")]
+        items.append(
+            {
+                "topic_id": topic_id,
+                "asset_id": asset.get("id"),
+                "brief_id": asset.get("brief_id"),
+                "topic": metadata.get("topic") or topic_id,
+                "planned_posting_date": notion_source.get("planned_posting_date") or "",
+                "notion_overall_status": notion_source.get("overall_status") or "",
+                "notion_image_status": notion_source.get("carousel_image_status") or "",
+                "notion_caption_status": notion_source.get("caption_status") or "",
+                "review_status": asset.get("review_status") or "",
+                "compliance_status": asset.get("compliance_status") or "",
+                "detector_status": detector.get("status") or "",
+                "slide_count": len(slides),
+                "png_count": len(slides),
+                "media_count": len(media_urls),
+                "visual_qa_status": metadata.get("latest_visual_qa_status") or "pending",
+                "queue_count": len(queue_matches),
+                "queue_statuses": sorted({item.get("status") or "unknown" for item in queue_matches}),
+                **stage,
+            }
+        )
+    return {
+        "source": NOTION_CAROUSEL_SOURCE,
+        "asset_count": len(items),
+        "png_count": sum(int(item.get("png_count") or 0) for item in items),
+        "stage_counts": counts,
+        "ready_to_move_count": sum(1 for item in items if item.get("status") == "ready"),
+        "waiting_count": sum(1 for item in items if item.get("status") == "waiting"),
+        "blocked_count": sum(1 for item in items if item.get("status") == "blocked"),
+        "items": items,
+        "next_step": next(
+            (item.get("next_action") for item in items if item.get("status") in {"blocked", "waiting"}),
+            "All monthly carousel items are through the current visible gates.",
+        ),
+        "safety": [
+            "This status board is read-only.",
+            "It does not approve, attach media, queue, schedule, publish, or call Meta.",
+            "Doctor approval and visual QA remain separate gates.",
+            "Topic ID remains the monthly unique identifier.",
+        ],
+    }
+
+
 @app.get("/operations/monthly-carousel-doctor-review")
 async def operations_monthly_carousel_doctor_review(_: None = Depends(require_access_token)):
     return await monthly_carousel_review_payload()
@@ -8140,6 +8271,98 @@ async def operations_monthly_carousel_png_assets_zip(_: None = Depends(require_a
         buffer.getvalue(),
         media_type="application/zip",
         headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-png-assets.zip"'},
+    )
+
+
+@app.get("/operations/monthly-carousel-status-board")
+async def operations_monthly_carousel_status_board(_: None = Depends(require_access_token)):
+    return await monthly_carousel_status_payload()
+
+
+@app.get("/operations/monthly-carousel-status-board.csv")
+async def operations_monthly_carousel_status_board_csv(_: None = Depends(require_access_token)):
+    payload = await monthly_carousel_status_payload()
+    output = StringIO()
+    fieldnames = [
+        "topic_id",
+        "asset_id",
+        "topic",
+        "planned_posting_date",
+        "notion_overall_status",
+        "notion_image_status",
+        "notion_caption_status",
+        "review_status",
+        "compliance_status",
+        "detector_status",
+        "slide_count",
+        "png_count",
+        "media_count",
+        "visual_qa_status",
+        "stage",
+        "status",
+        "queue_statuses",
+        "next_action",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for item in payload.get("items") or []:
+        writer.writerow({**item, "queue_statuses": ", ".join(item.get("queue_statuses") or [])})
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-status-board.csv"'},
+    )
+
+
+@app.get("/operations/monthly-carousel-status-board.zh.md")
+async def operations_monthly_carousel_status_board_zh(_: None = Depends(require_access_token)):
+    payload = await monthly_carousel_status_payload()
+    source = payload.get("source") or {}
+    stage_counts = payload.get("stage_counts") or {}
+    lines = [
+        "# DREC 月度 Carousel 状态板",
+        "",
+        f"- Notion 来源：{source.get('name')}",
+        f"- 月度刷新日：每月 {source.get('monthly_refresh_day')} 日",
+        f"- 月度内容数：{payload.get('asset_count')}",
+        f"- 已生成 PNG：{payload.get('png_count')}",
+        f"- 可推进：{payload.get('ready_to_move_count')}",
+        f"- 等待人工：{payload.get('waiting_count')}",
+        f"- 阻塞：{payload.get('blocked_count')}",
+        "",
+        "这个状态板只读，不会批准、挂载媒体、加入队列、排程、发布或调用 Meta。",
+        "",
+        "## 阶段统计",
+        "",
+        *markdown_list([f"{key}: {value}" for key, value in sorted(stage_counts.items())], "- 暂无阶段数据。"),
+        "",
+        "## 下一步",
+        "",
+        f"- {payload.get('next_step')}",
+        "",
+        "## 每条内容状态",
+        "",
+    ]
+    for item in payload.get("items") or []:
+        lines.extend(
+            [
+                f"### {item.get('topic_id')} · {item.get('topic')}",
+                "",
+                f"- Asset ID：`{item.get('asset_id')}`",
+                f"- Notion：Overall `{item.get('notion_overall_status') or 'n/a'}` / Image `{item.get('notion_image_status') or 'n/a'}` / Caption `{item.get('notion_caption_status') or 'n/a'}`",
+                f"- 系统：Safety `{item.get('compliance_status')}` / Review `{item.get('review_status')}` / Detector `{item.get('detector_status')}`",
+                f"- 图片：{item.get('png_count')}/{item.get('slide_count')} PNG；媒体 URL {item.get('media_count')}；Visual QA `{item.get('visual_qa_status')}`",
+                f"- 队列：{item.get('queue_count')} 条；状态 {', '.join(item.get('queue_statuses') or []) or '无'}",
+                f"- 当前阶段：`{item.get('stage')}` / `{item.get('status')}`",
+                f"- 下一步：{item.get('next_action')}",
+                "",
+            ]
+        )
+    lines.extend(["## 安全线", "", *markdown_list(payload.get("safety")), ""])
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-status-board-zh.md"'},
     )
 
 
