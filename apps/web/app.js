@@ -208,6 +208,12 @@ const uiZh = {
   "Open Asset Review": "打开素材审核",
   "Download Chinese Pack": "下载中文包",
   "Download Gate Board": "下载 Gate Board",
+  "Download Gate CSV": "下载 Gate CSV",
+  "First Publish Gate Board": "首发 Gate Board",
+  "Review Exit": "审核出口",
+  "Media Exit": "媒体出口",
+  "Blocked Gates": "阻塞 Gate",
+  "All gates are ready.": "所有 Gate 已准备好。",
   "Download Approval Handoff": "下载审核交接包",
   "Download Review Exit Status": "下载审核出口状态",
   "Download Doctor Review Sheet": "下载首发医生审核单",
@@ -1193,6 +1199,8 @@ function refreshProtectedData() {
   loadMetaSetupChecklist();
   loadLaunchReadiness();
   loadAccessPolicy();
+  loadFirstPublishGateBoard();
+  loadFirstPublishReadiness();
 }
 
 function showTokenPanel() {
@@ -1248,7 +1256,7 @@ document.getElementById("language-toggle")?.addEventListener("click", async () =
   localStorage.setItem(languageKey, isZh() ? "en" : "zh");
   localStorage.setItem(languageExplicitKey, "true");
   applyLanguage();
-  await Promise.all([loadLoopStatus(), loadFirstPublishReadiness()]);
+  await Promise.all([loadLoopStatus(), loadFirstPublishGateBoard(), loadFirstPublishReadiness()]);
 });
 
 new MutationObserver((mutations) => {
@@ -1816,6 +1824,66 @@ async function loadFirstPublishReadiness() {
   }
 }
 
+function renderFirstPublishGateBoard(data) {
+  const container = document.getElementById("first-publish-gate-board");
+  if (!container) return;
+  const asset = data.asset || {};
+  const review = data.review_exit || {};
+  const media = data.media_exit || {};
+  const blocked = (data.rows || []).filter((row) => row.status !== "ready");
+  container.innerHTML = `
+    <article class="learning-card wide-learning ${escapeHtml(data.overall_status || "waiting")}">
+      <h3>${escapeHtml(translateText("First Publish Gate Board"))}</h3>
+      <p>${escapeHtml(asset.topic || "No first-publish asset")}</p>
+      <small>${escapeHtml(asset.id || "n/a")} · ${escapeHtml(asset.channel || "channel")} / ${escapeHtml(asset.format || "format")}</small>
+      <div class="summary-row">
+        <span>${escapeHtml(String(data.ready_count || 0))} ready</span>
+        <span>${escapeHtml(String(data.blocked_count || 0))} blocked</span>
+        <span>${escapeHtml(data.overall_status || "waiting")}</span>
+      </div>
+      <div class="learning-actions">
+        <button type="button" data-download-first-gate-board>${escapeHtml(translateText("Download Gate Board"))}</button>
+        <button type="button" data-download-first-gate-board-csv>${escapeHtml(translateText("Download Gate CSV"))}</button>
+      </div>
+      <small><strong>${escapeHtml(translateText("Next"))}:</strong> ${escapeHtml(data.next_action || "")}</small>
+    </article>
+    <article class="learning-card ${escapeHtml(review.overall_status || "waiting")}">
+      <h3>${escapeHtml(translateText("Review Exit"))}</h3>
+      <p>${escapeHtml(String(review.ready_count || 0))} / ${escapeHtml(String((review.ready_count || 0) + (review.blocked_count || 0)))} ready</p>
+      <small>${escapeHtml(review.next_action || "")}</small>
+    </article>
+    <article class="learning-card ${escapeHtml(media.overall_status || "waiting")}">
+      <h3>${escapeHtml(translateText("Media Exit"))}</h3>
+      <p>${escapeHtml(String(media.ready_count || 0))} / ${escapeHtml(String((media.ready_count || 0) + (media.blocked_count || 0)))} ready</p>
+      <small>${escapeHtml(media.next_action || "")}</small>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>${escapeHtml(translateText("Blocked Gates"))}</h3>
+      ${blocked.length ? `
+        <ul>${blocked.map((row) => `
+          <li>
+            <strong>${escapeHtml(row.section || "")} / ${escapeHtml(row.key || "")}</strong>
+            <span>${escapeHtml(row.status || "")}</span>
+            <small>${escapeHtml(row.required_action || row.detail || "")}</small>
+          </li>
+        `).join("")}</ul>
+      ` : `<p>${escapeHtml(translateText("All gates are ready."))}</p>`}
+    </article>
+  `;
+  applyLanguage();
+}
+
+async function loadFirstPublishGateBoard() {
+  const container = document.getElementById("first-publish-gate-board");
+  if (!container) return;
+  try {
+    const data = await fetchJson("/operations/first-publish-gate-board");
+    renderFirstPublishGateBoard(data);
+  } catch {
+    container.innerHTML = "";
+  }
+}
+
 function renderFirstCycleRehearsal(data) {
   const container = document.getElementById("first-cycle-rehearsal");
   if (!container) return;
@@ -1926,7 +1994,7 @@ async function runFirstPublishSafeAdvanceLoop() {
     });
     renderFirstPublishSafeAdvanceLoop(data);
     if (message) message.textContent = `${translateText("Safe first-publish auto-advance completed.")} ${data.stop_reason || ""}`;
-    await Promise.all([loadFirstPublishReadiness(), loadLoopStatus(), loadAssets(), loadPublishQueue(), loadPreScheduleGate()]);
+    await Promise.all([loadFirstPublishGateBoard(), loadFirstPublishReadiness(), loadLoopStatus(), loadAssets(), loadPublishQueue(), loadPreScheduleGate()]);
   } catch (error) {
     if (message) {
       message.textContent = error.message === "Access token required"
@@ -2011,7 +2079,7 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
     try {
       const data = await fetchJson("/operations/first-publish-approve-current-asset?dry_run=false", { method: "POST" });
       if (message) message.textContent = data.message || (data.approved ? "Current first-publish asset approved." : "Current first-publish asset was not approved.");
-      await Promise.all([loadFirstPublishReadiness(), loadLoopStatus(), loadAssets(), loadPublishQueue(), loadPreScheduleGate()]);
+      await Promise.all([loadFirstPublishGateBoard(), loadFirstPublishReadiness(), loadLoopStatus(), loadAssets(), loadPublishQueue(), loadPreScheduleGate()]);
     } catch (error) {
       if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not approve current first-publish asset.";
     } finally {
@@ -2032,7 +2100,7 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
     try {
       const data = await fetchJson("/operations/first-publish-approve-current-queue?dry_run=false", { method: "POST" });
       if (message) message.textContent = data.message || (data.approved ? "Current first-publish queue item review-approved." : "Current first-publish queue item was not approved.");
-      await Promise.all([loadFirstPublishReadiness(), loadLoopStatus(), loadPublishQueue(), loadPreScheduleGate()]);
+      await Promise.all([loadFirstPublishGateBoard(), loadFirstPublishReadiness(), loadLoopStatus(), loadPublishQueue(), loadPreScheduleGate()]);
     } catch (error) {
       if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not approve current first-publish queue item.";
     } finally {
@@ -2144,7 +2212,7 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
     try {
       const data = await fetchJson("/operations/first-publish-attach-generated-media?dry_run=false", { method: "POST" });
       if (message) message.textContent = data.message || (data.attached ? "Generated media URLs attached." : "Generated media URLs were not attached.");
-      await Promise.all([loadFirstPublishReadiness(), loadLoopStatus(), loadAssets(), loadPublishQueue(), loadPreScheduleGate()]);
+      await Promise.all([loadFirstPublishGateBoard(), loadFirstPublishReadiness(), loadLoopStatus(), loadAssets(), loadPublishQueue(), loadPreScheduleGate()]);
     } catch (error) {
       if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not attach generated media URLs.";
     } finally {
@@ -2161,7 +2229,7 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
     try {
       const data = await fetchJson("/operations/first-publish-advance?dry_run=false", { method: "POST" });
       if (message) message.textContent = data.advanced ? data.message || "First publish path advanced." : data.message || "First publish path needs a manual step.";
-      await Promise.all([loadFirstPublishReadiness(), loadLoopStatus(), loadAssets(), loadPublishQueue(), loadPreScheduleGate()]);
+      await Promise.all([loadFirstPublishGateBoard(), loadFirstPublishReadiness(), loadLoopStatus(), loadAssets(), loadPublishQueue(), loadPreScheduleGate()]);
       if (data.action === "queue_ready_asset") showScreen("review");
       if (data.action === "schedule_review_approved" || data.action === "meta_dry_run") showScreen("scheduler");
     } catch (error) {
@@ -2218,6 +2286,28 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
     if (message) message.textContent = "First asset decision CSV copied.";
   } catch {
     if (message) message.textContent = "Could not copy the decision CSV. Use Fill Asset Decision CSV instead.";
+  }
+});
+
+document.getElementById("first-publish-gate-board")?.addEventListener("click", async (event) => {
+  const downloadBoardButton = event.target.closest("[data-download-first-gate-board]");
+  const downloadCsvButton = event.target.closest("[data-download-first-gate-board-csv]");
+  if (!downloadBoardButton && !downloadCsvButton) return;
+  const message = document.getElementById("test-path-message");
+  try {
+    if (downloadBoardButton) {
+      await downloadProtectedFile("/operations/first-publish-gate-board.zh.md", "drec-first-publish-gate-board-zh.md", "text/markdown");
+      if (message) message.textContent = translateText("First publish gate board downloaded.");
+      return;
+    }
+    await downloadProtectedFile("/operations/first-publish-gate-board.csv", "drec-first-publish-gate-board.csv", "text/csv");
+    if (message) message.textContent = translateText("First publish gate CSV downloaded.");
+  } catch (error) {
+    if (message) {
+      message.textContent = error.message === "Access token required"
+        ? translateText("Set the access token first.")
+        : translateText(downloadBoardButton ? "Could not download first publish gate board." : "Could not download first publish gate CSV.");
+    }
   }
 });
 
@@ -2306,6 +2396,7 @@ async function loadLoopStatus() {
     renderWorkflowNext(data.workflow || loop);
     loadLaunchReadiness();
     loadTestRunChecklist();
+    loadFirstPublishGateBoard();
     loadFirstPublishReadiness();
   } catch {
     const message = accessToken() ? "API access failed" : "Set access token";
