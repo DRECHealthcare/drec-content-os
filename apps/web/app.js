@@ -1191,6 +1191,7 @@ function refreshProtectedData() {
   loadBriefs();
   loadNotionCarouselSource();
   loadDashboardNotionRefreshStatus();
+  loadDashboardMonthlyActionQueue();
   loadAssets();
   loadMediaAssets();
   loadOutcomes();
@@ -2733,6 +2734,54 @@ async function loadDashboardNotionRefreshStatus() {
     renderDashboardNotionRefreshStatus(data);
   } catch (error) {
     container.innerHTML = `<p class="status-note">${escapeHtml(error.message === "Access token required" ? "Set the access token first." : "Could not load Notion monthly refresh status.")}</p>`;
+  }
+}
+
+function renderDashboardMonthlyActionQueue(data) {
+  const container = document.getElementById("dashboard-monthly-action-queue");
+  if (!container) return;
+  const primary = data.primary_action || {};
+  const rows = data.top_three || [];
+  const stageCounts = data.stage_counts || {};
+  const gateCounts = data.gate_counts || {};
+  container.innerHTML = `
+    <article class="learning-card wide-learning open" data-dashboard-monthly-action-queue>
+      <h3>月度 Carousel 下一步</h3>
+      <p>${escapeHtml(primary.title || "查看月度行动队列")}</p>
+      <small>${escapeHtml(primary.detail || "只读状态，不会自动批准、排程或发布。")}</small>
+      <div class="summary-row">
+        <span>月度内容 ${Number(data.asset_count || 0)}</span>
+        <span>医生审核 ${Number(gateCounts.waiting_doctor_safety_clear || 0)}</span>
+        <span>可入队 ${Number(gateCounts.ready_to_queue || 0)}</span>
+        <span>已排程 ${Number(stageCounts.scheduled || 0)}</span>
+      </div>
+      ${rows.length ? `
+        <h4>今天先看这几条</h4>
+        <ul>${rows.map((row) => `
+          <li>
+            <strong>${escapeHtml(row.action_zh || "")}</strong>
+            ${escapeHtml(row.topic_id || "")} · ${escapeHtml(row.topic || "")}
+            <br><small>${escapeHtml(row.operator_action || "")}</small>
+          </li>
+        `).join("")}</ul>
+      ` : "<p class=\"status-note\">暂无可行动项目。</p>"}
+      <div class="learning-actions">
+        <button type="button" data-open-monthly-assets-review>打开月度素材审核</button>
+        <button type="button" data-download-dashboard-monthly-action-queue>下载月度行动队列</button>
+        <button type="button" data-download-dashboard-monthly-action-csv>下载行动 CSV</button>
+      </div>
+    </article>
+  `;
+}
+
+async function loadDashboardMonthlyActionQueue() {
+  const container = document.getElementById("dashboard-monthly-action-queue");
+  if (!container) return;
+  try {
+    const data = await fetchJson("/operations/monthly-carousel-next-action-queue");
+    renderDashboardMonthlyActionQueue(data);
+  } catch (error) {
+    container.innerHTML = `<p class="status-note">${escapeHtml(error.message === "Access token required" ? "Set the access token first." : "Could not load monthly action queue.")}</p>`;
   }
 }
 
@@ -7173,6 +7222,36 @@ document.getElementById("dashboard-notion-refresh-status")?.addEventListener("cl
   }
 });
 
+document.getElementById("dashboard-monthly-action-queue")?.addEventListener("click", async (event) => {
+  const openAssets = event.target.closest("[data-open-monthly-assets-review]");
+  const downloadQueue = event.target.closest("[data-download-dashboard-monthly-action-queue]");
+  const downloadCsv = event.target.closest("[data-download-dashboard-monthly-action-csv]");
+  if (!openAssets && !downloadQueue && !downloadCsv) return;
+  if (openAssets) {
+    showScreen("assets");
+    const card = document.getElementById("monthly-carousel-status-board");
+    card?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+  const message = document.getElementById("test-path-message");
+  if (message) message.textContent = downloadCsv ? "Preparing monthly action CSV..." : "Preparing monthly action queue...";
+  try {
+    if (downloadCsv) {
+      await downloadProtectedFile("/operations/monthly-carousel-next-action-queue.csv", "drec-monthly-carousel-next-action-queue.csv", "text/csv");
+      if (message) message.textContent = translateText("Monthly carousel next-action CSV downloaded.");
+    } else {
+      await downloadProtectedFile("/operations/monthly-carousel-next-action-queue.zh.md", "drec-monthly-carousel-next-action-queue-zh.md", "text/markdown");
+      if (message) message.textContent = translateText("Monthly carousel next-action queue downloaded.");
+    }
+  } catch (error) {
+    if (message) {
+      message.textContent = error.message === "Access token required"
+        ? translateText("Set the access token first.")
+        : translateText(downloadCsv ? "Could not download monthly carousel next-action CSV." : "Could not download monthly carousel next-action queue.");
+    }
+  }
+});
+
 async function uploadNotionCarouselCsv({ dryRun }) {
   const message = document.getElementById("plan-message");
   const fileInput = document.getElementById("notion-carousel-csv-file");
@@ -9242,6 +9321,7 @@ storeAccessTokenFromUrl();
 loadLoopStatus();
 loadLaunchReadiness();
 loadDashboardNotionRefreshStatus();
+loadDashboardMonthlyActionQueue();
 loadKb();
 loadBriefs();
 loadNotionCarouselSource();

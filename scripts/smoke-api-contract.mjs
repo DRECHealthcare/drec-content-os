@@ -2717,6 +2717,16 @@ const requiredSnippets = [
     text: "download-dashboard-notion-refresh",
   },
   {
+    name: "web dashboard monthly action queue card",
+    file: "web",
+    text: "data-dashboard-monthly-action-queue",
+  },
+  {
+    name: "web dashboard monthly action queue action",
+    file: "web",
+    text: "download-dashboard-monthly-action-queue",
+  },
+  {
     name: "web notion carousel source action",
     file: "web",
     text: "refresh-notion-carousel-source",
