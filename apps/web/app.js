@@ -207,6 +207,7 @@ const uiZh = {
   "After manual publishing, record the Meta post ID and first metrics, then roll them into learning.": "人工发布后，记录 Meta 帖子 ID 和第一批数据，再汇总进学习系统。",
   "Open Asset Review": "打开素材审核",
   "Download Chinese Pack": "下载中文包",
+  "Download Gate Board": "下载 Gate Board",
   "Download Approval Handoff": "下载审核交接包",
   "Download Review Exit Status": "下载审核出口状态",
   "Download Doctor Review Sheet": "下载首发医生审核单",
@@ -608,6 +609,10 @@ Object.assign(uiZh, {
   "Could not download first publish review exit status.": "无法下载首发审核出口状态。",
   "First publish media exit pack downloaded.": "首发媒体出口包已下载。",
   "Could not download first publish media exit pack.": "无法下载首发媒体出口包。",
+  "First publish gate board downloaded.": "首发 Gate Board 已下载。",
+  "Could not download first publish gate board.": "无法下载首发 Gate Board。",
+  "First publish gate CSV downloaded.": "首发 Gate CSV 已下载。",
+  "Could not download first publish gate CSV.": "无法下载首发 Gate CSV。",
   "Project completion audit downloaded.": "项目完成度审计已下载。",
   "Could not download project completion audit.": "无法下载项目完成度审计。",
   "Project completion CSV downloaded.": "项目完成度 CSV 已下载。",
@@ -1687,6 +1692,7 @@ function renderFirstPublishReadiness(data) {
         ${hasDecisionCsv ? `<button type="button" data-fill-first-asset-decision>${escapeHtml(translateText("Fill Asset Decision CSV"))}</button>` : ""}
         <button type="button" data-open-first-asset-review>${escapeHtml(translateText("Open Asset Review"))}</button>
         <button type="button" data-download-first-publish-zh>${escapeHtml(translateText("Download Chinese Pack"))}</button>
+        ${nextAsset.id ? `<button type="button" data-download-first-gate-board>${escapeHtml(translateText("Download Gate Board"))}</button>` : ""}
         ${nextAsset.id ? `<button type="button" data-download-first-approval-handoff>${escapeHtml(translateText("Download Approval Handoff"))}</button>` : ""}
         ${nextAsset.id ? `<button type="button" data-download-first-review-exit>${escapeHtml(translateText("Download Review Exit Status"))}</button>` : ""}
         ${nextAsset.id ? `<button type="button" data-download-first-doctor-review-sheet>${escapeHtml(translateText("Download Doctor Review Sheet"))}</button>` : ""}
@@ -1707,6 +1713,7 @@ function renderFirstPublishReadiness(data) {
         <li><strong>${escapeHtml(translateText("Do Not Bypass"))}:</strong> ${escapeHtml(translateText("Do not approve, queue, schedule, or publish without explicit human safety clearance."))}</li>
       </ul>
       <div class="learning-actions">
+        ${nextAsset.id ? `<button type="button" data-download-first-gate-board>${escapeHtml(translateText("Download Gate Board"))}</button>` : ""}
         ${nextAsset.id ? `<button type="button" data-download-first-approval-handoff>${escapeHtml(translateText("Download Approval Handoff"))}</button>` : ""}
         ${nextAsset.id ? `<button type="button" data-download-first-review-exit>${escapeHtml(translateText("Download Review Exit Status"))}</button>` : ""}
         ${nextAsset.id ? `<button type="button" data-download-first-doctor-review-sheet>${escapeHtml(translateText("Download Doctor Review Sheet"))}</button>` : ""}
@@ -1944,6 +1951,7 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
   const approveCurrentFirstQueueButton = event.target.closest("[data-approve-current-first-queue]");
   const openAssetReviewButton = event.target.closest("[data-open-first-asset-review]");
   const downloadZhButton = event.target.closest("[data-download-first-publish-zh]");
+  const downloadGateBoardButton = event.target.closest("[data-download-first-gate-board]");
   const downloadApprovalHandoffButton = event.target.closest("[data-download-first-approval-handoff]");
   const downloadReviewExitButton = event.target.closest("[data-download-first-review-exit]");
   const downloadDoctorReviewSheetButton = event.target.closest("[data-download-first-doctor-review-sheet]");
@@ -1957,7 +1965,7 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
   const copyQueueButton = event.target.closest("[data-copy-first-queue-decision]");
   const fillQueueButton = event.target.closest("[data-fill-first-queue-decision]");
   const advanceButton = event.target.closest("[data-advance-first-publish]");
-  if (!copyReviewButton && !fillDoctorReplyButton && !approveCurrentFirstAssetButton && !approveCurrentFirstQueueButton && !openAssetReviewButton && !downloadZhButton && !downloadApprovalHandoffButton && !downloadReviewExitButton && !downloadDoctorReviewSheetButton && !downloadMediaExitButton && !downloadMediaPackButton && !downloadCarouselPngZipButton && !downloadCarouselZipButton && !attachGeneratedMediaButton && !copyButton && !fillButton && !copyQueueButton && !fillQueueButton && !advanceButton) return;
+  if (!copyReviewButton && !fillDoctorReplyButton && !approveCurrentFirstAssetButton && !approveCurrentFirstQueueButton && !openAssetReviewButton && !downloadZhButton && !downloadGateBoardButton && !downloadApprovalHandoffButton && !downloadReviewExitButton && !downloadDoctorReviewSheetButton && !downloadMediaExitButton && !downloadMediaPackButton && !downloadCarouselPngZipButton && !downloadCarouselZipButton && !attachGeneratedMediaButton && !copyButton && !fillButton && !copyQueueButton && !fillQueueButton && !advanceButton) return;
   const container = document.getElementById("first-publish-readiness");
   const message = document.getElementById("test-path-message");
   if (copyReviewButton) {
@@ -2045,6 +2053,16 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
       if (message) message.textContent = "中文首次发布准备包已下载。";
     } catch (error) {
       if (message) message.textContent = error.message === "Access token required" ? "请先设置访问码。" : "无法下载中文首次发布准备包。";
+    }
+    return;
+  }
+  if (downloadGateBoardButton) {
+    if (message) message.textContent = "正在下载首发 Gate Board...";
+    try {
+      await downloadProtectedFile("/operations/first-publish-gate-board.zh.md", "drec-first-publish-gate-board-zh.md", "text/markdown");
+      if (message) message.textContent = translateText("First publish gate board downloaded.");
+    } catch (error) {
+      if (message) message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download first publish gate board.");
     }
     return;
   }
@@ -5639,6 +5657,26 @@ document.getElementById("download-first-publish-media-exit-pack")?.addEventListe
     message.textContent = translateText("First publish media exit pack downloaded.");
   } catch (error) {
     message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download first publish media exit pack.");
+  }
+});
+
+document.getElementById("download-first-publish-gate-board")?.addEventListener("click", async () => {
+  const message = document.getElementById("test-path-message");
+  try {
+    await downloadProtectedFile("/operations/first-publish-gate-board.zh.md", "drec-first-publish-gate-board-zh.md", "text/markdown");
+    message.textContent = translateText("First publish gate board downloaded.");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download first publish gate board.");
+  }
+});
+
+document.getElementById("download-first-publish-gate-board-csv")?.addEventListener("click", async () => {
+  const message = document.getElementById("test-path-message");
+  try {
+    await downloadProtectedFile("/operations/first-publish-gate-board.csv", "drec-first-publish-gate-board.csv", "text/csv");
+    message.textContent = translateText("First publish gate CSV downloaded.");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download first publish gate CSV.");
   }
 });
 

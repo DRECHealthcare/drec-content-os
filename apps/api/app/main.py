@@ -4469,6 +4469,152 @@ async def operations_first_publish_media_exit_pack_zh(request: Request, _: None 
     )
 
 
+async def first_publish_gate_board_payload(request: Request):
+    readiness = await first_publish_readiness_payload()
+    review_exit = await first_publish_review_exit_status_payload(request)
+    media_exit = await first_publish_media_exit_pack_payload(request)
+    next_step = readiness.get("next_step") or {}
+    asset = review_exit.get("asset") or media_exit.get("asset") or {}
+    rows = []
+    for section, payload in [("review_exit", review_exit), ("media_exit", media_exit)]:
+        for item in payload.get("checks") or []:
+            rows.append(
+                {
+                    "section": section,
+                    "key": item.get("key"),
+                    "status": item.get("status"),
+                    "detail": item.get("detail"),
+                    "required_action": item.get("required_action"),
+                    "evidence": item.get("evidence") or "",
+                }
+            )
+    blocked = [row for row in rows if row.get("status") != "ready"]
+    return {
+        "mode": "read_only_first_publish_gate_board",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "overall_status": "ready_to_advance" if not blocked else "waiting_for_first_publish_gates",
+        "next_step": next_step,
+        "asset": asset,
+        "ready_count": len(rows) - len(blocked),
+        "blocked_count": len(blocked),
+        "review_exit": {
+            "overall_status": review_exit.get("overall_status"),
+            "ready_count": review_exit.get("ready_count"),
+            "blocked_count": review_exit.get("blocked_count"),
+            "next_action": review_exit.get("next_action"),
+        },
+        "media_exit": {
+            "overall_status": media_exit.get("overall_status"),
+            "ready_count": media_exit.get("ready_count"),
+            "blocked_count": media_exit.get("blocked_count"),
+            "next_action": media_exit.get("next_action"),
+        },
+        "rows": rows,
+        "next_action": (blocked[0].get("required_action") if blocked else "Run first-publish safe advance after final human checks."),
+        "links": {
+            "approval_handoff": "/operations/first-publish-approval-handoff.zh.md",
+            "review_exit_status": "/operations/first-publish-review-exit-status.zh.md",
+            "media_exit_pack": "/operations/first-publish-media-exit-pack.zh.md",
+            "png_zip": "/operations/first-publish-carousel-png-assets.zip",
+            "safe_advance": "/operations/first-publish-safe-advance-loop",
+            "project_unblock": "/operations/project-unblock-board.zh.md",
+        },
+        "safety": [
+            "This board is read-only and does not approve, import, attach media, queue, schedule, publish, update Notion, store secrets, or call Meta.",
+            "The first publish path still requires explicit human Decision: approve and Safety: clear.",
+            "Visual content still requires approved public media/design URLs, visual QA, and rights evidence before queueing.",
+        ],
+    }
+
+
+@app.get("/operations/first-publish-gate-board")
+async def operations_first_publish_gate_board(request: Request, _: None = Depends(require_access_token)):
+    return await first_publish_gate_board_payload(request)
+
+
+@app.get("/operations/first-publish-gate-board.csv")
+async def operations_first_publish_gate_board_csv(request: Request, _: None = Depends(require_access_token)):
+    payload = await first_publish_gate_board_payload(request)
+    output = StringIO()
+    fieldnames = ["section", "key", "status", "detail", "required_action", "evidence"]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for row in payload.get("rows") or []:
+        writer.writerow({key: row.get(key) or "" for key in fieldnames})
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-first-publish-gate-board.csv"'},
+    )
+
+
+@app.get("/operations/first-publish-gate-board.zh.md")
+async def operations_first_publish_gate_board_zh(request: Request, _: None = Depends(require_access_token)):
+    payload = await first_publish_gate_board_payload(request)
+    asset = payload.get("asset") or {}
+    review_exit = payload.get("review_exit") or {}
+    media_exit = payload.get("media_exit") or {}
+    lines = [
+        "# DREC 首发 Gate Board",
+        "",
+        f"生成时间：{payload.get('generated_at')}",
+        "",
+        "用途：把当前首发内容从医生/人工审核、媒体/设计，到安全自动推进前的所有 gate 放在一个只读看板里。本文件不会批准、导入、挂载媒体、入队、排程、发布或调用 Meta。",
+        "",
+        "## 总状态",
+        "",
+        f"- 状态：`{payload.get('overall_status')}`",
+        f"- 已准备：{payload.get('ready_count')}",
+        f"- 阻塞：{payload.get('blocked_count')}",
+        f"- 下一步：{payload.get('next_action')}",
+        "",
+        "## 当前首发内容",
+        "",
+        f"- Asset ID：`{asset.get('id') or 'n/a'}`",
+        f"- 主题：{asset.get('topic') or 'n/a'}",
+        f"- 频道 / 格式：{asset.get('channel') or 'n/a'} / {asset.get('format') or 'n/a'}",
+        f"- 安全 / 审核：{asset.get('compliance_status') or 'n/a'} / {asset.get('review_status') or 'n/a'}",
+        f"- Slide：{asset.get('slide_count') or 0}",
+        "",
+        "## 分区状态",
+        "",
+        f"- 审核出口：`{review_exit.get('overall_status')}`；ready {review_exit.get('ready_count')} / blocked {review_exit.get('blocked_count')}；下一步：{review_exit.get('next_action')}",
+        f"- 媒体出口：`{media_exit.get('overall_status')}`；ready {media_exit.get('ready_count')} / blocked {media_exit.get('blocked_count')}；下一步：{media_exit.get('next_action')}",
+        "",
+        "## Gate 明细",
+        "",
+    ]
+    for index, row in enumerate(payload.get("rows") or [], start=1):
+        lines.extend(
+            [
+                f"### {index}. `{row.get('section')}` / `{row.get('key')}`",
+                "",
+                f"- 状态：`{row.get('status')}`",
+                f"- 说明：{row.get('detail')}",
+                f"- 需要动作：{row.get('required_action')}",
+                f"- 证据：{row.get('evidence') or 'n/a'}",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## 相关入口",
+            "",
+            *markdown_list([f"{key}: `{value}`" for key, value in (payload.get("links") or {}).items()]),
+            "",
+            "## 安全线",
+            "",
+            *markdown_list(payload.get("safety")),
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="drec-first-publish-gate-board-zh.md"'},
+    )
+
+
 @app.get("/operations/first-publish-media-pack.md")
 async def operations_first_publish_media_pack(_: None = Depends(require_access_token)):
     payload = await first_publish_readiness_payload()
