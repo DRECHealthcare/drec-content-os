@@ -2502,6 +2502,52 @@ async function loadMonthlyCarouselStatusBoard() {
   }
 }
 
+function renderMonthlyCarouselProductionSmoke(data) {
+  const container = document.getElementById("monthly-carousel-production-smoke");
+  if (!container) return;
+  const reviewItems = (data.items || []).filter((item) => item.warning_count || item.cover_png_status !== "rendered");
+  container.innerHTML = `
+    <article class="learning-card wide-learning ${escapeHtml(data.overall_status || "review_needed")}">
+      <h3>月度图片 Smoke Test</h3>
+      <p>${escapeHtml(data.message || "")}</p>
+      <small>${escapeHtml(data.mode || "monthly_carousel_production_smoke_test")}</small>
+      <div class="summary-row">
+        <span>Assets ${Number(data.asset_count || 0)}</span>
+        <span>Rendered ${Number(data.rendered_count || 0)}</span>
+        <span>Warnings ${Number(data.warning_item_count || 0)}</span>
+      </div>
+    </article>
+    ${reviewItems.slice(0, 8).map((item) => `
+      <article class="learning-card">
+        <h3>${escapeHtml(item.topic_id || "")}</h3>
+        <p>${escapeHtml(item.cover_png_status || "")} · ${Number(item.slide_count || 0)} slides</p>
+        <small>${escapeHtml(item.topic || "")}</small>
+        <ul>${(item.warnings || [item.render_error || "Review rendering output."]).map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")}</ul>
+      </article>
+    `).join("")}
+  `;
+}
+
+async function runMonthlyCarouselProductionSmoke() {
+  const message = document.getElementById("media-message");
+  const container = document.getElementById("monthly-carousel-production-smoke");
+  if (message) message.textContent = translateText("Running monthly carousel production smoke test...");
+  if (container) container.innerHTML = "";
+  try {
+    const data = await fetchJson("/operations/monthly-carousel-production-smoke-test", {
+      method: "POST",
+    });
+    renderMonthlyCarouselProductionSmoke(data);
+    if (message) message.textContent = data.message || translateText("Monthly carousel production smoke test completed.");
+  } catch (error) {
+    if (message) {
+      message.textContent = error.message === "Access token required"
+        ? translateText("Set the access token first.")
+        : translateText("Could not run monthly carousel production smoke test.");
+    }
+  }
+}
+
 function countRows(items, labelKey) {
   if (!items.length) return "<li>No signals yet.</li>";
   return items.map((item) => `<li><strong>${escapeHtml(item[labelKey] || "unknown")}</strong> ${Number(item.count || 0)}</li>`).join("");
@@ -5600,6 +5646,10 @@ document.getElementById("download-monthly-carousel-png-assets")?.addEventListene
   } catch (error) {
     message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download monthly carousel PNG ZIP.");
   }
+});
+
+document.getElementById("run-monthly-carousel-production-smoke")?.addEventListener("click", async () => {
+  await runMonthlyCarouselProductionSmoke();
 });
 
 document.getElementById("download-monthly-carousel-status-board-zh")?.addEventListener("click", async () => {

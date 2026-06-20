@@ -2220,9 +2220,22 @@ def first_publish_slide_svg(asset: dict, slide: dict, index: int, total: int):
     title = slide.get("title") or topic
     body = slide.get("body") or ""
     note = slide.get("visual_note") or "DREC educational carousel"
+    takeaway = slide.get("bottom_takeaway") or slide.get("takeaway") or ""
+    highlighted_keywords = slide.get("highlighted_keywords") or []
     title_lines = text_chunks(title, 15)[:3]
-    body_lines = text_chunks(body, 22)[:8]
+    body_lines = text_chunks(body, 22)[:7]
     safe_note = html.escape(note)
+    keyword_text = "  ".join(str(item) for item in highlighted_keywords[:4])
+    keyword_svg = (
+        f'<text x="120" y="1022" font-size="28" font-weight="800" fill="#1FA9A0">{html.escape(keyword_text)}</text>'
+        if keyword_text
+        else ""
+    )
+    takeaway_svg = (
+        f'<text x="120" y="1168" font-size="30" font-weight="700" fill="#FFFFFF">{html.escape(takeaway[:42])}</text>'
+        if takeaway
+        else '<text x="120" y="1168" font-size="30" font-weight="700" fill="#FFFFFF">一般健康教育，不代替个人诊断或治疗建议。</text>'
+    )
     title_text = "\n".join(
         f'<text x="86" y="{270 + line_index * 74}" font-size="56" font-weight="800" fill="#FFFFFF">{html.escape(line)}</text>'
         for line_index, line in enumerate(title_lines)
@@ -2241,8 +2254,9 @@ def first_publish_slide_svg(asset: dict, slide: dict, index: int, total: int):
   <rect x="68" y="494" width="944" height="570" rx="28" fill="#FFFFFF"/>
   <rect x="68" y="494" width="14" height="570" fill="#1FA9A0"/>
   {body_text}
+  {keyword_svg}
   <rect x="88" y="1105" width="904" height="110" rx="18" fill="#0F2A4A"/>
-  <text x="120" y="1168" font-size="30" font-weight="700" fill="#FFFFFF">一般健康教育，不代替个人诊断或治疗建议。</text>
+  {takeaway_svg}
   <text x="88" y="1260" font-size="24" font-weight="600" fill="#0F2A4A">{html.escape(str(topic))}</text>
   <text x="88" y="1298" font-size="20" font-weight="500" fill="#64748B">{safe_note}</text>
 </svg>'''
@@ -2297,6 +2311,8 @@ def first_publish_slide_png(asset: dict, slide: dict, index: int, total: int):
     title = slide.get("title") or topic
     body = slide.get("body") or ""
     note = slide.get("visual_note") or "DREC educational carousel"
+    takeaway = slide.get("bottom_takeaway") or slide.get("takeaway") or ""
+    highlighted_keywords = slide.get("highlighted_keywords") or []
 
     navy = "#0F2A4A"
     teal = "#1FA9A0"
@@ -2327,12 +2343,18 @@ def first_publish_slide_png(asset: dict, slide: dict, index: int, total: int):
     draw.rounded_rectangle((68, 494, 1012, 1064), radius=28, fill="white")
     draw.rectangle((68, 494, 84, 1064), fill=teal)
     y = 572
-    for line in wrap_draw_text(draw, body, body_font, 820, 8):
+    for line in wrap_draw_text(draw, body, body_font, 820, 7):
         draw.text((112, y), line, font=body_font, fill=slate)
         y += 52
 
+    keyword_text = "  ".join(str(item) for item in highlighted_keywords[:4])
+    if keyword_text:
+        draw.text((112, 1012), keyword_text, font=first_publish_font(28, bold=True), fill=teal)
+
     draw.rounded_rectangle((88, 1105, 992, 1215), radius=18, fill=navy)
-    draw.text((120, 1160), "一般健康教育，不代替个人诊断或治疗建议。", font=footer_font, fill="white")
+    footer_text = takeaway or "一般健康教育，不代替个人诊断或治疗建议。"
+    for line in wrap_draw_text(draw, footer_text, footer_font, 820, 1):
+        draw.text((120, 1160), line, font=footer_font, fill="white")
 
     topic_lines = wrap_draw_text(draw, str(topic), small_font, 880, 1)
     note_lines = wrap_draw_text(draw, str(note), first_publish_font(20), 880, 1)
@@ -9245,6 +9267,81 @@ async def operations_monthly_carousel_png_assets_zip(_: None = Depends(require_a
         media_type="application/zip",
         headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-png-assets.zip"'},
     )
+
+
+@app.post("/operations/monthly-carousel-production-smoke-test")
+async def operations_monthly_carousel_production_smoke_test(_: None = Depends(require_access_token)):
+    assets = await monthly_carousel_asset_list()
+    items = []
+    for asset in assets:
+        topic_id = monthly_carousel_topic_id(asset) or ""
+        metadata = asset.get("metadata") or {}
+        slides = first_publish_slide_items(asset)
+        structural_warnings = []
+        if not slides:
+            structural_warnings.append("No slide plan found.")
+        if slides:
+            first_slide = slides[0] or {}
+            if first_slide.get("body") or first_slide.get("explanation"):
+                structural_warnings.append("Slide 1 appears to contain explanation body text; cover should be hook only.")
+        for index, slide in enumerate(slides[1:], start=2):
+            if not (slide.get("title") or "").strip():
+                structural_warnings.append(f"Slide {index} missing Big Title.")
+            if not (slide.get("body") or slide.get("explanation") or "").strip():
+                structural_warnings.append(f"Slide {index} missing Explanation Text.")
+            if not (slide.get("bottom_takeaway") or slide.get("takeaway") or "").strip():
+                structural_warnings.append(f"Slide {index} missing Bottom Takeaway/Teaser.")
+        png_status = "not_rendered"
+        png_bytes = 0
+        render_error = ""
+        try:
+            if slides:
+                rendered = first_publish_slide_png(asset, slides[0], 1, len(slides))
+                png_status = "rendered"
+                png_bytes = len(rendered)
+                if png_bytes < 10_000:
+                    structural_warnings.append("Rendered cover PNG is unexpectedly small.")
+        except Exception as exc:  # pragma: no cover - surfaced as smoke-test evidence
+            png_status = "failed"
+            render_error = str(exc)
+        items.append(
+            {
+                "topic_id": topic_id,
+                "asset_id": asset.get("id"),
+                "topic": metadata.get("topic") or topic_id,
+                "slide_count": len(slides),
+                "cover_png_status": png_status,
+                "cover_png_bytes": png_bytes,
+                "render_error": render_error,
+                "warning_count": len(structural_warnings),
+                "warnings": structural_warnings[:12],
+                "png_zip_url": f"/assets/{asset.get('id')}/carousel-png-assets.zip",
+                "preview_url": f"/assets/{asset.get('id')}/carousel-preview/1.png",
+            }
+        )
+    failed = [item for item in items if item.get("cover_png_status") != "rendered"]
+    warning_items = [item for item in items if item.get("warning_count")]
+    return {
+        "mode": "monthly_carousel_production_smoke_test",
+        "dry_run": True,
+        "asset_count": len(items),
+        "rendered_count": sum(1 for item in items if item.get("cover_png_status") == "rendered"),
+        "failed_count": len(failed),
+        "warning_item_count": len(warning_items),
+        "items": items,
+        "overall_status": "passed" if items and not failed and not warning_items else "review_needed" if items else "empty",
+        "message": (
+            f"Rendered {sum(1 for item in items if item.get('cover_png_status') == 'rendered')} monthly cover PNG(s); {len(failed)} failed; {len(warning_items)} item(s) need structural review."
+            if items
+            else "No monthly carousel assets are available for production smoke testing."
+        ),
+        "safety": [
+            "This smoke test is read-only and renders preview PNGs in memory only.",
+            "It does not approve, attach media, queue, schedule, publish, update Notion, or call Meta.",
+            "Warnings are production QA prompts, not medical approval.",
+            "Doctor approval and visual QA remain separate gates.",
+        ],
+    }
 
 
 @app.get("/operations/monthly-carousel-status-board")
