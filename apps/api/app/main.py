@@ -22882,6 +22882,31 @@ def completion_item(key, label, score, weight, status, detail):
     }
 
 
+def zh_completion_label(value: str | None):
+    return {
+        "Core app and API are live": "核心 App 和 API 已上线",
+        "Weekly planning": "每周规划",
+        "Draft asset pipeline": "草稿素材流程",
+        "Media preparation": "媒体准备",
+        "Review and approval path": "审核与批准路径",
+        "Scheduling and handoff path": "排程与交接路径",
+        "Learning loop": "学习复盘闭环",
+        "Meta test workers": "Meta 测试任务",
+        "Security hardening": "安全加固",
+        "First publish cycle": "首轮发布闭环",
+    }.get(value or "", value or "未知")
+
+
+def zh_completion_status(value: str | None):
+    return {
+        "ready": "已完成/可用",
+        "open": "待建立",
+        "waiting": "等待真实流程证据",
+        "blocked": "阻塞",
+        "ready_for_testing": "可测试，未开 live",
+    }.get(value or "", value or "未知")
+
+
 def build_completion_status(loop, workflow, security, automation):
     summary = workflow.get("summary") or {}
     automation_summary = (automation or {}).get("summary") or {}
@@ -23018,6 +23043,80 @@ def build_completion_status(loop, workflow, security, automation):
         "blockers": blockers,
         "next_requirement": blockers[0] if blockers else "Run the final publish, metrics, and learning closeout evidence.",
         "method": "weighted_operational_readiness",
+    }
+
+
+async def project_completion_audit_payload():
+    loop = await build_loop_status()
+    workflow = build_workflow_guidance(loop)
+    security = security_status_payload()
+    automation = await automation_status_payload()
+    completion = build_completion_status(loop, workflow, security, automation)
+    launch = await launch_readiness_payload()
+    meta = await meta_readiness(None)
+    monthly = await monthly_carousel_acceptance_audit_payload()
+    next_actions = []
+    if completion.get("blockers"):
+        next_actions.extend(completion.get("blockers") or [])
+    monthly_next = monthly.get("next_step")
+    if monthly_next and monthly_next not in next_actions:
+        next_actions.append(monthly_next)
+    launch_next = launch.get("next_step")
+    if launch_next and launch_next not in next_actions:
+        next_actions.append(launch_next)
+    meta_next = meta.get("next_step")
+    if meta_next and meta_next not in next_actions:
+        next_actions.append(meta_next)
+    if not next_actions:
+        next_actions.append("Run one full manual publishing cycle, record metrics, and confirm learning closeout.")
+    readiness = "ready_for_manual_ops"
+    if completion.get("percent", 0) >= 95 and not completion.get("blockers"):
+        readiness = "ready_for_live_acceptance_test"
+    elif completion.get("percent", 0) < 80:
+        readiness = "build_in_progress"
+    return {
+        "mode": "read_only_project_completion_audit",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "readiness": readiness,
+        "completion": completion,
+        "workflow_summary": workflow.get("summary") or {},
+        "security": security,
+        "automation_summary": (automation or {}).get("summary") or {},
+        "launch": {
+            "overall_status": launch.get("overall_status"),
+            "can_test_now": launch.get("can_test_now"),
+            "can_use_for_manual_ops": launch.get("can_use_for_manual_ops"),
+            "next_step": launch.get("next_step"),
+        },
+        "meta": {
+            "overall_status": meta.get("overall_status"),
+            "mode": meta.get("mode"),
+            "next_step": meta.get("next_step"),
+        },
+        "monthly_acceptance": {
+            "ready_count": monthly.get("ready_count"),
+            "waiting_count": monthly.get("waiting_count"),
+            "blocked_count": monthly.get("blocked_count"),
+            "next_step": monthly.get("next_step"),
+        },
+        "next_actions": next_actions[:8],
+        "links": {
+            "workflow_status": "/workflow/status",
+            "launch_readiness": "/operations/launch-readiness",
+            "launch_evidence": "/operations/launch-evidence.md",
+            "monthly_acceptance_audit": "/operations/monthly-carousel-acceptance-audit.zh.md",
+            "monthly_next_action_queue": "/operations/monthly-carousel-next-action-queue.zh.md",
+            "meta_readiness": "/meta/readiness",
+            "meta_preflight": "/meta/preflight-audit.md",
+            "project_completion_audit": "/operations/project-completion-audit.zh.md",
+            "project_completion_audit_csv": "/operations/project-completion-audit.csv",
+        },
+        "safety": [
+            "This audit is read-only and does not approve, import, queue, schedule, publish, update Notion, or call Meta.",
+            "Percent is an operational readiness score, not proof that the project is fully complete.",
+            "Full completion still requires real doctor/human approval evidence, scheduled/published evidence, metrics, learning closeout, and controlled Meta readiness.",
+            "Meta live automation remains locked until all readiness and live-switch gates are green.",
+        ],
     }
 
 
@@ -23168,6 +23267,117 @@ async def workflow_status(_: None = Depends(require_access_token)):
         "security": security,
         "automation": automation,
     }
+
+
+@app.get("/operations/project-completion-audit")
+async def operations_project_completion_audit(_: None = Depends(require_access_token)):
+    return await project_completion_audit_payload()
+
+
+@app.get("/operations/project-completion-audit.csv")
+async def operations_project_completion_audit_csv(_: None = Depends(require_access_token)):
+    payload = await project_completion_audit_payload()
+    completion = payload.get("completion") or {}
+    output = StringIO()
+    fieldnames = ["key", "label", "label_zh", "score", "weight", "percent", "status", "status_zh", "detail"]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for item in completion.get("items") or []:
+        weight = int(item.get("weight") or 0)
+        score = int(item.get("score") or 0)
+        writer.writerow({
+            "key": item.get("key") or "",
+            "label": item.get("label") or "",
+            "label_zh": zh_completion_label(item.get("label")),
+            "score": score,
+            "weight": weight,
+            "percent": round(score * 100 / weight) if weight else 0,
+            "status": item.get("status") or "",
+            "status_zh": zh_completion_status(item.get("status")),
+            "detail": item.get("detail") or "",
+        })
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-project-completion-audit.csv"'},
+    )
+
+
+@app.get("/operations/project-completion-audit.zh.md")
+async def operations_project_completion_audit_zh(_: None = Depends(require_access_token)):
+    payload = await project_completion_audit_payload()
+    completion = payload.get("completion") or {}
+    launch = payload.get("launch") or {}
+    meta = payload.get("meta") or {}
+    monthly = payload.get("monthly_acceptance") or {}
+    workflow_summary = payload.get("workflow_summary") or {}
+    automation_summary = payload.get("automation_summary") or {}
+    lines = [
+        "# DREC Content OS 项目完成度审计",
+        "",
+        f"生成时间：{payload.get('generated_at')}",
+        "",
+        "用途：用当前系统证据解释项目完成百分比、剩余工作和上线风险。本文件只读，不会批准、导入、入队、排程、发布、写 Notion 或调用 Meta。",
+        "",
+        "## 总状态",
+        "",
+        f"- 当前完成度：{completion.get('percent')}%（{completion.get('score')}/{completion.get('weight')}）",
+        f"- 首轮闭环：{completion.get('first_cycle_percent')}%",
+        f"- Readiness：`{payload.get('readiness')}`",
+        f"- 计算方法：`{completion.get('method')}`",
+        f"- 当前下一要求：{completion.get('next_requirement')}",
+        "",
+        "## 运营证据",
+        "",
+        f"- Brief：{workflow_summary.get('brief_count', 0)}",
+        f"- Asset：{workflow_summary.get('asset_count', 0)}",
+        f"- 可入队素材：{workflow_summary.get('queue_ready_asset_count', 0)}",
+        f"- Queue 总数：{workflow_summary.get('queue_total', 0)}",
+        f"- Media：{workflow_summary.get('media_count', 0)}",
+        f"- Outcome：{workflow_summary.get('outcome_count', 0)}",
+        f"- Scheduled queue：{automation_summary.get('scheduled_queue', 0)}",
+        f"- Published queue：{automation_summary.get('published_queue', 0)}",
+        "",
+        "## 模块完成度",
+        "",
+    ]
+    for item in completion.get("items") or []:
+        weight = int(item.get("weight") or 0)
+        score = int(item.get("score") or 0)
+        percent = round(score * 100 / weight) if weight else 0
+        lines.extend([
+            f"### {zh_completion_label(item.get('label'))}",
+            "",
+            f"- 分数：{score}/{weight}（{percent}%）",
+            f"- 状态：`{item.get('status')}`（{zh_completion_status(item.get('status'))}）",
+            f"- 证据：{item.get('detail')}",
+            "",
+        ])
+    lines.extend([
+        "## 关键外部 Gate",
+        "",
+        f"- Launch readiness：`{launch.get('overall_status')}`；可测试：{launch.get('can_test_now')}；可人工运营：{launch.get('can_use_for_manual_ops')}",
+        f"- Meta readiness：`{meta.get('overall_status')}`；模式：`{meta.get('mode')}`",
+        f"- 月度验收：ready/manual {monthly.get('ready_count')}；waiting {monthly.get('waiting_count')}；blocked {monthly.get('blocked_count')}",
+        "",
+        "## 剩余工作",
+        "",
+        *markdown_list(payload.get("next_actions")),
+        "",
+        "## 关键证据链接",
+        "",
+        *markdown_list([f"{key}: `{value}`" for key, value in (payload.get("links") or {}).items()]),
+        "",
+        "## 安全线",
+        "",
+        *markdown_list(payload.get("safety")),
+        "",
+    ])
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-project-completion-audit-zh.md"'},
+    )
 
 
 @app.get("/loop-status")

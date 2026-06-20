@@ -591,6 +591,10 @@ Object.assign(uiZh, {
   "First publish readiness downloaded.": "首次发布准备包已下载。",
   "First publish doctor review sheet downloaded.": "首发医生审核单已下载。",
   "Could not download first publish doctor review sheet.": "无法下载首发医生审核单。",
+  "Project completion audit downloaded.": "项目完成度审计已下载。",
+  "Could not download project completion audit.": "无法下载项目完成度审计。",
+  "Project completion CSV downloaded.": "项目完成度 CSV 已下载。",
+  "Could not download project completion CSV.": "无法下载项目完成度 CSV。",
   "Monthly carousel doctor review pack downloaded.": "月度 Carousel 医生审核总包已下载。",
   "Could not download monthly carousel doctor review pack.": "无法下载月度 Carousel 医生审核总包。",
   "Monthly carousel doctor reply templates downloaded.": "月度医生回复模板已下载。",
@@ -5006,6 +5010,26 @@ document.getElementById("download-launch-evidence")?.addEventListener("click", a
     message.textContent = "Launch evidence downloaded.";
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download launch evidence.";
+  }
+});
+
+document.getElementById("download-project-completion-audit")?.addEventListener("click", async () => {
+  const message = document.getElementById("test-path-message");
+  try {
+    await downloadProtectedFile("/operations/project-completion-audit.zh.md", "drec-project-completion-audit-zh.md", "text/markdown");
+    message.textContent = translateText("Project completion audit downloaded.");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download project completion audit.");
+  }
+});
+
+document.getElementById("download-project-completion-audit-csv")?.addEventListener("click", async () => {
+  const message = document.getElementById("test-path-message");
+  try {
+    await downloadProtectedFile("/operations/project-completion-audit.csv", "drec-project-completion-audit.csv", "text/csv");
+    message.textContent = translateText("Project completion CSV downloaded.");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download project completion CSV.");
   }
 });
 
