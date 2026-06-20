@@ -319,6 +319,10 @@ const uiZh = {
   "Download Run Sheet": "下载发布执行表",
   "Download Schedule CSV": "下载排程 CSV",
   "Download Schedule Worksheet": "下载排程工作表",
+  "下载月度排程表": "下载月度排程表",
+  "Monthly Schedule CSV": "月度排程 CSV",
+  "预览月度排程": "预览月度排程",
+  "导入月度排程": "导入月度排程",
   "Schedule CSV": "排程 CSV",
   "Preview Schedule": "预览排程",
   "Import Schedule": "导入排程",
@@ -618,6 +622,15 @@ Object.assign(uiZh, {
   "Monthly carousel queue decisions imported.": "月度 Carousel 队列决定已导入。",
   "Could not preview monthly carousel queue decisions.": "无法预览月度 Carousel 队列决定。",
   "Could not import monthly carousel queue decisions.": "无法导入月度 Carousel 队列决定。",
+  "Monthly carousel schedule worksheet downloaded.": "月度 Carousel 排程表已下载。",
+  "Could not download monthly carousel schedule worksheet.": "无法下载月度 Carousel 排程表。",
+  "Choose a monthly carousel schedule worksheet CSV first.": "请先选择月度 Carousel 排程 CSV。",
+  "Previewing monthly carousel schedule worksheet...": "正在预览月度 Carousel 排程...",
+  "Importing monthly carousel schedule worksheet...": "正在导入月度 Carousel 排程...",
+  "Monthly carousel schedule worksheet previewed.": "月度 Carousel 排程已预览。",
+  "Monthly carousel schedule worksheet imported.": "月度 Carousel 排程已导入。",
+  "Could not preview monthly carousel schedule worksheet.": "无法预览月度 Carousel 排程。",
+  "Could not import monthly carousel schedule worksheet.": "无法导入月度 Carousel 排程。",
   "Choose the monthly carousel production worksheet CSV first.": "请先选择月度 Carousel 制作设计表 CSV。",
   "Previewing monthly carousel production worksheet...": "正在预览月度 Carousel 制作设计表...",
   "Importing monthly carousel production worksheet...": "正在导入月度 Carousel 制作设计表...",
@@ -6976,26 +6989,51 @@ document.getElementById("download-schedule-worksheet")?.addEventListener("click"
   }
 });
 
-async function uploadScheduleWorksheet({ dryRun }) {
+document.getElementById("download-monthly-carousel-schedule-worksheet")?.addEventListener("click", async () => {
   const message = document.getElementById("queue-message");
-  const fileInput = document.getElementById("schedule-worksheet-file");
+  message.textContent = "Preparing monthly schedule worksheet...";
+  try {
+    await downloadProtectedFile("/operations/monthly-carousel-schedule-worksheet.csv", "drec-monthly-carousel-schedule-worksheet.csv", "text/csv");
+    message.textContent = translateText("Monthly carousel schedule worksheet downloaded.");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download monthly carousel schedule worksheet.");
+  }
+});
+
+async function uploadScheduleWorksheet({
+  dryRun,
+  source = "schedule",
+  fileInputId = "schedule-worksheet-file",
+}) {
+  const message = document.getElementById("queue-message");
+  const isMonthly = source === "monthly_carousel";
+  const fileInput = document.getElementById(fileInputId);
   const file = fileInput?.files?.[0];
   if (!file) {
-    message.textContent = "Choose a schedule worksheet CSV first.";
+    message.textContent = isMonthly ? translateText("Choose a monthly carousel schedule worksheet CSV first.") : "Choose a schedule worksheet CSV first.";
     return;
   }
   const body = new FormData();
   body.append("file", file);
   body.append("dry_run", dryRun ? "true" : "false");
-  message.textContent = dryRun ? "Previewing schedule worksheet..." : "Importing schedule worksheet...";
+  message.textContent = dryRun
+    ? (isMonthly ? translateText("Previewing monthly carousel schedule worksheet...") : "Previewing schedule worksheet...")
+    : (isMonthly ? translateText("Importing monthly carousel schedule worksheet...") : "Importing schedule worksheet...");
   try {
-    const data = await fetchForm("/publish-queue/import-schedule-worksheet", body);
+    const endpoint = isMonthly ? "/operations/import-monthly-carousel-schedule-worksheet" : "/publish-queue/import-schedule-worksheet";
+    const data = await fetchForm(endpoint, body);
     if (!dryRun) fileInput.value = "";
-    message.textContent = data.message || (dryRun ? "Schedule worksheet previewed." : "Schedule worksheet imported.");
+    message.textContent = data.message || (dryRun
+      ? (isMonthly ? translateText("Monthly carousel schedule worksheet previewed.") : "Schedule worksheet previewed.")
+      : (isMonthly ? translateText("Monthly carousel schedule worksheet imported.") : "Schedule worksheet imported."));
     renderScheduleWorksheetPreview(data);
     if (!dryRun) await Promise.all([loadPublishQueue(), loadPreScheduleGate(), loadLoopStatus()]);
   } catch (error) {
-    message.textContent = error.message === "Access token required" ? "Set the access token first." : dryRun ? "Could not preview schedule worksheet." : "Could not import schedule worksheet.";
+    message.textContent = error.message === "Access token required"
+      ? translateText("Set the access token first.")
+      : dryRun
+        ? (isMonthly ? translateText("Could not preview monthly carousel schedule worksheet.") : "Could not preview schedule worksheet.")
+        : (isMonthly ? translateText("Could not import monthly carousel schedule worksheet.") : "Could not import schedule worksheet.");
   }
 }
 
@@ -7005,6 +7043,22 @@ document.getElementById("preview-schedule-worksheet")?.addEventListener("click",
 
 document.getElementById("import-schedule-worksheet")?.addEventListener("click", async () => {
   await uploadScheduleWorksheet({ dryRun: false });
+});
+
+document.getElementById("preview-monthly-carousel-schedule-worksheet")?.addEventListener("click", async () => {
+  await uploadScheduleWorksheet({
+    dryRun: true,
+    source: "monthly_carousel",
+    fileInputId: "monthly-carousel-schedule-worksheet-file",
+  });
+});
+
+document.getElementById("import-monthly-carousel-schedule-worksheet")?.addEventListener("click", async () => {
+  await uploadScheduleWorksheet({
+    dryRun: false,
+    source: "monthly_carousel",
+    fileInputId: "monthly-carousel-schedule-worksheet-file",
+  });
 });
 
 document.getElementById("download-schedule-audit")?.addEventListener("click", async () => {

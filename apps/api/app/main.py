@@ -8902,6 +8902,8 @@ async def monthly_carousel_action_pack_payload():
             "monthly_review_queue": "/operations/monthly-carousel-review-queue.csv",
             "monthly_review_queue_decisions": "/operations/monthly-carousel-review-queue-decisions.csv",
             "monthly_review_queue_decision_import": "/operations/import-monthly-carousel-review-queue-decisions",
+            "monthly_schedule_worksheet": "/operations/monthly-carousel-schedule-worksheet.csv",
+            "monthly_schedule_import": "/operations/import-monthly-carousel-schedule-worksheet",
             "status_board": "/operations/monthly-carousel-status-board.zh.md",
             "pre_schedule_gate": "/operations/pre-schedule-gate.md",
             "review_to_schedule": "/operations/review-to-schedule-pack.zh.md",
@@ -17527,9 +17529,7 @@ async def publish_queue_schedule_csv(_: None = Depends(require_access_token)):
     )
 
 
-@app.get("/publish-queue/schedule-worksheet.csv")
-async def publish_queue_schedule_worksheet_csv(_: None = Depends(require_access_token)):
-    rows = await fetch_publish_queue_items(200)
+async def schedule_worksheet_csv_response(rows: list[dict], filename: str):
     candidates = []
     for item in rows:
         state, blockers = review_queue_state(item)
@@ -17580,8 +17580,20 @@ async def publish_queue_schedule_worksheet_csv(_: None = Depends(require_access_
     return Response(
         output.getvalue(),
         media_type="text/csv",
-        headers={"Content-Disposition": 'attachment; filename="drec-schedule-worksheet.csv"'},
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@app.get("/publish-queue/schedule-worksheet.csv")
+async def publish_queue_schedule_worksheet_csv(_: None = Depends(require_access_token)):
+    rows = await fetch_publish_queue_items(200)
+    return await schedule_worksheet_csv_response(rows, "drec-schedule-worksheet.csv")
+
+
+@app.get("/operations/monthly-carousel-schedule-worksheet.csv")
+async def operations_monthly_carousel_schedule_worksheet_csv(_: None = Depends(require_access_token)):
+    rows = await monthly_carousel_queue_items()
+    return await schedule_worksheet_csv_response(rows, "drec-monthly-carousel-schedule-worksheet.csv")
 
 
 def normalize_schedule_decision(value: str | None):
@@ -17632,13 +17644,13 @@ async def decode_schedule_worksheet_csv(file: UploadFile):
         raise HTTPException(status_code=400, detail="Schedule worksheet CSV must be UTF-8 text.") from exc
 
 
-@app.post("/publish-queue/import-schedule-worksheet")
-async def import_schedule_worksheet(
-    file: UploadFile = File(...),
-    dry_run: bool = Form(True),
-    session: dict = Depends(require_schedule_access),
+async def process_schedule_worksheet_csv(
+    csv_text: str,
+    dry_run: bool,
+    session: dict,
+    source_label: str = "schedule worksheet",
+    allowed_queue_ids: set[str] | None = None,
 ):
-    csv_text = await decode_schedule_worksheet_csv(file)
     reader = csv.DictReader(StringIO(csv_text))
     required = {"queue_id", "planned_slot"}
     headers = set(reader.fieldnames or [])
@@ -17655,6 +17667,9 @@ async def import_schedule_worksheet(
         queue_id = (row.get("queue_id") or "").strip()
         if not queue_id:
             skipped.append({"row": index, "reason": "Missing queue_id."})
+            continue
+        if allowed_queue_ids is not None and queue_id not in allowed_queue_ids:
+            skipped.append({"row": index, "queue_id": queue_id, "reason": "Queue item is not part of the monthly carousel source of truth."})
             continue
         decision = normalize_schedule_decision(row.get("schedule_decision"))
         if decision == "skip":
@@ -17715,9 +17730,9 @@ async def import_schedule_worksheet(
         "imported": imported,
         "skipped": skipped,
         "message": (
-            f"Previewed {len(planned)} schedule worksheet row(s), {len(skipped)} skipped."
+            f"Previewed {len(planned)} {source_label} row(s), {len(skipped)} skipped."
             if dry_run
-            else f"Imported {len(imported)} schedule worksheet row(s), {len(skipped)} skipped."
+            else f"Imported {len(imported)} {source_label} row(s), {len(skipped)} skipped."
         ),
         "safety": [
             "Schedule worksheet import only sets planned time and scheduled status for already review-approved queue items.",
@@ -17726,6 +17741,51 @@ async def import_schedule_worksheet(
         ],
         "actor": session.get("actor"),
     }
+
+
+@app.post("/publish-queue/import-schedule-worksheet")
+async def import_schedule_worksheet(
+    file: UploadFile = File(...),
+    dry_run: bool = Form(True),
+    session: dict = Depends(require_schedule_access),
+):
+    csv_text = await decode_schedule_worksheet_csv(file)
+    return await process_schedule_worksheet_csv(
+        csv_text=csv_text,
+        dry_run=dry_run,
+        session=session,
+        source_label="schedule worksheet",
+    )
+
+
+@app.post("/operations/import-monthly-carousel-schedule-worksheet")
+async def import_monthly_carousel_schedule_worksheet(
+    file: UploadFile = File(...),
+    dry_run: bool = Form(True),
+    session: dict = Depends(require_schedule_access),
+):
+    csv_text = await decode_schedule_worksheet_csv(file)
+    monthly_items = await monthly_carousel_queue_items()
+    allowed_queue_ids = {str(item.get("id")) for item in monthly_items if item.get("id")}
+    result = await process_schedule_worksheet_csv(
+        csv_text=csv_text,
+        dry_run=dry_run,
+        session=session,
+        source_label="monthly carousel schedule worksheet",
+        allowed_queue_ids=allowed_queue_ids,
+    )
+    result["source"] = "monthly_carousel_schedule_worksheet"
+    result["message"] = (
+        f"Previewed {result.get('planned_count', 0)} monthly schedule row(s), {result.get('skipped_count', 0)} skipped."
+        if dry_run
+        else f"Imported {result.get('imported_count', 0)} monthly schedule row(s), {result.get('skipped_count', 0)} skipped."
+    )
+    result["safety"] = [
+        *result.get("safety", []),
+        "Monthly schedule import accepts only queue items created from the Notion monthly carousel source of truth.",
+        "It still does not publish, dispatch Meta requests, or record external post IDs.",
+    ]
+    return result
 
 
 def review_schedule_asset_lines(asset: dict, index: int):
