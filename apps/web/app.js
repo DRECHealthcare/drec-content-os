@@ -2642,12 +2642,14 @@ function renderNotionCarouselSource(data) {
       <small>${escapeHtml(data.database_url || "")}</small>
       <ul>
         <li><strong>${escapeHtml(translateText("Unique ID"))}</strong> ${escapeHtml(data.unique_id_property || "Topic ID")}</li>
+        <li><strong>${escapeHtml(translateText("Sync mode"))}</strong> ${escapeHtml(data.app_sync_mode || "csv_import_with_topic_id_dedupe")}</li>
         <li><strong>${escapeHtml(translateText("Monthly refresh"))}</strong> ${escapeHtml(String(data.monthly_refresh_rule || ""))}</li>
         <li><strong>${escapeHtml(translateText("Monthly refresh workbench"))}</strong> ${escapeHtml(data.monthly_refresh_workbench_zh || "/notion/monthly-refresh-workbench.zh.md")}</li>
+        <li><strong>${escapeHtml(translateText("Connector fallback"))}</strong> ${escapeHtml(data.connector_fallback_pack || "/notion/connector-fallback-pack.md")}</li>
         <li><strong>${escapeHtml(translateText("Image status rule"))}</strong> ${escapeHtml(translateText(statusRules.find((item) => item.includes("Carousel Image Status = Not Started")) || ""))}</li>
         <li><strong>${escapeHtml(translateText("Caption boundary"))}</strong> ${escapeHtml(translateText(statusRules.find((item) => item.includes("Caption Status")) || ""))}</li>
       </ul>
-      <p>${escapeHtml(translateText("Use only existing Notion rows after the 19th refresh."))}</p>
+      <p>${escapeHtml(data.operator_note || translateText("Use only existing Notion rows after the 19th refresh."))}</p>
     </article>
   `;
 }
@@ -7205,6 +7207,17 @@ document.getElementById("download-notion-carousel-workflow")?.addEventListener("
     message.textContent = "Notion image workflow downloaded.";
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download Notion image workflow.";
+  }
+});
+
+document.getElementById("download-notion-connector-fallback")?.addEventListener("click", async () => {
+  const message = document.getElementById("plan-message");
+  message.textContent = "Preparing Notion CSV fallback pack...";
+  try {
+    await downloadProtectedFile("/notion/connector-fallback-pack.md", "drec-notion-connector-fallback-pack.md", "text/markdown");
+    message.textContent = "Notion CSV fallback pack downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download Notion CSV fallback pack.";
   }
 });
 

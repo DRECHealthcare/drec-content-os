@@ -40,6 +40,7 @@ const requiredRoutes = [
   "GET /notion/carousel-source",
   "GET /notion/carousel-intake-template.csv",
   "GET /notion/carousel-image-workflow.md",
+  "GET /notion/connector-fallback-pack.md",
   "GET /notion/monthly-refresh-workbench",
   "GET /notion/monthly-refresh-workbench.md",
   "GET /notion/monthly-refresh-workbench.zh.md",
@@ -665,6 +666,21 @@ const requiredSnippets = [
     name: "notion carousel monthly refresh rule",
     file: "main",
     text: "monthly_refresh_day",
+  },
+  {
+    name: "notion connector csv fallback mode",
+    file: "main",
+    text: "csv_import_with_topic_id_dedupe",
+  },
+  {
+    name: "notion connector fallback route",
+    file: "main",
+    text: "/notion/connector-fallback-pack.md",
+  },
+  {
+    name: "notion connector plan limitation note",
+    file: "main",
+    text: "direct database row querying may require a Notion Enterprise plan with Notion AI",
   },
   {
     name: "notion carousel monthly refresh workbench payload",
@@ -2840,6 +2856,16 @@ const requiredSnippets = [
     name: "web notion carousel workflow endpoint",
     file: "web",
     text: "/notion/carousel-image-workflow.md",
+  },
+  {
+    name: "web notion connector fallback action",
+    file: "web",
+    text: "download-notion-connector-fallback",
+  },
+  {
+    name: "web notion connector fallback endpoint",
+    file: "web",
+    text: "/notion/connector-fallback-pack.md",
   },
   {
     name: "web notion carousel template endpoint",

@@ -92,6 +92,9 @@ NOTION_CAROUSEL_SOURCE = {
     "data_source_url": "collection://58a85294-ac72-4f16-8df0-bf0caf1b0b52",
     "unique_id_property": "Topic ID",
     "source_of_truth": True,
+    "app_sync_mode": "csv_import_with_topic_id_dedupe",
+    "direct_connector_row_query": "not_available_in_current_notion_plan",
+    "connector_fallback_reason": "The Notion connector can read the database schema, but direct database row querying may require a Notion Enterprise plan with Notion AI. The deployed app therefore treats CSV export/import as the reliable production sync path.",
     "monthly_refresh_day": 19,
     "monthly_refresh_rule": "Treat the Notion database as refreshed on the 19th of every month. Re-scan existing rows after that date, but still use Topic ID for dedupe and do not create new Notion rows unless instructed.",
     "primary_language": "Mandarin",
@@ -17436,6 +17439,7 @@ def notion_carousel_source_payload():
         "image_workflow_pack": "/notion/carousel-image-workflow.md",
         "monthly_refresh_workbench": "/notion/monthly-refresh-workbench",
         "monthly_refresh_workbench_zh": "/notion/monthly-refresh-workbench.zh.md",
+        "connector_fallback_pack": "/notion/connector-fallback-pack.md",
         "import_endpoint": "/notion/carousel-row/import",
         "sample_row": {
             "topic_id": "DC001",
@@ -17446,7 +17450,7 @@ def notion_carousel_source_payload():
             "caption_status": "Not Started",
             "content_stage": "Awareness",
         },
-        "operator_note": "Codex can read and update this Notion database through the Notion connector. The deployed app keeps a protected import/sync contract so generated assets always preserve Topic ID and Notion status rules.",
+        "operator_note": "The deployed app uses a protected CSV/import sync contract so generated assets always preserve Topic ID and Notion status rules. If direct Notion row querying is unavailable on the current plan, export the current Notion view as CSV and import it here.",
     }
 
 
@@ -17941,6 +17945,57 @@ async def notion_carousel_image_workflow(_: None = Depends(require_access_token)
         "\n".join(lines),
         media_type="text/markdown",
         headers={"Content-Disposition": 'attachment; filename="drec-notion-carousel-image-workflow.md"'},
+    )
+
+
+@app.get("/notion/connector-fallback-pack.md")
+async def notion_connector_fallback_pack(_: None = Depends(require_access_token)):
+    source = notion_carousel_source_payload()
+    lines = [
+        "# DREC Notion Connector Fallback Pack",
+        "",
+        f"Source database: {source['name']}",
+        f"Database URL: {source['database_url']}",
+        f"Data source: `{source['data_source_url']}`",
+        f"App sync mode: `{source['app_sync_mode']}`",
+        "",
+        "## Why This Exists",
+        "",
+        source["connector_fallback_reason"],
+        "",
+        "The app should not assume direct Notion row sync is available. The reliable production path is:",
+        "",
+        "1. Open the Notion database after the monthly 19th refresh.",
+        "2. Filter out rows where `Overall Status = Published`.",
+        "3. For image work, keep only `Carousel Image Status = Not Started`.",
+        "4. Export the visible Notion view as CSV.",
+        "5. Upload that CSV in DREC Content OS using Preview Notion CSV first.",
+        "6. Import only after preview shows no duplicate Topic ID problems.",
+        "",
+        "## Required CSV Columns",
+        "",
+        *markdown_list(source["fields"]),
+        "",
+        "## Required Guards",
+        "",
+        "- `Topic ID` is the unique identifier.",
+        "- Do not create duplicate local briefs or assets for the same Topic ID.",
+        "- Do not import Published rows.",
+        "- Preserve `Carousel Slide Plan` exactly enough for slide parsing.",
+        "- Slide 1 remains cover hook only; slides 2 onward keep explanation text.",
+        "- This fallback pack is read-only and does not query Notion rows, update Notion, approve, queue, schedule, publish, or call Meta.",
+        "",
+        "## App Links",
+        "",
+        f"- Intake template: `{source['intake_template']}`",
+        f"- Monthly refresh workbench: `{source['monthly_refresh_workbench_zh']}`",
+        f"- Import endpoint: `{source['import_endpoint']}`",
+        "",
+    ]
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-notion-connector-fallback-pack.md"'},
     )
 
 
