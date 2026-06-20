@@ -207,6 +207,7 @@ const uiZh = {
   "After manual publishing, record the Meta post ID and first metrics, then roll them into learning.": "人工发布后，记录 Meta 帖子 ID 和第一批数据，再汇总进学习系统。",
   "Open Asset Review": "打开素材审核",
   "Download Chinese Pack": "下载中文包",
+  "Download Approval Handoff": "下载审核交接包",
   "Download Doctor Review Sheet": "下载首发医生审核单",
   "Download Media Pack": "下载媒体制作包",
   "Download PNG Zip": "下载 PNG 图片包",
@@ -599,6 +600,8 @@ Object.assign(uiZh, {
   "First publish readiness downloaded.": "首次发布准备包已下载。",
   "First publish doctor review sheet downloaded.": "首发医生审核单已下载。",
   "Could not download first publish doctor review sheet.": "无法下载首发医生审核单。",
+  "First publish approval handoff downloaded.": "首发审核交接包已下载。",
+  "Could not download first publish approval handoff.": "无法下载首发审核交接包。",
   "Project completion audit downloaded.": "项目完成度审计已下载。",
   "Could not download project completion audit.": "无法下载项目完成度审计。",
   "Project completion CSV downloaded.": "项目完成度 CSV 已下载。",
@@ -1678,6 +1681,7 @@ function renderFirstPublishReadiness(data) {
         ${hasDecisionCsv ? `<button type="button" data-fill-first-asset-decision>${escapeHtml(translateText("Fill Asset Decision CSV"))}</button>` : ""}
         <button type="button" data-open-first-asset-review>${escapeHtml(translateText("Open Asset Review"))}</button>
         <button type="button" data-download-first-publish-zh>${escapeHtml(translateText("Download Chinese Pack"))}</button>
+        ${nextAsset.id ? `<button type="button" data-download-first-approval-handoff>${escapeHtml(translateText("Download Approval Handoff"))}</button>` : ""}
         ${nextAsset.id ? `<button type="button" data-download-first-doctor-review-sheet>${escapeHtml(translateText("Download Doctor Review Sheet"))}</button>` : ""}
         <button type="button" data-download-first-media-pack>${escapeHtml(translateText("Download Media Pack"))}</button>
         <button type="button" data-download-first-carousel-png-zip>${escapeHtml(translateText("Download PNG Zip"))}</button>
@@ -1695,6 +1699,7 @@ function renderFirstPublishReadiness(data) {
         <li><strong>${escapeHtml(translateText("Do Not Bypass"))}:</strong> ${escapeHtml(translateText("Do not approve, queue, schedule, or publish without explicit human safety clearance."))}</li>
       </ul>
       <div class="learning-actions">
+        ${nextAsset.id ? `<button type="button" data-download-first-approval-handoff>${escapeHtml(translateText("Download Approval Handoff"))}</button>` : ""}
         ${nextAsset.id ? `<button type="button" data-download-first-doctor-review-sheet>${escapeHtml(translateText("Download Doctor Review Sheet"))}</button>` : ""}
         ${nextAsset.id ? `<button type="button" data-copy-first-asset-review>${escapeHtml(translateText("Copy Doctor Review"))}</button>` : ""}
         ${nextAsset.id ? `<button type="button" data-fill-first-doctor-reply>${escapeHtml(translateText("Fill Doctor Reply Template"))}</button>` : ""}
@@ -1929,6 +1934,7 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
   const approveCurrentFirstQueueButton = event.target.closest("[data-approve-current-first-queue]");
   const openAssetReviewButton = event.target.closest("[data-open-first-asset-review]");
   const downloadZhButton = event.target.closest("[data-download-first-publish-zh]");
+  const downloadApprovalHandoffButton = event.target.closest("[data-download-first-approval-handoff]");
   const downloadDoctorReviewSheetButton = event.target.closest("[data-download-first-doctor-review-sheet]");
   const downloadMediaPackButton = event.target.closest("[data-download-first-media-pack]");
   const downloadCarouselPngZipButton = event.target.closest("[data-download-first-carousel-png-zip]");
@@ -1939,7 +1945,7 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
   const copyQueueButton = event.target.closest("[data-copy-first-queue-decision]");
   const fillQueueButton = event.target.closest("[data-fill-first-queue-decision]");
   const advanceButton = event.target.closest("[data-advance-first-publish]");
-  if (!copyReviewButton && !fillDoctorReplyButton && !approveCurrentFirstAssetButton && !approveCurrentFirstQueueButton && !openAssetReviewButton && !downloadZhButton && !downloadDoctorReviewSheetButton && !downloadMediaPackButton && !downloadCarouselPngZipButton && !downloadCarouselZipButton && !attachGeneratedMediaButton && !copyButton && !fillButton && !copyQueueButton && !fillQueueButton && !advanceButton) return;
+  if (!copyReviewButton && !fillDoctorReplyButton && !approveCurrentFirstAssetButton && !approveCurrentFirstQueueButton && !openAssetReviewButton && !downloadZhButton && !downloadApprovalHandoffButton && !downloadDoctorReviewSheetButton && !downloadMediaPackButton && !downloadCarouselPngZipButton && !downloadCarouselZipButton && !attachGeneratedMediaButton && !copyButton && !fillButton && !copyQueueButton && !fillQueueButton && !advanceButton) return;
   const container = document.getElementById("first-publish-readiness");
   const message = document.getElementById("test-path-message");
   if (copyReviewButton) {
@@ -2027,6 +2033,16 @@ document.getElementById("first-publish-readiness")?.addEventListener("click", as
       if (message) message.textContent = "中文首次发布准备包已下载。";
     } catch (error) {
       if (message) message.textContent = error.message === "Access token required" ? "请先设置访问码。" : "无法下载中文首次发布准备包。";
+    }
+    return;
+  }
+  if (downloadApprovalHandoffButton) {
+    if (message) message.textContent = "正在下载首发审核交接包...";
+    try {
+      await downloadProtectedFile("/operations/first-publish-approval-handoff.zh.md", "drec-first-publish-approval-handoff-zh.md", "text/markdown");
+      if (message) message.textContent = translateText("First publish approval handoff downloaded.");
+    } catch (error) {
+      if (message) message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download first publish approval handoff.");
     }
     return;
   }
@@ -5561,6 +5577,16 @@ document.getElementById("download-first-publish-readiness-zh")?.addEventListener
     message.textContent = "中文首次发布准备包已下载。";
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "请先设置访问 token。" : "无法下载中文首次发布准备包。";
+  }
+});
+
+document.getElementById("download-first-publish-approval-handoff")?.addEventListener("click", async () => {
+  const message = document.getElementById("test-path-message");
+  try {
+    await downloadProtectedFile("/operations/first-publish-approval-handoff.zh.md", "drec-first-publish-approval-handoff-zh.md", "text/markdown");
+    message.textContent = translateText("First publish approval handoff downloaded.");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download first publish approval handoff.");
   }
 });
 

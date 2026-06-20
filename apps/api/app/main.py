@@ -3931,6 +3931,154 @@ async def operations_first_publish_doctor_review_sheet_zh(request: Request, _: N
     )
 
 
+@app.get("/operations/first-publish-approval-handoff.zh.md")
+async def operations_first_publish_approval_handoff_zh(request: Request, _: None = Depends(require_access_token)):
+    payload = await first_publish_readiness_payload()
+    next_step = payload.get("next_step") or {}
+    candidates = payload.get("candidates") or {}
+    action_pack = payload.get("action_pack") or {}
+    asset = candidates.get("next_asset") or candidates.get("approved_clear_asset") or candidates.get("ready_asset") or {}
+    if not asset:
+        raise HTTPException(status_code=404, detail="No first-publish asset is available for approval handoff.")
+    metadata = asset.get("metadata") or {}
+    slides = first_publish_slide_items(asset)
+    media_gate = action_pack.get("media_gate") or first_publish_media_gate(asset)
+    forwarded_proto = request.headers.get("x-forwarded-proto") or request.url.scheme or "https"
+    forwarded_host = request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.netloc
+    if forwarded_host.endswith(".fly.dev"):
+        forwarded_proto = "https"
+    base_url = f"{forwarded_proto}://{forwarded_host}".rstrip("/")
+    preview_links = [
+        f"{base_url}/operations/first-publish-carousel-preview/{index}.png"
+        for index, _slide in enumerate(slides, start=1)
+    ]
+    topic = metadata.get("topic") or asset.get("title") or asset.get("brief_title") or "当前首发内容"
+    decision_csv = (action_pack.get("next_asset_decision_csv") or "").strip()
+    next_step_label = {
+        "asset_review": "素材安全与批准审核",
+        "media_ready": "媒体/设计素材准备",
+        "queue": "创建发布队列项目",
+        "review_queue": "队列项目人工审核",
+        "schedule": "队列项目排程",
+        "meta_dry_run": "Meta 发布任务 dry run",
+    }.get(next_step.get("key") or "", zh_first_publish_stage_label(next_step.get("key")))
+    reply_template = "\n".join(
+        [
+            f"Asset ID: {asset.get('id') or ''}",
+            "Decision: approve / needs edits / reject",
+            "Safety: clear / needs review / blocked",
+            "Use polished copy: yes / no",
+            "Notes:",
+        ]
+    )
+    lines = [
+        "# DREC 首发审核交接包",
+        "",
+        f"生成时间：{datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}",
+        "",
+        "用途：把当前首发内容交给医生/人工审核，并把审核通过后的下一步交给操作员。这个文件只读，不会批准、入队、排程、发布或调用 Meta。",
+        "",
+        "## 当前状态",
+        "",
+        f"- 下一步：{next_step_label}",
+        f"- 阻塞说明：{zh_first_publish_stage_detail(next_step)}",
+        f"- Asset ID：`{asset.get('id')}`",
+        f"- 主题：{topic}",
+        f"- 频道 / 格式：{asset.get('channel') or 'n/a'} / {asset.get('format') or 'n/a'}",
+        f"- 安全 / 审核：{asset.get('compliance_status') or 'n/a'} / {asset.get('review_status') or 'n/a'}",
+        f"- 媒体/设计：{'需要' if media_gate.get('required') else '不强制'}；当前 URL 数量 {media_gate.get('media_count') or 0}",
+        "",
+        "## 先给医生/人工审核",
+        "",
+        "请把下面这段发给审核者。不要要求对方只回“ok”；必须明确 Decision 和 Safety。",
+        "",
+        "```",
+        f"医生好，请帮忙审核这条 DREC 首发内容：{topic}",
+        "",
+        "请重点确认：",
+        "1. 是否只是健康教育，不是诊断或个人治疗建议。",
+        "2. 是否没有承诺治愈、保证逆转、保证降糖、保证停药。",
+        "3. 是否没有暗示读者可以自行调整药物。",
+        "4. 中文医学表达是否准确、克制、不制造恐惧。",
+        "5. 如果是轮播图，Slide 1 是否只有 hook/标题，不放解释正文。",
+        "",
+        "请按这个格式回复：",
+        reply_template,
+        "```",
+        "",
+        "## 医生审核回复格式",
+        "",
+        "```",
+        reply_template,
+        "```",
+        "",
+        "## 内容文案",
+        "",
+        asset.get("caption") or "暂无文案。",
+        "",
+        "## 轮播页检查",
+        "",
+    ]
+    if slides:
+        for index, slide in enumerate(slides, start=1):
+            lines.extend(
+                [
+                    f"### Slide {index}",
+                    "",
+                    f"- 标题：{slide.get('title') or ''}",
+                    f"- 正文：{slide.get('body') or 'Slide 1 应该没有解释正文。'}",
+                    f"- 视觉：{slide.get('visual_note') or 'DREC 深蓝/青绿医疗风格，文字清楚，视觉辅助解释。'}",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["- 暂无轮播页计划。", ""])
+    lines.extend(["## 图片预览和制作包", ""])
+    if preview_links:
+        lines.extend([f"- 预览第 {index} 张：{url}" for index, url in enumerate(preview_links, start=1)])
+    else:
+        lines.append("- 暂无图片预览。")
+    lines.extend(
+        [
+            f"- 中文医生审核单：`{base_url}/operations/first-publish-doctor-review-sheet.zh.md`",
+            f"- 媒体制作包：`{base_url}/operations/first-publish-media-pack.md`",
+            f"- PNG 图片包：`{base_url}/operations/first-publish-carousel-png-assets.zip`",
+            f"- SVG 源文件包：`{base_url}/operations/first-publish-carousel-assets.zip`",
+            "",
+            "## 医生批准后，操作员才可以做",
+            "",
+            "1. 在 Assets 的 Doctor Reply Text 粘贴医生回复，先 Preview，再 Import。",
+            "2. 只有 `Decision: approve` 和 `Safety: clear` 同时出现，才允许继续。",
+            "3. 如果这是视觉内容，先下载 PNG 图片包，完成视觉 QA 后把最终公开图片 URL 通过 Media Attachment 导入。",
+            "4. 回到 Dashboard 点击「运行安全自动推进」；系统只会做已经满足 gate 的机械动作。",
+            "5. 入队后还要由人工审核队列项目，`reviewer_action=approve` 后才可排程。",
+            "6. 排程后只允许 Meta dry run；正式 Meta 发布仍由 live 开关保护。",
+            "",
+            "## 素材审核 CSV 模板",
+            "",
+            "如果使用 CSV 导入，只有医生/真人明确批准后，才可以把 `reviewer_safety_decision` 填 `clear`，把 `reviewer_review_decision` 填 `approved`。",
+            "",
+            "```csv",
+            decision_csv or "暂无可导入的审核 CSV。",
+            "```",
+            "",
+            "## 不可以做",
+            "",
+            "- 不可以因为系统生成了图片就自动批准医学内容。",
+            "- 不可以把 `needs edits`、`needs review` 或模糊回复当成 approve。",
+            "- 不可以缺媒体/设计 URL 就把视觉内容入队。",
+            "- 不可以跳过队列审核直接排程。",
+            "- 不可以打开 Meta live 发布开关来绕过人工 gate。",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="drec-first-publish-approval-handoff-zh.md"'},
+    )
+
+
 @app.get("/operations/first-publish-media-pack.md")
 async def operations_first_publish_media_pack(_: None = Depends(require_access_token)):
     payload = await first_publish_readiness_payload()
