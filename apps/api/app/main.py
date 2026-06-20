@@ -2884,6 +2884,98 @@ async def operations_first_publish_advance(
     return result
 
 
+@app.post("/operations/first-cycle-dry-run-rehearsal")
+async def operations_first_cycle_dry_run_rehearsal(
+    request: Request,
+    _: None = Depends(require_access_token),
+):
+    readiness = await first_publish_readiness_payload()
+    first_advance = await operations_first_publish_advance(request, dry_run=True, session={})
+    monthly_advance = await operations_monthly_carousel_safe_advance(dry_run=True, max_actions=10, _=None)
+    pre_schedule = await pre_schedule_gate_payload()
+    meta_dry_run = await meta_publishing_job(channel="all", dry_run=True)
+    completion = await project_completion_audit_payload()
+    next_step = readiness.get("next_step") or {}
+    first_action = first_advance.get("action")
+    monthly_actions = monthly_advance.get("actions") or []
+    rehearsal_steps = [
+        {
+            "key": "doctor_approval",
+            "status": "blocked" if next_step.get("key") == "asset_review" else "ready",
+            "label": "Doctor or human approval",
+            "detail": next_step.get("detail") if next_step.get("key") == "asset_review" else "Approval gate is not the current blocker.",
+        },
+        {
+            "key": "media_ready",
+            "status": "would_run" if first_action == "attach_generated_media" else "waiting",
+            "label": "Attach approved/generated media",
+            "detail": first_advance.get("message") if first_action == "attach_generated_media" else "Media attachment waits for approval or is already satisfied.",
+        },
+        {
+            "key": "queue",
+            "status": "would_run" if first_action == "queue_ready_asset" or monthly_advance.get("would_queue") else "waiting",
+            "label": "Queue approved clear asset",
+            "detail": first_advance.get("message") if first_action == "queue_ready_asset" else f"{monthly_advance.get('would_queue', 0)} monthly asset(s) would queue.",
+        },
+        {
+            "key": "queue_review",
+            "status": "blocked" if next_step.get("key") == "review_queue" else "waiting",
+            "label": "Human queue review",
+            "detail": "Queue review approval is still a human gate." if next_step.get("key") == "review_queue" else "No queue item is currently waiting at this gate.",
+        },
+        {
+            "key": "schedule",
+            "status": "would_run" if first_action == "schedule_review_approved" or monthly_advance.get("would_schedule") else "waiting",
+            "label": "Schedule reviewed item",
+            "detail": f"{pre_schedule.get('ready_to_schedule_count', 0)} item(s) pass pre-schedule gate.",
+        },
+        {
+            "key": "meta_dry_run",
+            "status": "would_run" if meta_dry_run.get("ready_count") else "waiting",
+            "label": "Meta dry-run",
+            "detail": f"{meta_dry_run.get('ready_count', 0)} due scheduled item(s) ready for dry-run.",
+        },
+    ]
+    first_open = next((item for item in rehearsal_steps if item.get("status") in {"blocked", "would_run"}), rehearsal_steps[0])
+    return {
+        "mode": "first_cycle_dry_run_rehearsal",
+        "dry_run": True,
+        "overall_status": "blocked_by_human_gate" if first_open.get("status") == "blocked" else "ready_for_next_safe_action",
+        "next_step": first_open,
+        "rehearsal_steps": rehearsal_steps,
+        "first_publish": {
+            "overall_status": readiness.get("overall_status"),
+            "next_step": next_step,
+            "advance_action": first_action,
+            "advance_message": first_advance.get("message"),
+        },
+        "monthly_safe_advance": {
+            "action_count": monthly_advance.get("action_count"),
+            "would_queue": monthly_advance.get("would_queue"),
+            "would_schedule": monthly_advance.get("would_schedule"),
+            "actions": monthly_actions[:10],
+        },
+        "pre_schedule_gate": {
+            "ready_to_schedule_count": pre_schedule.get("ready_to_schedule_count"),
+            "blocked_count": pre_schedule.get("blocked_count"),
+        },
+        "meta_dry_run": {
+            "ready_count": meta_dry_run.get("ready_count"),
+            "dry_run": meta_dry_run.get("dry_run"),
+        },
+        "completion": {
+            "percent": ((completion.get("completion") or {}).get("percent")),
+            "first_cycle_percent": ((completion.get("completion") or {}).get("first_cycle_percent")),
+            "blockers": ((completion.get("completion") or {}).get("blockers") or [])[:6],
+        },
+        "safety": [
+            "This rehearsal is dry-run only and does not approve, import, attach media, queue, schedule, publish, write Notion, or call Meta live publishing.",
+            "It reuses the same gates as the live workflow, including human approval, queue review, pre-schedule checks, and Meta dry-run locks.",
+            "Use it after each human decision import to see the next safe action.",
+        ],
+    }
+
+
 @app.post("/operations/first-publish-attach-generated-media")
 async def operations_first_publish_attach_generated_media(
     request: Request,

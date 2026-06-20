@@ -1782,6 +1782,72 @@ async function loadFirstPublishReadiness() {
   }
 }
 
+function renderFirstCycleRehearsal(data) {
+  const container = document.getElementById("first-cycle-rehearsal");
+  if (!container) return;
+  const next = data.next_step || {};
+  const completion = data.completion || {};
+  const steps = data.rehearsal_steps || [];
+  const blockers = completion.blockers || [];
+  container.innerHTML = `
+    <article class="learning-card wide-learning ${escapeHtml(data.overall_status || "waiting")}">
+      <h3>${escapeHtml(translateText("First Cycle Dry Run Rehearsal"))}</h3>
+      <p>${escapeHtml(translateText(next.label || "Checking first cycle path"))}</p>
+      <small>${escapeHtml(translateText(next.detail || data.overall_status || ""))}</small>
+      <div class="summary-row">
+        <span>${escapeHtml(completion.percent || 0)}% overall</span>
+        <span>${escapeHtml(completion.first_cycle_percent || 0)}% first cycle</span>
+        <span>${escapeHtml(data.mode || "dry_run")}</span>
+      </div>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>${escapeHtml(translateText("Gate Rehearsal"))}</h3>
+      <ul>${steps.map((step) => `
+        <li>
+          <strong>${escapeHtml(translateText(step.label || ""))}</strong>
+          ${escapeHtml(step.status || "")}
+          <br><small>${escapeHtml(translateText(step.detail || ""))}</small>
+        </li>
+      `).join("") || `<li>${escapeHtml(translateText("No rehearsal steps returned."))}</li>`}</ul>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>${escapeHtml(translateText("Current Blockers"))}</h3>
+      <ul>${blockers.length ? blockers.map((item) => `<li>${escapeHtml(translateText(item))}</li>`).join("") : `<li>${escapeHtml(translateText("No blockers reported by the completion audit."))}</li>`}</ul>
+    </article>
+    ${Array.isArray(data.safety) && data.safety.length ? `
+      <article class="learning-card wide-learning">
+        <h3>${escapeHtml(translateText("Safety"))}</h3>
+        <ul>${data.safety.map((item) => `<li>${escapeHtml(translateText(item))}</li>`).join("")}</ul>
+      </article>
+    ` : ""}
+  `;
+}
+
+async function runFirstCycleRehearsal() {
+  const message = document.getElementById("test-path-message");
+  if (message) message.textContent = translateText("Running first cycle dry-run rehearsal...");
+  try {
+    const data = await fetchJson("/operations/first-cycle-dry-run-rehearsal", {
+      method: "POST",
+    });
+    renderFirstCycleRehearsal(data);
+    if (message) {
+      const next = data.next_step || {};
+      message.textContent = `${translateText("First cycle dry-run rehearsal complete.")} ${translateText("Next")}: ${translateText(next.label || data.overall_status || "")}`;
+    }
+  } catch (error) {
+    if (message) {
+      message.textContent = error.message === "Access token required"
+        ? translateText("Set the access token first.")
+        : translateText("Could not run first cycle rehearsal.");
+    }
+  }
+}
+
+document.getElementById("run-first-cycle-rehearsal")?.addEventListener("click", async () => {
+  await runFirstCycleRehearsal();
+});
+
 document.getElementById("first-publish-readiness")?.addEventListener("click", async (event) => {
   const copyReviewButton = event.target.closest("[data-copy-first-asset-review]");
   const fillDoctorReplyButton = event.target.closest("[data-fill-first-doctor-reply]");
