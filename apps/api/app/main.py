@@ -23339,6 +23339,7 @@ def today_safe_operator_pack_readme(payload: dict):
     next_body = (workflow.get("next_action") or {}).get("body") or closeout.get("next_action", {}).get("detail") or "继续人工交接，不做自动发布。"
     next_body = {
         "Download the handoff, publish manually only after human confirmation, then record the post ID.": "下载今日安全包或发布交接包；只有真人确认并手动发布后，才记录 post ID。",
+        "Review the read-only handoff pack. Do not publish or record a post ID until a human actually posts.": "查看只读交接包；真人真正手动发布前，不要发布，也不要记录 post ID。",
     }.get(next_body, next_body)
     lines = [
         "# DREC 今日安全操作包",
