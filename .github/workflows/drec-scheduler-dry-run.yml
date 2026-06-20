@@ -28,7 +28,7 @@ jobs:
       - name: Dry run due Meta publishing
         if: ${{ env.DREC_ACCESS_TOKEN != '' }}
         run: |
-          curl --fail --silent --show-error \
+          curl --fail --silent --show-error --retry 3 --retry-delay 10 --max-time 90 \
             --request POST \
             --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
             "${DREC_API_BASE_URL}/jobs/meta-publishing?dry_run=true&channel=all"
@@ -36,7 +36,7 @@ jobs:
       - name: Dry run nightly Meta metrics
         if: ${{ env.DREC_ACCESS_TOKEN != '' && (github.event_name == 'workflow_dispatch' || github.event.schedule == '30 18 * * *') }}
         run: |
-          curl --fail --silent --show-error \
+          curl --fail --silent --show-error --retry 3 --retry-delay 10 --max-time 90 \
             --request POST \
             --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
             "${DREC_API_BASE_URL}/jobs/nightly-meta-metrics?dry_run=true&limit=25&rollup=true"
@@ -44,17 +44,32 @@ jobs:
       - name: Check automation and risk gates
         if: ${{ env.DREC_ACCESS_TOKEN != '' }}
         run: |
-          curl --fail --silent --show-error \
+          curl --fail --silent --show-error --retry 3 --retry-delay 10 --max-time 90 \
             --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
             "${DREC_API_BASE_URL}/automation/status"
-          curl --fail --silent --show-error \
+          curl --fail --silent --show-error --retry 3 --retry-delay 10 --max-time 90 \
             --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
             "${DREC_API_BASE_URL}/operations/risk-audit"
 
       - name: Record scheduler heartbeat
         if: ${{ env.DREC_ACCESS_TOKEN != '' }}
         run: |
-          curl --fail --silent --show-error \
+          curl --fail --silent --show-error --retry 3 --retry-delay 10 --max-time 90 \
             --request POST \
             --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
             "${DREC_API_BASE_URL}/operations/scheduler-heartbeat"
+
+      - name: Write scheduler run summary
+        if: ${{ always() }}
+        run: |
+          {
+            echo "## DREC Scheduler Dry Run"
+            echo ""
+            echo "- API: ${DREC_API_BASE_URL}"
+            echo "- Event: ${GITHUB_EVENT_NAME}"
+            echo "- Schedule: ${GITHUB_EVENT_SCHEDULE:-manual}"
+            echo "- Token configured: $([ -n "${DREC_ACCESS_TOKEN}" ] && echo yes || echo no)"
+            echo "- Safety: dry-run only; this workflow does not publish live Meta posts."
+            echo ""
+            echo "If heartbeat stays stale in DREC Content OS, confirm the repository secret \`DREC_ACCESS_TOKEN\` is current and admin-scoped, then run this workflow manually once."
+          } >> "$GITHUB_STEP_SUMMARY"

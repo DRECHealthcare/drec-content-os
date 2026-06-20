@@ -3966,6 +3966,10 @@ async def scheduler_health_payload():
     scheduler = setup.get("scheduler_setup") or {}
     heartbeat = scheduler.get("heartbeat") or {}
     heartbeat_status = heartbeat.get("status") or "missing"
+    heartbeat_age_minutes = heartbeat.get("age_minutes")
+    heartbeat_age_hours = round(float(heartbeat_age_minutes) / 60, 1) if heartbeat_age_minutes is not None else None
+    stale_after_minutes = 420
+    repo_url = "https://github.com/DRECHealthcare/drec-content-os"
     access_policy = access_policy_payload()
     current_status = "healthy" if heartbeat_status == "recent" else "needs_attention"
     likely_causes = []
@@ -3992,7 +3996,17 @@ async def scheduler_health_payload():
         "mode": "read_only_diagnostics",
         "status": current_status,
         "heartbeat": heartbeat,
+        "heartbeat_age_hours": heartbeat_age_hours,
+        "stale_after_minutes": stale_after_minutes,
+        "stale_after_hours": round(stale_after_minutes / 60, 1),
         "workflow_file": scheduler.get("workflow_file") or ".github/workflows/drec-scheduler-dry-run.yml",
+        "workflow_links": {
+            "actions": f"{repo_url}/actions",
+            "dry_run_workflow": f"{repo_url}/actions/workflows/drec-scheduler-dry-run.yml",
+            "nightly_metrics_workflow": f"{repo_url}/actions/workflows/drec-nightly-meta-metrics.yml",
+            "secrets": f"{repo_url}/settings/secrets/actions",
+            "variables": f"{repo_url}/settings/variables/actions",
+        },
         "required_secret": "DREC_ACCESS_TOKEN",
         "required_secret_scope": "admin token or legacy DREC_ACCESS_TOKEN because /operations/scheduler-heartbeat requires admin access",
         "optional_variable": "DREC_API_BASE_URL",
@@ -4001,6 +4015,7 @@ async def scheduler_health_payload():
         "checks": [
             "Open GitHub > Actions and confirm DREC Scheduler Dry Run is enabled.",
             "Open the latest DREC Scheduler Dry Run run and check whether it reached Record scheduler heartbeat.",
+            "Read the GitHub run summary; it now states the API URL, token presence, event, schedule, and dry-run safety line.",
             "Confirm repository secret DREC_ACCESS_TOKEN exists and is the current admin or legacy app token.",
             "Confirm repository variable DREC_API_BASE_URL is unset or set to https://drec-content-os-api.fly.dev.",
             "Run the workflow manually once; refresh Automation Status and expect the heartbeat to become recent.",
@@ -4046,10 +4061,16 @@ async def operations_scheduler_health_markdown(_: None = Depends(require_access_
         f"- Latest heartbeat: {heartbeat.get('status') or 'missing'}",
         f"- Last seen: {heartbeat.get('last_seen_at') or 'none'}",
         f"- Age minutes: {heartbeat.get('age_minutes')}",
+        f"- Age hours: {payload.get('heartbeat_age_hours')}",
+        f"- Stale threshold: {payload.get('stale_after_minutes')} minutes / {payload.get('stale_after_hours')} hours",
         f"- Detail: {heartbeat.get('detail') or 'No heartbeat detail available.'}",
         f"- Automation gate: {evidence.get('automation_status') or 'unknown'}",
         f"- Scheduler gate: {scheduler_gate.get('status') or 'unknown'} — {scheduler_gate.get('detail') or 'no detail'}",
         f"- Risk status: {evidence.get('risk_status') or 'unknown'}",
+        "",
+        "## GitHub Links",
+        "",
+        *markdown_list([f"{key}: {value}" for key, value in (payload.get("workflow_links") or {}).items()]),
         "",
         "## Required GitHub Secret",
         "",

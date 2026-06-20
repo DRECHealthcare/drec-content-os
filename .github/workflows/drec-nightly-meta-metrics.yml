@@ -39,7 +39,7 @@ jobs:
       - name: Check automation gate
         if: ${{ env.DREC_ACCESS_TOKEN != '' }}
         run: |
-          curl --fail --silent --show-error \
+          curl --fail --silent --show-error --retry 3 --retry-delay 10 --max-time 90 \
             --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
             "${DREC_API_BASE_URL}/automation/status"
 
@@ -50,14 +50,14 @@ jobs:
             echo "Dry-run metrics mode selected. Skipping live Meta readiness precheck."
             exit 0
           fi
-          curl --fail --silent --show-error \
+          curl --fail --silent --show-error --retry 3 --retry-delay 10 --max-time 90 \
             --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
             "${DREC_API_BASE_URL}/meta/readiness"
 
       - name: Run nightly Meta metrics job
         if: ${{ env.DREC_ACCESS_TOKEN != '' }}
         run: |
-          curl --fail --silent --show-error \
+          curl --fail --silent --show-error --retry 3 --retry-delay 10 --max-time 90 \
             --request POST \
             --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
             "${DREC_API_BASE_URL}/jobs/nightly-meta-metrics?dry_run=${DREC_METRICS_DRY_RUN}&limit=25&rollup=true"
@@ -65,7 +65,20 @@ jobs:
       - name: Record metrics scheduler heartbeat
         if: ${{ env.DREC_ACCESS_TOKEN != '' }}
         run: |
-          curl --fail --silent --show-error \
+          curl --fail --silent --show-error --retry 3 --retry-delay 10 --max-time 90 \
             --request POST \
             --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
             "${DREC_API_BASE_URL}/operations/scheduler-heartbeat?workflow=drec-nightly-meta-metrics&mode=${DREC_METRICS_MODE}"
+
+      - name: Write metrics run summary
+        if: ${{ always() }}
+        run: |
+          {
+            echo "## DREC Nightly Meta Metrics"
+            echo ""
+            echo "- API: ${DREC_API_BASE_URL}"
+            echo "- Mode: ${DREC_METRICS_MODE:-not_selected}"
+            echo "- Dry run: ${DREC_METRICS_DRY_RUN:-not_selected}"
+            echo "- Token configured: $([ -n "${DREC_ACCESS_TOKEN}" ] && echo yes || echo no)"
+            echo "- Safety: live metrics require both GitHub variable \`DREC_ENABLE_REAL_META_METRICS=true\` and Fly secret \`META_ENABLE_METRICS_JOB=true\`."
+          } >> "$GITHUB_STEP_SUMMARY"
