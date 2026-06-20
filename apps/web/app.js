@@ -595,6 +595,13 @@ Object.assign(uiZh, {
   "Could not download project completion audit.": "无法下载项目完成度审计。",
   "Project completion CSV downloaded.": "项目完成度 CSV 已下载。",
   "Could not download project completion CSV.": "无法下载项目完成度 CSV。",
+  "Choose the Notion carousel CSV first.": "请先选择 Notion Carousel CSV。",
+  "Previewing Notion carousel CSV...": "正在预览 Notion Carousel CSV...",
+  "Importing Notion carousel CSV...": "正在导入 Notion Carousel CSV...",
+  "Notion carousel CSV previewed.": "Notion Carousel CSV 已预览。",
+  "Notion carousel CSV imported.": "Notion Carousel CSV 已导入。",
+  "Could not preview Notion carousel CSV.": "无法预览 Notion Carousel CSV。",
+  "Could not import Notion carousel CSV.": "无法导入 Notion Carousel CSV。",
   "Monthly carousel doctor review pack downloaded.": "月度 Carousel 医生审核总包已下载。",
   "Could not download monthly carousel doctor review pack.": "无法下载月度 Carousel 医生审核总包。",
   "Monthly carousel doctor reply templates downloaded.": "月度医生回复模板已下载。",
@@ -2308,6 +2315,40 @@ function renderNotionMonthlyRefreshStatus(data) {
       </ul>
     </article>
   `;
+}
+
+function renderNotionCarouselCsvImport(data) {
+  const container = document.getElementById("notion-carousel-source");
+  if (!container) return;
+  const rows = data.planned || data.imported || [];
+  const skipped = data.skipped || [];
+  container.insertAdjacentHTML("beforeend", `
+    <article class="learning-card wide-learning" data-notion-csv-import-result>
+      <h3>${data.dry_run ? "Notion CSV Preview" : "Notion CSV Import"}</h3>
+      <p>${escapeHtml(data.message || "")}</p>
+      <div class="summary-row">
+        <span>Ready/imported ${escapeHtml(String(rows.length))}</span>
+        <span>Skipped ${escapeHtml(String(skipped.length))}</span>
+        <span>${escapeHtml(data.source || "notion_carousel_csv")}</span>
+      </div>
+      ${rows.length ? `
+        <h4>Rows</h4>
+        <ul>${rows.slice(0, 15).map((row) => `
+          <li><strong>${escapeHtml(row.topic_id || "")}</strong> ${escapeHtml(row.topic || "")} · ${escapeHtml(row.status || row.reason || "imported")}</li>
+        `).join("")}</ul>
+      ` : ""}
+      ${skipped.length ? `
+        <h4>Skipped</h4>
+        <ul>${skipped.slice(0, 15).map((row) => `
+          <li><strong>${escapeHtml(row.topic_id || row.row || "")}</strong> ${escapeHtml(row.reason || row.status || "")}</li>
+        `).join("")}</ul>
+      ` : ""}
+      ${Array.isArray(data.safety) && data.safety.length ? `
+        <h4>Safety</h4>
+        <ul>${data.safety.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+      ` : ""}
+    </article>
+  `);
 }
 
 async function loadNotionCarouselSource() {
@@ -6393,6 +6434,47 @@ document.getElementById("download-notion-carousel-template")?.addEventListener("
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download Notion intake CSV.";
   }
+});
+
+async function uploadNotionCarouselCsv({ dryRun }) {
+  const message = document.getElementById("plan-message");
+  const fileInput = document.getElementById("notion-carousel-csv-file");
+  const file = fileInput?.files?.[0];
+  if (!file) {
+    message.textContent = translateText("Choose the Notion carousel CSV first.");
+    return;
+  }
+  const body = new FormData();
+  body.append("file", file);
+  body.append("dry_run", dryRun ? "true" : "false");
+  body.append("create_asset", "true");
+  message.textContent = dryRun
+    ? translateText("Previewing Notion carousel CSV...")
+    : translateText("Importing Notion carousel CSV...");
+  try {
+    const data = await fetchForm("/notion/carousel-row/import-csv", body);
+    if (!dryRun) fileInput.value = "";
+    message.textContent = data.message || (dryRun
+      ? translateText("Notion carousel CSV previewed.")
+      : translateText("Notion carousel CSV imported."));
+    await loadNotionCarouselSource();
+    renderNotionCarouselCsvImport(data);
+    if (!dryRun) await Promise.all([loadBriefs(), loadAssets(), loadMonthlyCarouselStatusBoard(), loadProjectCompletionAudit()]);
+  } catch (error) {
+    message.textContent = error.message === "Access token required"
+      ? translateText("Set the access token first.")
+      : dryRun
+        ? translateText("Could not preview Notion carousel CSV.")
+        : translateText("Could not import Notion carousel CSV.");
+  }
+}
+
+document.getElementById("preview-notion-carousel-csv")?.addEventListener("click", async () => {
+  await uploadNotionCarouselCsv({ dryRun: true });
+});
+
+document.getElementById("import-notion-carousel-csv")?.addEventListener("click", async () => {
+  await uploadNotionCarouselCsv({ dryRun: false });
 });
 
 document.getElementById("save-all-assets").addEventListener("click", async () => {

@@ -19,6 +19,7 @@ from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, Upload
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
+from pydantic import ValidationError
 
 from .auth import (
     ROLE_SCOPES,
@@ -16770,6 +16771,185 @@ async def import_notion_carousel_row(row: NotionCarouselRowIn, _: None = Depends
         "asset": asset.get("item") if isinstance(asset, dict) else asset,
         "source": notion_carousel_source_payload(),
         "next_step": "If generating images, update the Notion row Carousel Image Status to In Progress before image work, then Ready for Review after completion.",
+    }
+
+
+def parse_bool_cell(value: str | None, default: bool = False):
+    text = (value or "").strip().lower()
+    if not text:
+        return default
+    return text in {"1", "true", "yes", "y", "create", "create_asset"}
+
+
+def csv_cell(row: dict, *names: str):
+    lowered = {str(key).strip().lower(): value for key, value in row.items()}
+    for name in names:
+        value = lowered.get(name.strip().lower())
+        if value is not None:
+            return str(value).strip()
+    return ""
+
+
+async def decode_notion_carousel_csv(file: UploadFile):
+    raw = await file.read()
+    if len(raw) > 2_000_000:
+        raise HTTPException(status_code=413, detail="Notion carousel CSV is too large. Keep imports below 2 MB.")
+    try:
+        return raw.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise HTTPException(status_code=400, detail="Notion carousel CSV must be UTF-8 text.") from exc
+
+
+async def notion_carousel_row_plan(row: NotionCarouselRowIn):
+    existing_brief = await find_existing_notion_brief(row.topic_id)
+    existing_asset = await find_existing_notion_asset(row.topic_id)
+    if (row.overall_status or "").strip().lower() == "published":
+        return {
+            "topic_id": row.topic_id,
+            "topic": row.mandarin_topic_title,
+            "status": "skipped",
+            "reason": "Overall Status is Published; row will not be imported.",
+            "existing_brief": bool(existing_brief),
+            "existing_asset": bool(existing_asset),
+        }
+    if existing_brief and existing_asset:
+        return {
+            "topic_id": row.topic_id,
+            "topic": row.mandarin_topic_title,
+            "status": "duplicate",
+            "reason": "Topic ID already has a local brief and asset.",
+            "existing_brief": True,
+            "existing_asset": True,
+        }
+    if existing_brief and row.create_asset and not existing_asset:
+        return {
+            "topic_id": row.topic_id,
+            "topic": row.mandarin_topic_title,
+            "status": "would_create_missing_asset",
+            "reason": "Topic ID already has a brief; import would create the missing asset from that brief.",
+            "existing_brief": True,
+            "existing_asset": False,
+        }
+    if existing_brief:
+        return {
+            "topic_id": row.topic_id,
+            "topic": row.mandarin_topic_title,
+            "status": "duplicate_brief",
+            "reason": "Topic ID already has a local brief; no duplicate will be created.",
+            "existing_brief": True,
+            "existing_asset": bool(existing_asset),
+        }
+    return {
+        "topic_id": row.topic_id,
+        "topic": row.mandarin_topic_title,
+        "status": "would_import",
+        "reason": "New Topic ID can be imported.",
+        "create_asset": row.create_asset,
+        "slide_count": len(parse_notion_carousel_slide_plan(row.carousel_slide_plan)),
+        "overall_status": row.overall_status or "",
+        "carousel_image_status": row.carousel_image_status or "",
+        "caption_status": row.caption_status or "",
+    }
+
+
+@app.post("/notion/carousel-row/import-csv")
+async def import_notion_carousel_csv(
+    file: UploadFile = File(...),
+    dry_run: bool = Form(True),
+    create_asset: bool = Form(True),
+    session: dict = Depends(require_review_access),
+):
+    csv_text = await decode_notion_carousel_csv(file)
+    reader = csv.DictReader(StringIO(csv_text))
+    required = {"topic_id", "mandarin_topic_title", "carousel_slide_plan"}
+    headers = {str(item).strip().lower() for item in (reader.fieldnames or [])}
+    if not required.issubset(headers):
+        missing = sorted(required - headers)
+        raise HTTPException(status_code=400, detail={"message": "Notion carousel CSV is missing required columns.", "missing": missing})
+
+    planned = []
+    imported = []
+    skipped = []
+    seen_topic_ids = set()
+    for index, csv_row in enumerate(reader, start=2):
+        row_type = csv_cell(csv_row, "row_type")
+        if row_type.lower() in {"instructions", "sample"}:
+            skipped.append({"row": index, "reason": f"Skipped {row_type} row."})
+            continue
+        topic_id = csv_cell(csv_row, "topic_id", "Topic ID")
+        if not topic_id:
+            skipped.append({"row": index, "reason": "Missing Topic ID."})
+            continue
+        if topic_id in seen_topic_ids:
+            skipped.append({"row": index, "topic_id": topic_id, "reason": "Duplicate Topic ID inside this CSV."})
+            continue
+        seen_topic_ids.add(topic_id)
+        mandarin_topic_title = csv_cell(csv_row, "mandarin_topic_title", "Mandarin Topic Title")
+        carousel_slide_plan = csv_cell(csv_row, "carousel_slide_plan", "Carousel Slide Plan")
+        if not mandarin_topic_title:
+            skipped.append({"row": index, "topic_id": topic_id, "reason": "Missing Mandarin Topic Title."})
+            continue
+        if not carousel_slide_plan:
+            skipped.append({"row": index, "topic_id": topic_id, "reason": "Missing Carousel Slide Plan."})
+            continue
+        try:
+            row = NotionCarouselRowIn(
+                topic_id=topic_id,
+                mandarin_topic_title=mandarin_topic_title,
+                english_topic_title=csv_cell(csv_row, "english_topic_title", "English Topic Title") or None,
+                content_stage=csv_cell(csv_row, "content_stage", "Content Stage") or None,
+                day=float(csv_cell(csv_row, "day", "Day")) if csv_cell(csv_row, "day", "Day") else None,
+                overall_status=csv_cell(csv_row, "overall_status", "Overall Status") or None,
+                carousel_image_status=csv_cell(csv_row, "carousel_image_status", "Carousel Image Status") or None,
+                caption_status=csv_cell(csv_row, "caption_status", "Caption Status") or None,
+                planned_posting_date=csv_cell(csv_row, "planned_posting_date", "Planned Posting Date") or None,
+                notion_url=csv_cell(csv_row, "notion_url", "Notion URL") or None,
+                carousel_slide_plan=carousel_slide_plan,
+                create_asset=parse_bool_cell(csv_cell(csv_row, "create_asset", "Create Asset"), create_asset),
+            )
+        except (ValidationError, ValueError) as exc:
+            skipped.append({"row": index, "topic_id": topic_id, "reason": f"Invalid row: {exc}"})
+            continue
+        plan = await notion_carousel_row_plan(row)
+        plan["row"] = index
+        if plan.get("status") in {"skipped", "duplicate", "duplicate_brief"}:
+            skipped.append(plan)
+            continue
+        if dry_run:
+            planned.append(plan)
+            continue
+        result = await import_notion_carousel_row(row, session)
+        imported.append(
+            {
+                "row": index,
+                "topic_id": topic_id,
+                "topic": row.mandarin_topic_title,
+                "skipped": bool(result.get("skipped")),
+                "reason": result.get("reason") or "Imported.",
+                "brief_id": (result.get("brief") or {}).get("id") if isinstance(result.get("brief"), dict) else None,
+                "asset_id": ((result.get("asset") or {}).get("id") if isinstance(result.get("asset"), dict) else None),
+            }
+        )
+    return {
+        "dry_run": dry_run,
+        "source": "notion_carousel_csv",
+        "planned_count": len(planned),
+        "imported_count": len(imported),
+        "skipped_count": len(skipped),
+        "planned": planned,
+        "imported": imported,
+        "skipped": skipped,
+        "message": (
+            f"Previewed {len(planned)} Notion row(s), {len(skipped)} skipped."
+            if dry_run
+            else f"Imported {len(imported)} Notion row(s), {len(skipped)} skipped."
+        ),
+        "safety": [
+            "CSV import uses Topic ID as the unique identifier.",
+            "Rows with Overall Status = Published are skipped.",
+            "Duplicate Topic IDs are skipped or used only to create a missing asset from an existing brief.",
+            "Importing does not approve, queue, schedule, publish, update Notion, or call Meta.",
+        ],
     }
 
 
