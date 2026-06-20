@@ -664,6 +664,21 @@ const requiredSnippets = [
     text: "weighted_operational_readiness",
   },
   {
+    name: "workflow scheduled queue summary",
+    file: "main",
+    text: "\"scheduled_queue\": scheduled_queue",
+  },
+  {
+    name: "workflow handoff next action after scheduling",
+    file: "main",
+    text: "Use publishing handoff",
+  },
+  {
+    name: "workflow handoff manual publish safety",
+    file: "main",
+    text: "publish manually only after human confirmation",
+  },
+  {
     name: "notion carousel source payload",
     file: "main",
     text: "NOTION_CAROUSEL_SOURCE",

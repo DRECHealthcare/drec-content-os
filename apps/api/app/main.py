@@ -25803,6 +25803,12 @@ async def project_unblock_board_payload():
 
 def build_workflow_guidance(loop):
     total_queue = total_queue_count(loop.get("queue"))
+    queue_counts = {
+        item.get("status", "unknown"): int(item.get("count") or 0)
+        for item in loop.get("queue") or []
+    }
+    scheduled_queue = queue_counts.get("scheduled", 0)
+    published_queue = queue_counts.get("published", 0)
     brief_count = int(loop.get("brief_count") or 0)
     asset_count = int(loop.get("asset_count") or 0)
     ready_asset_count = queue_ready_asset_count(loop.get("asset_status"))
@@ -25883,15 +25889,35 @@ def build_workflow_guidance(loop):
             )
         )
 
-    steps.append(
-        workflow_step(
-            "open" if total_queue else "locked",
-            "Review and schedule",
-            "Approve safe content, choose a planned publish time, then build the manual handoff.",
-            "review" if total_queue else "scheduler",
-            "Open Review" if total_queue else "Open Scheduler",
+    if scheduled_queue:
+        steps.append(
+            workflow_step(
+                "done",
+                "Review and schedule",
+                f"{scheduled_queue} item(s) are scheduled and ready for manual publishing handoff.",
+                "scheduler",
+                "Open Scheduler",
+            )
         )
-    )
+        steps.append(
+            workflow_step(
+                "open" if not published_queue else "done",
+                "Use publishing handoff",
+                "Download the handoff, publish manually only after human confirmation, then record the post ID.",
+                "scheduler",
+                "Build Handoff",
+            )
+        )
+    else:
+        steps.append(
+            workflow_step(
+                "open" if total_queue else "locked",
+                "Review and schedule",
+                "Approve safe content, choose a planned publish time, then build the manual handoff.",
+                "review" if total_queue else "scheduler",
+                "Open Review" if total_queue else "Open Scheduler",
+            )
+        )
 
     steps.append(
         workflow_step(
@@ -25929,6 +25955,8 @@ def build_workflow_guidance(loop):
             "brief_count": brief_count,
             "asset_count": asset_count,
             "queue_ready_asset_count": ready_asset_count,
+            "scheduled_queue": scheduled_queue,
+            "published_queue": published_queue,
             "media_count": media_count,
             "outcome_count": outcome_count,
         },
