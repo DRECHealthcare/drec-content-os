@@ -559,6 +559,16 @@ const requiredSnippets = [
     text: "latest_scheduler_heartbeat",
   },
   {
+    name: "scheduler heartbeat six hour threshold",
+    file: "main",
+    text: "SCHEDULER_HEARTBEAT_RECENT_MINUTES = 6 * 60",
+  },
+  {
+    name: "scheduler health uses heartbeat threshold constant",
+    file: "main",
+    text: "stale_after_minutes = SCHEDULER_HEARTBEAT_RECENT_MINUTES",
+  },
+  {
     name: "scheduler heartbeat route",
     file: "main",
     text: "operations_scheduler_heartbeat",

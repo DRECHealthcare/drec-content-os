@@ -72,6 +72,8 @@ DEFAULT_PLAN_TOPICS = [
     "给50岁以上华人的控糖复诊问题清单",
 ]
 
+SCHEDULER_HEARTBEAT_RECENT_MINUTES = 6 * 60
+
 LEARNING_TOPIC_LIBRARY = {
     "reel": "用60秒解释一个常被误会的血糖指标",
     "carousel": "用5页图文拆解一个代谢误区",
@@ -569,7 +571,7 @@ async def latest_scheduler_heartbeat():
     age_minutes = None
     if created_at:
         age_minutes = round((datetime.now(timezone.utc) - created_at).total_seconds() / 60, 1)
-    status = "recent" if age_minutes is not None and age_minutes <= 8 * 60 else "stale"
+    status = "recent" if age_minutes is not None and age_minutes <= SCHEDULER_HEARTBEAT_RECENT_MINUTES else "stale"
     return {
         "status": status,
         "last_seen_at": row.get("created_at"),
@@ -5039,7 +5041,7 @@ async def scheduler_health_payload():
     heartbeat_status = heartbeat.get("status") or "missing"
     heartbeat_age_minutes = heartbeat.get("age_minutes")
     heartbeat_age_hours = round(float(heartbeat_age_minutes) / 60, 1) if heartbeat_age_minutes is not None else None
-    stale_after_minutes = 420
+    stale_after_minutes = SCHEDULER_HEARTBEAT_RECENT_MINUTES
     repo_url = "https://github.com/DRECHealthcare/drec-content-os"
     access_policy = access_policy_payload()
     current_status = "healthy" if heartbeat_status == "recent" else "needs_attention"
