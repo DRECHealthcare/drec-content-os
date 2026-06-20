@@ -8899,6 +8899,9 @@ async def monthly_carousel_action_pack_payload():
             "production_worksheet": "/operations/monthly-carousel-production-design-worksheet.csv",
             "queue_readiness": "/operations/monthly-carousel-queue-readiness.zh.md",
             "monthly_queue_ready_action": "/operations/monthly-carousel-queue-ready",
+            "monthly_review_queue": "/operations/monthly-carousel-review-queue.csv",
+            "monthly_review_queue_decisions": "/operations/monthly-carousel-review-queue-decisions.csv",
+            "monthly_review_queue_decision_import": "/operations/import-monthly-carousel-review-queue-decisions",
             "status_board": "/operations/monthly-carousel-status-board.zh.md",
             "pre_schedule_gate": "/operations/pre-schedule-gate.md",
             "review_to_schedule": "/operations/review-to-schedule-pack.zh.md",
@@ -12786,6 +12789,82 @@ async def operations_review_queue_decisions_csv(_: None = Depends(require_access
     )
 
 
+async def monthly_carousel_queue_items():
+    assets = await monthly_carousel_asset_list()
+    monthly_asset_ids = {str(asset.get("id")) for asset in assets if asset.get("id")}
+    queue_items = await fetch_publish_queue_items(500)
+    return [item for item in queue_items if str(item.get("asset_id") or "") in monthly_asset_ids]
+
+
+@app.get("/operations/monthly-carousel-review-queue.csv")
+async def operations_monthly_carousel_review_queue_csv(_: None = Depends(require_access_token)):
+    review_items = [item for item in await monthly_carousel_queue_items() if item.get("status") == "draft"]
+    output = StringIO()
+    fieldnames = [
+        "queue_id",
+        "asset_id",
+        "topic_id",
+        "review_state",
+        "blockers",
+        "latest_feedback",
+        "latest_feedback_reason",
+        "status",
+        "compliance_status",
+        "channel",
+        "format",
+        "media_count",
+        "media_urls",
+        "caption",
+        "created_at",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    asset_lookup = {str(asset.get("id")): asset for asset in await monthly_carousel_asset_list()}
+    for item in review_items:
+        feedback = item.get("latest_feedback") or {}
+        state, blockers = review_queue_state(item)
+        asset = asset_lookup.get(str(item.get("asset_id") or "")) or {}
+        writer.writerow(
+            {
+                "queue_id": item.get("id") or "",
+                "asset_id": item.get("asset_id") or "",
+                "topic_id": monthly_carousel_topic_id(asset),
+                "review_state": state,
+                "blockers": "; ".join(blockers),
+                "latest_feedback": feedback.get("action") or "",
+                "latest_feedback_reason": feedback.get("reason") or "",
+                "status": item.get("status") or "",
+                "compliance_status": item.get("compliance_status") or "",
+                "channel": item.get("channel") or "",
+                "format": item.get("format") or "",
+                "media_count": len([url for url in item.get("media_urls") or [] if url]),
+                "media_urls": "\n".join([url for url in item.get("media_urls") or [] if url]),
+                "caption": item.get("caption") or "",
+                "created_at": item.get("created_at") or "",
+            }
+        )
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-review-queue.csv"'},
+    )
+
+
+@app.get("/operations/monthly-carousel-review-queue-decisions.csv")
+async def operations_monthly_carousel_review_queue_decisions_csv(_: None = Depends(require_access_token)):
+    review_items = [item for item in await monthly_carousel_queue_items() if item.get("status") == "draft"]
+    output = StringIO()
+    writer = csv.DictWriter(output, fieldnames=REVIEW_QUEUE_DECISION_FIELDS)
+    writer.writeheader()
+    for item in review_items:
+        writer.writerow(review_queue_decision_row(item))
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-review-queue-decisions.csv"'},
+    )
+
+
 def normalize_queue_review_action(value: str | None):
     text = (value or "").strip().lower().replace("_", " ").replace("-", " ")
     if not text:
@@ -12811,13 +12890,13 @@ async def decode_review_queue_decisions_csv(file: UploadFile):
         raise HTTPException(status_code=400, detail="Review queue decision CSV must be UTF-8 text.") from exc
 
 
-@app.post("/operations/import-review-queue-decisions")
-async def import_review_queue_decisions(
-    file: UploadFile = File(...),
-    dry_run: bool = Form(True),
-    session: dict = Depends(require_review_access),
+async def process_review_queue_decisions_csv(
+    csv_text: str,
+    dry_run: bool,
+    session: dict,
+    source_label: str = "review queue decision",
+    allowed_queue_ids: set[str] | None = None,
 ):
-    csv_text = await decode_review_queue_decisions_csv(file)
     reader = csv.DictReader(StringIO(csv_text))
     required = {"queue_id", "reviewer_action"}
     headers = set(reader.fieldnames or [])
@@ -12834,6 +12913,9 @@ async def import_review_queue_decisions(
         queue_id = (row.get("queue_id") or "").strip()
         if not queue_id:
             skipped.append({"row": index, "reason": "Missing queue_id."})
+            continue
+        if allowed_queue_ids is not None and queue_id not in allowed_queue_ids:
+            skipped.append({"row": index, "queue_id": queue_id, "reason": "Queue item is not part of the monthly carousel source of truth."})
             continue
         action = normalize_queue_review_action(row.get("reviewer_action"))
         reviewer_name = (row.get("reviewer_name") or "").strip()
@@ -12854,7 +12936,7 @@ async def import_review_queue_decisions(
         if action == "approve" and item.get("compliance_status") != "clear":
             skipped.append({"row": index, "queue_id": queue_id, "reason": "Approval requires compliance_status=clear."})
             continue
-        reason_parts = ["CSV queue review decision import."]
+        reason_parts = [f"{source_label} CSV queue review decision import."]
         if reviewer_name:
             reason_parts.append(f"Reviewer: {reviewer_name}.")
         if notes:
@@ -12895,9 +12977,9 @@ async def import_review_queue_decisions(
         "imported": imported,
         "skipped": skipped,
         "message": (
-            f"Previewed {len(planned)} review queue decision(s), {len(skipped)} skipped."
+            f"Previewed {len(planned)} {source_label} row(s), {len(skipped)} skipped."
             if dry_run
-            else f"Imported {len(imported)} review queue decision(s), {len(skipped)} skipped."
+            else f"Imported {len(imported)} {source_label} row(s), {len(skipped)} skipped."
         ),
         "safety": [
             "Importing queue review decisions does not schedule or publish items.",
@@ -12905,6 +12987,51 @@ async def import_review_queue_decisions(
             "Run the pre-schedule gate before using Schedule Approved.",
         ],
     }
+
+
+@app.post("/operations/import-review-queue-decisions")
+async def import_review_queue_decisions(
+    file: UploadFile = File(...),
+    dry_run: bool = Form(True),
+    session: dict = Depends(require_review_access),
+):
+    csv_text = await decode_review_queue_decisions_csv(file)
+    return await process_review_queue_decisions_csv(
+        csv_text=csv_text,
+        dry_run=dry_run,
+        session=session,
+        source_label="review queue decision",
+    )
+
+
+@app.post("/operations/import-monthly-carousel-review-queue-decisions")
+async def import_monthly_carousel_review_queue_decisions(
+    file: UploadFile = File(...),
+    dry_run: bool = Form(True),
+    session: dict = Depends(require_review_access),
+):
+    csv_text = await decode_review_queue_decisions_csv(file)
+    monthly_items = await monthly_carousel_queue_items()
+    allowed_queue_ids = {str(item.get("id")) for item in monthly_items if item.get("id")}
+    result = await process_review_queue_decisions_csv(
+        csv_text=csv_text,
+        dry_run=dry_run,
+        session=session,
+        source_label="monthly carousel review queue decision",
+        allowed_queue_ids=allowed_queue_ids,
+    )
+    result["source"] = "monthly_carousel_review_queue_decision"
+    result["message"] = (
+        f"Previewed {result.get('planned_count', 0)} monthly queue decision row(s), {result.get('skipped_count', 0)} skipped."
+        if dry_run
+        else f"Imported {result.get('imported_count', 0)} monthly queue decision row(s), {result.get('skipped_count', 0)} skipped."
+    )
+    result["safety"] = [
+        *result.get("safety", []),
+        "Monthly queue decision import accepts only queue items created from the Notion monthly carousel source of truth.",
+        "It still does not schedule, publish, or call Meta.",
+    ]
+    return result
 
 
 def editorial_qa_flags(item: dict):

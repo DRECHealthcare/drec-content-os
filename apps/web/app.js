@@ -607,6 +607,17 @@ Object.assign(uiZh, {
   "Monthly carousel ready items queued.": "月度 Carousel 可入队内容已加入队列。",
   "Could not preview monthly carousel queue.": "无法预览月度 Carousel 入队。",
   "Could not queue monthly carousel ready items.": "无法把月度 Carousel 内容加入队列。",
+  "Monthly carousel review queue downloaded.": "月度 Carousel 队列审核 CSV 已下载。",
+  "Could not download monthly carousel review queue.": "无法下载月度 Carousel 队列审核 CSV。",
+  "Monthly carousel queue decisions downloaded.": "月度 Carousel 队列决定表已下载。",
+  "Could not download monthly carousel queue decisions.": "无法下载月度 Carousel 队列决定表。",
+  "Choose a monthly carousel queue decision CSV first.": "请先选择月度 Carousel 队列决定 CSV。",
+  "Previewing monthly carousel queue decisions...": "正在预览月度 Carousel 队列决定...",
+  "Importing monthly carousel queue decisions...": "正在导入月度 Carousel 队列决定...",
+  "Monthly carousel queue decisions previewed.": "月度 Carousel 队列决定已预览。",
+  "Monthly carousel queue decisions imported.": "月度 Carousel 队列决定已导入。",
+  "Could not preview monthly carousel queue decisions.": "无法预览月度 Carousel 队列决定。",
+  "Could not import monthly carousel queue decisions.": "无法导入月度 Carousel 队列决定。",
   "Choose the monthly carousel production worksheet CSV first.": "请先选择月度 Carousel 制作设计表 CSV。",
   "Previewing monthly carousel production worksheet...": "正在预览月度 Carousel 制作设计表...",
   "Importing monthly carousel production worksheet...": "正在导入月度 Carousel 制作设计表...",
@@ -7274,6 +7285,26 @@ document.getElementById("download-review-queue-decisions")?.addEventListener("cl
   }
 });
 
+document.getElementById("download-monthly-carousel-review-queue")?.addEventListener("click", async () => {
+  const message = document.getElementById("queue-message");
+  try {
+    await downloadProtectedFile("/operations/monthly-carousel-review-queue.csv", "drec-monthly-carousel-review-queue.csv", "text/csv");
+    message.textContent = translateText("Monthly carousel review queue downloaded.");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download monthly carousel review queue.");
+  }
+});
+
+document.getElementById("download-monthly-carousel-review-queue-decisions")?.addEventListener("click", async () => {
+  const message = document.getElementById("queue-message");
+  try {
+    await downloadProtectedFile("/operations/monthly-carousel-review-queue-decisions.csv", "drec-monthly-carousel-review-queue-decisions.csv", "text/csv");
+    message.textContent = translateText("Monthly carousel queue decisions downloaded.");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download monthly carousel queue decisions.");
+  }
+});
+
 function renderReviewQueueDecisionPreview(data) {
   const container = document.getElementById("review-queue-decision-preview");
   if (!container) return;
@@ -7304,30 +7335,49 @@ function renderReviewQueueDecisionPreview(data) {
   `;
 }
 
-async function uploadReviewQueueDecisions({ dryRun }) {
+async function uploadReviewQueueDecisions({
+  dryRun,
+  source = "review_queue",
+  fileInputId = "review-queue-decisions-file",
+  allowPastedCsv = true,
+}) {
   const message = document.getElementById("queue-message");
-  const fileInput = document.getElementById("review-queue-decisions-file");
+  const isMonthly = source === "monthly_carousel";
+  const fileInput = document.getElementById(fileInputId);
   const textInput = document.getElementById("review-queue-decisions-text");
   const file = fileInput?.files?.[0];
-  const pastedCsv = textInput?.value?.trim() || "";
+  const pastedCsv = allowPastedCsv ? (textInput?.value?.trim() || "") : "";
   if (!file && !pastedCsv) {
-    message.textContent = "Choose a review queue decision CSV or paste queue decision CSV text first.";
+    message.textContent = isMonthly
+      ? translateText("Choose a monthly carousel queue decision CSV first.")
+      : "Choose a review queue decision CSV or paste queue decision CSV text first.";
     return;
   }
   const body = new FormData();
-  const uploadFile = file || new File([pastedCsv], "pasted-review-queue-decisions.csv", { type: "text/csv" });
+  const uploadFile = file || new File([pastedCsv], isMonthly ? "monthly-carousel-review-queue-decisions.csv" : "pasted-review-queue-decisions.csv", { type: "text/csv" });
   body.append("file", uploadFile);
   body.append("dry_run", dryRun ? "true" : "false");
-  message.textContent = dryRun ? "Previewing queue decisions..." : "Importing queue decisions...";
+  message.textContent = dryRun
+    ? (isMonthly ? translateText("Previewing monthly carousel queue decisions...") : "Previewing queue decisions...")
+    : (isMonthly ? translateText("Importing monthly carousel queue decisions...") : "Importing queue decisions...");
   try {
-    const data = await fetchForm("/operations/import-review-queue-decisions", body);
+    const endpoint = isMonthly
+      ? "/operations/import-monthly-carousel-review-queue-decisions"
+      : "/operations/import-review-queue-decisions";
+    const data = await fetchForm(endpoint, body);
     if (!dryRun) fileInput.value = "";
     if (!dryRun && !file && textInput) textInput.value = "";
-    message.textContent = data.message || (dryRun ? "Queue decisions previewed." : "Queue decisions imported.");
+    message.textContent = data.message || (dryRun
+      ? (isMonthly ? translateText("Monthly carousel queue decisions previewed.") : "Queue decisions previewed.")
+      : (isMonthly ? translateText("Monthly carousel queue decisions imported.") : "Queue decisions imported."));
     renderReviewQueueDecisionPreview(data);
     if (!dryRun) await Promise.all([loadPublishQueue(), loadPreScheduleGate(), loadLoopStatus()]);
   } catch (error) {
-    message.textContent = error.message === "Access token required" ? "Set the access token first." : dryRun ? "Could not preview queue decisions." : "Could not import queue decisions.";
+    message.textContent = error.message === "Access token required"
+      ? translateText("Set the access token first.")
+      : dryRun
+        ? (isMonthly ? translateText("Could not preview monthly carousel queue decisions.") : "Could not preview queue decisions.")
+        : (isMonthly ? translateText("Could not import monthly carousel queue decisions.") : "Could not import queue decisions.");
   }
 }
 
@@ -7337,6 +7387,24 @@ document.getElementById("preview-review-queue-decisions")?.addEventListener("cli
 
 document.getElementById("import-review-queue-decisions")?.addEventListener("click", async () => {
   await uploadReviewQueueDecisions({ dryRun: false });
+});
+
+document.getElementById("preview-monthly-carousel-review-queue-decisions")?.addEventListener("click", async () => {
+  await uploadReviewQueueDecisions({
+    dryRun: true,
+    source: "monthly_carousel",
+    fileInputId: "monthly-carousel-review-queue-decisions-file",
+    allowPastedCsv: false,
+  });
+});
+
+document.getElementById("import-monthly-carousel-review-queue-decisions")?.addEventListener("click", async () => {
+  await uploadReviewQueueDecisions({
+    dryRun: false,
+    source: "monthly_carousel",
+    fileInputId: "monthly-carousel-review-queue-decisions-file",
+    allowPastedCsv: false,
+  });
 });
 
 document.getElementById("preview-review-queue-decisions-text")?.addEventListener("click", async () => {
