@@ -8898,6 +8898,7 @@ async def monthly_carousel_action_pack_payload():
             "doctor_worksheet": "/operations/monthly-carousel-doctor-decision-worksheet.csv",
             "production_worksheet": "/operations/monthly-carousel-production-design-worksheet.csv",
             "queue_readiness": "/operations/monthly-carousel-queue-readiness.zh.md",
+            "monthly_queue_ready_action": "/operations/monthly-carousel-queue-ready",
             "status_board": "/operations/monthly-carousel-status-board.zh.md",
             "pre_schedule_gate": "/operations/pre-schedule-gate.md",
             "review_to_schedule": "/operations/review-to-schedule-pack.zh.md",
@@ -8978,6 +8979,76 @@ async def operations_monthly_carousel_action_pack_zh(_: None = Depends(require_a
         media_type="text/markdown",
         headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-action-pack-zh.md"'},
     )
+
+
+@app.post("/operations/monthly-carousel-queue-ready")
+async def operations_monthly_carousel_queue_ready(
+    dry_run: bool = True,
+    _: None = Depends(require_schedule_access),
+):
+    payload = await monthly_carousel_queue_readiness_payload()
+    results = []
+    for item in payload.get("items") or []:
+        asset_id = item.get("asset_id") or ""
+        if not item.get("can_queue"):
+            results.append(
+                {
+                    "asset_id": asset_id,
+                    "topic_id": item.get("topic_id") or "",
+                    "topic": item.get("topic") or "",
+                    "status": "skipped",
+                    "gate_status": item.get("gate_status") or "",
+                    "detail": item.get("next_action") or "Not ready to queue.",
+                    "blockers": item.get("blockers") or [],
+                }
+            )
+            continue
+        if dry_run:
+            results.append(
+                {
+                    "asset_id": asset_id,
+                    "topic_id": item.get("topic_id") or "",
+                    "topic": item.get("topic") or "",
+                    "status": "would_queue",
+                    "gate_status": item.get("gate_status") or "",
+                    "detail": "Dry run only; no queue item created.",
+                    "blockers": [],
+                }
+            )
+            continue
+        queued = await queue_asset(asset_id)
+        results.append(
+            {
+                "asset_id": asset_id,
+                "topic_id": item.get("topic_id") or "",
+                "topic": item.get("topic") or "",
+                "queue_id": (queued.get("item") or {}).get("id"),
+                "status": "reused" if queued.get("reused") else "queued",
+                "gate_status": item.get("gate_status") or "",
+                "detail": "Monthly carousel item added to publishing queue. Queue review and pre-schedule gate still apply.",
+                "blockers": [],
+            }
+        )
+    return {
+        "dry_run": dry_run,
+        "processed": len(results),
+        "would_queue": sum(1 for item in results if item.get("status") == "would_queue"),
+        "queued": sum(1 for item in results if item.get("status") == "queued"),
+        "reused": sum(1 for item in results if item.get("status") == "reused"),
+        "skipped": sum(1 for item in results if item.get("status") == "skipped"),
+        "items": results,
+        "message": (
+            f"Previewed monthly queue readiness: {sum(1 for item in results if item.get('status') == 'would_queue')} would queue, {sum(1 for item in results if item.get('status') == 'skipped')} skipped."
+            if dry_run
+            else f"Queued {sum(1 for item in results if item.get('status') == 'queued')} monthly item(s), reused {sum(1 for item in results if item.get('status') == 'reused')}, skipped {sum(1 for item in results if item.get('status') == 'skipped')}."
+        ),
+        "safety": [
+            "This endpoint only processes current monthly carousel assets from the Notion source of truth.",
+            "It queues only items that pass doctor approval, safety clear, final media, visual QA, and copy detector gates.",
+            "It does not approve, schedule, publish, or call Meta.",
+            "Queue review and the pre-schedule gate still apply before scheduling.",
+        ],
+    }
 
 
 def doctor_approval_item_lines(item: dict, index: int):

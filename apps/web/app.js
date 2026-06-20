@@ -274,6 +274,8 @@ const uiZh = {
   "Monthly Production CSV": "月度制作 CSV",
   "Preview Monthly Production": "预览月度制作表",
   "Import Monthly Production": "导入月度制作表",
+  "预览月度入队": "预览月度入队",
+  "月度内容加入队列": "月度内容加入队列",
   "Design CSV": "设计 CSV",
   "Review CSV": "审核 CSV",
   "Media CSV": "媒体 CSV",
@@ -601,6 +603,10 @@ Object.assign(uiZh, {
   "Could not download monthly carousel production worksheet.": "无法下载月度 Carousel 制作设计表。",
   "Monthly carousel queue readiness downloaded.": "月度 Carousel 入队检查表已下载。",
   "Could not download monthly carousel queue readiness.": "无法下载月度 Carousel 入队检查表。",
+  "Monthly carousel queue preview complete.": "月度 Carousel 入队预览完成。",
+  "Monthly carousel ready items queued.": "月度 Carousel 可入队内容已加入队列。",
+  "Could not preview monthly carousel queue.": "无法预览月度 Carousel 入队。",
+  "Could not queue monthly carousel ready items.": "无法把月度 Carousel 内容加入队列。",
   "Choose the monthly carousel production worksheet CSV first.": "请先选择月度 Carousel 制作设计表 CSV。",
   "Previewing monthly carousel production worksheet...": "正在预览月度 Carousel 制作设计表...",
   "Importing monthly carousel production worksheet...": "正在导入月度 Carousel 制作设计表...",
@@ -5657,6 +5663,32 @@ function renderAssetMediaAttachmentPreview(data) {
   `;
 }
 
+function renderMonthlyQueueResult(data) {
+  const container = document.getElementById("asset-media-attachment-preview");
+  if (!container) return;
+  const rows = data.items || [];
+  container.innerHTML = `
+    <article class="insight-card">
+      <strong>${data.dry_run ? "Monthly Queue Preview" : "Monthly Queue Result"}</strong>
+      <small>${escapeHtml(data.would_queue || 0)} would queue · ${escapeHtml(data.queued || 0)} queued · ${escapeHtml(data.reused || 0)} reused · ${escapeHtml(data.skipped || 0)} skipped</small>
+      ${rows.length ? `
+        <ul>${rows.slice(0, 15).map((row) => `
+          <li>
+            <strong>${escapeHtml(row.topic_id || row.asset_id || "")}</strong>
+            ${escapeHtml(row.status || "")}
+            ${row.gate_status ? ` · ${escapeHtml(row.gate_status)}` : ""}
+            ${row.detail ? ` · ${escapeHtml(row.detail)}` : ""}
+          </li>
+        `).join("")}</ul>
+      ` : ""}
+      ${Array.isArray(data.safety) && data.safety.length ? `
+        <h4>Safety</h4>
+        <ul>${data.safety.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+      ` : ""}
+    </article>
+  `;
+}
+
 async function uploadAssetReviewDecisions({ dryRun, fileInputId = "asset-review-decisions-file", allowPastedCsv = true, source = "review" }) {
   const message = document.getElementById("media-message");
   const fileInput = document.getElementById(fileInputId);
@@ -5815,6 +5847,27 @@ async function uploadProductionDesignWorksheet({
   }
 }
 
+async function runMonthlyCarouselQueueReady({ dryRun }) {
+  const message = document.getElementById("media-message");
+  message.textContent = dryRun ? "Previewing monthly queue..." : "Queueing monthly ready items...";
+  try {
+    const data = await fetchJson(`/operations/monthly-carousel-queue-ready?dry_run=${dryRun ? "true" : "false"}`, {
+      method: "POST",
+    });
+    message.textContent = data.message || (dryRun
+      ? translateText("Monthly carousel queue preview complete.")
+      : translateText("Monthly carousel ready items queued."));
+    renderMonthlyQueueResult(data);
+    if (!dryRun) await Promise.all([loadAssets(), loadMonthlyCarouselStatusBoard(), loadPreScheduleGate(), loadLoopStatus()]);
+  } catch (error) {
+    message.textContent = error.message === "Access token required"
+      ? translateText("Set the access token first.")
+      : dryRun
+        ? translateText("Could not preview monthly carousel queue.")
+        : translateText("Could not queue monthly carousel ready items.");
+  }
+}
+
 document.getElementById("preview-asset-review-decisions")?.addEventListener("click", async () => {
   await uploadAssetReviewDecisions({ dryRun: true });
 });
@@ -5871,6 +5924,14 @@ document.getElementById("preview-production-replies")?.addEventListener("click",
 
 document.getElementById("import-production-replies")?.addEventListener("click", async () => {
   await importProductionReplies({ dryRun: false });
+});
+
+document.getElementById("preview-monthly-carousel-queue-ready")?.addEventListener("click", async () => {
+  await runMonthlyCarouselQueueReady({ dryRun: true });
+});
+
+document.getElementById("queue-monthly-carousel-ready")?.addEventListener("click", async () => {
+  await runMonthlyCarouselQueueReady({ dryRun: false });
 });
 
 document.getElementById("preview-monthly-carousel-production-worksheet")?.addEventListener("click", async () => {
