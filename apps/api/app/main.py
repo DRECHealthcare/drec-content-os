@@ -14158,6 +14158,72 @@ def notion_monthly_refresh_workbench_payload():
     }
 
 
+async def notion_monthly_refresh_status_payload():
+    workbench = notion_monthly_refresh_workbench_payload()
+    assets = await monthly_carousel_asset_list()
+    active_start = datetime.fromisoformat(workbench["active_cycle_start"]).replace(tzinfo=MYT)
+    active_start_utc = active_start.astimezone(timezone.utc)
+    topic_ids = [monthly_carousel_topic_id(asset) for asset in assets if monthly_carousel_topic_id(asset)]
+    created_dates = [parse_datetime(asset.get("created_at")) for asset in assets]
+    created_dates = [date for date in created_dates if date]
+    imported_since_refresh = [
+        asset for asset in assets
+        if (parse_datetime(asset.get("created_at")) or datetime.min.replace(tzinfo=timezone.utc)) >= active_start_utc
+    ]
+    image_status_counts: dict[str, int] = {}
+    overall_status_counts: dict[str, int] = {}
+    caption_status_counts: dict[str, int] = {}
+    for asset in assets:
+        notion_source = ((asset.get("metadata") or {}).get("notion_source") or {})
+        image_status = notion_source.get("carousel_image_status") or "unknown"
+        overall_status = notion_source.get("overall_status") or "unknown"
+        caption_status = notion_source.get("caption_status") or "unknown"
+        image_status_counts[image_status] = image_status_counts.get(image_status, 0) + 1
+        overall_status_counts[overall_status] = overall_status_counts.get(overall_status, 0) + 1
+        caption_status_counts[caption_status] = caption_status_counts.get(caption_status, 0) + 1
+    if workbench.get("status") == "refresh_due_today":
+        status = "refresh_due_today"
+        next_action = "Open the Notion database today, confirm refreshed rows, then import/sync existing rows by Topic ID."
+    elif not assets:
+        status = "no_local_monthly_assets"
+        next_action = "Import/sync the current Notion monthly rows before generating carousel images or captions."
+    elif not imported_since_refresh:
+        status = "needs_rescan_after_refresh"
+        next_action = "Re-scan Notion because the current monthly cycle started after the latest local monthly import."
+    else:
+        status = "local_cycle_active"
+        next_action = "Continue the visible monthly gates: doctor review, production QA, queue review, schedule, handoff, and learning."
+    latest_local_import_at = max(created_dates).isoformat() if created_dates else None
+    return {
+        "source": notion_carousel_source_payload(),
+        "status": status,
+        "generated_at_myt": workbench.get("generated_at_myt"),
+        "active_cycle_start": workbench.get("active_cycle_start"),
+        "next_refresh_date": workbench.get("next_refresh_date"),
+        "local_monthly_asset_count": len(assets),
+        "imported_since_refresh_count": len(imported_since_refresh),
+        "latest_local_import_at": latest_local_import_at,
+        "topic_ids": topic_ids,
+        "image_status_counts": image_status_counts,
+        "overall_status_counts": overall_status_counts,
+        "caption_status_counts": caption_status_counts,
+        "next_action": next_action,
+        "evidence": [
+            f"Active monthly cycle starts on {workbench.get('active_cycle_start')} MYT.",
+            f"{len(assets)} non-published local monthly carousel asset(s) are visible.",
+            f"{len(imported_since_refresh)} local monthly asset(s) were created after this cycle start.",
+            "This check is read-only and does not query, edit, create, schedule, publish, or call Meta.",
+        ],
+        "safety": [
+            "Use Topic ID as the unique identifier.",
+            "Do not create duplicate Notion rows.",
+            "Skip Notion rows where Overall Status = Published.",
+            "Before image generation, set Carousel Image Status to In Progress in Notion.",
+            "After images are ready, set Carousel Image Status to Ready for Review in Notion.",
+        ],
+    }
+
+
 def notion_monthly_refresh_workbench_zh_markdown(payload: dict):
     source = payload["source"]
     lines = [
@@ -14476,6 +14542,11 @@ async def notion_carousel_image_workflow(_: None = Depends(require_access_token)
 @app.get("/notion/monthly-refresh-workbench")
 async def notion_monthly_refresh_workbench(_: None = Depends(require_access_token)):
     return notion_monthly_refresh_workbench_payload()
+
+
+@app.get("/notion/monthly-refresh-status")
+async def notion_monthly_refresh_status(_: None = Depends(require_access_token)):
+    return await notion_monthly_refresh_status_payload()
 
 
 @app.get("/notion/monthly-refresh-workbench.md")

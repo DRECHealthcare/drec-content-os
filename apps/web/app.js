@@ -2248,12 +2248,43 @@ function renderNotionCarouselSource(data) {
   `;
 }
 
+function renderNotionMonthlyRefreshStatus(data) {
+  const statusLabel = {
+    refresh_due_today: "今天是刷新日，请先复核 Notion",
+    no_local_monthly_assets: "本地还没有月度内容",
+    needs_rescan_after_refresh: "建议重新扫描 Notion",
+    local_cycle_active: "本轮月度内容已在系统内",
+  }[data.status] || data.status || "未知";
+  const topicIds = data.topic_ids || [];
+  return `
+    <article class="learning-card wide-learning" data-notion-refresh-status>
+      <h3>Notion 月度刷新状态</h3>
+      <p>${escapeHtml(statusLabel)}</p>
+      <small>本轮开始 ${escapeHtml(data.active_cycle_start || "")} · 下次刷新 ${escapeHtml(data.next_refresh_date || "")}</small>
+      <div class="summary-row">
+        <span>本地月度内容 ${Number(data.local_monthly_asset_count || 0)}</span>
+        <span>本轮导入 ${Number(data.imported_since_refresh_count || 0)}</span>
+        <span>${escapeHtml(data.status || "checking")}</span>
+      </div>
+      <ul>
+        <li><strong>最新本地导入</strong> ${escapeHtml(data.latest_local_import_at || "暂无")}</li>
+        <li><strong>Topic ID</strong> ${escapeHtml(topicIds.slice(0, 20).join(", ") || "暂无")}</li>
+        <li><strong>下一步</strong> ${escapeHtml(data.next_action || "")}</li>
+      </ul>
+    </article>
+  `;
+}
+
 async function loadNotionCarouselSource() {
   const container = document.getElementById("notion-carousel-source");
   if (!container) return;
   try {
-    const data = await fetchJson("/notion/carousel-source");
+    const [data, refreshStatus] = await Promise.all([
+      fetchJson("/notion/carousel-source"),
+      fetchJson("/notion/monthly-refresh-status"),
+    ]);
     renderNotionCarouselSource(data);
+    container.insertAdjacentHTML("beforeend", renderNotionMonthlyRefreshStatus(refreshStatus));
   } catch {
     container.innerHTML = '<p class="status-note">Set the access token to load Notion source.</p>';
   }
