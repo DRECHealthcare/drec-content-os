@@ -3324,6 +3324,11 @@ const requiredSnippets = [
     text: "data-simple-download-handoff",
   },
   {
+    name: "web simple operator scheduled queue fallback",
+    file: "web",
+    text: "loopScheduledQueue",
+  },
+  {
     name: "web simple operator reel handoff action",
     file: "web",
     text: "data-simple-download-reel",

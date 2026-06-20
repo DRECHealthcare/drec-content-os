@@ -2432,11 +2432,16 @@ function renderSimpleOperator(data) {
   const container = document.getElementById("simple-operator");
   if (!container) return;
   const summary = data.workflow?.summary || data.summary || {};
+  const loopQueue = Array.isArray(data.loop?.queue) ? data.loop.queue : [];
+  const loopQueueTotal = loopQueue.reduce((total, row) => total + Number(row.count || 0), 0);
+  const loopScheduledQueue = loopQueue
+    .filter((row) => String(row.status || "").toLowerCase() === "scheduled")
+    .reduce((total, row) => total + Number(row.count || 0), 0);
   const completion = data.workflow?.completion || data.completion || {};
   const nextAction = data.workflow?.next_action || data.next_action || {};
   const readyAssets = Number(summary.queue_ready_asset_count || 0);
-  const queueTotal = Number(summary.queue_total || 0);
-  const scheduledQueue = Number(summary.scheduled_queue || 0);
+  const queueTotal = Number(summary.queue_total || loopQueueTotal || 0);
+  const scheduledQueue = Number(summary.scheduled_queue || loopScheduledQueue || 0);
   const percent = Number(completion.percent || 0);
   const firstCycle = Number(completion.first_cycle_percent || 0);
   let title = "今天只看这里";
