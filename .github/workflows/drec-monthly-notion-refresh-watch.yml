@@ -1,0 +1,71 @@
+name: DREC Monthly Notion Refresh Watch
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 09:15 MYT on the 19th, after the Notion monthly content refresh window.
+    - cron: "15 1 19 * *"
+    # Follow-up check the next morning in case the database was refreshed late.
+    - cron: "15 1 20 * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: drec-monthly-notion-refresh-watch
+  cancel-in-progress: false
+
+jobs:
+  monthly-refresh-watch:
+    runs-on: ubuntu-latest
+    env:
+      DREC_API_BASE_URL: ${{ vars.DREC_API_BASE_URL || 'https://drec-content-os-api.fly.dev' }}
+      DREC_ACCESS_TOKEN: ${{ secrets.DREC_ACCESS_TOKEN }}
+    steps:
+      - name: Skip when access token is missing
+        if: ${{ env.DREC_ACCESS_TOKEN == '' }}
+        run: |
+          echo "DREC_ACCESS_TOKEN is not configured. Skipping monthly Notion refresh watch."
+
+      - name: Check monthly Notion refresh status
+        if: ${{ env.DREC_ACCESS_TOKEN != '' }}
+        run: |
+          curl --fail --silent --show-error --retry 3 --retry-delay 10 --max-time 120 \
+            --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
+            "${DREC_API_BASE_URL}/notion/monthly-refresh-status" \
+            | tee monthly-refresh-status.json
+
+      - name: Check monthly carousel acceptance audit
+        if: ${{ env.DREC_ACCESS_TOKEN != '' }}
+        run: |
+          curl --fail --silent --show-error --retry 3 --retry-delay 10 --max-time 120 \
+            --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
+            "${DREC_API_BASE_URL}/operations/monthly-carousel-acceptance-audit" \
+            | tee monthly-carousel-acceptance-audit.json
+
+      - name: Run monthly carousel production smoke test
+        if: ${{ env.DREC_ACCESS_TOKEN != '' }}
+        run: |
+          curl --fail --silent --show-error --retry 3 --retry-delay 10 --max-time 180 \
+            --request POST \
+            --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
+            "${DREC_API_BASE_URL}/operations/monthly-carousel-production-smoke-test" \
+            | tee monthly-carousel-production-smoke-test.json
+
+      - name: Write refresh watch summary
+        if: ${{ always() }}
+        run: |
+          {
+            echo "## DREC Monthly Notion Refresh Watch"
+            echo ""
+            echo "- API: ${DREC_API_BASE_URL}"
+            echo "- Event: ${GITHUB_EVENT_NAME}"
+            echo "- Schedule: ${GITHUB_EVENT_SCHEDULE:-manual}"
+            echo "- Token configured: $([ -n "${DREC_ACCESS_TOKEN}" ] && echo yes || echo no)"
+            echo "- Safety: read-only monthly source checks only; this workflow does not approve, queue, schedule, publish, update Notion, or call Meta."
+            echo ""
+            echo "Checks:"
+            echo "- /notion/monthly-refresh-status"
+            echo "- /operations/monthly-carousel-acceptance-audit"
+            echo "- /operations/monthly-carousel-production-smoke-test"
+          } >> "$GITHUB_STEP_SUMMARY"

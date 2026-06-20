@@ -643,6 +643,26 @@ async def meta_setup_checklist(_: None = Depends(require_access_token)):
         ],
         "safety": "The workflow defaults to dry-run. Live ingestion requires both the GitHub variable and the Fly META_ENABLE_METRICS_JOB lock to be enabled, and the API still checks Meta readiness.",
     }
+    monthly_notion_refresh_watch = {
+        "status": "armed_read_only" if scheduler_heartbeat.get("status") in {"recent", "stale"} else "needs_first_run",
+        "workflow_file": ".github/workflows/drec-monthly-notion-refresh-watch.yml",
+        "schedule": "monthly on the 19th and 20th at 09:15 Asia/Kuala_Lumpur",
+        "required_github_secrets": ["DREC_ACCESS_TOKEN"],
+        "optional_github_variables": ["DREC_API_BASE_URL"],
+        "default_mode": "read_only",
+        "checks": [
+            "/notion/monthly-refresh-status",
+            "/operations/monthly-carousel-acceptance-audit",
+            "/operations/monthly-carousel-production-smoke-test",
+        ],
+        "steps": [
+            "Keep using the same DREC_ACCESS_TOKEN repository secret as the dry-run scheduler.",
+            "Run DREC Monthly Notion Refresh Watch manually once after installation.",
+            "On each monthly 19th refresh, confirm the Action summary shows refreshed rows, no duplicate Topic IDs, and passing production smoke test.",
+            "If the 19th check is early, the 20th follow-up check catches late Notion refreshes.",
+        ],
+        "safety": "This workflow is read-only. It does not approve, queue, schedule, publish, update Notion, or call Meta.",
+    }
     meta_ready = readiness.get("overall_status") == "ready_for_worker_testing"
     security_ready = bool(security.get("rls_hardening_ready"))
     heartbeat_recent = scheduler_heartbeat.get("status") == "recent"
@@ -705,6 +725,7 @@ async def meta_setup_checklist(_: None = Depends(require_access_token)):
         "oauth_guide": oauth_guide,
         "scheduler_setup": scheduler_setup,
         "nightly_metrics_scheduler": nightly_metrics_scheduler,
+        "monthly_notion_refresh_watch": monthly_notion_refresh_watch,
         "activation_switchboard": activation_switchboard,
         "live_ready": live_ready,
         "live_sequence": [

@@ -2671,11 +2671,14 @@ function renderMetaSetupChecklist(data) {
   latestMetaOAuthUrl = oauth.oauth_dialog_url || oauth.oauth_dialog_url_template || "";
   const scheduler = data.scheduler_setup || {};
   const nightlyScheduler = data.nightly_metrics_scheduler || {};
+  const monthlyRefreshWatch = data.monthly_notion_refresh_watch || {};
   const githubSecrets = scheduler.required_github_secrets || [];
   const githubVariables = scheduler.optional_github_variables || [];
   const schedulerSteps = scheduler.steps || [];
   const schedulerHeartbeat = scheduler.heartbeat || {};
   const nightlySteps = nightlyScheduler.steps || [];
+  const monthlyRefreshSteps = monthlyRefreshWatch.steps || [];
+  const monthlyRefreshChecks = monthlyRefreshWatch.checks || [];
   const switchboard = data.activation_switchboard || [];
   const liveSequence = data.live_sequence || [];
   container.innerHTML = `
@@ -2729,6 +2732,19 @@ function renderMetaSetupChecklist(data) {
       </ul>
       <ol>${nightlySteps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol>
       <p>${escapeHtml(nightlyScheduler.safety || "")}</p>
+    </article>
+    <article class="learning-card wide-learning">
+      <h3>Monthly Notion Refresh Watch</h3>
+      <p>${escapeHtml(monthlyRefreshWatch.status || "not_checked")}</p>
+      <small>${escapeHtml(monthlyRefreshWatch.workflow_file || ".github/workflows/drec-monthly-notion-refresh-watch.yml")}</small>
+      <ul>
+        <li><strong>Schedule</strong> ${escapeHtml(monthlyRefreshWatch.schedule || "monthly after the 19th refresh")}</li>
+        <li><strong>Default</strong> ${escapeHtml(monthlyRefreshWatch.default_mode || "read_only")}</li>
+        <li><strong>Secret</strong> ${escapeHtml((monthlyRefreshWatch.required_github_secrets || []).join(", ") || "DREC_ACCESS_TOKEN")}</li>
+      </ul>
+      <ol>${monthlyRefreshSteps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol>
+      <small>${escapeHtml(monthlyRefreshChecks.join(" · "))}</small>
+      <p>${escapeHtml(monthlyRefreshWatch.safety || "")}</p>
     </article>
     <article class="learning-card wide-learning">
       <h3>Meta Activation Switchboard</h3>

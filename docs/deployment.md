@@ -244,6 +244,37 @@ The workflow checks:
 - Nightly Meta metrics in dry-run mode at 02:30 Asia/Kuala_Lumpur
 - Automation status and content risk audit gates
 
+## GitHub Monthly Notion Refresh Watch
+
+The repository includes
+`.github/workflows/drec-monthly-notion-refresh-watch.yml`. It runs on the 19th
+and 20th of each month at 09:15 Asia/Kuala_Lumpur so the system checks the
+Notion monthly carousel source after the expected refresh window and again the
+next morning in case the refresh is late.
+
+It uses the same GitHub Actions secret as the dry-run scheduler:
+
+```text
+DREC_ACCESS_TOKEN
+```
+
+Optional repository variable:
+
+```text
+DREC_API_BASE_URL=https://drec-content-os-api.fly.dev
+```
+
+The workflow is read-only. It calls:
+
+- `/notion/monthly-refresh-status`
+- `/operations/monthly-carousel-acceptance-audit`
+- `/operations/monthly-carousel-production-smoke-test`
+
+It does not approve content, create queue items, schedule posts, publish, update
+Notion, or call Meta. Use the Action summary after the 19th refresh to confirm
+there are no duplicate Topic IDs, current-cycle rows are visible, and generated
+carousel previews still pass structural smoke tests.
+
 ## GitHub Nightly Meta Metrics Scheduler
 
 The repository also includes `.github/workflows/drec-nightly-meta-metrics.yml`.
