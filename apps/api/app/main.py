@@ -23788,6 +23788,7 @@ async def publishing_closeout_payload(limit: int = 50):
     raw_by_post = {str(row.get("external_post_id")): row for row in raw_rows if row.get("external_post_id")}
     outcome_by_post = {str(row.get("post_id")): row for row in outcome_rows if row.get("post_id")}
     scheduled_ready = []
+    scheduled_blocked = []
     waiting_for_post_id = []
     waiting_for_metrics = []
     waiting_for_rollup = []
@@ -23796,7 +23797,15 @@ async def publishing_closeout_payload(limit: int = 50):
         status = item.get("status")
         external_id = str(item.get("external_post_id") or "")
         if status == "scheduled" and item.get("compliance_status") == "clear":
-            scheduled_ready.append(item)
+            handoff_blockers = []
+            if not item.get("planned_slot"):
+                handoff_blockers.append("Needs a planned publish time.")
+            handoff_blockers.extend(visual_media_blockers(item))
+            enriched = {**item, "handoff_blockers": handoff_blockers}
+            if handoff_blockers:
+                scheduled_blocked.append(enriched)
+            else:
+                scheduled_ready.append(enriched)
             continue
         if status == "published" and not external_id:
             waiting_for_post_id.append(item)
@@ -23859,12 +23868,14 @@ async def publishing_closeout_payload(limit: int = 50):
         "next_action": next_action,
         "counts": {
             "scheduled_ready": len(scheduled_ready),
+            "scheduled_blocked": len(scheduled_blocked),
             "waiting_for_post_id": len(waiting_for_post_id),
             "waiting_for_metrics": len(waiting_for_metrics),
             "waiting_for_rollup": len(waiting_for_rollup),
             "complete": len(complete),
         },
         "scheduled_ready": scheduled_ready[:10],
+        "scheduled_blocked": scheduled_blocked[:10],
         "waiting_for_post_id": waiting_for_post_id[:10],
         "waiting_for_metrics": waiting_for_metrics[:10],
         "waiting_for_rollup": waiting_for_rollup[:10],
@@ -23920,6 +23931,7 @@ async def operations_publishing_closeout_zh(_: None = Depends(require_access_tok
         "## 当前数量",
         "",
         f"- 已排程、可人工发布：{counts.get('scheduled_ready', 0)}",
+        f"- 已排程但仍有阻碍：{counts.get('scheduled_blocked', 0)}",
         f"- 已标记发布但缺外部帖 ID：{counts.get('waiting_for_post_id', 0)}",
         f"- 已发布但缺表现数据：{counts.get('waiting_for_metrics', 0)}",
         f"- 已录表现数据但未汇总学习：{counts.get('waiting_for_rollup', 0)}",
@@ -23949,6 +23961,18 @@ async def operations_publishing_closeout_zh(_: None = Depends(require_access_tok
             ])
     else:
         lines.extend(["目前没有已发布但缺表现数据的帖子。", ""])
+    blocked = payload.get("scheduled_blocked") or []
+    if blocked:
+        lines.extend(["## 已排程但暂不能发布", ""])
+        for item in blocked:
+            lines.extend(
+                [
+                    f"### {item.get('channel')} / {item.get('format')} · {item.get('id')}",
+                    f"- 计划时间：{item.get('planned_slot') or '尚未设置'}",
+                    f"- 阻碍：{'; '.join([zh_handoff_blocker(blocker) for blocker in item.get('handoff_blockers') or []])}",
+                    "",
+                ]
+            )
     lines.extend([
         "## 安全边界",
         "",
@@ -23961,6 +23985,187 @@ async def operations_publishing_closeout_zh(_: None = Depends(require_access_tok
         "\n".join(lines),
         media_type="text/markdown; charset=utf-8",
         headers={"Content-Disposition": 'attachment; filename="drec-publishing-closeout-zh.md"'},
+    )
+
+
+def manual_publish_label(item: dict):
+    planned = parse_datetime(item.get("planned_slot") or item.get("created_at")) or datetime.utcnow()
+    return f"manual-{item.get('channel') or 'post'}-{planned.strftime('%Y%m%d')}-{str(item.get('id') or '')[:8]}"
+
+
+def metric_template_for_queue_item(item: dict):
+    return {
+        "row_type": "fill_after_publish",
+        "source": item.get("channel") or "manual",
+        "external_post_id": manual_publish_label(item),
+        "captured_at": "",
+        "reach": 0,
+        "likes": 0,
+        "comments": 0,
+        "saves": 0,
+        "shares": 0,
+        "leads": 0,
+        "spend": 0,
+        "channel": item.get("channel") or "manual",
+        "format": item.get("format") or "carousel",
+        "funnel_stage": "TOFU",
+        "metric_window": "7d",
+        "notes": "Fill after manual publishing. Do not import until real metrics are available.",
+    }
+
+
+async def post_publish_next_steps_payload():
+    closeout = await publishing_closeout_payload(100)
+    ready_items = closeout.get("scheduled_ready") or []
+    blocked_items = closeout.get("scheduled_blocked") or []
+    templates = [metric_template_for_queue_item(item) for item in ready_items]
+    return {
+        "mode": "read_only_post_publish_next_steps",
+        "ready_to_publish_count": len(ready_items),
+        "blocked_count": len(blocked_items),
+        "ready_items": [
+            {
+                "queue_id": item.get("id"),
+                "asset_id": item.get("asset_id"),
+                "channel": item.get("channel"),
+                "format": item.get("format"),
+                "planned_slot": item.get("planned_slot"),
+                "media_count": len([url for url in item.get("media_urls") or [] if url]),
+                "manual_label_suggestion": manual_publish_label(item),
+                "caption": item.get("caption"),
+                "media_urls": item.get("media_urls") or [],
+                "after_publish_steps": [
+                    "Publish manually from the approved caption and media.",
+                    "Copy the real Meta post ID. If publishing outside Meta, use the suggested manual label.",
+                    "Record Published in Scheduler with that ID or label.",
+                    "After 7 days, fill the metrics row and import with rollup enabled.",
+                ],
+            }
+            for item in ready_items
+        ],
+        "blocked_items": blocked_items,
+        "metrics_csv_rows": templates,
+        "safety": [
+            "This pack is read-only and does not publish.",
+            "Do not import the metrics template until real post metrics exist.",
+            "Do not mark a queue item published unless a human actually posted it.",
+            "Reel/video items remain blocked until a public MP4 URL is attached.",
+        ],
+        "next_step": "Use the ready item checklist after manual posting, then record the post ID and metrics.",
+    }
+
+
+@app.get("/operations/post-publish-next-steps")
+async def operations_post_publish_next_steps(_: None = Depends(require_access_token)):
+    return await post_publish_next_steps_payload()
+
+
+@app.get("/operations/post-publish-next-steps.zh.md")
+async def operations_post_publish_next_steps_zh(_: None = Depends(require_access_token)):
+    payload = await post_publish_next_steps_payload()
+    lines = [
+        "# DREC 发布后下一步交接包",
+        "",
+        f"生成时间：{datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}",
+        "",
+        "用途：人工发布后，按本文件回填帖子 ID、等待数据、导入 metrics、汇总 learning。这个文件只读，不会发布、不改状态、不导入数据。",
+        "",
+        "## 当前状态",
+        "",
+        f"- 可人工发布后回填：{payload.get('ready_to_publish_count')}",
+        f"- 仍被阻碍：{payload.get('blocked_count')}",
+        "",
+        "## 安全边界",
+        "",
+        *markdown_list(payload.get("safety")),
+        "",
+        "## 可发布后回填项目",
+        "",
+    ]
+    ready_items = payload.get("ready_items") or []
+    if not ready_items:
+        lines.extend(["- 暂无可人工发布后回填项目。", ""])
+    for index, item in enumerate(ready_items, start=1):
+        lines.extend(
+            [
+                f"### {index}. {item.get('channel')} / {item.get('format')}",
+                "",
+                f"- Queue ID：{item.get('queue_id')}",
+                f"- Asset ID：{item.get('asset_id')}",
+                f"- 计划发布时间：{item.get('planned_slot')}",
+                f"- 媒体数量：{item.get('media_count')}",
+                f"- 如果没有 Meta ID，可用人工标签：`{item.get('manual_label_suggestion')}`",
+                "",
+                "发布后步骤：",
+                "",
+                *markdown_list(item.get("after_publish_steps")),
+                "",
+                "媒体链接：",
+                "",
+                *markdown_list(item.get("media_urls"), "- 无媒体链接，不应发布。"),
+                "",
+                "文案：",
+                "",
+                item.get("caption") or "暂无文案。",
+                "",
+            ]
+        )
+    blocked_items = payload.get("blocked_items") or []
+    if blocked_items:
+        lines.extend(["## 仍被阻碍项目", ""])
+        for item in blocked_items:
+            lines.extend(
+                [
+                    f"### {item.get('channel')} / {item.get('format')} · {item.get('id')}",
+                    f"- 阻碍：{'; '.join([zh_handoff_blocker(blocker) for blocker in item.get('handoff_blockers') or []])}",
+                    "",
+                ]
+            )
+    lines.extend(
+        [
+            "## 下一步",
+            "",
+            f"- {payload.get('next_step')}",
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="drec-post-publish-next-steps-zh.md"'},
+    )
+
+
+@app.get("/operations/post-publish-metrics-template.csv")
+async def operations_post_publish_metrics_template_csv(_: None = Depends(require_access_token)):
+    payload = await post_publish_next_steps_payload()
+    output = StringIO()
+    fieldnames = [
+        "row_type",
+        "source",
+        "external_post_id",
+        "captured_at",
+        "reach",
+        "likes",
+        "comments",
+        "saves",
+        "shares",
+        "leads",
+        "spend",
+        "channel",
+        "format",
+        "funnel_stage",
+        "metric_window",
+        "notes",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for row in payload.get("metrics_csv_rows") or []:
+        writer.writerow(row)
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-post-publish-metrics-template.csv"'},
     )
 
 

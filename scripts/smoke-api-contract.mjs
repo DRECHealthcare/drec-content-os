@@ -172,6 +172,9 @@ const requiredRoutes = [
   "GET /publish-queue/schedule-worksheet.csv",
   "POST /publish-queue/import-schedule-worksheet",
   "GET /operations/publishing-handoff.zh.md",
+  "GET /operations/post-publish-next-steps",
+  "GET /operations/post-publish-next-steps.zh.md",
+  "GET /operations/post-publish-metrics-template.csv",
   "GET /briefs/plan.csv",
   "GET /briefs/asset-pack.md",
   "GET /creative/style-library",
@@ -3294,6 +3297,26 @@ const requiredSnippets = [
     name: "web publishing closeout endpoint",
     file: "web",
     text: "/operations/publishing-closeout",
+  },
+  {
+    name: "web post-publish next steps action",
+    file: "web",
+    text: "download-post-publish-next-steps",
+  },
+  {
+    name: "web post-publish next steps endpoint",
+    file: "web",
+    text: "/operations/post-publish-next-steps.zh.md",
+  },
+  {
+    name: "web post-publish metrics template action",
+    file: "web",
+    text: "download-post-publish-metrics-template",
+  },
+  {
+    name: "web post-publish metrics template endpoint",
+    file: "web",
+    text: "/operations/post-publish-metrics-template.csv",
   },
   {
     name: "web publishing closeout renderer",

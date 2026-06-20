@@ -9512,6 +9512,26 @@ document.getElementById("download-publishing-closeout-zh")?.addEventListener("cl
   }
 });
 
+document.getElementById("download-post-publish-next-steps")?.addEventListener("click", async () => {
+  const message = document.getElementById("metric-message");
+  try {
+    await downloadProtectedFile("/operations/post-publish-next-steps.zh.md", "drec-post-publish-next-steps-zh.md", "text/markdown");
+    message.textContent = "发布后下一步交接包已下载。";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "请先设置访问码。" : "无法下载发布后下一步交接包。";
+  }
+});
+
+document.getElementById("download-post-publish-metrics-template")?.addEventListener("click", async () => {
+  const message = document.getElementById("metric-message");
+  try {
+    await downloadProtectedFile("/operations/post-publish-metrics-template.csv", "drec-post-publish-metrics-template.csv", "text/csv");
+    message.textContent = "发布后数据表已下载。";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "请先设置访问码。" : "无法下载发布后数据表。";
+  }
+});
+
 function renderMetricsImportPreview(data) {
   const container = document.getElementById("metrics-import-preview");
   if (!container) return;
