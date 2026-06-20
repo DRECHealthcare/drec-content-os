@@ -10762,6 +10762,113 @@ async def operations_monthly_carousel_queue_ready(
     }
 
 
+@app.post("/operations/monthly-carousel-safe-advance")
+async def operations_monthly_carousel_safe_advance(
+    dry_run: bool = True,
+    max_actions: int = 20,
+    _: None = Depends(require_schedule_access),
+):
+    bounded_limit = max(1, min(int(max_actions or 20), 50))
+    actions = []
+    queue_readiness = await monthly_carousel_queue_readiness_payload()
+    for item in queue_readiness.get("items") or []:
+        if len(actions) >= bounded_limit:
+            break
+        asset_id = item.get("asset_id") or ""
+        if not item.get("can_queue"):
+            continue
+        if dry_run:
+            actions.append(
+                {
+                    "type": "queue_asset",
+                    "status": "would_queue",
+                    "asset_id": asset_id,
+                    "topic_id": item.get("topic_id") or "",
+                    "topic": item.get("topic") or "",
+                    "detail": "Asset already passes doctor approval, safety, media, visual QA, and detector gates.",
+                }
+            )
+        else:
+            queued = await queue_asset(asset_id)
+            actions.append(
+                {
+                    "type": "queue_asset",
+                    "status": "reused" if queued.get("reused") else "queued",
+                    "asset_id": asset_id,
+                    "queue_id": (queued.get("item") or {}).get("id"),
+                    "topic_id": item.get("topic_id") or "",
+                    "topic": item.get("topic") or "",
+                    "detail": "Queued monthly carousel asset. Queue review approval is still required before scheduling.",
+                }
+            )
+
+    monthly_queue = await monthly_carousel_queue_items()
+    for item in monthly_queue:
+        if len(actions) >= bounded_limit:
+            break
+        state, blockers = review_queue_state(item)
+        if state != "ready_to_schedule":
+            continue
+        if dry_run:
+            suggestion = await suggest_publish_slot(item.get("channel") or "facebook", ignore_item_id=str(item.get("id")))
+            actions.append(
+                {
+                    "type": "schedule_queue",
+                    "status": "would_schedule",
+                    "queue_id": item.get("id"),
+                    "asset_id": item.get("asset_id"),
+                    "suggested_slot": suggestion.get("suggested_slot"),
+                    "suggested_slot_myt": suggestion.get("local_slot"),
+                    "detail": "Queue item is draft, compliance-clear, and review-approved.",
+                }
+            )
+        else:
+            scheduled = await schedule_publish_queue_next_slot(str(item.get("id")))
+            actions.append(
+                {
+                    "type": "schedule_queue",
+                    "status": "scheduled",
+                    "queue_id": item.get("id"),
+                    "asset_id": item.get("asset_id"),
+                    "planned_slot": (scheduled.get("item") or {}).get("planned_slot"),
+                    "suggestion": scheduled.get("suggestion"),
+                    "detail": "Scheduled monthly carousel queue item after queue review approval.",
+                }
+            )
+
+    meta_dry_run = await meta_publishing_job(channel="all", dry_run=True)
+    return {
+        "dry_run": dry_run,
+        "mode": "monthly_carousel_safe_advance",
+        "max_actions": bounded_limit,
+        "action_count": len(actions),
+        "queued": sum(1 for item in actions if item.get("status") == "queued"),
+        "reused": sum(1 for item in actions if item.get("status") == "reused"),
+        "scheduled": sum(1 for item in actions if item.get("status") == "scheduled"),
+        "would_queue": sum(1 for item in actions if item.get("status") == "would_queue"),
+        "would_schedule": sum(1 for item in actions if item.get("status") == "would_schedule"),
+        "actions": actions,
+        "meta_dry_run": meta_dry_run,
+        "current_gates": {
+            "ready_to_queue_count": queue_readiness.get("ready_to_queue_count"),
+            "already_in_queue_count": queue_readiness.get("already_in_queue_count"),
+            "waiting_count": queue_readiness.get("waiting_count"),
+            "blocked_count": queue_readiness.get("blocked_count"),
+        },
+        "message": (
+            f"Previewed {len(actions)} safe monthly advance action(s)."
+            if dry_run
+            else f"Ran {len(actions)} safe monthly advance action(s)."
+        ),
+        "safety": [
+            "This endpoint never approves assets, never approves queue review, and never publishes to Meta.",
+            "It only queues monthly assets that already pass doctor approval, safety clear, final media, visual QA, and copy detector gates.",
+            "It only schedules monthly queue items that are already draft, compliance-clear, and human review-approved.",
+            "It runs Meta publishing in dry-run mode only.",
+        ],
+    }
+
+
 def doctor_approval_item_lines(item: dict, index: int):
     blockers = item.get("blockers") or []
     return [

@@ -643,6 +643,12 @@ Object.assign(uiZh, {
   "Monthly carousel ready items queued.": "月度 Carousel 可入队内容已加入队列。",
   "Could not preview monthly carousel queue.": "无法预览月度 Carousel 入队。",
   "Could not queue monthly carousel ready items.": "无法把月度 Carousel 内容加入队列。",
+  "Previewing monthly carousel safe advance...": "正在预览月度 Carousel 安全推进...",
+  "Running monthly carousel safe advance...": "正在执行月度 Carousel 安全推进...",
+  "Monthly carousel safe advance previewed.": "月度 Carousel 安全推进已预览。",
+  "Monthly carousel safe advance completed.": "月度 Carousel 安全推进已完成。",
+  "Could not preview monthly carousel safe advance.": "无法预览月度 Carousel 安全推进。",
+  "Could not run monthly carousel safe advance.": "无法执行月度 Carousel 安全推进。",
   "Monthly carousel review queue downloaded.": "月度 Carousel 队列审核 CSV 已下载。",
   "Could not download monthly carousel review queue.": "无法下载月度 Carousel 队列审核 CSV。",
   "Monthly carousel queue decisions downloaded.": "月度 Carousel 队列决定表已下载。",
@@ -6021,6 +6027,41 @@ function renderMonthlyQueueResult(data) {
   `;
 }
 
+function renderMonthlySafeAdvanceResult(data) {
+  const container = document.getElementById("asset-media-attachment-preview");
+  if (!container) return;
+  const actions = data.actions || [];
+  const gates = data.current_gates || {};
+  const meta = data.meta_dry_run || {};
+  container.innerHTML = `
+    <article class="insight-card">
+      <strong>${data.dry_run ? "Monthly Safe Advance Preview" : "Monthly Safe Advance Result"}</strong>
+      <small>${escapeHtml(data.action_count || 0)} action(s) · ${escapeHtml(data.would_queue || 0)} would queue · ${escapeHtml(data.would_schedule || 0)} would schedule · ${escapeHtml(data.queued || 0)} queued · ${escapeHtml(data.scheduled || 0)} scheduled</small>
+      <div class="summary-row">
+        <span>Ready to queue ${escapeHtml(gates.ready_to_queue_count || 0)}</span>
+        <span>Already queued ${escapeHtml(gates.already_in_queue_count || 0)}</span>
+        <span>Waiting ${escapeHtml(gates.waiting_count || 0)}</span>
+      </div>
+      ${actions.length ? `
+        <ul>${actions.slice(0, 20).map((row) => `
+          <li>
+            <strong>${escapeHtml(row.topic_id || row.queue_id || row.asset_id || "")}</strong>
+            ${escapeHtml(row.type || "")} · ${escapeHtml(row.status || "")}
+            ${row.suggested_slot_myt ? ` · ${escapeHtml(row.suggested_slot_myt)}` : ""}
+            ${row.detail ? `<br><small>${escapeHtml(row.detail)}</small>` : ""}
+          </li>
+        `).join("")}</ul>
+      ` : "<p>No safe monthly advance action is currently available.</p>"}
+      <h4>Meta Dry Run</h4>
+      <p>${escapeHtml(meta.ready_count || 0)} due item(s) ready for dry-run publishing.</p>
+      ${Array.isArray(data.safety) && data.safety.length ? `
+        <h4>Safety</h4>
+        <ul>${data.safety.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+      ` : ""}
+    </article>
+  `;
+}
+
 async function uploadAssetReviewDecisions({ dryRun, fileInputId = "asset-review-decisions-file", allowPastedCsv = true, source = "review" }) {
   const message = document.getElementById("media-message");
   const fileInput = document.getElementById(fileInputId);
@@ -6232,6 +6273,29 @@ async function runMonthlyCarouselQueueReady({ dryRun }) {
   }
 }
 
+async function runMonthlyCarouselSafeAdvance({ dryRun }) {
+  const message = document.getElementById("media-message");
+  message.textContent = dryRun
+    ? translateText("Previewing monthly carousel safe advance...")
+    : translateText("Running monthly carousel safe advance...");
+  try {
+    const data = await fetchJson(`/operations/monthly-carousel-safe-advance?dry_run=${dryRun ? "true" : "false"}`, {
+      method: "POST",
+    });
+    message.textContent = data.message || (dryRun
+      ? translateText("Monthly carousel safe advance previewed.")
+      : translateText("Monthly carousel safe advance completed."));
+    renderMonthlySafeAdvanceResult(data);
+    if (!dryRun) await Promise.all([loadAssets(), loadMonthlyCarouselStatusBoard(), loadPreScheduleGate(), loadPublishQueue(), loadLoopStatus(), loadProjectCompletionAudit()]);
+  } catch (error) {
+    message.textContent = error.message === "Access token required"
+      ? translateText("Set the access token first.")
+      : dryRun
+        ? translateText("Could not preview monthly carousel safe advance.")
+        : translateText("Could not run monthly carousel safe advance.");
+  }
+}
+
 document.getElementById("preview-asset-review-decisions")?.addEventListener("click", async () => {
   await uploadAssetReviewDecisions({ dryRun: true });
 });
@@ -6296,6 +6360,14 @@ document.getElementById("preview-monthly-carousel-queue-ready")?.addEventListene
 
 document.getElementById("queue-monthly-carousel-ready")?.addEventListener("click", async () => {
   await runMonthlyCarouselQueueReady({ dryRun: false });
+});
+
+document.getElementById("preview-monthly-carousel-safe-advance")?.addEventListener("click", async () => {
+  await runMonthlyCarouselSafeAdvance({ dryRun: true });
+});
+
+document.getElementById("run-monthly-carousel-safe-advance")?.addEventListener("click", async () => {
+  await runMonthlyCarouselSafeAdvance({ dryRun: false });
 });
 
 document.getElementById("preview-monthly-carousel-production-worksheet")?.addEventListener("click", async () => {
