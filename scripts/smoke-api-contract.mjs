@@ -2772,6 +2772,26 @@ const requiredSnippets = [
     text: "/operations/production-reply-inbox-pack",
   },
   {
+    name: "web dashboard monthly schedule worksheet action",
+    file: "web",
+    text: "download-dashboard-monthly-schedule-worksheet",
+  },
+  {
+    name: "web dashboard monthly schedule pack action",
+    file: "web",
+    text: "download-dashboard-monthly-schedule-pack",
+  },
+  {
+    name: "web dashboard schedule audit action",
+    file: "web",
+    text: "download-dashboard-schedule-audit",
+  },
+  {
+    name: "web dashboard monthly publishing handoff action",
+    file: "web",
+    text: "download-dashboard-monthly-publishing-handoff",
+  },
+  {
     name: "web notion carousel source action",
     file: "web",
     text: "refresh-notion-carousel-source",

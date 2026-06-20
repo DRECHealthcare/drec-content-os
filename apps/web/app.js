@@ -2774,6 +2774,10 @@ function renderDashboardMonthlyActionQueue(data) {
         <button type="button" data-download-dashboard-monthly-production-worksheet>下载制作设计表</button>
         <button type="button" data-download-dashboard-monthly-production-qa>下载制作 QA 包</button>
         <button type="button" data-fill-dashboard-production-reply-template>填写制作回复模板</button>
+        <button type="button" data-download-dashboard-monthly-schedule-worksheet>下载月度排程表</button>
+        <button type="button" data-download-dashboard-monthly-schedule-pack>下载排程执行包</button>
+        <button type="button" data-download-dashboard-schedule-audit>下载排程检查</button>
+        <button type="button" data-download-dashboard-monthly-publishing-handoff>下载发布交接包</button>
         <button type="button" data-download-dashboard-monthly-action-queue>下载月度行动队列</button>
         <button type="button" data-download-dashboard-monthly-action-csv>下载行动 CSV</button>
       </div>
@@ -7238,9 +7242,13 @@ document.getElementById("dashboard-monthly-action-queue")?.addEventListener("cli
   const downloadProductionWorksheet = event.target.closest("[data-download-dashboard-monthly-production-worksheet]");
   const downloadProductionQa = event.target.closest("[data-download-dashboard-monthly-production-qa]");
   const fillProductionReplyTemplate = event.target.closest("[data-fill-dashboard-production-reply-template]");
+  const downloadScheduleWorksheet = event.target.closest("[data-download-dashboard-monthly-schedule-worksheet]");
+  const downloadSchedulePack = event.target.closest("[data-download-dashboard-monthly-schedule-pack]");
+  const downloadScheduleAudit = event.target.closest("[data-download-dashboard-schedule-audit]");
+  const downloadPublishingHandoff = event.target.closest("[data-download-dashboard-monthly-publishing-handoff]");
   const downloadQueue = event.target.closest("[data-download-dashboard-monthly-action-queue]");
   const downloadCsv = event.target.closest("[data-download-dashboard-monthly-action-csv]");
-  if (!openAssets && !downloadDoctorReview && !downloadPngAssets && !downloadDoctorWorksheet && !fillDoctorReplyTemplate && !downloadProductionWorksheet && !downloadProductionQa && !fillProductionReplyTemplate && !downloadQueue && !downloadCsv) return;
+  if (!openAssets && !downloadDoctorReview && !downloadPngAssets && !downloadDoctorWorksheet && !fillDoctorReplyTemplate && !downloadProductionWorksheet && !downloadProductionQa && !fillProductionReplyTemplate && !downloadScheduleWorksheet && !downloadSchedulePack && !downloadScheduleAudit && !downloadPublishingHandoff && !downloadQueue && !downloadCsv) return;
   if (openAssets) {
     showScreen("assets");
     const card = document.getElementById("monthly-carousel-status-board");
@@ -7343,6 +7351,46 @@ document.getElementById("dashboard-monthly-action-queue")?.addEventListener("cli
         preparing: "Preparing monthly production QA pack...",
         done: "Monthly carousel production QA pack downloaded.",
         failed: "Could not download monthly carousel production QA pack.",
+      };
+    }
+    if (downloadScheduleWorksheet) {
+      return {
+        path: "/operations/monthly-carousel-schedule-worksheet.csv",
+        filename: "drec-monthly-carousel-schedule-worksheet.csv",
+        type: "text/csv",
+        preparing: "Preparing monthly schedule worksheet...",
+        done: "Monthly carousel schedule worksheet downloaded.",
+        failed: "Could not download monthly carousel schedule worksheet.",
+      };
+    }
+    if (downloadSchedulePack) {
+      return {
+        path: "/operations/monthly-carousel-schedule-execution-pack.zh.md",
+        filename: "drec-monthly-carousel-schedule-execution-pack-zh.md",
+        type: "text/markdown",
+        preparing: "Preparing monthly schedule execution pack...",
+        done: "Monthly carousel schedule execution pack downloaded.",
+        failed: "Could not download monthly carousel schedule execution pack.",
+      };
+    }
+    if (downloadScheduleAudit) {
+      return {
+        path: "/publish-queue/schedule-audit.md",
+        filename: "drec-schedule-audit.md",
+        type: "text/markdown",
+        preparing: "Preparing schedule audit...",
+        done: "Schedule audit downloaded.",
+        failed: "Could not download schedule audit.",
+      };
+    }
+    if (downloadPublishingHandoff) {
+      return {
+        path: "/operations/monthly-carousel-publishing-handoff.zh.md",
+        filename: "drec-monthly-carousel-publishing-handoff-zh.md",
+        type: "text/markdown",
+        preparing: "Preparing monthly carousel publishing handoff...",
+        done: "Monthly carousel publishing handoff downloaded.",
+        failed: "Could not download monthly carousel publishing handoff.",
       };
     }
     if (downloadCsv) {
