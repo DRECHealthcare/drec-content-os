@@ -5068,6 +5068,13 @@ async def scheduler_health_payload():
         "phase": "scheduler_health",
         "mode": "read_only_diagnostics",
         "status": current_status,
+        "overall_status": current_status,
+        "current_status": current_status,
+        "next_step": (
+            "No scheduler issue detected; keep the dry-run workflow active."
+            if current_status == "healthy"
+            else "Run DREC Scheduler Dry Run manually and confirm it records a fresh heartbeat."
+        ),
         "heartbeat": heartbeat,
         "heartbeat_age_hours": heartbeat_age_hours,
         "stale_after_minutes": stale_after_minutes,

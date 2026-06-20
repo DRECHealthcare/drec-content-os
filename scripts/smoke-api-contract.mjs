@@ -569,6 +569,16 @@ const requiredSnippets = [
     text: "stale_after_minutes = SCHEDULER_HEARTBEAT_RECENT_MINUTES",
   },
   {
+    name: "scheduler health overall status alias",
+    file: "main",
+    text: "\"overall_status\": current_status",
+  },
+  {
+    name: "scheduler health next step field",
+    file: "main",
+    text: "\"next_step\": (",
+  },
+  {
     name: "scheduler heartbeat route",
     file: "main",
     text: "operations_scheduler_heartbeat",
