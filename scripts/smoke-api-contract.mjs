@@ -122,6 +122,7 @@ const requiredRoutes = [
   "GET /operations/today-runbook",
   "GET /operations/today-runbook.md",
   "GET /operations/today-runbook.zh.md",
+  "GET /operations/today-safe-operator-pack.zip",
   "GET /operations/asset-media-attachments.csv",
   "POST /operations/import-asset-media-attachments",
   "POST /operations/import-production-replies",
@@ -3415,6 +3416,21 @@ const requiredSnippets = [
     name: "web simple operator publishing handoff action",
     file: "web",
     text: "data-simple-download-handoff",
+  },
+  {
+    name: "web simple operator today safe pack action",
+    file: "web",
+    text: "data-simple-download-today-pack",
+  },
+  {
+    name: "web simple operator today safe pack endpoint",
+    file: "web",
+    text: "/operations/today-safe-operator-pack.zip",
+  },
+  {
+    name: "web simple operator today safe pack copy",
+    file: "web",
+    text: "下载今日安全包",
   },
   {
     name: "web simple operator safe action center copy",

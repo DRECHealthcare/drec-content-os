@@ -2473,11 +2473,12 @@ function renderSimpleOperator(data) {
     `;
   } else if (scheduledQueue > 0) {
     eyebrow = "下一步：人工发布交接";
-    title = "已排程，不要点发布";
-    body = `已有 ${scheduledQueue} 条内容进入排程。现在只下载交接资料给真人检查和手动发布；系统不会自动发到 Facebook / Instagram。`;
+    title = "已排程，我帮你打包安全资料";
+    body = `已有 ${scheduledQueue} 条内容进入排程。先下载今日安全包给真人检查；系统不会自动发到 Facebook / Instagram。`;
     status = "已排程 · 未发布";
     actions = `
-      <button class="primary" type="button" data-simple-open-scheduler>打开排程</button>
+      <button class="primary" type="button" data-simple-download-today-pack>下载今日安全包</button>
+      <button type="button" data-simple-open-scheduler>打开排程</button>
       <button type="button" data-simple-download-handoff>下载发布交接包</button>
       <button type="button" data-simple-download-reel>下载 Reel 制作包</button>
       <button type="button" data-simple-download-post-publish>下载发布后下一步</button>
@@ -5732,11 +5733,12 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   const openReview = event.target.closest("[data-simple-open-review]");
   const openScheduler = event.target.closest("[data-simple-open-scheduler]");
   const downloadHandoff = event.target.closest("[data-simple-download-handoff]");
+  const downloadTodayPack = event.target.closest("[data-simple-download-today-pack]");
   const downloadReel = event.target.closest("[data-simple-download-reel]");
   const downloadPostPublish = event.target.closest("[data-simple-download-post-publish]");
   const downloadPostMetrics = event.target.closest("[data-simple-download-post-metrics]");
   const refresh = event.target.closest("[data-simple-refresh]");
-  if (!runReadyAssets && !openAssets && !openReview && !openScheduler && !downloadHandoff && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !refresh) return;
+  if (!runReadyAssets && !openAssets && !openReview && !openScheduler && !downloadHandoff && !downloadTodayPack && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !refresh) return;
   if (refresh) {
     await loadLoopStatus();
     await loadDashboardMonthlyActionQueue();
@@ -5752,6 +5754,10 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   }
   if (openAssets) {
     showScreen("assets");
+    return;
+  }
+  if (downloadTodayPack) {
+    await downloadProtectedFile("/operations/today-safe-operator-pack.zip", "drec-today-safe-operator-pack.zip", "application/zip");
     return;
   }
   if (downloadHandoff) {

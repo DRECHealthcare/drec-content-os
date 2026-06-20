@@ -23193,6 +23193,136 @@ async def operations_monthly_carousel_publishing_handoff_zh(_: None = Depends(re
     )
 
 
+def post_publish_metrics_template_csv(payload: dict):
+    output = StringIO()
+    fieldnames = [
+        "row_type",
+        "source",
+        "external_post_id",
+        "captured_at",
+        "reach",
+        "likes",
+        "comments",
+        "saves",
+        "shares",
+        "leads",
+        "spend",
+        "channel",
+        "format",
+        "funnel_stage",
+        "metric_window",
+        "notes",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for row in payload.get("metrics_csv_rows") or []:
+        writer.writerow(row)
+    return output.getvalue()
+
+
+async def today_safe_operator_pack_payload():
+    loop = await build_loop_status()
+    workflow = build_workflow_guidance(loop)
+    security = await strict_security_status_payload()
+    automation = await automation_status_payload()
+    workflow["completion"] = build_completion_status(loop, workflow, security, automation)
+    handoff = await publishing_handoff(None)
+    monthly_handoff = await monthly_carousel_publishing_handoff_payload()
+    audit = await schedule_audit_payload()
+    closeout = await publishing_closeout_payload(100)
+    post_publish = await post_publish_next_steps_payload()
+    return {
+        "generated_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
+        "loop": loop,
+        "workflow": workflow,
+        "security": security,
+        "automation": automation,
+        "handoff": handoff,
+        "monthly_handoff": monthly_handoff,
+        "schedule_audit": audit,
+        "closeout": closeout,
+        "post_publish": post_publish,
+    }
+
+
+def today_safe_operator_pack_readme(payload: dict):
+    workflow = payload.get("workflow") or {}
+    completion = workflow.get("completion") or {}
+    loop = payload.get("loop") or {}
+    security = payload.get("security") or {}
+    handoff = payload.get("handoff") or {}
+    monthly = payload.get("monthly_handoff") or {}
+    audit = payload.get("schedule_audit") or {}
+    closeout = payload.get("closeout") or {}
+    post_publish = payload.get("post_publish") or {}
+    queue_rows = loop.get("queue") or []
+    queue_text = ", ".join(f"{item.get('status')}: {item.get('count')}" for item in queue_rows) or "无队列数据"
+    security_smoke = (security.get("service_role_smoke") or {}).get("status") or "missing"
+    lines = [
+        "# DREC 今日安全操作包",
+        "",
+        f"生成时间：{payload.get('generated_at')}",
+        "",
+        "这个 ZIP 是只读操作包：不会发布到 Facebook / Instagram，不会排程，不会记录已发布，不会调用 Meta 正式发布。",
+        "",
+        "## 现在状态",
+        "",
+        f"- 总进度：{completion.get('percent', '?')}%",
+        f"- 队列：{queue_text}",
+        f"- 可交接发布项目：{handoff.get('ready_count', 0)}",
+        f"- 月度 Carousel 可交接项目：{monthly.get('ready_count', 0)}",
+        f"- 排程检查：{zh_schedule_audit_status(audit.get('overall_status'))}",
+        f"- 发布后可回填项目：{post_publish.get('ready_to_publish_count', 0)}",
+        f"- 安全门槛：{security.get('overall_status')} / service-role smoke: {security_smoke}",
+        f"- Meta 自动发布：关闭；只允许 dry run 和人工交接。",
+        "",
+        "## 你真正要看的文件",
+        "",
+        "1. `01-publishing-handoff.txt`：人工发布时复制文案和媒体链接。",
+        "2. `02-monthly-carousel-publishing-handoff.txt`：只看月度 Carousel 的交接项目。",
+        "3. `03-post-publish-next-steps.json`：发布后要回填 ID 和数据的清单。",
+        "4. `04-post-publish-metrics-template.csv`：发布 7 天后再填写，不要提前导入。",
+        "5. `05-schedule-audit.json`：排程阻碍和提醒。",
+        "",
+        "## 下一步",
+        "",
+        f"- {((workflow.get('next_action') or {}).get('body') or closeout.get('next_action', {}).get('detail') or '继续人工交接，不做自动发布。')}",
+        "",
+        "## 安全线",
+        "",
+        "- 不能把本包当成医生审批或发布证明。",
+        "- 只有真人实际发布后，才可以记录 Meta post ID 或人工标签。",
+        "- 缺 `SUPABASE_SERVICE_ROLE_KEY` 时，RLS 加固继续保持未开启状态。",
+        "- 正式 Meta 自动发布保持锁住，直到你明确授权并完成 live smoke。",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+@app.get("/operations/today-safe-operator-pack.zip")
+async def operations_today_safe_operator_pack_zip(_: None = Depends(require_access_token)):
+    payload = await today_safe_operator_pack_payload()
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("README.zh.md", today_safe_operator_pack_readme(payload))
+        archive.writestr("01-publishing-handoff.txt", (payload.get("handoff") or {}).get("handoff_text") or "暂无发布交接内容。")
+        archive.writestr("02-monthly-carousel-publishing-handoff.txt", (payload.get("monthly_handoff") or {}).get("handoff_text") or "暂无月度 Carousel 交接内容。")
+        archive.writestr("03-post-publish-next-steps.json", json.dumps(payload.get("post_publish") or {}, ensure_ascii=False, indent=2, default=str))
+        archive.writestr("04-post-publish-metrics-template.csv", post_publish_metrics_template_csv(payload.get("post_publish") or {}))
+        archive.writestr("05-schedule-audit.json", json.dumps(payload.get("schedule_audit") or {}, ensure_ascii=False, indent=2, default=str))
+        archive.writestr("06-security-status.json", json.dumps(payload.get("security") or {}, ensure_ascii=False, indent=2, default=str))
+        archive.writestr("07-workflow-status.json", json.dumps({
+            "loop": payload.get("loop") or {},
+            "workflow": payload.get("workflow") or {},
+            "automation": payload.get("automation") or {},
+        }, ensure_ascii=False, indent=2, default=str))
+    return Response(
+        buffer.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": 'attachment; filename="drec-today-safe-operator-pack.zip"'},
+    )
+
+
 async def next_facebook_publish_item(item_id: str | None = None):
     if item_id:
         row = await fetch_row(
