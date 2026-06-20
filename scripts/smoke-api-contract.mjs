@@ -1979,7 +1979,7 @@ const requiredSnippets = [
   {
     name: "asset media attachment import dry run",
     file: "main",
-    text: "Previewed {len(planned)} asset media attachment(s)",
+    text: "Previewed {len(planned)} {source_label} row(s)",
   },
   {
     name: "asset media attachment import safety",
@@ -4547,14 +4547,19 @@ const requiredSnippets = [
     text: "## GitHub Scheduler Setup",
   },
   {
-    name: "github scheduler dry-run workflow",
+    name: "github scheduler self-check workflow",
     file: "schedulerWorkflow",
-    text: "/jobs/meta-publishing?dry_run=true&channel=all",
+    text: "/operations/scheduler-dry-run-self-check?record_heartbeat=true",
   },
   {
-    name: "github nightly metrics dry-run workflow",
-    file: "schedulerWorkflow",
-    text: "/jobs/nightly-meta-metrics?dry_run=true&limit=25&rollup=true",
+    name: "github scheduler self-check publishing dry run",
+    file: "main",
+    text: "publishing = await meta_publishing_job(channel=\"all\", dry_run=True)",
+  },
+  {
+    name: "github scheduler self-check metrics dry run",
+    file: "main",
+    text: "metrics = await nightly_meta_metrics_job(dry_run=True, limit=25, rollup=True)",
   },
   {
     name: "github scheduler skips missing token",
@@ -4562,9 +4567,9 @@ const requiredSnippets = [
     text: "DREC_ACCESS_TOKEN is not configured. Skipping dry-run scheduler checks.",
   },
   {
-    name: "github scheduler heartbeat",
+    name: "github scheduler self-check heartbeat",
     file: "schedulerWorkflow",
-    text: "/operations/scheduler-heartbeat",
+    text: "record_heartbeat=true",
   },
   {
     name: "real metrics workflow job",
