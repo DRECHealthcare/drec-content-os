@@ -57,17 +57,22 @@ The API exposes:
 - `POST /metrics`
 - `POST /feedback`
 
-## Vercel Web
+## Web UI
 
 Current production app:
 
 ```text
-https://drec-content-os.vercel.app
+https://drec-content-os-api.fly.dev/ui/
 ```
 
-Deploy the repository root as a Vercel project. The root `vercel.json` copies
-`apps/web` into `dist` during build, so the project works even if the Vercel
-Root Directory is left as the repository root.
+The Fly.io API serves the current operator UI at `/ui/`. The Vercel static web
+deployment can still be used as a secondary shell, but the Fly UI is the
+preferred live app because it is deployed with the API and avoids stale static
+files.
+
+If using Vercel, deploy the repository root as a Vercel project. The root
+`vercel.json` copies `apps/web` into `dist` during build, so the project works
+even if the Vercel Root Directory is left as the repository root.
 
 Set:
 
@@ -102,7 +107,7 @@ Optional overrides:
 
 ```bash
 DREC_API_BASE_URL="https://drec-content-os-api.fly.dev" \
-DREC_WEB_URL="https://drec-content-os.vercel.app" \
+DREC_WEB_URL="https://drec-content-os-api.fly.dev/ui/" \
 DREC_ACCESS_TOKEN="..." \
 npm run smoke:live
 ```
@@ -274,6 +279,12 @@ It does not approve content, create queue items, schedule posts, publish, update
 Notion, or call Meta. Use the Action summary after the 19th refresh to confirm
 there are no duplicate Topic IDs, current-cycle rows are visible, and generated
 carousel previews still pass structural smoke tests.
+
+Connector status as of 2026-06-21: the Notion connector can verify the database
+schema and data source URL, but row-level database querying requires a Notion
+Enterprise plan with Notion AI in the current workspace. Until that gate is
+removed, the safe production path is to export the refreshed Notion view as CSV
+and import it through the app with `Topic ID` dedupe.
 
 ## GitHub Publishing Closeout Watch
 

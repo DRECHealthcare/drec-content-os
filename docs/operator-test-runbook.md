@@ -6,16 +6,22 @@ connecting Meta auto-publishing yet.
 Live app:
 
 ```text
-https://drec-content-os.vercel.app
+https://drec-content-os-api.fly.dev/ui/
 ```
 
 ## Before Testing
 
 1. Open the live app.
 2. Confirm the top button says `Access set`.
-3. On Dashboard, read `Next Best Action`.
-4. Check the Dashboard operating counts for review, handoff, ready assets, outcomes, and active weights.
-5. If the page looks stale, click `Refresh` in the Next Best Action card.
+3. On `首页`, start from the large `现在只看这里` area.
+4. Check the simple six-step workflow: doctor reply, image reply, queue, review, handoff, learning.
+5. If the page looks stale, click `Refresh` in the status card or reload the page.
+
+Notion monthly source note: the database schema has been verified through the
+Notion connector, but row-level query access currently requires a Notion
+Enterprise plan with Notion AI. For monthly testing after the 19th, export the
+current Notion view as CSV, then import it through the app so `Topic ID` dedupe
+can protect against duplicates.
 
 ## Full Workflow Test
 

@@ -774,7 +774,22 @@ const requiredSnippets = [
   {
     name: "notion connector plan limitation note",
     file: "main",
-    text: "direct database row querying may require a Notion Enterprise plan with Notion AI",
+    text: "direct database row querying requires a Notion Enterprise plan with Notion AI",
+  },
+  {
+    name: "notion connector verified schema flag",
+    file: "main",
+    text: "direct_connector_schema",
+  },
+  {
+    name: "notion connector row query gate",
+    file: "main",
+    text: "enterprise_plan_required",
+  },
+  {
+    name: "notion connector evidence",
+    file: "main",
+    text: "connector_evidence",
   },
   {
     name: "notion carousel monthly refresh workbench payload",
@@ -3265,6 +3280,11 @@ const requiredSnippets = [
     name: "web notion monthly refresh endpoint",
     file: "web",
     text: "/notion/monthly-refresh-workbench.zh.md",
+  },
+  {
+    name: "web notion connector schema label",
+    file: "web",
+    text: "Row query",
   },
   {
     name: "web notion carousel workflow endpoint",

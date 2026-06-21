@@ -96,8 +96,17 @@ NOTION_CAROUSEL_SOURCE = {
     "unique_id_property": "Topic ID",
     "source_of_truth": True,
     "app_sync_mode": "csv_import_with_topic_id_dedupe",
-    "direct_connector_row_query": "not_available_in_current_notion_plan",
-    "connector_fallback_reason": "The Notion connector can read the database schema, but direct database row querying may require a Notion Enterprise plan with Notion AI. The deployed app therefore treats CSV export/import as the reliable production sync path.",
+    "direct_connector_schema": "verified",
+    "direct_connector_schema_verified_at": "2026-06-21",
+    "direct_connector_data_source_title": "Dr. Eason Chang Diabetes Reversal Carousel Master Content Plan",
+    "direct_connector_row_query": "enterprise_plan_required",
+    "connector_fallback_reason": "The Notion connector can read the database schema and data source ID, but direct database row querying requires a Notion Enterprise plan with Notion AI in the current workspace. The deployed app therefore treats CSV export/import as the reliable production sync path.",
+    "connector_evidence": [
+        "Database schema was readable through the Notion connector on 2026-06-21.",
+        "Data source URL verified as collection://58a85294-ac72-4f16-8df0-bf0caf1b0b52.",
+        "Row querying returned Notion validation_error: Enterprise plan with Notion AI required.",
+        "CSV export/import remains the safe production sync path until row query access is available.",
+    ],
     "monthly_refresh_day": 19,
     "monthly_refresh_rule": "Treat the Notion database as refreshed on the 19th of every month. Re-scan existing rows after that date, but still use Topic ID for dedupe and do not create new Notion rows unless instructed.",
     "primary_language": "Mandarin",
@@ -112,6 +121,18 @@ NOTION_CAROUSEL_SOURCE = {
         "Overall Status",
         "Carousel Image Status",
         "Caption Status",
+        "Carousel Slide Plan",
+    ],
+    "verified_schema_fields": [
+        "Topic ID",
+        "Overall Status",
+        "Content Stage",
+        "English Topic Title",
+        "Mandarin Topic Title",
+        "Carousel Image Status",
+        "Caption Status",
+        "Day",
+        "Planned Posting Date",
         "Carousel Slide Plan",
     ],
     "status_rules": [
@@ -18622,6 +18643,13 @@ def notion_monthly_refresh_workbench_payload():
         "refresh_day": refresh_day,
         "active_cycle_start": active_refresh.date().isoformat(),
         "next_refresh_date": next_refresh.date().isoformat(),
+        "connector_status": {
+            "schema": NOTION_CAROUSEL_SOURCE.get("direct_connector_schema"),
+            "schema_verified_at": NOTION_CAROUSEL_SOURCE.get("direct_connector_schema_verified_at"),
+            "row_query": NOTION_CAROUSEL_SOURCE.get("direct_connector_row_query"),
+            "fallback": NOTION_CAROUSEL_SOURCE.get("app_sync_mode"),
+            "reason": NOTION_CAROUSEL_SOURCE.get("connector_fallback_reason"),
+        },
         "status": "refresh_due_today" if due_today else "active_monthly_cycle",
         "cycle_label": f"{active_refresh.strftime('%Y-%m-%d')} monthly Notion cycle",
         "notion_filters": [
@@ -18648,6 +18676,7 @@ def notion_monthly_refresh_workbench_payload():
         ],
         "operator_checklist": [
             "Open the Notion master database after the monthly 19th refresh.",
+            "Confirm the schema still matches the verified fields; if direct row query is unavailable, export the current Notion view as CSV.",
             "Confirm the current month rows have unique Topic ID values.",
             "Skip rows where Overall Status = Published.",
             "For image work, select only rows where Carousel Image Status = Not Started.",
@@ -18663,6 +18692,7 @@ def notion_monthly_refresh_workbench_payload():
             "Do not work on Published rows.",
             "Do not use miracle-cure, guaranteed reversal, fear-based, or course-selling language.",
             "Do not make Slide 1 an explanation slide; Slide 1 is the cover hook only.",
+            "Do not assume live row sync is available until the connector row-query gate no longer reports enterprise_plan_required.",
         ],
         "next_action": "Run the Notion image queue check, update selected rows to In Progress, then import/sync rows by Topic ID.",
     }
@@ -18780,6 +18810,9 @@ async def notion_monthly_refresh_status_payload():
 
 def notion_monthly_refresh_workbench_zh_markdown(payload: dict):
     source = payload["source"]
+    connector_status = payload.get("connector_status", {})
+    verified_fields = source.get("verified_schema_fields") or source.get("fields") or []
+    connector_evidence = source.get("connector_evidence") or []
     lines = [
         "# DREC Notion 每月 19 号刷新工作台",
         "",
@@ -18789,6 +18822,21 @@ def notion_monthly_refresh_workbench_zh_markdown(payload: dict):
         f"本轮周期开始：{payload['active_cycle_start']}",
         f"下一次刷新：{payload['next_refresh_date']}",
         f"状态：{payload['status']}",
+        "",
+        "## Notion 连接状态",
+        "",
+        f"- 资料库结构：`{connector_status.get('schema') or 'unknown'}`（验证日期：{connector_status.get('schema_verified_at') or 'unknown'}）",
+        f"- 行级读取：`{connector_status.get('row_query') or 'unknown'}`",
+        f"- 系统同步方式：`{connector_status.get('fallback') or source.get('app_sync_mode')}`",
+        f"- 原因：{connector_status.get('reason') or source.get('connector_fallback_reason')}",
+        "",
+        "已验证字段：",
+        "",
+        *markdown_list(verified_fields),
+        "",
+        "连接证据：",
+        "",
+        *markdown_list(connector_evidence),
         "",
         "## 核心规则",
         "",
@@ -18835,6 +18883,9 @@ def notion_monthly_refresh_workbench_zh_markdown(payload: dict):
 
 def notion_monthly_refresh_workbench_en_markdown(payload: dict):
     source = payload["source"]
+    connector_status = payload.get("connector_status", {})
+    verified_fields = source.get("verified_schema_fields") or source.get("fields") or []
+    connector_evidence = source.get("connector_evidence") or []
     lines = [
         "# DREC Notion Monthly Refresh Workbench",
         "",
@@ -18844,6 +18895,21 @@ def notion_monthly_refresh_workbench_en_markdown(payload: dict):
         f"Active cycle start: {payload['active_cycle_start']}",
         f"Next refresh date: {payload['next_refresh_date']}",
         f"Status: {payload['status']}",
+        "",
+        "## Notion Connector Status",
+        "",
+        f"- Schema: `{connector_status.get('schema') or 'unknown'}` (verified at {connector_status.get('schema_verified_at') or 'unknown'})",
+        f"- Row query: `{connector_status.get('row_query') or 'unknown'}`",
+        f"- App sync mode: `{connector_status.get('fallback') or source.get('app_sync_mode')}`",
+        f"- Reason: {connector_status.get('reason') or source.get('connector_fallback_reason')}",
+        "",
+        "Verified fields:",
+        "",
+        *markdown_list(verified_fields),
+        "",
+        "Connector evidence:",
+        "",
+        *markdown_list(connector_evidence),
         "",
         "## Operator Checklist",
         "",

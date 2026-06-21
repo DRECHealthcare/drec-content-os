@@ -2905,6 +2905,7 @@ function renderNotionCarouselSource(data) {
   const container = document.getElementById("notion-carousel-source");
   if (!container) return;
   const statusRules = data.status_rules || [];
+  const connectorEvidence = data.connector_evidence || [];
   container.innerHTML = `
     <article class="learning-card wide-learning" data-notion-carousel-source>
       <h3>${escapeHtml(translateText("Notion Monthly Source"))}</h3>
@@ -2913,12 +2914,18 @@ function renderNotionCarouselSource(data) {
       <ul>
         <li><strong>${escapeHtml(translateText("Unique ID"))}</strong> ${escapeHtml(data.unique_id_property || "Topic ID")}</li>
         <li><strong>${escapeHtml(translateText("Sync mode"))}</strong> ${escapeHtml(data.app_sync_mode || "csv_import_with_topic_id_dedupe")}</li>
+        <li><strong>${escapeHtml(translateText("Schema"))}</strong> ${escapeHtml(data.direct_connector_schema || "unknown")}${data.direct_connector_schema_verified_at ? ` · ${escapeHtml(data.direct_connector_schema_verified_at)}` : ""}</li>
+        <li><strong>${escapeHtml(translateText("Row query"))}</strong> ${escapeHtml(data.direct_connector_row_query || "unknown")}</li>
         <li><strong>${escapeHtml(translateText("Monthly refresh"))}</strong> ${escapeHtml(String(data.monthly_refresh_rule || ""))}</li>
         <li><strong>${escapeHtml(translateText("Monthly refresh workbench"))}</strong> ${escapeHtml(data.monthly_refresh_workbench_zh || "/notion/monthly-refresh-workbench.zh.md")}</li>
         <li><strong>${escapeHtml(translateText("Connector fallback"))}</strong> ${escapeHtml(data.connector_fallback_pack || "/notion/connector-fallback-pack.md")}</li>
         <li><strong>${escapeHtml(translateText("Image status rule"))}</strong> ${escapeHtml(translateText(statusRules.find((item) => item.includes("Carousel Image Status = Not Started")) || ""))}</li>
         <li><strong>${escapeHtml(translateText("Caption boundary"))}</strong> ${escapeHtml(translateText(statusRules.find((item) => item.includes("Caption Status")) || ""))}</li>
       </ul>
+      ${data.connector_fallback_reason ? `<p>${escapeHtml(data.connector_fallback_reason)}</p>` : ""}
+      ${connectorEvidence.length ? `
+        <small>${escapeHtml(connectorEvidence.slice(0, 2).join(" "))}</small>
+      ` : ""}
       <p>${escapeHtml(data.operator_note || translateText("Use only existing Notion rows after the 19th refresh."))}</p>
     </article>
   `;
@@ -2934,6 +2941,7 @@ function renderNotionMonthlyRefreshStatus(data) {
   }[data.status] || data.status || "未知";
   const topicIds = data.topic_ids || [];
   const diagnostics = data.diagnostics || [];
+  const connectorStatus = data.connector_status || {};
   return `
     <article class="learning-card wide-learning" data-notion-refresh-status>
       <h3>Notion 月度刷新状态</h3>
@@ -2950,6 +2958,7 @@ function renderNotionMonthlyRefreshStatus(data) {
         <li><strong>缺 Topic ID</strong> ${Number(data.missing_topic_id_count || 0)}</li>
         <li><strong>Topic ID</strong> ${escapeHtml(topicIds.slice(0, 20).join(", ") || "暂无")}</li>
         <li><strong>下一步</strong> ${escapeHtml(data.next_action || "")}</li>
+        <li><strong>Notion 连接</strong> 结构 ${escapeHtml(connectorStatus.schema || "unknown")} · 行读取 ${escapeHtml(connectorStatus.row_query || "unknown")}</li>
       </ul>
       ${diagnostics.length ? `
         <h4>刷新诊断</h4>
@@ -2977,6 +2986,7 @@ function renderDashboardNotionRefreshStatus(data) {
   }[data.status] || data.status || "检查中";
   const duplicateCount = (data.duplicate_topic_ids || []).length;
   const missingTopicCount = Number(data.missing_topic_id_count || 0);
+  const connectorStatus = data.connector_status || {};
   const health = duplicateCount || missingTopicCount ? "blocked" : data.status === "local_cycle_active" ? "done" : "open";
   container.innerHTML = `
     <article class="learning-card wide-learning ${escapeHtml(health)}" data-dashboard-notion-refresh-status>
@@ -2988,6 +2998,8 @@ function renderDashboardNotionRefreshStatus(data) {
         <span>本轮导入 ${Number(data.imported_since_refresh_count || 0)}</span>
         <span>重复 Topic ID ${duplicateCount}</span>
         <span>缺 Topic ID ${missingTopicCount}</span>
+        <span>结构 ${escapeHtml(connectorStatus.schema || "unknown")}</span>
+        <span>行读取 ${escapeHtml(connectorStatus.row_query || "unknown")}</span>
       </div>
       <p>${escapeHtml(data.next_action || "")}</p>
       <div class="learning-actions">
