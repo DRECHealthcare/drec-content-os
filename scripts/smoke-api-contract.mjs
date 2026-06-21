@@ -826,6 +826,21 @@ const requiredSnippets = [
     text: "\"scheduled_queue\": scheduled_queue",
   },
   {
+    name: "project completion first cycle scheduled detail",
+    file: "main",
+    text: "scheduled item(s) are ready for manual publishing evidence",
+  },
+  {
+    name: "project completion first cycle manual publish blocker",
+    file: "main",
+    text: "Manually publish the next scheduled item at its planned time",
+  },
+  {
+    name: "project completion first cycle no stale gate wording",
+    file: "main",
+    absentText: "First cycle still needs approval, queueing, scheduling, and manual publishing evidence.",
+  },
+  {
     name: "workflow handoff next action after scheduling",
     file: "main",
     text: "Download today's safe pack",
@@ -6165,7 +6180,13 @@ for (const route of requiredRoutes) {
 }
 
 for (const check of requiredSnippets) {
-  if (sources[check.file].includes(check.text)) {
+  if (check.absentText) {
+    if (sources[check.file].includes(check.absentText)) {
+      failures.push(fail(check.name, "stale forbidden text present"));
+    } else {
+      pass(check.name);
+    }
+  } else if (sources[check.file].includes(check.text)) {
     pass(check.name);
   } else {
     failures.push(fail(check.name, "missing expected code"));

@@ -27954,6 +27954,25 @@ def build_completion_status(loop, workflow, security, automation):
     if published_queue:
         first_cycle_score += 1
 
+    if published_queue:
+        first_cycle_status = "ready"
+        first_cycle_detail = f"{published_queue} published queue item(s) have evidence; record metrics and roll learning forward."
+    elif scheduled_queue:
+        first_cycle_status = "waiting"
+        first_cycle_detail = f"{scheduled_queue} scheduled item(s) are ready for manual publishing evidence; after a human posts, record the Meta post ID or manual label, then add metrics."
+    elif queue_total:
+        first_cycle_status = "waiting"
+        first_cycle_detail = f"{queue_total} queue item(s) exist; finish queue review approval and scheduling before manual handoff."
+    elif ready_asset_count:
+        first_cycle_status = "waiting"
+        first_cycle_detail = f"{ready_asset_count} approved clear asset(s) can enter the publishing queue."
+    elif asset_count:
+        first_cycle_status = "waiting"
+        first_cycle_detail = "Draft assets exist; explicit doctor or human approval and Safety clear are still required."
+    else:
+        first_cycle_status = "open"
+        first_cycle_detail = "Create one safe draft asset before starting the first publish cycle."
+
     items = [
         completion_item(
             "core_app",
@@ -28040,8 +28059,8 @@ def build_completion_status(loop, workflow, security, automation):
             "First publish cycle",
             first_cycle_score,
             14,
-            "ready" if published_queue else "waiting",
-            "First cycle still needs approval, queueing, scheduling, and manual publishing evidence.",
+            first_cycle_status,
+            first_cycle_detail,
         ),
     ]
     total_score = sum(item["score"] for item in items)
@@ -28057,6 +28076,8 @@ def build_completion_status(loop, workflow, security, automation):
         blockers.append(security.get("next_step") or "Supabase service-role security evidence is incomplete.")
     if scheduled_queue == 0:
         blockers.append("No reviewed item has been scheduled yet.")
+    elif not published_queue:
+        blockers.append("Manually publish the next scheduled item at its planned time, then record the Meta post ID or manual label.")
     return {
         "percent": percent,
         "label": f"{percent}% built",
