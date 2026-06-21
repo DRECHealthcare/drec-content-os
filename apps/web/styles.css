@@ -377,6 +377,20 @@ header span { color: var(--muted); font-size: 12px; }
   min-width: 170px;
 }
 
+.home-progress-safe-label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  border: 1px solid #BBF7D0;
+  border-radius: 999px;
+  padding: 0 12px;
+  background: #F0FDF4;
+  color: #166534;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
 .home-progress-head span,
 .home-progress small {
   color: var(--muted);

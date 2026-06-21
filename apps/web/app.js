@@ -2525,7 +2525,7 @@ function renderHomeProjectCompletion(data) {
         <p>${escapeHtml(translateText(primaryNext))}</p>
       </div>
       <div class="home-progress-actions">
-        <button class="primary" type="button" data-home-open-next="${escapeHtml(nextScreen)}">继续下一步</button>
+        <span class="home-progress-safe-label">只读状态</span>
       </div>
     </div>
     <div class="home-progress-bars">
@@ -2635,7 +2635,7 @@ function renderSimpleOperator(data, monthly = null, cycle = null) {
   let body = translateText(nextAction.body || "系统正在判断下一步。");
   let status = `${percent || "?"}% 总体 · ${firstCycle || "?"}% 第一轮`;
   let actions = `
-    <button class="primary" type="button" data-simple-refresh>刷新状态</button>
+    <button class="primary" type="button" data-simple-refresh>重新检查</button>
   `;
   let safetyNote = "这里不会发布到 Facebook / Instagram。";
   const cycleScreen = ["dashboard", "assets", "review", "scheduler", "learning", "plan", "compose", "creative", "templates", "video", "meta", "outcomes", "kb", "insights"].includes(cycleAction.screen)
@@ -2651,7 +2651,7 @@ function renderSimpleOperator(data, monthly = null, cycle = null) {
       <details class="simple-extra-actions">
         <summary>更多</summary>
         <button type="button" data-simple-download-cycle-command-center>下载指挥中心</button>
-        <button type="button" data-simple-refresh>刷新状态</button>
+        <button type="button" data-simple-refresh>重新检查</button>
       </details>
     `;
     safetyNote = "指挥中心只负责带路和收集证据；不会批准、排程、发布或调用 Meta。";
@@ -2664,14 +2664,14 @@ function renderSimpleOperator(data, monthly = null, cycle = null) {
     status = "等待医生审核 · 不会发布";
     actions = `
       <button class="primary" type="button" data-simple-download-monthly-doctor-handoff>下载医生包</button>
-      <button type="button" data-simple-upload-doctor-worksheet>上传医生表 CSV</button>
-      <button type="button" data-simple-paste-doctor-reply>粘贴文字回复</button>
       <details class="simple-extra-actions">
-        <summary>更多资料</summary>
+        <summary>我已收到医生回复 / 更多资料</summary>
+        <button type="button" data-simple-upload-doctor-worksheet>上传医生表 CSV</button>
+        <button type="button" data-simple-paste-doctor-reply>粘贴文字回复</button>
         <button type="button" data-simple-download-monthly-doctor-message>只下载医生消息</button>
         <button type="button" data-simple-download-monthly-doctor-evidence>医生证据表</button>
         <button type="button" data-simple-download-monthly-action-queue>行动队列</button>
-        <button type="button" data-simple-refresh>刷新状态</button>
+        <button type="button" data-simple-refresh>重新检查</button>
       </details>
     `;
     safetyNote = "安全锁：医生未 approve + Safety clear 前，我不会推进制作、入队、排程或发布。";
@@ -2682,11 +2682,11 @@ function renderSimpleOperator(data, monthly = null, cycle = null) {
     status = "制作阶段 · 不会发布";
     actions = `
       <button class="primary" type="button" data-simple-download-monthly-production-rules>下载制作规则</button>
-      <button type="button" data-simple-paste-production-reply>我已有图片回复</button>
       <details class="simple-extra-actions">
-        <summary>更多资料</summary>
+        <summary>我已收到图片 / 更多资料</summary>
+        <button type="button" data-simple-paste-production-reply>粘贴图片回复</button>
         <button type="button" data-simple-download-monthly-production-qa>制作 QA 包</button>
-        <button type="button" data-simple-refresh>刷新状态</button>
+        <button type="button" data-simple-refresh>重新检查</button>
       </details>
     `;
     safetyNote = "安全锁：制作导入不能替代医生审核，也不会入队、排程或发布。";
@@ -2697,11 +2697,11 @@ function renderSimpleOperator(data, monthly = null, cycle = null) {
     status = "可预览入队 · 不会发布";
     actions = `
       <button class="primary" type="button" data-simple-preview-monthly-queue>先检查</button>
-      <button type="button" data-simple-run-monthly-queue>确认加入队列</button>
       <details class="simple-extra-actions">
-        <summary>更多资料</summary>
+        <summary>检查通过后 / 更多资料</summary>
+        <button type="button" data-simple-run-monthly-queue>确认加入队列</button>
         <button type="button" data-simple-download-monthly-queue-readiness>入队检查表</button>
-        <button type="button" data-simple-refresh>刷新状态</button>
+        <button type="button" data-simple-refresh>重新检查</button>
       </details>
     `;
     safetyNote = "安全锁：入队后仍需队列审核、排程检查和发布交接。";
@@ -2721,11 +2721,11 @@ function renderSimpleOperator(data, monthly = null, cycle = null) {
     status = "已入队 · 不会发布";
     actions = `
       <button class="primary" type="button" data-simple-paste-review-decisions>粘贴审核决定</button>
-      <button type="button" data-simple-schedule-approved>排程已通过内容</button>
       <details class="simple-extra-actions">
-        <summary>更多资料</summary>
+        <summary>审核通过后 / 更多资料</summary>
+        <button type="button" data-simple-schedule-approved>排程已通过内容</button>
         <button type="button" data-simple-download-monthly-review-queue>下载审核队列</button>
-        <button type="button" data-simple-refresh>刷新状态</button>
+        <button type="button" data-simple-refresh>重新检查</button>
       </details>
     `;
     safetyNote = "安全锁：审核和排程都不会发布到 Facebook / Instagram。";
@@ -6349,7 +6349,7 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   const openCycleScreen = event.target.closest("[data-simple-open-cycle-screen]");
   const downloadCycleCommandCenter = event.target.closest("[data-simple-download-cycle-command-center]");
   const refresh = event.target.closest("[data-simple-refresh]");
-  if (!openAccess && !runReadyAssets && !openAssets && !openReview && !openScheduler && !pasteDoctorReply && !pasteProductionReply && !previewMonthlyQueue && !runMonthlyQueue && !downloadMonthlyReviewQueue && !pasteReviewDecisions && !scheduleApprovedFromHome && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorEvidence && !downloadMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadManualPublishEvidence && !downloadTodayPack && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !openLearning && !useLearningTopics && !downloadWeeklyReportZh && !downloadNextPlanHandback && !openCycleScreen && !downloadCycleCommandCenter && !refresh) return;
+  if (!openAccess && !runReadyAssets && !openAssets && !openReview && !openScheduler && !pasteDoctorReply && !uploadDoctorWorksheet && !pasteProductionReply && !previewMonthlyQueue && !runMonthlyQueue && !downloadMonthlyReviewQueue && !pasteReviewDecisions && !scheduleApprovedFromHome && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorEvidence && !downloadMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadManualPublishEvidence && !downloadTodayPack && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !openLearning && !useLearningTopics && !downloadWeeklyReportZh && !downloadNextPlanHandback && !openCycleScreen && !downloadCycleCommandCenter && !refresh) return;
   if (openAccess) {
     const panel = document.getElementById("token-panel");
     if (panel?.hidden) showTokenPanel();
