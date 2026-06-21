@@ -2488,6 +2488,7 @@ function renderHomeProjectCompletion(data) {
       </ul>
     ` : ""}
     <div class="form-actions">
+      <button type="button" data-home-download-operator-guide>下载首页操作说明</button>
       <button type="button" data-home-download-completion>下载完成度审计</button>
       <button type="button" data-home-download-unblock>下载解锁清单</button>
     </div>
@@ -5948,14 +5949,19 @@ document.getElementById("workflow-next").addEventListener("click", (event) => {
 
 document.getElementById("home-progress-card")?.addEventListener("click", async (event) => {
   const refresh = event.target.closest("[data-home-refresh-progress]");
+  const downloadOperatorGuide = event.target.closest("[data-home-download-operator-guide]");
   const downloadCompletion = event.target.closest("[data-home-download-completion]");
   const downloadUnblock = event.target.closest("[data-home-download-unblock]");
-  if (!refresh && !downloadCompletion && !downloadUnblock) return;
+  if (!refresh && !downloadOperatorGuide && !downloadCompletion && !downloadUnblock) return;
   if (refresh) {
     await Promise.all([loadLoopStatus(), loadProjectCompletionAudit()]);
     return;
   }
   try {
+    if (downloadOperatorGuide) {
+      await downloadProtectedFile("/operations/home-operator-guide.zh.md", "drec-home-operator-guide-zh.md", "text/markdown");
+      return;
+    }
     if (downloadCompletion) {
       await downloadProtectedFile("/operations/project-completion-audit.zh.md", "drec-project-completion-audit-zh.md", "text/markdown");
       return;

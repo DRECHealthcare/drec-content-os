@@ -38,6 +38,7 @@ const requiredRoutes = [
   "GET /public/first-publish-assets/{asset_id}/slides/{slide_number}.png",
   "GET /operations/chinese-operator-center",
   "GET /operations/chinese-operator-center.md",
+  "GET /operations/home-operator-guide.zh.md",
   "GET /notion/carousel-source",
   "GET /notion/carousel-intake-template.csv",
   "GET /notion/carousel-image-workflow.md",
@@ -2823,6 +2824,16 @@ const requiredSnippets = [
     name: "web home progress download completion",
     file: "web",
     text: "data-home-download-completion",
+  },
+  {
+    name: "web home operator guide action",
+    file: "web",
+    text: "data-home-download-operator-guide",
+  },
+  {
+    name: "web home operator guide endpoint",
+    file: "web",
+    text: "/operations/home-operator-guide.zh.md",
   },
   {
     name: "web home progress download unblock",

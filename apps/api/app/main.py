@@ -24318,6 +24318,173 @@ async def operations_today_safe_operator_pack_zip(_: None = Depends(require_acce
     )
 
 
+def home_operator_click_path(primary_key: str | None):
+    mapping = {
+        "doctor_safety_clear": [
+            "首页主卡：点“下载医生发送消息”。",
+            "把医生交接内容发给医生审核。",
+            "医生回复后回首页点“粘贴医生回复”，先预览，再导入。",
+        ],
+        "production_handoff": [
+            "首页主卡：点“下载制作导入规则”。",
+            "把制作要求给设计/制作人员。",
+            "收到图片 URL 后，在“更多”里点“粘贴图片回复”，先预览，再导入。",
+        ],
+        "visual_qa": [
+            "首页主卡：点“下载制作 QA 包”。",
+            "确认手机可读、Slide 1 只有 hook、Slides 2+ 有解释文字。",
+            "视觉 QA 通过后，回首页刷新状态。",
+        ],
+        "queue_ready": [
+            "首页主卡：点“预览入队”。",
+            "确认只处理 ready_to_queue 的内容。",
+            "确认无误后点“执行入队”；入队不是发布。",
+        ],
+        "queue_review": [
+            "首页主卡：点“粘贴审核决定”。",
+            "先在“更多”下载审核队列，填 reviewer_action=approve。",
+            "粘贴回来先预览，再导入；之后才排程已审核内容。",
+        ],
+        "pre_schedule": [
+            "首页主卡：点“排程已审核内容”或打开排程页。",
+            "确认 planned slot、caption、media、human approval 都完整。",
+            "排程完成后仍不会发布到 Meta。",
+        ],
+        "handoff": [
+            "首页主卡：点“下载今日安全包”。",
+            "真人按交接包检查并手动发布。",
+            "只有真人真的发布后，才记录 Meta post ID。",
+        ],
+        "monitor": [
+            "首页主卡：点“刷新状态”。",
+            "打开“月度 Carousel”查看是否等待医生、制作、审核、排程或外部资料。",
+            "不要创建重复 Notion 主题；继续使用 Topic ID。",
+        ],
+    }
+    return mapping.get(primary_key or "", mapping["monitor"])
+
+
+async def home_operator_guide_payload():
+    loop = await build_loop_status()
+    workflow = build_workflow_guidance(loop)
+    security = await strict_security_status_payload()
+    automation = await automation_status_payload()
+    workflow["completion"] = build_completion_status(loop, workflow, security, automation)
+    monthly = await monthly_carousel_next_action_queue_payload()
+    primary = monthly.get("primary_action") or {}
+    completion = workflow.get("completion") or {}
+    return {
+        "generated_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
+        "mode": "read_only_home_operator_guide",
+        "completion": {
+            "percent": completion.get("percent"),
+            "first_cycle_percent": completion.get("first_cycle_percent"),
+            "next_requirement": completion.get("next_requirement"),
+            "blockers": completion.get("blockers") or [],
+        },
+        "monthly": {
+            "asset_count": monthly.get("asset_count"),
+            "stage_counts": monthly.get("stage_counts") or {},
+            "gate_counts": monthly.get("gate_counts") or {},
+            "primary_action": primary,
+            "top_three": monthly.get("top_three") or [],
+        },
+        "click_path": home_operator_click_path(primary.get("key")),
+        "links": {
+            "home": "/ui/",
+            "monthly_action_queue": "/operations/monthly-carousel-next-action-queue.zh.md",
+            "today_safe_pack": "/operations/today-safe-operator-pack.zip",
+            "project_completion_audit": "/operations/project-completion-audit.zh.md",
+            "project_unblock_board": "/operations/project-unblock-board.zh.md",
+            "access_control_pack": "/security/access-control-pack.md",
+        },
+        "safety": [
+            "这份首页说明只读，不会批准、入队、排程、发布、记录 post ID 或调用 Meta。",
+            "首页主卡永远优先于高级工具；不确定时只按首页主卡。",
+            "医生/人工审核、制作、队列审核、排程、发布交接、数据回流仍是分开的安全门。",
+            "Meta 自动发布保持关闭，直到你明确授权并完成上线前检查。",
+        ],
+    }
+
+
+@app.get("/operations/home-operator-guide.zh.md")
+async def operations_home_operator_guide_zh(_: None = Depends(require_access_token)):
+    payload = await home_operator_guide_payload()
+    completion = payload.get("completion") or {}
+    monthly = payload.get("monthly") or {}
+    primary = monthly.get("primary_action") or {}
+    top_three = monthly.get("top_three") or []
+    lines = [
+        "# DREC 首页操作说明",
+        "",
+        f"- 生成时间：{payload.get('generated_at')}",
+        f"- 总完成度：{completion.get('percent')}%",
+        f"- 首轮闭环：{completion.get('first_cycle_percent')}%",
+        f"- 当前下一要求：{completion.get('next_requirement')}",
+        "",
+        "## 打开后先做什么",
+        "",
+        "1. 打开 `/ui/` 首页。",
+        "2. 如果页面显示需要访问码，点右上角“访问”，输入访问码和操作者姓名，然后保存。",
+        "3. 回到首页最上面的“今天只按这里”。只看这张主卡，不用先找左边菜单。",
+        "4. 完成主卡动作后，回首页点“刷新状态”。",
+        "",
+        "## 现在该按哪个按钮",
+        "",
+        f"- 当前阶段：{primary.get('title') or '查看状态'}",
+        f"- 说明：{primary.get('detail') or '继续查看首页主卡。'}",
+        f"- 对应下载：`{primary.get('download') or '看首页主卡按钮'}`",
+        "",
+        *markdown_list(payload.get("click_path")),
+        "",
+        "## 如果仍然找不到",
+        "",
+        "- 不要去高级测试区。",
+        "- 先点首页主卡的第一个蓝绿色按钮。",
+        "- 如果主卡说“粘贴”，它会自动把你带到下面对应的输入框。",
+        "- 如果主卡说“下载”，下载后把文件交给对应的人：医生、设计、审核人或发布人。",
+        "",
+        "## 当前最前面的 3 条月度内容",
+        "",
+    ]
+    if top_three:
+        for item in top_three:
+            lines.extend(
+                [
+                    f"### {item.get('topic_id') or '无 Topic ID'} · {item.get('topic') or '未命名主题'}",
+                    "",
+                    f"- Asset ID：`{item.get('asset_id') or 'n/a'}`",
+                    f"- 下一步：{item.get('action_zh')}",
+                    f"- 操作：{item.get('operator_action')}",
+                    f"- 安全线：{item.get('safety_note')}",
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["- 当前没有月度内容需要排在最前处理。", ""])
+    lines.extend(
+        [
+            "## 完成度阻碍",
+            "",
+            *markdown_list(completion.get("blockers") or ["继续按首页主卡完成下一步。"]),
+            "",
+            "## 安全线",
+            "",
+            *markdown_list(payload.get("safety")),
+            "",
+            "## 相关链接",
+            "",
+            *[f"- {label}: `{url}`" for label, url in (payload.get("links") or {}).items()],
+            "",
+        ]
+    )
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-home-operator-guide-zh.md"'},
+    )
+
+
 async def next_facebook_publish_item(item_id: str | None = None):
     if item_id:
         row = await fetch_row(
