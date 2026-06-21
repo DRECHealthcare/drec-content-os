@@ -10588,8 +10588,9 @@ async def operations_monthly_carousel_doctor_reply_templates_zh(_: None = Depend
         "",
         "1. 先把「月度 Carousel 医生审核总包」和 PNG ZIP 给医生看。",
         "2. 医生只需要在下面每个 block 里保留对应 Asset ID，并填写 Decision / Safety / Notes。",
-        "3. 只有明确 `Decision: approve` 且 `Safety: clear` 的项目，才可以导入并进入下一步。",
-        "4. 若医生写 needs edits、needs review、blocked 或不确定，就保持在审核状态，不要推进。",
+        "3. 若要 approve，5 个 doctor_check_* 都必须填 yes/pass。",
+        "4. 只有明确 `Decision: approve` 且 `Safety: clear` 的项目，才可以导入并进入下一步。",
+        "5. 若医生写 needs edits、needs review、blocked 或不确定，就保持在审核状态，不要推进。",
         "",
         "## 可复制整包回复模板",
         "",
@@ -10607,6 +10608,11 @@ async def operations_monthly_carousel_doctor_reply_templates_zh(_: None = Depend
                 "Decision: approve / needs edits / reject",
                 "Safety: clear / needs review / blocked",
                 "Use polished copy: no",
+                "doctor_check_educational_not_diagnostic: yes / no",
+                "doctor_check_no_guaranteed_outcome: yes / no",
+                "doctor_check_no_medication_instruction: yes / no",
+                "doctor_check_mandarin_accurate: yes / no",
+                "doctor_check_cta_appropriate: yes / no",
                 "Notes:",
                 "",
             ]
@@ -10622,6 +10628,7 @@ async def operations_monthly_carousel_doctor_reply_templates_zh(_: None = Depend
             "- `Safety` 只能接受 clear、needs review、blocked。",
             "- 不要把医生没明确批准的项目改成 approve。",
             "- 不要把医生没明确写 clear 的项目改成 Safety clear。",
+            "- 月度 Carousel approve 必须有审核人姓名、Notes、以及 5 个 doctor_check_* = yes/pass。",
             "",
         ]
     )
@@ -13218,6 +13225,11 @@ def doctor_review_polish_item(item: dict):
                 "Decision: approve / needs edits / reject",
                 "Safety: clear / needs review / blocked",
                 "Use polished copy: yes / edit first / no",
+                "doctor_check_educational_not_diagnostic: yes / no",
+                "doctor_check_no_guaranteed_outcome: yes / no",
+                "doctor_check_no_medication_instruction: yes / no",
+                "doctor_check_mandarin_accurate: yes / no",
+                "doctor_check_cta_appropriate: yes / no",
                 "Notes:",
             ]
         ),
@@ -13292,6 +13304,7 @@ async def doctor_reply_inbox_pack_payload():
         "safety": [
             "This pack is read-only and does not approve, edit, queue, schedule, publish, or send Meta requests.",
             "Preview is required before import.",
+            "Monthly carousel approvals require reviewer name, Notes, and every doctor_check_* field marked yes/pass.",
             "Polished copy adoption requires explicit doctor approval, Safety: clear, and Use polished copy: yes.",
             "Needs edits or blocked replies should stay out of production until rewritten and reviewed again.",
         ],
@@ -16717,6 +16730,13 @@ def parse_doctor_reply_blocks(reply_text: str):
     blocks = []
     current = {}
     note_lines = []
+    doctor_check_aliases = {
+        "educational not diagnostic": "doctor_check_educational_not_diagnostic",
+        "no guaranteed outcome": "doctor_check_no_guaranteed_outcome",
+        "no medication instruction": "doctor_check_no_medication_instruction",
+        "mandarin accurate": "doctor_check_mandarin_accurate",
+        "cta appropriate": "doctor_check_cta_appropriate",
+    }
 
     def flush():
         if not current and not note_lines:
@@ -16749,6 +16769,14 @@ def parse_doctor_reply_blocks(reply_text: str):
         match = re.match(r"^(use\s+polished\s+copy|polished\s+copy|apply\s+polish|apply\s+polished\s+copy)\s*[:：]\s*(.+)$", line, flags=re.IGNORECASE)
         if match:
             current["use_polished_copy"] = match.group(2).strip()
+            continue
+        match = re.match(r"^(doctor_check_[a-z0-9_]+)\s*[:：]\s*(.+)$", line, flags=re.IGNORECASE)
+        if match:
+            current[match.group(1).strip().lower()] = match.group(2).strip()
+            continue
+        match = re.match(r"^(educational not diagnostic|no guaranteed outcome|no medication instruction|mandarin accurate|cta appropriate)\s*[:：]\s*(.+)$", line, flags=re.IGNORECASE)
+        if match:
+            current[doctor_check_aliases[match.group(1).strip().lower()]] = match.group(2).strip()
             continue
         match = re.match(r"^(notes?|reason)\s*[:：]\s*(.*)$", line, flags=re.IGNORECASE)
         if match:
@@ -17249,6 +17277,26 @@ async def import_doctor_replies(
         if review_decision == "approved" and target_safety != "clear":
             skipped.append({"row": index, "asset_id": asset_id, "reason": "Approval requires Safety: clear or an already clear asset."})
             continue
+        is_monthly_carousel = bool(monthly_carousel_topic_id(existing))
+        if is_monthly_carousel and review_decision == "approved":
+            missing_evidence = []
+            if not fallback_reviewer:
+                missing_evidence.append("reviewer_name")
+            if not notes:
+                missing_evidence.append("review_notes")
+            failed_checks = [field for field in MONTHLY_DOCTOR_CHECK_FIELDS if not is_affirmative_review_check(row.get(field))]
+            if failed_checks:
+                missing_evidence.extend(failed_checks)
+            if missing_evidence:
+                skipped.append(
+                    {
+                        "row": index,
+                        "asset_id": asset_id,
+                        "reason": "Monthly carousel approval requires reviewer name, Notes, and all doctor_check_* fields marked yes/pass.",
+                        "missing_evidence": missing_evidence,
+                    }
+                )
+                continue
         polished_caption = ""
         if use_polished_copy is True:
             if review_decision != "approved" or target_safety != "clear":
@@ -17292,6 +17340,7 @@ async def import_doctor_replies(
             "reviewer_name": reviewer_name,
             "review_notes": notes,
             "use_polished_copy": bool(use_polished_copy is True),
+            "monthly_strict_checks": "required" if is_monthly_carousel and review_decision == "approved" else "not_required",
             "caption_update": "will_apply_polished_copy" if use_polished_copy is True else "none",
             "polished_caption_preview": feedback_excerpt(polished_caption, 220) if polished_caption else "",
         }
@@ -17342,6 +17391,7 @@ async def import_doctor_replies(
         ),
         "safety": [
             "Doctor reply import records review and safety decisions, and can apply polished copy only when the doctor explicitly says yes with Decision: approve and Safety: clear.",
+            "Monthly carousel approvals also require reviewer name, Notes, and every doctor_check_* field marked yes/pass.",
             "It does not queue, schedule, publish, send Meta requests, or attach media/design.",
             "Approval still requires Safety: clear before review can become approved.",
         ],

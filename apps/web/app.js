@@ -6362,7 +6362,15 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
     if (card) {
       card.hidden = false;
       card.scrollIntoView({ behavior: "smooth", block: "start" });
-      document.getElementById("home-doctor-reply-text")?.focus();
+      const replyText = document.getElementById("home-doctor-reply-text");
+      if (replyText && !replyText.value.trim()) {
+        await fillDoctorReplyTemplate({
+          textInputId: "home-doctor-reply-text",
+          messageId: "home-doctor-reply-message",
+          scroll: false,
+        });
+      }
+      replyText?.focus();
     }
     return;
   }

@@ -1424,6 +1424,16 @@ const requiredSnippets = [
     text: "can apply polished copy only when the doctor explicitly says yes with Decision: approve and Safety: clear.",
   },
   {
+    name: "monthly doctor reply strict check parser",
+    file: "main",
+    text: "doctor_check_educational_not_diagnostic",
+  },
+  {
+    name: "monthly doctor reply strict approval gate",
+    file: "main",
+    text: "Monthly carousel approval requires reviewer name, Notes, and all doctor_check_* fields marked yes/pass.",
+  },
+  {
     name: "doctor reply inbox chinese export",
     file: "main",
     text: "drec-doctor-reply-inbox-pack-zh.md",
@@ -3127,6 +3137,11 @@ const requiredSnippets = [
     name: "web simple paste doctor reply action",
     file: "web",
     text: "data-simple-paste-doctor-reply",
+  },
+  {
+    name: "web simple paste doctor reply auto fills template",
+    file: "web",
+    text: "textInputId: \"home-doctor-reply-text\"",
   },
   {
     name: "web home production reply card",
