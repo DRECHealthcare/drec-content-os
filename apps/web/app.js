@@ -2724,12 +2724,12 @@ function renderSimpleOperator(data, monthly = null, cycle = null) {
     actions = `
       <button class="primary" type="button" data-simple-download-today-pack>下载给发布人的安全包</button>
       <details class="simple-extra-actions">
-        <summary>看排程 / 其他资料</summary>
+        <summary>更多工具</summary>
         <button type="button" data-simple-open-scheduler>看排程</button>
         <button type="button" data-simple-download-handoff>交接包</button>
-        <button type="button" data-simple-download-reel>Reel 制作包</button>
         <button type="button" data-simple-download-post-publish>发布后下一步</button>
         <button type="button" data-simple-download-post-metrics>数据表</button>
+        <button type="button" data-simple-download-reel>Reel 制作包</button>
       </details>
     `;
     safetyNote = "安全锁：我不会点测试 Facebook、测试 Instagram 或记录已发布。";
@@ -5736,14 +5736,22 @@ function renderHomePublishingCloseout(data) {
   const waitingMetricsCount = Number(counts.waiting_for_metrics || 0);
   const waitingRollup = Number(counts.waiting_for_rollup || 0);
   const complete = Number(counts.complete || 0);
+  const nextReadyItem = readyItems[0] || null;
   const learningCard = document.getElementById("home-learning-handback-card");
   if (learningCard && (waitingMetricsCount > 0 || waitingRollup > 0 || complete > 0)) {
     learningCard.hidden = false;
   }
   container.innerHTML = `
-    <div class="home-closeout-next">
-      <strong>${escapeHtml(translateText(next.label || "Build handoff and publish manually"))}</strong>
-      <small>${escapeHtml(translateText(next.detail || "人工发布后，再回填帖子 ID 和数据。"))}</small>
+    <div class="home-closeout-simple">
+      <div class="home-closeout-next">
+        <strong>${escapeHtml(translateText(next.label || "Build handoff and publish manually"))}</strong>
+        <small>${escapeHtml(translateText(next.detail || "人工发布后，再回填帖子 ID 和数据。"))}</small>
+      </div>
+      <ol class="home-closeout-steps">
+        <li class="${scheduledReady > 0 ? "active" : "done"}"><span>1</span><b>下载安全包</b></li>
+        <li class="${waitingPostId > 0 ? "active" : scheduledReady > 0 ? "" : "done"}"><span>2</span><b>真人手动发布</b></li>
+        <li class="${waitingMetricsCount > 0 ? "active" : waitingPostId > 0 ? "" : "done"}"><span>3</span><b>回来填 ID 和数据</b></li>
+      </ol>
     </div>
     <div class="home-closeout-pills">
       <span>可人工发布 ${escapeHtml(String(scheduledReady))}</span>
@@ -5752,23 +5760,42 @@ function renderHomePublishingCloseout(data) {
       <span>等学习汇总 ${escapeHtml(String(waitingRollup))}</span>
       <span>已闭环 ${escapeHtml(String(complete))}</span>
     </div>
-    ${readyItems.length ? `
+    ${nextReadyItem ? `
+      <article class="home-handoff-feature">
+        <div>
+          <span>下一条要交接</span>
+          <strong>${escapeHtml(nextReadyItem.channel || "post")} / ${escapeHtml(nextReadyItem.format || "content")}</strong>
+          <small>${escapeHtml(nextReadyItem.planned_slot || "未排程")}</small>
+          <p>${escapeHtml((nextReadyItem.caption || "").slice(0, 150))}${(nextReadyItem.caption || "").length > 150 ? "..." : ""}</p>
+        </div>
+        <div class="home-handoff-actions">
+          <button type="button" data-home-copy-handoff-full="${escapeHtml(nextReadyItem.id || "")}">复制给发布人</button>
+          <button type="button" data-home-prepare-record-published="${escapeHtml(nextReadyItem.id || "")}">发布后填 ID</button>
+        </div>
+      </article>
+    ` : ""}
+    ${readyItems.length > 1 ? `
       <div class="home-handoff-list">
-        ${readyItems.slice(0, 4).map((item, index) => {
+        ${readyItems.slice(1, 5).map((item, index) => {
           const mediaUrls = Array.isArray(item.media_urls) ? item.media_urls.filter(Boolean) : [];
           return `
             <article class="home-handoff-item">
               <div>
-                <strong>${escapeHtml(index + 1)}. ${escapeHtml(item.channel || "post")} / ${escapeHtml(item.format || "content")}</strong>
+                <strong>${escapeHtml(index + 2)}. ${escapeHtml(item.channel || "post")} / ${escapeHtml(item.format || "content")}</strong>
                 <small>${escapeHtml(item.planned_slot || "未排程")} · ${escapeHtml(item.id || "")}</small>
               </div>
               <p>${escapeHtml((item.caption || "").slice(0, 150))}${(item.caption || "").length > 150 ? "..." : ""}</p>
               <div class="home-handoff-actions">
-                <button type="button" data-home-copy-handoff-full="${escapeHtml(item.id || "")}">复制整套资料</button>
-                <button type="button" data-home-copy-handoff-caption="${escapeHtml(item.id || "")}">复制文案</button>
-                ${mediaUrls.length ? `<button type="button" data-home-copy-handoff-media="${escapeHtml(item.id || "")}">复制媒体链接</button>` : ""}
+                <button type="button" data-home-copy-handoff-full="${escapeHtml(item.id || "")}">复制给发布人</button>
                 <button type="button" data-home-prepare-record-published="${escapeHtml(item.id || "")}">发布后填 ID</button>
               </div>
+              ${mediaUrls.length ? `
+                <details class="home-handoff-more">
+                  <summary>分开复制</summary>
+                  <button type="button" data-home-copy-handoff-caption="${escapeHtml(item.id || "")}">复制文案</button>
+                  <button type="button" data-home-copy-handoff-media="${escapeHtml(item.id || "")}">复制媒体链接</button>
+                </details>
+              ` : ""}
             </article>
           `;
         }).join("")}
@@ -5784,7 +5811,7 @@ function renderHomePublishingCloseout(data) {
             </div>
             <p>${escapeHtml((item.caption || "").slice(0, 150))}${(item.caption || "").length > 150 ? "..." : ""}</p>
             <div class="home-handoff-actions">
-              <button type="button" data-home-prepare-metrics="${homeMetricsPayload(item)}">填数据</button>
+              <button type="button" data-home-prepare-metrics="${homeMetricsPayload(item)}">填写表现数据</button>
             </div>
           </article>
         `).join("")}

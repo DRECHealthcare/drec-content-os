@@ -716,6 +716,67 @@ header span { color: var(--muted); font-size: 12px; }
   line-height: 1.45;
 }
 
+.home-closeout-simple {
+  display: grid;
+  gap: 10px;
+}
+
+.home-closeout-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.home-closeout-steps li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 10px;
+  background: #FFFFFF;
+  color: var(--muted);
+}
+
+.home-closeout-steps li span {
+  display: grid;
+  place-items: center;
+  flex: 0 0 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: #E2E8F0;
+  color: var(--navy);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.home-closeout-steps li b {
+  overflow-wrap: anywhere;
+  color: inherit;
+  font-size: 12px;
+}
+
+.home-closeout-steps li.active {
+  border-color: var(--teal);
+  background: #F0FDFA;
+  color: var(--navy);
+}
+
+.home-closeout-steps li.active span {
+  background: var(--teal);
+  color: #052E2A;
+}
+
+.home-closeout-steps li.done {
+  border-color: #BBF7D0;
+  background: #F0FDF4;
+  color: #166534;
+}
+
 .home-closeout-pills {
   display: flex;
   flex-wrap: wrap;
@@ -737,6 +798,36 @@ header span { color: var(--muted); font-size: 12px; }
   display: grid;
   gap: 10px;
   margin-top: 12px;
+}
+
+.home-handoff-feature {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  margin-top: 12px;
+  border: 1px solid #99F6E4;
+  border-radius: 8px;
+  padding: 12px;
+  background: #F0FDFA;
+}
+
+.home-handoff-feature span,
+.home-handoff-feature small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.home-handoff-feature strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--navy);
+}
+
+.home-handoff-feature p {
+  margin: 8px 0 0;
+  color: var(--ink);
 }
 
 .home-handoff-item {
@@ -765,6 +856,28 @@ header span { color: var(--muted); font-size: 12px; }
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.home-handoff-actions button:first-child {
+  border-color: var(--teal);
+  background: var(--teal);
+  color: #052E2A;
+}
+
+.home-handoff-more {
+  margin-top: 10px;
+}
+
+.home-handoff-more summary {
+  color: var(--navy);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.home-handoff-more button {
+  margin-top: 8px;
+  margin-right: 8px;
 }
 
 .home-doctor-reply[hidden],
@@ -1975,6 +2088,10 @@ button[type="submit"] {
   .simple-operator { grid-template-columns: 1fr; }
   .simple-operator-actions { justify-content: stretch; }
   .simple-operator-actions button { width: 100%; white-space: normal; }
+  .home-closeout-steps,
+  .home-handoff-feature { grid-template-columns: 1fr; }
+  .home-handoff-feature .home-handoff-actions button,
+  .home-handoff-item .home-handoff-actions button { width: 100%; }
   .home-record-published { grid-template-columns: 1fr; }
   .home-metrics-quick { grid-template-columns: 1fr 1fr; }
   .home-metrics-quick label:first-child,
