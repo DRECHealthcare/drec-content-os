@@ -4962,6 +4962,16 @@ const requiredSnippets = [
     text: "renderHomePublishingCloseout",
   },
   {
+    name: "web home handoff copy caption action",
+    file: "web",
+    text: "data-home-copy-handoff-caption",
+  },
+  {
+    name: "web home handoff copy media action",
+    file: "web",
+    text: "data-home-copy-handoff-media",
+  },
+  {
     name: "web home today safe pack action",
     file: "webIndex",
     text: "home-download-today-safe-pack",
@@ -5010,6 +5020,11 @@ const requiredSnippets = [
     name: "web home publish closeout styles",
     file: "styles",
     text: ".home-publish-closeout",
+  },
+  {
+    name: "web home handoff list styles",
+    file: "styles",
+    text: ".home-handoff-list",
   },
   {
     name: "web home learning handback card",

@@ -5646,7 +5646,28 @@ function renderHomePublishingCloseout(data) {
       <span>等学习汇总 ${escapeHtml(String(waitingRollup))}</span>
       <span>已闭环 ${escapeHtml(String(complete))}</span>
     </div>
+    ${readyItems.length ? `
+      <div class="home-handoff-list">
+        ${readyItems.slice(0, 4).map((item, index) => {
+          const mediaUrls = Array.isArray(item.media_urls) ? item.media_urls.filter(Boolean) : [];
+          return `
+            <article class="home-handoff-item">
+              <div>
+                <strong>${escapeHtml(index + 1)}. ${escapeHtml(item.channel || "post")} / ${escapeHtml(item.format || "content")}</strong>
+                <small>${escapeHtml(item.planned_slot || "未排程")} · ${escapeHtml(item.id || "")}</small>
+              </div>
+              <p>${escapeHtml((item.caption || "").slice(0, 150))}${(item.caption || "").length > 150 ? "..." : ""}</p>
+              <div class="home-handoff-actions">
+                <button type="button" data-home-copy-handoff-caption="${escapeHtml(item.id || "")}">复制文案</button>
+                ${mediaUrls.length ? `<button type="button" data-home-copy-handoff-media="${escapeHtml(item.id || "")}">复制媒体链接</button>` : ""}
+              </div>
+            </article>
+          `;
+        }).join("")}
+      </div>
+    ` : ""}
   `;
+  container.dataset.readyItems = JSON.stringify(readyItems);
 }
 
 async function loadPublishingCloseout() {
@@ -6433,6 +6454,30 @@ document.getElementById("home-record-published-save")?.addEventListener("click",
     messageId: "home-publish-closeout-message",
   });
   document.getElementById("home-record-published-id").value = "";
+});
+
+document.getElementById("home-publish-closeout-status")?.addEventListener("click", async (event) => {
+  const captionButton = event.target.closest("[data-home-copy-handoff-caption]");
+  const mediaButton = event.target.closest("[data-home-copy-handoff-media]");
+  if (!captionButton && !mediaButton) return;
+  const itemId = captionButton?.dataset.homeCopyHandoffCaption || mediaButton?.dataset.homeCopyHandoffMedia || "";
+  const container = document.getElementById("home-publish-closeout-status");
+  const message = document.getElementById("home-publish-closeout-message");
+  const readyItems = JSON.parse(container?.dataset.readyItems || "[]");
+  const item = readyItems.find((row) => row.id === itemId);
+  if (!item) {
+    if (message) message.textContent = "找不到这条交接内容，请刷新。";
+    return;
+  }
+  const text = captionButton
+    ? item.caption || ""
+    : (item.media_urls || []).filter(Boolean).join("\n");
+  try {
+    await navigator.clipboard.writeText(text);
+    if (message) message.textContent = captionButton ? "文案已复制。" : "媒体链接已复制。";
+  } catch {
+    if (message) message.textContent = "浏览器挡住了复制，请下载安全包后手动复制。";
+  }
 });
 
 async function downloadHomeLearningHandback(path, filename, mediaType, doneMessage) {

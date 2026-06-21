@@ -583,6 +583,40 @@ header span { color: var(--muted); font-size: 12px; }
   font-weight: 800;
 }
 
+.home-handoff-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.home-handoff-item {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #FFF;
+}
+
+.home-handoff-item strong,
+.home-handoff-item small {
+  display: block;
+}
+
+.home-handoff-item small {
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.home-handoff-item p {
+  margin: 8px 0;
+  color: var(--ink);
+}
+
+.home-handoff-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .home-doctor-reply[hidden],
 .home-production-reply[hidden],
 .home-queue-action[hidden],
