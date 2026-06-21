@@ -2487,11 +2487,12 @@ function renderHomeProjectCompletion(data) {
         ${nextActions.slice(0, 3).map((item) => `<li>${escapeHtml(translateText(item))}</li>`).join("")}
       </ul>
     ` : ""}
-    <div class="form-actions">
-      <button type="button" data-home-download-operator-guide>下载首页操作说明</button>
-      <button type="button" data-home-download-completion>下载完成度审计</button>
-      <button type="button" data-home-download-unblock>下载解锁清单</button>
-    </div>
+    <details class="simple-extra-actions home-progress-more">
+      <summary>进度资料</summary>
+      <button type="button" data-home-download-operator-guide>首页说明</button>
+      <button type="button" data-home-download-completion>完成度审计</button>
+      <button type="button" data-home-download-unblock>解锁清单</button>
+    </details>
     <small>这个卡片只读，不会批准、排程、发布或调用 Meta。</small>
   `;
 }
@@ -2530,7 +2531,7 @@ function renderSimpleOperator(data, monthly = null) {
   const percent = Number(completion.percent || 0);
   const firstCycle = Number(completion.first_cycle_percent || 0);
   let eyebrow = "安全操作中心";
-  let title = "今天只按这里";
+  let title = "现在只看这里";
   let body = translateText(nextAction.body || "系统正在判断下一步。");
   let status = `${percent || "?"}% 总体 · ${firstCycle || "?"}% 第一轮`;
   let actions = `
@@ -2541,15 +2542,15 @@ function renderSimpleOperator(data, monthly = null) {
   if (Number(monthlyGateCounts.waiting_doctor_safety_clear || 0) > 0) {
     eyebrow = "月度 Carousel 下一步";
     title = `${Number(monthlyGateCounts.waiting_doctor_safety_clear || 0)} 条内容等待医生 Safety clear`;
-    body = monthlyPrimary.detail || "现在只需要把医生交接 ZIP 发给医生审核；医生没有明确 approve + Safety clear 前，系统不会推进制作、入队或发布。";
+    body = monthlyPrimary.detail || "先把医生审核消息发给医生。收到回复后，点“粘贴回复”贴回来检查。";
     status = "等待医生审核 · 不会发布";
     actions = `
-      <button class="primary" type="button" data-simple-download-monthly-doctor-message>下载医生发送消息</button>
-      <button type="button" data-simple-paste-doctor-reply>粘贴医生回复</button>
+      <button class="primary" type="button" data-simple-download-monthly-doctor-message>给医生的消息</button>
+      <button type="button" data-simple-paste-doctor-reply>粘贴回复</button>
       <details class="simple-extra-actions">
         <summary>更多</summary>
         <button type="button" data-simple-download-monthly-doctor-handoff>医生交接 ZIP</button>
-        <button type="button" data-simple-download-monthly-action-queue>今日行动队列</button>
+        <button type="button" data-simple-download-monthly-action-queue>行动队列</button>
         <button type="button" data-simple-refresh>刷新状态</button>
       </details>
     `;
@@ -2557,14 +2558,14 @@ function renderSimpleOperator(data, monthly = null) {
   } else if (Number(monthlyGateCounts.waiting_final_media || 0) > 0 || Number(monthlyGateCounts.waiting_visual_qa || 0) > 0) {
     eyebrow = "月度 Carousel 下一步";
     title = "等待最终图片和视觉 QA";
-    body = monthlyPrimary.detail || "先下载制作规则和制作表；只有医生已批准且 Safety clear 的内容才能挂最终媒体。";
+    body = monthlyPrimary.detail || "先给制作端规则；收到图片链接后，点“粘贴图片回复”贴回来检查。";
     status = "制作阶段 · 不会发布";
     actions = `
-      <button class="primary" type="button" data-simple-download-monthly-production-rules>下载制作导入规则</button>
-      <button type="button" data-simple-download-monthly-production-qa>下载制作 QA 包</button>
+      <button class="primary" type="button" data-simple-download-monthly-production-rules>制作规则</button>
+      <button type="button" data-simple-paste-production-reply>粘贴图片回复</button>
       <details class="simple-extra-actions">
         <summary>更多</summary>
-        <button type="button" data-simple-paste-production-reply>粘贴图片回复</button>
+        <button type="button" data-simple-download-monthly-production-qa>制作 QA 包</button>
         <button type="button" data-simple-refresh>刷新状态</button>
       </details>
     `;
@@ -2572,11 +2573,11 @@ function renderSimpleOperator(data, monthly = null) {
   } else if (Number(monthlyGateCounts.ready_to_queue || 0) > 0) {
     eyebrow = "月度 Carousel 下一步";
     title = `${Number(monthlyGateCounts.ready_to_queue || 0)} 条月度内容可预览入队`;
-    body = "先下载入队检查表；确认只处理 ready_to_queue 的内容。入队不是发布。";
+    body = "先检查可入队内容，再加入队列。入队不是发布。";
     status = "可预览入队 · 不会发布";
     actions = `
-      <button class="primary" type="button" data-simple-preview-monthly-queue>预览入队</button>
-      <button type="button" data-simple-run-monthly-queue>执行入队</button>
+      <button class="primary" type="button" data-simple-preview-monthly-queue>检查入队</button>
+      <button type="button" data-simple-run-monthly-queue>加入队列</button>
       <details class="simple-extra-actions">
         <summary>更多</summary>
         <button type="button" data-simple-download-monthly-queue-readiness>入队检查表</button>
@@ -2590,17 +2591,17 @@ function renderSimpleOperator(data, monthly = null) {
     body = `已有 ${readyAssets} 条通用内容是 approved + safety clear。执行入队只会放进审核队列，不会发布到 Meta。`;
     status = "安全通过，可以进入发布队列";
     actions = `
-      <button class="primary" type="button" data-simple-run-ready-assets>执行安全入队</button>
-      <button type="button" data-simple-open-assets>打开素材页查看</button>
+      <button class="primary" type="button" data-simple-run-ready-assets>加入队列</button>
+      <button type="button" data-simple-open-assets>看素材</button>
     `;
   } else if (queueTotal > 0 && scheduledQueue === 0) {
     eyebrow = "下一步：审核和排程";
     title = `${queueTotal} 条内容已入队，在首页完成审核`;
-    body = "先下载审核决定表，填 reviewer_action=approve，再粘贴回来预览和导入。排程只处理已审核通过、合规 clear 的项目。";
+    body = "粘贴审核决定，检查后导入；导入后再排程。不会发布。";
     status = "已入队 · 不会发布";
     actions = `
-      <button class="primary" type="button" data-simple-paste-review-decisions>粘贴审核决定</button>
-      <button type="button" data-simple-schedule-approved>排程已审核内容</button>
+      <button class="primary" type="button" data-simple-paste-review-decisions>粘贴审核</button>
+      <button type="button" data-simple-schedule-approved>排程</button>
       <details class="simple-extra-actions">
         <summary>更多</summary>
         <button type="button" data-simple-download-monthly-review-queue>下载审核队列</button>
@@ -2611,28 +2612,28 @@ function renderSimpleOperator(data, monthly = null) {
   } else if (scheduledQueue > 0) {
     eyebrow = "下一步：人工发布交接";
     title = "现在只需要下载安全包";
-    body = `已有 ${scheduledQueue} 条内容排好时间。点下面这个按钮，拿给真人检查；系统不会自动发到 Facebook / Instagram，也不会记录已发布。`;
+    body = `已有 ${scheduledQueue} 条内容排好时间。下载安全包给真人检查；系统不会自动发到 Facebook / Instagram。`;
     status = "已排程 · 未发布";
     actions = `
-      <button class="primary" type="button" data-simple-download-today-pack>下载今日安全包</button>
-      <button type="button" data-simple-open-scheduler>查看排程</button>
+      <button class="primary" type="button" data-simple-download-today-pack>下载安全包</button>
+      <button type="button" data-simple-open-scheduler>看排程</button>
       <details class="simple-extra-actions">
         <summary>其他下载</summary>
-        <button type="button" data-simple-download-handoff>发布交接包</button>
+        <button type="button" data-simple-download-handoff>交接包</button>
         <button type="button" data-simple-download-reel>Reel 制作包</button>
         <button type="button" data-simple-download-post-publish>发布后下一步</button>
-        <button type="button" data-simple-download-post-metrics>数据记录表</button>
+        <button type="button" data-simple-download-post-metrics>数据表</button>
       </details>
     `;
     safetyNote = "安全锁：我不会点测试 Facebook、测试 Instagram 或记录已发布。";
   } else if (outcomeCount > 0) {
     eyebrow = "下一步：学习回流";
     title = "把表现结果带回下一轮计划";
-    body = `已有 ${outcomeCount} 条结果进入学习系统。可以下载中文周报和下月候选主题，或一键带入计划页继续准备下一轮。`;
+    body = `已有 ${outcomeCount} 条结果进入学习系统。可以带入计划页继续准备下一轮。`;
     status = "学习已准备 · 不会发布";
     actions = `
-      <button class="primary" type="button" data-simple-use-learning-topics>带入计划页</button>
-      <button type="button" data-simple-open-learning>打开学习页</button>
+      <button class="primary" type="button" data-simple-use-learning-topics>带入计划</button>
+      <button type="button" data-simple-open-learning>看学习</button>
       <details class="simple-extra-actions">
         <summary>更多</summary>
         <button type="button" data-simple-download-weekly-report-zh>中文周报</button>
@@ -2651,7 +2652,7 @@ function renderSimpleOperator(data, monthly = null) {
     <div class="simple-operator-actions">
       ${actions}
     </div>
-    <small>${escapeHtml(safetyNote)} 下面的详细区域是高级工具，平时不用找。</small>
+    <small>${escapeHtml(safetyNote)} 找不到东西时，优先看这个卡片，不用进高级工具。</small>
   `;
   const homeDoctorReplyCard = document.getElementById("home-doctor-reply-card");
   if (homeDoctorReplyCard) {

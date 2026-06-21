@@ -219,9 +219,9 @@ header span { color: var(--muted); font-size: 12px; }
 
 .simple-operator {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, auto);
   align-items: center;
-  gap: 16px;
+  gap: 18px;
   border-left: 6px solid var(--teal);
   margin-bottom: 14px;
 }
@@ -234,6 +234,7 @@ header span { color: var(--muted); font-size: 12px; }
 .simple-operator p {
   max-width: 760px;
   color: var(--ink);
+  font-size: 15px;
 }
 
 .simple-operator span,
@@ -252,11 +253,13 @@ header span { color: var(--muted); font-size: 12px; }
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
+  max-width: 420px;
 }
 
 .simple-operator-actions button {
   border: 1px solid var(--line);
   border-radius: 8px;
+  min-height: 42px;
   padding: 10px 14px;
   background: #FFF;
   color: var(--navy);
@@ -269,6 +272,7 @@ header span { color: var(--muted); font-size: 12px; }
   border-color: var(--teal);
   background: var(--teal);
   color: #052E2A;
+  box-shadow: 0 8px 20px rgba(31,169,160,.18);
 }
 
 .simple-extra-actions {
@@ -281,6 +285,9 @@ header span { color: var(--muted); font-size: 12px; }
   cursor: pointer;
   font-size: 12px;
   font-weight: 800;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
 }
 
 .simple-extra-actions[open] {
@@ -292,6 +299,10 @@ header span { color: var(--muted); font-size: 12px; }
 
 .simple-extra-actions[open] summary {
   flex-basis: 100%;
+}
+
+.simple-extra-actions[open] button {
+  background: #F8FAFC;
 }
 
 .home-progress {
@@ -370,6 +381,15 @@ header span { color: var(--muted); font-size: 12px; }
   margin-top: 14px;
 }
 
+.home-progress-more {
+  margin-top: 10px;
+}
+
+.home-progress-more[open] {
+  justify-content: flex-start;
+  text-align: left;
+}
+
 .dashboard-details > summary {
   display: inline-flex;
   align-items: center;
@@ -424,6 +444,7 @@ header span { color: var(--muted); font-size: 12px; }
 .home-stage-more {
   flex-basis: auto;
   min-width: 150px;
+  text-align: left;
 }
 
 .home-stage-more[open] {

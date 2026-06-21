@@ -15,11 +15,12 @@
     <nav>
       <button class="active" data-screen="dashboard">首页</button>
       <button data-screen="assets">月度 Carousel</button>
-      <button data-screen="review">审核队列</button>
       <button data-screen="scheduler">排程</button>
+      <button data-screen="learning">学习复盘</button>
       <details class="nav-more">
         <summary>更多功能</summary>
         <div class="nav-more-list">
+          <button data-screen="review">审核队列</button>
           <button data-screen="insights">洞察收件箱</button>
           <button data-screen="plan">内容计划</button>
           <button data-screen="compose">创建帖子</button>
@@ -28,7 +29,6 @@
           <button data-screen="video">视频工作室</button>
           <button data-screen="meta">Meta 设置</button>
           <button data-screen="outcomes">表现数据</button>
-          <button data-screen="learning">学习复盘</button>
           <button data-screen="kb">知识库</button>
         </div>
       </details>
@@ -63,10 +63,10 @@
       <div id="home-doctor-reply-card" class="card wide home-doctor-reply" hidden>
         <div class="workflow-head">
           <div>
-            <h2>收到医生回复后贴这里</h2>
-            <p class="section-note">先预览，确认 Decision: approve 和 Safety: clear 都明确，再导入。导入不会发布到 Facebook / Instagram。</p>
+            <h2>医生回复区</h2>
+            <p class="section-note">把医生回复贴进来，先检查，再导入。没有明确 approve + Safety clear 时，系统不会往下走。</p>
           </div>
-          <button id="home-fill-doctor-reply-template" type="button">填入模板</button>
+          <button id="home-fill-doctor-reply-template" type="button">填模板</button>
         </div>
         <label>
           医生回复内容
@@ -77,8 +77,8 @@
           <input id="home-doctor-reply-reviewer" placeholder="Dr. name">
         </label>
         <div class="form-actions">
-          <button id="home-preview-doctor-replies-safe-advance" type="button">预览医生回复</button>
-          <button id="home-import-doctor-replies-safe-advance" class="danger-safe-action" type="button">导入医生回复</button>
+          <button id="home-preview-doctor-replies-safe-advance" type="button">检查回复</button>
+          <button id="home-import-doctor-replies-safe-advance" class="danger-safe-action" type="button">导入通过项</button>
         </div>
         <div id="home-doctor-reply-message" class="status-note"></div>
         <div id="home-doctor-reply-preview" class="learning-grid"></div>
@@ -87,10 +87,10 @@
       <div id="home-production-reply-card" class="card wide home-production-reply" hidden>
         <div class="workflow-head">
           <div>
-            <h2>收到设计/图片后贴这里</h2>
-            <p class="section-note">先预览媒体 URL、Visual QA 和 Rights；只有医生已通过且资料完整，才会挂最终图片。不会发布到 Facebook / Instagram。</p>
+            <h2>图片制作回复区</h2>
+            <p class="section-note">把图片 URL / Visual QA / Rights 贴进来，先检查，再挂到对应内容。不会发布。</p>
           </div>
-          <button id="home-fill-production-reply-template" type="button">填入模板</button>
+          <button id="home-fill-production-reply-template" type="button">填模板</button>
         </div>
         <label>
           制作回复内容
@@ -101,8 +101,8 @@
           <input id="home-production-reply-producer" placeholder="Designer or producer">
         </label>
         <div class="form-actions">
-          <button id="home-preview-production-replies" type="button">预览图片回复</button>
-          <button id="home-import-production-replies" class="danger-safe-action" type="button">导入图片回复</button>
+          <button id="home-preview-production-replies" type="button">检查图片</button>
+          <button id="home-import-production-replies" class="danger-safe-action" type="button">导入图片</button>
         </div>
         <div id="home-production-reply-message" class="status-note"></div>
         <div id="home-production-reply-preview" class="learning-grid"></div>
@@ -110,14 +110,17 @@
       <div id="home-queue-action-card" class="card wide home-queue-action" hidden>
         <div class="workflow-head">
           <div>
-            <h2>图片合格后，在这里加入队列</h2>
-            <p class="section-note">先预览，只会处理 ready_to_queue 的内容。入队不是发布，后面仍需审核、排程和人工发布交接。</p>
+            <h2>加入队列</h2>
+            <p class="section-note">只处理 ready_to_queue 的内容。加入队列不是发布，后面还要审核和排程。</p>
           </div>
-          <button id="home-download-queue-readiness" type="button">下载入队检查表</button>
         </div>
         <div class="form-actions">
-          <button id="home-preview-monthly-queue-ready" type="button">预览入队</button>
-          <button id="home-run-monthly-queue-ready" class="danger-safe-action" type="button">执行入队</button>
+          <button id="home-preview-monthly-queue-ready" type="button">检查可入队</button>
+          <button id="home-run-monthly-queue-ready" class="danger-safe-action" type="button">加入队列</button>
+          <details class="simple-extra-actions home-stage-more">
+            <summary>更多</summary>
+            <button id="home-download-queue-readiness" type="button">下载检查表</button>
+          </details>
         </div>
         <div id="home-queue-action-message" class="status-note"></div>
         <div id="home-queue-action-preview" class="learning-grid"></div>
@@ -125,23 +128,24 @@
       <div id="home-review-schedule-card" class="card wide home-review-schedule" hidden>
         <div class="workflow-head">
           <div>
-            <h2>入队后，在这里审核和排程</h2>
-            <p class="section-note">先下载队列审核表，填 reviewer_action=approve 后粘贴回来预览。排程只处理已审核通过、合规 clear 的项目，不会发布。</p>
+            <h2>审核和排程</h2>
+            <p class="section-note">粘贴审核决定，先检查，再导入。只有 approve + clear 的内容才会排程；不会发布。</p>
           </div>
-          <button id="home-download-monthly-review-queue" type="button">下载审核队列</button>
         </div>
         <div class="form-actions">
-          <button id="home-download-monthly-review-decisions" type="button">下载审核决定表</button>
-          <button id="home-schedule-approved-items" class="danger-safe-action" type="button">排程已审核内容</button>
+          <button id="home-preview-review-queue-decisions" type="button">检查审核决定</button>
+          <button id="home-import-review-queue-decisions" class="danger-safe-action" type="button">导入审核决定</button>
+          <button id="home-schedule-approved-items" class="danger-safe-action" type="button">排程</button>
+          <details class="simple-extra-actions home-stage-more">
+            <summary>更多</summary>
+            <button id="home-download-monthly-review-queue" type="button">下载审核队列</button>
+            <button id="home-download-monthly-review-decisions" type="button">下载决定表</button>
+          </details>
         </div>
         <label>
           队列审核决定 CSV
           <textarea id="home-review-queue-decisions-text" placeholder="queue_id,reviewer_action,reviewer_name,review_notes&#10;...,approve,Dr. name,Approved for scheduling"></textarea>
         </label>
-        <div class="form-actions">
-          <button id="home-preview-review-queue-decisions" type="button">预览队列审核</button>
-          <button id="home-import-review-queue-decisions" class="danger-safe-action" type="button">导入队列审核</button>
-        </div>
         <div id="home-review-schedule-message" class="status-note"></div>
         <div id="home-review-schedule-preview" class="learning-grid"></div>
         <div id="home-review-safe-advance-preview" class="learning-grid"></div>
@@ -149,16 +153,19 @@
       <div id="home-publish-closeout-card" class="card wide home-publish-closeout" hidden>
         <div class="workflow-head">
           <div>
-            <h2>排程后，在这里做人工发布交接</h2>
-            <p class="section-note">这里只下载交接和发布后记录材料。不会自动发布，也不会把任何项目标记为已发布。</p>
+            <h2>人工发布交接</h2>
+            <p class="section-note">下载安全包给真人检查。这里不会自动发布；只有你手动填 Post ID，系统才记录已发布。</p>
           </div>
-          <button id="home-download-today-safe-pack" type="button">下载今日安全包</button>
+          <button id="home-download-today-safe-pack" type="button">下载安全包</button>
         </div>
         <div class="form-actions">
-          <button id="home-download-publishing-handoff" type="button">下载发布交接包</button>
-          <button id="home-download-post-publish-next" type="button">下载发布后下一步</button>
-          <button id="home-download-post-publish-metrics" type="button">下载数据记录表</button>
-          <button id="home-open-scheduler" type="button">打开排程页</button>
+          <button id="home-open-scheduler" type="button">看排程</button>
+          <details class="simple-extra-actions home-stage-more">
+            <summary>更多下载</summary>
+            <button id="home-download-publishing-handoff" type="button">发布交接包</button>
+            <button id="home-download-post-publish-next" type="button">发布后下一步</button>
+            <button id="home-download-post-publish-metrics" type="button">数据记录表</button>
+          </details>
         </div>
         <div class="home-record-published">
           <label>
@@ -179,13 +186,13 @@
       <div id="home-learning-handback-card" class="card wide home-learning-handback" hidden>
         <div class="workflow-head">
           <div>
-            <h2>学习回流到下一轮计划</h2>
-            <p class="section-note">有发布结果后，从这里下载复盘和下月候选主题，或把学习建议带回计划页。这里只准备下一轮内容，不会创建 Notion 新行，也不会发布。</p>
+            <h2>数据回流学习</h2>
+            <p class="section-note">填发布数据，保存后系统会更新学习建议。这里只准备下一轮，不会发布，也不会创建 Notion 新行。</p>
           </div>
-          <button id="home-use-learning-topics" class="primary" type="button">带入计划页</button>
+          <button id="home-use-learning-topics" class="primary" type="button">带入计划</button>
         </div>
         <div class="form-actions">
-          <button id="home-open-learning" type="button">打开学习页</button>
+          <button id="home-open-learning" type="button">看学习页</button>
           <details class="simple-extra-actions home-stage-more">
             <summary>下载资料</summary>
             <button id="home-download-weekly-report-zh" type="button">中文周报</button>
