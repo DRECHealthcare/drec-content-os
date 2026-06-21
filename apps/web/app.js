@@ -5675,6 +5675,7 @@ function renderHomePublishingCloseout(data) {
                 <button type="button" data-home-copy-handoff-full="${escapeHtml(item.id || "")}">复制整套资料</button>
                 <button type="button" data-home-copy-handoff-caption="${escapeHtml(item.id || "")}">复制文案</button>
                 ${mediaUrls.length ? `<button type="button" data-home-copy-handoff-media="${escapeHtml(item.id || "")}">复制媒体链接</button>` : ""}
+                <button type="button" data-home-prepare-record-published="${escapeHtml(item.id || "")}">发布后填 ID</button>
               </div>
             </article>
           `;
@@ -6499,11 +6500,13 @@ document.getElementById("home-record-published-save")?.addEventListener("click",
 });
 
 document.getElementById("home-publish-closeout-status")?.addEventListener("click", async (event) => {
+  const recordButton = event.target.closest("[data-home-prepare-record-published]");
   const fullButton = event.target.closest("[data-home-copy-handoff-full]");
   const captionButton = event.target.closest("[data-home-copy-handoff-caption]");
   const mediaButton = event.target.closest("[data-home-copy-handoff-media]");
-  if (!fullButton && !captionButton && !mediaButton) return;
-  const itemId = fullButton?.dataset.homeCopyHandoffFull
+  if (!recordButton && !fullButton && !captionButton && !mediaButton) return;
+  const itemId = recordButton?.dataset.homePrepareRecordPublished
+    || fullButton?.dataset.homeCopyHandoffFull
     || captionButton?.dataset.homeCopyHandoffCaption
     || mediaButton?.dataset.homeCopyHandoffMedia
     || "";
@@ -6513,6 +6516,19 @@ document.getElementById("home-publish-closeout-status")?.addEventListener("click
   const item = readyItems.find((row) => row.id === itemId);
   if (!item) {
     if (message) message.textContent = "找不到这条交接内容，请刷新。";
+    return;
+  }
+  if (recordButton) {
+    const more = document.querySelector(".home-manual-more");
+    const select = document.getElementById("home-record-published-item");
+    const input = document.getElementById("home-record-published-id");
+    if (more) more.open = true;
+    if (select) select.value = itemId;
+    if (input) {
+      input.value = "";
+      input.focus();
+    }
+    if (message) message.textContent = "已选中这条内容。人工发布完成后，把真实 Meta Post ID 填进来，再按“只记录，不发布”。";
     return;
   }
   const text = fullButton

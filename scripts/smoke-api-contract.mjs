@@ -4997,6 +4997,16 @@ const requiredSnippets = [
     text: "data-home-copy-handoff-media",
   },
   {
+    name: "web home handoff prepare record action",
+    file: "web",
+    text: "data-home-prepare-record-published",
+  },
+  {
+    name: "web home handoff prepare record safety copy",
+    file: "web",
+    text: "只记录，不发布",
+  },
+  {
     name: "web home today safe pack action",
     file: "webIndex",
     text: "home-download-today-safe-pack",
