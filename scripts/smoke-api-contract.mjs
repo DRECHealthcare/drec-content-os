@@ -4151,6 +4151,16 @@ const requiredSnippets = [
     text: "建议人工标签",
   },
   {
+    name: "api publishing handoff metrics due cue",
+    file: "main",
+    text: "Metrics due date",
+  },
+  {
+    name: "api publishing handoff pre-publish check",
+    file: "main",
+    text: "Pre-publish check",
+  },
+  {
     name: "web manual publish prompt safety copy",
     file: "web",
     text: "这里不会自动发帖",
@@ -5299,6 +5309,16 @@ const requiredSnippets = [
     name: "web home handoff full text helper",
     file: "web",
     text: "DREC 人工发布资料",
+  },
+  {
+    name: "web home handoff pre-publish checklist",
+    file: "web",
+    text: "发布前核对",
+  },
+  {
+    name: "web home handoff manual label guidance",
+    file: "web",
+    text: "无 Meta ID 时的人工标签建议",
   },
   {
     name: "web home handoff copy media action",

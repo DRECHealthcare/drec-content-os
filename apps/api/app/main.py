@@ -24369,7 +24369,13 @@ async def publishing_handoff(_: None = Depends(require_access_token)):
     blocked = []
     for item in rows:
         blockers = handoff_blockers(item)
-        enriched = {**item, "handoff_blockers": blockers}
+        enriched = {
+            **item,
+            "handoff_blockers": blockers,
+            "manual_label_suggestion": manual_publish_label(item),
+            "metrics_due_date": manual_publish_metric_due_date(item),
+            "metric_window": "7d",
+        }
         if not blockers:
             ready.append(enriched)
         else:
@@ -24398,6 +24404,10 @@ async def publishing_handoff(_: None = Depends(require_access_token)):
                 f"Format: {item.get('format')}",
                 f"Planned time: {item.get('planned_slot') or 'Not set'}",
                 f"Queue ID: {item.get('id')}",
+                f"Media count: {len(media_urls)}",
+                f"Manual label if no Meta ID: {item.get('manual_label_suggestion')}",
+                f"Metrics due date: {item.get('metrics_due_date') or '7 days after publishing'}",
+                "Pre-publish check: caption unchanged; media opens; planned time matches; compliance clear.",
                 "Caption:",
                 item.get("caption") or "",
             ]
@@ -24405,7 +24415,7 @@ async def publishing_handoff(_: None = Depends(require_access_token)):
         if media_urls:
             lines.append("Media:")
             lines.extend([f"- {url}" for url in media_urls])
-        lines.append("After publishing: paste the Meta post ID back into the handoff with Record Published.")
+        lines.append("After publishing: paste the real Meta post ID in DREC. Use the manual label only for non-Meta/manual evidence.")
     if blocked:
         lines.extend(["", "Needs Review Items:"])
         for index, item in enumerate(blocked, start=1):
@@ -24446,7 +24456,14 @@ async def monthly_carousel_publishing_handoff_payload():
         asset = asset_lookup.get(str(item.get("asset_id") or "")) or {}
         topic_id = monthly_carousel_topic_id(asset)
         blockers = monthly_handoff_blockers(item)
-        enriched = {**item, "topic_id": topic_id, "handoff_blockers": blockers}
+        enriched = {
+            **item,
+            "topic_id": topic_id,
+            "handoff_blockers": blockers,
+            "manual_label_suggestion": manual_publish_label(item),
+            "metrics_due_date": manual_publish_metric_due_date(item),
+            "metric_window": "7d",
+        }
         if not blockers:
             ready.append(enriched)
         else:
@@ -24477,6 +24494,10 @@ async def monthly_carousel_publishing_handoff_payload():
                 f"Format: {item.get('format')}",
                 f"Planned time: {item.get('planned_slot') or 'Not set'}",
                 f"Queue ID: {item.get('id')}",
+                f"Media count: {len(media_urls)}",
+                f"Manual label if no Meta ID: {item.get('manual_label_suggestion')}",
+                f"Metrics due date: {item.get('metrics_due_date') or '7 days after publishing'}",
+                "Pre-publish check: caption unchanged; media opens; planned time matches; compliance clear.",
                 "Caption:",
                 item.get("caption") or "",
             ]
@@ -24484,7 +24505,7 @@ async def monthly_carousel_publishing_handoff_payload():
         if media_urls:
             lines.append("Media:")
             lines.extend([f"- {url}" for url in media_urls])
-        lines.append("After publishing: record the external post ID in DREC Content OS.")
+        lines.append("After publishing: record the real Meta post ID in DREC. Use the manual label only for non-Meta/manual evidence.")
     if blocked:
         lines.extend(["", "Needs Review Items:"])
         for index, item in enumerate(blocked, start=1):
@@ -24561,8 +24582,12 @@ def zh_handoff_item_lines(item: dict, index: int, heading: str):
         f"- 状态：{item.get('status')}",
         f"- 安全状态：{item.get('compliance_status')}",
         f"- 计划发布时间：{item.get('planned_slot') or '尚未设置'}",
+        f"- 媒体数量：{len(media_urls)}",
+        f"- 无 Meta ID 时的人工标签建议：{item.get('manual_label_suggestion') or manual_publish_label(item)}",
+        f"- 数据回填建议：{item.get('metrics_due_date') or manual_publish_metric_due_date(item) or '发布后 7 天'}",
         f"- 外部帖子 ID：{item.get('external_post_id') or '尚未记录'}",
         f"- 阻碍：{'; '.join(blockers) if blockers else '无'}",
+        f"- 发布前核对：文案不临时改、媒体可打开、时间正确、安全状态 clear。",
         "",
         "文案：",
         "",

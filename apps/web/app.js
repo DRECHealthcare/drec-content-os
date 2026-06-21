@@ -5858,12 +5858,22 @@ function homeMetricsPayload(item) {
 
 function homeHandoffText(item) {
   const mediaUrls = (item.media_urls || []).filter(Boolean);
+  const manualLabel = item.manual_label_suggestion || "非 Meta 发布时再填人工标签";
   return [
     "DREC 人工发布资料",
+    "",
+    "发布前核对:",
+    "- 只发这条 Queue ID 对应内容",
+    "- 文案不要临时修改",
+    "- 每个媒体链接都能打开",
+    "- 这里是人工发布，不是系统自动发帖",
+    "",
     `平台: ${item.channel || "manual"}`,
     `格式: ${item.format || "content"}`,
     `计划时间: ${item.planned_slot || "未排程"}`,
     `Queue ID: ${item.id || ""}`,
+    `媒体数量: ${mediaUrls.length}`,
+    `无 Meta ID 时的人工标签建议: ${manualLabel}`,
     `数据回填建议: ${item.metrics_due_date || "发布后 7 天"}`,
     "",
     "文案:",
@@ -5873,7 +5883,8 @@ function homeHandoffText(item) {
     mediaUrls.length ? mediaUrls.join("\n") : "无",
     "",
     "发布后回填:",
-    "请把真实 Meta Post ID 或人工标签填回系统；这里不会自动发布。",
+    "请把真实 Meta Post ID 填回系统。",
+    `如果不是发布在 Meta，才使用人工标签：${manualLabel}`,
     "发布后 7 天请回填 Reach / Likes / Comments / Saves / Shares / Leads / Spend。",
   ].join("\n");
 }
