@@ -607,6 +607,21 @@ const requiredSnippets = [
     text: "manual_safe_auto_blocked",
   },
   {
+    name: "fast meta readiness payload helper",
+    file: "main",
+    text: "meta_readiness_payload(check_graph: bool = True)",
+  },
+  {
+    name: "fast local meta audit mode",
+    file: "main",
+    text: "fast_local_env_only",
+  },
+  {
+    name: "automation avoids slow meta graph check",
+    file: "main",
+    text: "meta_readiness_payload(check_graph=False)",
+  },
+  {
     name: "scheduler heartbeat status",
     file: "main",
     text: "latest_scheduler_heartbeat",

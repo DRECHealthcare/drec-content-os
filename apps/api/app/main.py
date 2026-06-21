@@ -450,15 +450,27 @@ async def inspect_meta_page_token():
     }
 
 
-@app.get("/meta/readiness")
-async def meta_readiness(_: None = Depends(require_access_token)):
+async def meta_readiness_payload(check_graph: bool = True):
     env_checks = meta_env_status()
-    token_check = await inspect_meta_page_token()
     missing_publish_env = [
         check["key"]
         for check in env_checks
         if not check["configured"] and check["key"] in {"META_PAGE_ID", "META_IG_USER_ID", "META_PAGE_ACCESS_TOKEN"}
     ]
+    if check_graph:
+        token_check = await inspect_meta_page_token()
+    else:
+        token_check = {
+            "status": "missing" if missing_publish_env else "not_checked",
+            "message": (
+                "Meta Graph check was skipped for this fast read-only audit. Open Meta Readiness for a live token check."
+                if not missing_publish_env
+                else "Meta publishing credentials are incomplete."
+            ),
+            "permissions": [],
+            "missing_permissions": META_REQUIRED_PERMISSIONS,
+            "check_mode": "fast_local_env_only",
+        }
     token_status = token_check.get("status")
     page_ready = not missing_publish_env and token_status in {"ready", "functional"}
     permission_proof_ready = token_status == "ready"
@@ -491,6 +503,11 @@ async def meta_readiness(_: None = Depends(require_access_token)):
             "Turn on nightly metrics ingestion only after publish IDs are stored.",
         ],
     }
+
+
+@app.get("/meta/readiness")
+async def meta_readiness(_: None = Depends(require_access_token)):
+    return await meta_readiness_payload(check_graph=True)
 
 
 def meta_oauth_guide_payload():
@@ -1826,7 +1843,7 @@ async def security_rls_hardening_plan(_: None = Depends(require_admin_access)):
 async def automation_status_payload():
     loop = await build_loop_status()
     workflow = build_workflow_guidance(loop)
-    meta = await meta_readiness(None)
+    meta = await meta_readiness_payload(check_graph=False)
     security = await strict_security_status_payload()
     scheduler_heartbeat = await latest_scheduler_heartbeat()
     total_queue = total_queue_count(loop.get("queue"))
@@ -2054,7 +2071,7 @@ async def launch_readiness_payload():
     workflow = build_workflow_guidance(loop)
     automation = await automation_status_payload()
     security = await strict_security_status_payload()
-    meta = await meta_readiness(None)
+    meta = await meta_readiness_payload(check_graph=False)
     risk = await content_risk_audit_payload()
     automation_gates = {gate.get("key"): gate for gate in automation.get("gates", [])}
     manual_ops_ready = security.get("supabase_rest") == "configured"
@@ -27216,7 +27233,7 @@ async def project_completion_audit_payload():
     automation = await automation_status_payload()
     completion = build_completion_status(loop, workflow, security, automation)
     launch = await launch_readiness_payload()
-    meta = await meta_readiness(None)
+    meta = await meta_readiness_payload(check_graph=False)
     monthly = await monthly_carousel_acceptance_audit_payload()
     next_actions = []
     if completion.get("blockers"):
