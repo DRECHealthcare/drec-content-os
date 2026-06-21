@@ -23,6 +23,7 @@ const requiredRoutes = [
   "GET /security/access-policy",
   "GET /security/access-control-pack.md",
   "GET /security/service-role-install-pack.md",
+  "GET /security/rls-advisor-evidence.md",
   "GET /security/rls-hardening-plan.md",
   "GET /automation/status",
   "GET /operations/launch-readiness",
@@ -479,6 +480,21 @@ const requiredSnippets = [
     name: "security rls requires recent smoke",
     file: "main",
     text: "service_role_smoke.status=recent",
+  },
+  {
+    name: "security rls advisor evidence route",
+    file: "main",
+    text: "rls-advisor-evidence.md",
+  },
+  {
+    name: "security rls advisor warning count",
+    file: "main",
+    text: "warning_count",
+  },
+  {
+    name: "security rls advisor affected tables",
+    file: "main",
+    text: "CONTENT_OS_RLS_TABLES",
   },
   {
     name: "security access policy route",
@@ -2774,6 +2790,16 @@ const requiredSnippets = [
     name: "web rls plan action",
     file: "web",
     text: "download-rls-plan",
+  },
+  {
+    name: "web rls advisor evidence action",
+    file: "web",
+    text: "download-rls-advisor-evidence",
+  },
+  {
+    name: "web rls advisor evidence endpoint",
+    file: "web",
+    text: "/security/rls-advisor-evidence.md",
   },
   {
     name: "web service role pack action",

@@ -2681,8 +2681,9 @@ function renderSimpleOperator(data, monthly = null) {
 
 function securityGateSummary(security = {}) {
   const smokeStatus = (security.service_role_smoke || {}).status || "missing";
+  const advisorCount = Number((security.rls_advisor || {}).warning_count || 0);
   if (security.rls_hardening_ready) return "RLS 可加固 · smoke recent";
-  if (security.service_role_key !== "configured") return `缺 service-role key · smoke ${smokeStatus}`;
+  if (security.service_role_key !== "configured") return `缺 service-role key · RLS 警告 ${advisorCount}`;
   if (smokeStatus !== "recent") return `需运行 service-role smoke · ${smokeStatus}`;
   return security.overall_status || "安全门槛需检查";
 }
@@ -6713,6 +6714,16 @@ document.getElementById("run-service-role-smoke")?.addEventListener("click", asy
     message.textContent = error.message === "Access token required"
       ? translateText("Set the access token first.")
       : translateText("Could not run service-role smoke test.");
+  }
+});
+
+document.getElementById("download-rls-advisor-evidence")?.addEventListener("click", async () => {
+  const message = document.getElementById("test-path-message");
+  try {
+    await downloadProtectedFile("/security/rls-advisor-evidence.md", "drec-rls-advisor-evidence.md", "text/markdown");
+    message.textContent = "RLS Advisor evidence downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : "Could not download RLS Advisor evidence.";
   }
 });
 

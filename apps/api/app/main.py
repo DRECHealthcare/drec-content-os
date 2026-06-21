@@ -1328,11 +1328,41 @@ async def meta_preflight_audit_markdown(_: None = Depends(require_access_token))
     )
 
 
+CONTENT_OS_RLS_TABLES = [
+    "kb_entries",
+    "content_briefs",
+    "assets",
+    "media_assets",
+    "publish_queue",
+    "raw_metrics",
+    "feedback",
+    "outcomes",
+    "learning_weights",
+]
+
+
+def rls_advisor_summary(has_service_role: bool, smoke_recent: bool = False):
+    status = "ready_to_harden" if has_service_role and smoke_recent else "blocked_until_service_role_smoke"
+    return {
+        "status": status,
+        "advisor_source": "Supabase security advisor checked via connected Supabase project tooling.",
+        "project_ref": "ddzqgttrwfwssxnayfsd",
+        "warning": "rls_policy_always_true",
+        "warning_count": len(CONTENT_OS_RLS_TABLES),
+        "affected_tables": [f"public.{table}" for table in CONTENT_OS_RLS_TABLES],
+        "current_policy": "drec_api_rest_access allows anon/authenticated ALL with USING true and WITH CHECK true.",
+        "target_policy": "drec_service_role_access only, with anon/authenticated direct table access revoked.",
+        "migration": "supabase/migrations/20260617040906_strict_server_only_rls.sql",
+        "blocker": "" if has_service_role and smoke_recent else "Do not apply strict RLS until SUPABASE_SERVICE_ROLE_KEY is installed on Fly and service-role smoke is recent.",
+    }
+
+
 def security_status_payload():
     has_service_role = bool(settings.supabase_service_role_key)
     has_supabase_rest = bool(settings.supabase_url and supabase_rest.api_key())
     fallback_key_mode = bool(settings.supabase_api_key and not settings.supabase_service_role_key)
     rls_ready = has_service_role and has_supabase_rest
+    rls_advisor = rls_advisor_summary(has_service_role, False)
     return {
         "overall_status": "ready_for_rls_hardening" if rls_ready else "needs_service_role_key",
         "supabase_rest": "configured" if has_supabase_rest else "missing",
@@ -1340,6 +1370,7 @@ def security_status_payload():
         "fallback_key_mode": fallback_key_mode,
         "direct_browser_supabase": "disabled_by_design",
         "rls_hardening_ready": rls_ready,
+        "rls_advisor": rls_advisor,
         "checks": [
             {
                 "label": "Fly API uses Supabase REST",
@@ -1352,6 +1383,11 @@ def security_status_payload():
             {
                 "label": "Browser talks only to protected API",
                 "status": "ready",
+            },
+            {
+                "label": "Supabase advisor RLS warnings are tracked",
+                "status": "ready" if rls_advisor.get("warning_count") else "missing",
+                "detail": f"{rls_advisor.get('warning_count')} permissive Content OS policy warning(s).",
             },
         ],
         "next_step": (
@@ -1388,10 +1424,12 @@ async def strict_security_status_payload():
             "status": "ready" if smoke_recent else smoke.get("status", "missing"),
         }
     )
+    rls_advisor = rls_advisor_summary(has_service_role, smoke_recent)
     return {
         **security,
         "overall_status": overall_status,
         "rls_hardening_ready": strict_ready,
+        "rls_advisor": rls_advisor,
         "service_role_smoke": smoke,
         "service_role_smoke_recent_minutes": SERVICE_ROLE_SMOKE_RECENT_MINUTES,
         "checks": checks,
@@ -1651,9 +1689,70 @@ async def security_service_role_install_pack(_: None = Depends(require_admin_acc
     )
 
 
+@app.get("/security/rls-advisor-evidence.md")
+async def security_rls_advisor_evidence(_: None = Depends(require_admin_access)):
+    security = await strict_security_status_payload()
+    advisor = security.get("rls_advisor") or {}
+    affected = advisor.get("affected_tables") or []
+    lines = [
+        "# DREC Supabase RLS Advisor Evidence",
+        "",
+        f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}",
+        "",
+        "This file documents the current Supabase security-advisor blocker for DREC Content OS. It is read-only and does not change Supabase policies.",
+        "",
+        "## Current Finding",
+        "",
+        f"- Project ref: `{advisor.get('project_ref')}`",
+        f"- Advisor warning: `{advisor.get('warning')}`",
+        f"- Warning count: {advisor.get('warning_count')}",
+        f"- Current broad policy: {advisor.get('current_policy')}",
+        f"- Target policy: {advisor.get('target_policy')}",
+        f"- Migration prepared: `{advisor.get('migration')}`",
+        f"- Current gate: `{security.get('overall_status')}`",
+        f"- Service-role key: `{security.get('service_role_key')}`",
+        f"- Service-role smoke: `{(security.get('service_role_smoke') or {}).get('status')}`",
+        "",
+        "## Affected Tables",
+        "",
+        *markdown_list(affected, "- No Content OS tables listed."),
+        "",
+        "## Why This Is Not Auto-Fixed Yet",
+        "",
+        "- The live Fly API is still using the fallback Supabase REST key until `SUPABASE_SERVICE_ROLE_KEY` is installed.",
+        "- Applying strict RLS before service-role smoke would break the protected API routes that the UI uses.",
+        "- The prepared migration intentionally revokes anon/authenticated direct table access and keeps service-role access only.",
+        "",
+        "## Required Evidence Before Applying Strict RLS",
+        "",
+        "- Fly secret `SUPABASE_SERVICE_ROLE_KEY` exists on `drec-content-os-api`.",
+        "- `/security/status` returns `ready_for_rls_hardening`.",
+        "- `/security/service-role-smoke-test` returns `passed` and the smoke status is recent.",
+        "- Live smoke against `https://drec-content-os-api.fly.dev/ui/` passes after the secret deploy.",
+        "- Only then apply `supabase/migrations/20260617040906_strict_server_only_rls.sql`.",
+        "",
+        "## 中文摘要",
+        "",
+        f"- Supabase Advisor 已发现 {advisor.get('warning_count')} 个 Content OS 表仍有过宽 RLS 策略。",
+        "- 现在不能直接收紧，因为 Fly 还没有 service-role key 的通过证据。",
+        "- 下一步：把 service_role key 安装到 Fly，跑 service-role smoke，再应用严格 RLS migration。",
+        "- 本文件只读，不会修改 Supabase、不会暴露 secret、不会影响 Facebook/Instagram。",
+        "",
+        "## Hard Stop",
+        "",
+        advisor.get("blocker") or "RLS hardening can proceed only after service-role smoke is recent.",
+    ]
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-rls-advisor-evidence.md"'},
+    )
+
+
 @app.get("/security/rls-hardening-plan.md")
 async def security_rls_hardening_plan(_: None = Depends(require_admin_access)):
     security = await strict_security_status_payload()
+    advisor = security.get("rls_advisor") or {}
     migration = "supabase/migrations/20260617040906_strict_server_only_rls.sql"
     lines = [
         "# DREC Content OS RLS Hardening Plan",
@@ -1667,6 +1766,7 @@ async def security_rls_hardening_plan(_: None = Depends(require_admin_access)):
         f"- Service-role key: {security.get('service_role_key')}",
         f"- Service-role smoke: {(security.get('service_role_smoke') or {}).get('status')}",
         f"- Direct browser Supabase: {security.get('direct_browser_supabase')}",
+        f"- Supabase advisor warning count: {advisor.get('warning_count')}",
         f"- Next step: {security.get('next_step')}",
         "",
         "## Migration",
