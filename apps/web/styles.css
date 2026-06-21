@@ -395,7 +395,8 @@ header span { color: var(--muted); font-size: 12px; }
 .home-production-reply,
 .home-queue-action,
 .home-review-schedule,
-.home-publish-closeout {
+.home-publish-closeout,
+.home-learning-handback {
   margin-top: 14px;
   border-left: 6px solid var(--orange);
 }
@@ -414,6 +415,19 @@ header span { color: var(--muted); font-size: 12px; }
 
 .home-publish-closeout {
   border-left-color: var(--teal);
+}
+
+.home-learning-handback {
+  border-left-color: var(--green);
+}
+
+.home-stage-more {
+  flex-basis: auto;
+  min-width: 150px;
+}
+
+.home-stage-more[open] {
+  flex-basis: 100%;
 }
 
 .home-closeout-status {
@@ -459,7 +473,8 @@ header span { color: var(--muted); font-size: 12px; }
 .home-production-reply[hidden],
 .home-queue-action[hidden],
 .home-review-schedule[hidden],
-.home-publish-closeout[hidden] {
+.home-publish-closeout[hidden],
+.home-learning-handback[hidden] {
   display: none;
 }
 

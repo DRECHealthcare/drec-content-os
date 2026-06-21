@@ -4900,6 +4900,41 @@ const requiredSnippets = [
     text: ".home-publish-closeout",
   },
   {
+    name: "web home learning handback card",
+    file: "webIndex",
+    text: "home-learning-handback-card",
+  },
+  {
+    name: "web home learning handback primary action",
+    file: "webIndex",
+    text: "home-use-learning-topics",
+  },
+  {
+    name: "web simple learning topics action",
+    file: "web",
+    text: "data-simple-use-learning-topics",
+  },
+  {
+    name: "web home weekly report zh action",
+    file: "webIndex",
+    text: "home-download-weekly-report-zh",
+  },
+  {
+    name: "web home next plan handback action",
+    file: "webIndex",
+    text: "home-download-next-plan-handback",
+  },
+  {
+    name: "web home next plan csv action",
+    file: "webIndex",
+    text: "home-download-next-plan-csv",
+  },
+  {
+    name: "web home learning handback styles",
+    file: "styles",
+    text: ".home-learning-handback",
+  },
+  {
     name: "web home closeout pills styles",
     file: "styles",
     text: ".home-closeout-pills",

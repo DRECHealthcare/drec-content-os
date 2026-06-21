@@ -2525,6 +2525,7 @@ function renderSimpleOperator(data, monthly = null) {
   const readyAssets = Number(summary.queue_ready_asset_count || 0);
   const queueTotal = Number(summary.queue_total || loopQueueTotal || 0);
   const scheduledQueue = Number(summary.scheduled_queue || loopScheduledQueue || 0);
+  const outcomeCount = Number(summary.outcome_count || data.loop?.outcome_count || 0);
   const percent = Number(completion.percent || 0);
   const firstCycle = Number(completion.first_cycle_percent || 0);
   let eyebrow = "安全操作中心";
@@ -2543,10 +2544,13 @@ function renderSimpleOperator(data, monthly = null) {
     status = "等待医生审核 · 不会发布";
     actions = `
       <button class="primary" type="button" data-simple-download-monthly-doctor-message>下载医生发送消息</button>
-      <button class="primary" type="button" data-simple-download-monthly-doctor-handoff>下载医生交接 ZIP</button>
       <button type="button" data-simple-paste-doctor-reply>粘贴医生回复</button>
-      <button type="button" data-simple-download-monthly-action-queue>下载今日行动队列</button>
-      <button type="button" data-simple-refresh>刷新状态</button>
+      <details class="simple-extra-actions">
+        <summary>更多</summary>
+        <button type="button" data-simple-download-monthly-doctor-handoff>医生交接 ZIP</button>
+        <button type="button" data-simple-download-monthly-action-queue>今日行动队列</button>
+        <button type="button" data-simple-refresh>刷新状态</button>
+      </details>
     `;
     safetyNote = "安全锁：医生未 approve + Safety clear 前，我不会推进制作、入队、排程或发布。";
   } else if (Number(monthlyGateCounts.waiting_final_media || 0) > 0 || Number(monthlyGateCounts.waiting_visual_qa || 0) > 0) {
@@ -2557,8 +2561,11 @@ function renderSimpleOperator(data, monthly = null) {
     actions = `
       <button class="primary" type="button" data-simple-download-monthly-production-rules>下载制作导入规则</button>
       <button type="button" data-simple-download-monthly-production-qa>下载制作 QA 包</button>
-      <button type="button" data-simple-paste-production-reply>粘贴图片回复</button>
-      <button type="button" data-simple-refresh>刷新状态</button>
+      <details class="simple-extra-actions">
+        <summary>更多</summary>
+        <button type="button" data-simple-paste-production-reply>粘贴图片回复</button>
+        <button type="button" data-simple-refresh>刷新状态</button>
+      </details>
     `;
     safetyNote = "安全锁：制作导入不能替代医生审核，也不会入队、排程或发布。";
   } else if (Number(monthlyGateCounts.ready_to_queue || 0) > 0) {
@@ -2567,10 +2574,13 @@ function renderSimpleOperator(data, monthly = null) {
     body = "先下载入队检查表；确认只处理 ready_to_queue 的内容。入队不是发布。";
     status = "可预览入队 · 不会发布";
     actions = `
-      <button class="primary" type="button" data-simple-download-monthly-queue-readiness>下载入队检查表</button>
-      <button type="button" data-simple-preview-monthly-queue>预览入队</button>
+      <button class="primary" type="button" data-simple-preview-monthly-queue>预览入队</button>
       <button type="button" data-simple-run-monthly-queue>执行入队</button>
-      <button type="button" data-simple-refresh>刷新状态</button>
+      <details class="simple-extra-actions">
+        <summary>更多</summary>
+        <button type="button" data-simple-download-monthly-queue-readiness>入队检查表</button>
+        <button type="button" data-simple-refresh>刷新状态</button>
+      </details>
     `;
     safetyNote = "安全锁：入队后仍需队列审核、排程检查和发布交接。";
   } else if (readyAssets > 0 && queueTotal === 0) {
@@ -2588,10 +2598,13 @@ function renderSimpleOperator(data, monthly = null) {
     body = "先下载审核决定表，填 reviewer_action=approve，再粘贴回来预览和导入。排程只处理已审核通过、合规 clear 的项目。";
     status = "已入队 · 不会发布";
     actions = `
-      <button class="primary" type="button" data-simple-download-monthly-review-queue>下载审核队列</button>
-      <button type="button" data-simple-paste-review-decisions>粘贴审核决定</button>
+      <button class="primary" type="button" data-simple-paste-review-decisions>粘贴审核决定</button>
       <button type="button" data-simple-schedule-approved>排程已审核内容</button>
-      <button type="button" data-simple-refresh>刷新状态</button>
+      <details class="simple-extra-actions">
+        <summary>更多</summary>
+        <button type="button" data-simple-download-monthly-review-queue>下载审核队列</button>
+        <button type="button" data-simple-refresh>刷新状态</button>
+      </details>
     `;
     safetyNote = "安全锁：审核和排程都不会发布到 Facebook / Instagram。";
   } else if (scheduledQueue > 0) {
@@ -2611,6 +2624,21 @@ function renderSimpleOperator(data, monthly = null) {
       </details>
     `;
     safetyNote = "安全锁：我不会点测试 Facebook、测试 Instagram 或记录已发布。";
+  } else if (outcomeCount > 0) {
+    eyebrow = "下一步：学习回流";
+    title = "把表现结果带回下一轮计划";
+    body = `已有 ${outcomeCount} 条结果进入学习系统。可以下载中文周报和下月候选主题，或一键带入计划页继续准备下一轮。`;
+    status = "学习已准备 · 不会发布";
+    actions = `
+      <button class="primary" type="button" data-simple-use-learning-topics>带入计划页</button>
+      <button type="button" data-simple-open-learning>打开学习页</button>
+      <details class="simple-extra-actions">
+        <summary>更多</summary>
+        <button type="button" data-simple-download-weekly-report-zh>中文周报</button>
+        <button type="button" data-simple-download-next-plan-handback>下月回流包</button>
+      </details>
+    `;
+    safetyNote = "安全锁：学习回流只准备下一轮计划，不创建 Notion 新主题，也不会发布。";
   }
 
   container.innerHTML = `
@@ -2643,6 +2671,10 @@ function renderSimpleOperator(data, monthly = null) {
   const homePublishCloseoutCard = document.getElementById("home-publish-closeout-card");
   if (homePublishCloseoutCard) {
     homePublishCloseoutCard.hidden = scheduledQueue <= 0;
+  }
+  const homeLearningHandbackCard = document.getElementById("home-learning-handback-card");
+  if (homeLearningHandbackCard) {
+    homeLearningHandbackCard.hidden = outcomeCount <= 0;
   }
 }
 
@@ -5970,8 +6002,12 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   const downloadReel = event.target.closest("[data-simple-download-reel]");
   const downloadPostPublish = event.target.closest("[data-simple-download-post-publish]");
   const downloadPostMetrics = event.target.closest("[data-simple-download-post-metrics]");
+  const openLearning = event.target.closest("[data-simple-open-learning]");
+  const useLearningTopics = event.target.closest("[data-simple-use-learning-topics]");
+  const downloadWeeklyReportZh = event.target.closest("[data-simple-download-weekly-report-zh]");
+  const downloadNextPlanHandback = event.target.closest("[data-simple-download-next-plan-handback]");
   const refresh = event.target.closest("[data-simple-refresh]");
-  if (!runReadyAssets && !openAssets && !openReview && !openScheduler && !pasteDoctorReply && !pasteProductionReply && !previewMonthlyQueue && !runMonthlyQueue && !downloadMonthlyReviewQueue && !pasteReviewDecisions && !scheduleApprovedFromHome && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadTodayPack && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !refresh) return;
+  if (!runReadyAssets && !openAssets && !openReview && !openScheduler && !pasteDoctorReply && !pasteProductionReply && !previewMonthlyQueue && !runMonthlyQueue && !downloadMonthlyReviewQueue && !pasteReviewDecisions && !scheduleApprovedFromHome && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadTodayPack && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !openLearning && !useLearningTopics && !downloadWeeklyReportZh && !downloadNextPlanHandback && !refresh) return;
   if (refresh) {
     await loadLoopStatus();
     await loadDashboardMonthlyActionQueue();
@@ -5984,6 +6020,15 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   }
   if (openScheduler) {
     showScreen("scheduler");
+    return;
+  }
+  if (openLearning) {
+    showScreen("learning");
+    return;
+  }
+  if (useLearningTopics) {
+    const message = document.getElementById("home-learning-handback-message") || document.getElementById("plan-message");
+    await loadLearningTopicsIntoPlan(message, { openPlan: true });
     return;
   }
   if (openAssets) {
@@ -6087,6 +6132,14 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   }
   if (downloadPostMetrics) {
     await downloadProtectedFile("/operations/post-publish-metrics-template.csv", "drec-post-publish-metrics-template.csv", "text/csv");
+    return;
+  }
+  if (downloadWeeklyReportZh) {
+    await downloadProtectedFile("/weekly-report.zh.md", "drec-weekly-report-zh.md", "text/markdown");
+    return;
+  }
+  if (downloadNextPlanHandback) {
+    await downloadProtectedFile("/operations/monthly-carousel-next-plan-handback.zh.md", "drec-monthly-carousel-next-plan-handback-zh.md", "text/markdown");
     return;
   }
   showScreen("assets");
@@ -6266,6 +6319,41 @@ document.getElementById("home-download-post-publish-metrics")?.addEventListener(
 
 document.getElementById("home-open-scheduler")?.addEventListener("click", () => {
   showScreen("scheduler");
+});
+
+async function downloadHomeLearningHandback(path, filename, mediaType, doneMessage) {
+  const message = document.getElementById("home-learning-handback-message");
+  try {
+    await downloadProtectedFile(path, filename, mediaType);
+    if (message) message.textContent = doneMessage;
+  } catch (error) {
+    if (message) message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : "无法下载学习回流材料。";
+  }
+}
+
+document.getElementById("home-use-learning-topics")?.addEventListener("click", async () => {
+  const message = document.getElementById("home-learning-handback-message") || document.getElementById("plan-message");
+  await loadLearningTopicsIntoPlan(message, { openPlan: true });
+});
+
+document.getElementById("home-open-learning")?.addEventListener("click", () => {
+  showScreen("learning");
+});
+
+document.getElementById("home-download-weekly-report-zh")?.addEventListener("click", async () => {
+  await downloadHomeLearningHandback("/weekly-report.zh.md", "drec-weekly-report-zh.md", "text/markdown", "中文周报已下载。");
+});
+
+document.getElementById("home-download-learning-snapshot")?.addEventListener("click", async () => {
+  await downloadHomeLearningHandback("/operations/learning-snapshot.csv", "drec-learning-snapshot.csv", "text/csv", "学习数据 CSV 已下载。");
+});
+
+document.getElementById("home-download-next-plan-handback")?.addEventListener("click", async () => {
+  await downloadHomeLearningHandback("/operations/monthly-carousel-next-plan-handback.zh.md", "drec-monthly-carousel-next-plan-handback-zh.md", "text/markdown", "下月回流包已下载。");
+});
+
+document.getElementById("home-download-next-plan-csv")?.addEventListener("click", async () => {
+  await downloadHomeLearningHandback("/operations/monthly-carousel-next-plan-handback.csv", "drec-monthly-carousel-next-plan-handback.csv", "text/csv", "下月候选 CSV 已下载。");
 });
 
 document.getElementById("copy-test-path")?.addEventListener("click", async () => {
