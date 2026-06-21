@@ -5298,9 +5298,9 @@ async function runAssetBatchAction(button, path, label) {
 }
 
 async function recordPublishedItem(itemId, button, options = {}) {
-  const postId = window.prompt("只有你已经手动发布到 Facebook/IG 后才填写。这里不会自动发帖；请粘贴真实 Meta post ID。");
+  const postId = options.postId || window.prompt("只有你已经手动发布到 Facebook/IG 后才填写。这里不会自动发帖；请粘贴真实 Meta post ID。");
   if (!postId || !postId.trim()) return;
-  const message = document.getElementById("queue-message");
+  const message = document.getElementById(options.messageId || "queue-message");
   const originalText = button.textContent;
   button.disabled = true;
   button.textContent = "Saving";
@@ -5314,11 +5314,12 @@ async function recordPublishedItem(itemId, button, options = {}) {
       const data = await fetchJson("/publishing-handoff");
       renderHandoff(data);
     }
-    message.textContent = "人工发布记录已保存。系统没有自动发帖。";
-  } catch {
+    if (message) message.textContent = "人工发布记录已保存。系统没有自动发帖。";
+  } catch (error) {
+    if (message) message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : "无法保存人工发布记录。";
+  } finally {
     button.disabled = false;
     button.textContent = originalText;
-    message.textContent = "无法保存人工发布记录。";
   }
 }
 
@@ -5562,6 +5563,19 @@ function renderHomePublishingCloseout(data) {
   if (!container) return;
   const counts = data.counts || {};
   const next = data.next_action || {};
+  const readyItems = data.scheduled_ready || [];
+  const select = document.getElementById("home-record-published-item");
+  if (select) {
+    select.innerHTML = readyItems.length
+      ? [
+          '<option value="">选择已人工发布的项目</option>',
+          ...readyItems.map((item) => {
+            const label = `${item.channel || "post"} / ${item.format || "content"} · ${item.planned_slot || "未排程"} · ${(item.caption || "").slice(0, 48)}`;
+            return `<option value="${escapeHtml(item.id)}">${escapeHtml(label)}</option>`;
+          }),
+        ].join("")
+      : '<option value="">暂无可记录项目</option>';
+  }
   const scheduledReady = Number(counts.scheduled_ready || 0);
   const waitingPostId = Number(counts.waiting_for_post_id || 0);
   const waitingMetrics = Number(counts.waiting_for_metrics || 0);
@@ -6325,6 +6339,25 @@ document.getElementById("home-download-post-publish-metrics")?.addEventListener(
 
 document.getElementById("home-open-scheduler")?.addEventListener("click", () => {
   showScreen("scheduler");
+});
+
+document.getElementById("home-record-published-save")?.addEventListener("click", async (event) => {
+  const itemId = document.getElementById("home-record-published-item")?.value || "";
+  const postId = document.getElementById("home-record-published-id")?.value || "";
+  const message = document.getElementById("home-publish-closeout-message");
+  if (!itemId) {
+    if (message) message.textContent = "请选择已经由真人手动发布的项目。";
+    return;
+  }
+  if (!postId.trim()) {
+    if (message) message.textContent = "请输入真实 Meta Post ID；如果不是 Meta，可填人工标签。";
+    return;
+  }
+  await recordPublishedItem(itemId, event.currentTarget, {
+    postId,
+    messageId: "home-publish-closeout-message",
+  });
+  document.getElementById("home-record-published-id").value = "";
 });
 
 async function downloadHomeLearningHandback(path, filename, mediaType, doneMessage) {

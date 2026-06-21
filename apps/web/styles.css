@@ -434,6 +434,37 @@ header span { color: var(--muted); font-size: 12px; }
   margin-top: 12px;
 }
 
+.home-record-published {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.1fr) minmax(220px, 1.4fr) auto;
+  gap: 10px;
+  align-items: end;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #F8FAFC;
+}
+
+.home-record-published label {
+  display: grid;
+  gap: 6px;
+  color: var(--navy);
+  font-weight: 800;
+}
+
+.home-record-published select,
+.home-record-published input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #FFF;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 500;
+}
+
 .home-closeout-next {
   display: grid;
   gap: 4px;
@@ -1662,6 +1693,7 @@ button[type="submit"] {
   .simple-operator { grid-template-columns: 1fr; }
   .simple-operator-actions { justify-content: stretch; }
   .simple-operator-actions button { width: 100%; white-space: normal; }
+  .home-record-published { grid-template-columns: 1fr; }
   .workflow-head, .workflow-primary { align-items: stretch; flex-direction: column; }
   .completion-head { flex-direction: column; }
   .workflow-primary button { width: 100%; }

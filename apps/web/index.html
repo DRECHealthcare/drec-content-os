@@ -160,6 +160,19 @@
           <button id="home-download-post-publish-metrics" type="button">下载数据记录表</button>
           <button id="home-open-scheduler" type="button">打开排程页</button>
         </div>
+        <div class="home-record-published">
+          <label>
+            已人工发布的项目
+            <select id="home-record-published-item">
+              <option value="">先等待可发布项目</option>
+            </select>
+          </label>
+          <label>
+            真实 Meta Post ID 或人工标签
+            <input id="home-record-published-id" placeholder="例如 447572..._123 或 manual-facebook-20260621">
+          </label>
+          <button id="home-record-published-save" class="danger-safe-action" type="button">只记录，不发布</button>
+        </div>
         <div id="home-publish-closeout-status" class="home-closeout-status"></div>
         <div id="home-publish-closeout-message" class="status-note"></div>
       </div>

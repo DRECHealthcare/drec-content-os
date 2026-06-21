@@ -4906,6 +4906,31 @@ const requiredSnippets = [
     text: "home-download-post-publish-metrics",
   },
   {
+    name: "web home record published item selector",
+    file: "webIndex",
+    text: "home-record-published-item",
+  },
+  {
+    name: "web home record published save action",
+    file: "webIndex",
+    text: "home-record-published-save",
+  },
+  {
+    name: "web home record published handler",
+    file: "web",
+    text: "home-record-published-save",
+  },
+  {
+    name: "web home record published safety copy",
+    file: "webIndex",
+    text: "只记录，不发布",
+  },
+  {
+    name: "web home record published styles",
+    file: "styles",
+    text: ".home-record-published",
+  },
+  {
     name: "web home publish closeout styles",
     file: "styles",
     text: ".home-publish-closeout",
