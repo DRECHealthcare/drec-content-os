@@ -24374,6 +24374,7 @@ async def publishing_handoff(_: None = Depends(require_access_token)):
             "handoff_blockers": blockers,
             "manual_label_suggestion": manual_publish_label(item),
             "planned_slot_myt": myt_datetime_label(item.get("planned_slot")),
+            **manual_publish_timing(item),
             "metrics_due_date": manual_publish_metric_due_date(item),
             "metric_window": "7d",
         }
@@ -24405,6 +24406,7 @@ async def publishing_handoff(_: None = Depends(require_access_token)):
                 f"Format: {item.get('format')}",
                 f"Planned time: {item.get('planned_slot') or 'Not set'}",
                 f"Malaysia time: {item.get('planned_slot_myt') or 'Not set'}",
+                f"Publish timing: {item.get('publish_timing_label') or 'Not calculated'}",
                 f"Queue ID: {item.get('id')}",
                 f"Media count: {len(media_urls)}",
                 f"Manual label if no Meta ID: {item.get('manual_label_suggestion')}",
@@ -24464,6 +24466,7 @@ async def monthly_carousel_publishing_handoff_payload():
             "handoff_blockers": blockers,
             "manual_label_suggestion": manual_publish_label(item),
             "planned_slot_myt": myt_datetime_label(item.get("planned_slot")),
+            **manual_publish_timing(item),
             "metrics_due_date": manual_publish_metric_due_date(item),
             "metric_window": "7d",
         }
@@ -24497,6 +24500,7 @@ async def monthly_carousel_publishing_handoff_payload():
                 f"Format: {item.get('format')}",
                 f"Planned time: {item.get('planned_slot') or 'Not set'}",
                 f"Malaysia time: {item.get('planned_slot_myt') or 'Not set'}",
+                f"Publish timing: {item.get('publish_timing_label') or 'Not calculated'}",
                 f"Queue ID: {item.get('id')}",
                 f"Media count: {len(media_urls)}",
                 f"Manual label if no Meta ID: {item.get('manual_label_suggestion')}",
@@ -24587,6 +24591,7 @@ def zh_handoff_item_lines(item: dict, index: int, heading: str):
         f"- 安全状态：{item.get('compliance_status')}",
         f"- 计划发布时间：{item.get('planned_slot') or '尚未设置'}",
         f"- 马来西亚时间：{item.get('planned_slot_myt') or myt_datetime_label(item.get('planned_slot')) or '尚未设置'}",
+        f"- 发布时间状态：{item.get('publish_timing_label') or manual_publish_timing(item).get('publish_timing_label')}",
         f"- 媒体数量：{len(media_urls)}",
         f"- 无 Meta ID 时的人工标签建议：{item.get('manual_label_suggestion') or manual_publish_label(item)}",
         f"- 数据回填建议：{item.get('metrics_due_date') or manual_publish_metric_due_date(item) or '发布后 7 天'}",
@@ -24806,6 +24811,35 @@ def myt_datetime_label(value):
     return local.strftime("%Y-%m-%d %H:%M MYT")
 
 
+def manual_publish_timing(item: dict):
+    planned = parse_datetime(item.get("planned_slot"))
+    if not planned:
+        return {
+            "publish_window_status": "unscheduled",
+            "minutes_until_planned": None,
+            "publish_timing_label": "No planned publish time.",
+        }
+    planned_utc = planned.astimezone(timezone.utc) if planned.tzinfo else planned.replace(tzinfo=timezone.utc)
+    delta_minutes = round((planned_utc - datetime.now(timezone.utc)).total_seconds() / 60)
+    if delta_minutes > 60:
+        status = "upcoming"
+        label = f"Publish in about {round(delta_minutes / 60, 1)} hour(s)."
+    elif delta_minutes > 0:
+        status = "due_soon"
+        label = f"Publish in about {delta_minutes} minute(s)."
+    elif delta_minutes >= -60:
+        status = "due_now"
+        label = "Publish now or record the manual post ID if already posted."
+    else:
+        status = "overdue_needs_post_id"
+        label = f"Planned time passed about {abs(delta_minutes)} minute(s) ago; confirm whether a human posted it and record the post ID."
+    return {
+        "publish_window_status": status,
+        "minutes_until_planned": delta_minutes,
+        "publish_timing_label": label,
+    }
+
+
 def manual_publish_evidence_csv(payload: dict):
     output = StringIO()
     fieldnames = [
@@ -24816,6 +24850,8 @@ def manual_publish_evidence_csv(payload: dict):
         "format",
         "planned_slot",
         "planned_slot_myt",
+        "publish_window_status",
+        "publish_timing_label",
         "manual_label_suggestion",
         "caption_preview",
         "media_urls",
@@ -24842,6 +24878,8 @@ def manual_publish_evidence_csv(payload: dict):
                 "format": item.get("format") or "",
                 "planned_slot": item.get("planned_slot") or "",
                 "planned_slot_myt": myt_datetime_label(item.get("planned_slot")),
+                "publish_window_status": manual_publish_timing(item).get("publish_window_status") or "",
+                "publish_timing_label": manual_publish_timing(item).get("publish_timing_label") or "",
                 "manual_label_suggestion": item.get("manual_label_suggestion") or "",
                 "caption_preview": safe_csv_text(item.get("caption")),
                 "media_urls": " | ".join([url for url in item.get("media_urls") or [] if url]),
@@ -24866,6 +24904,8 @@ def manual_publish_evidence_csv(payload: dict):
                 "format": item.get("format") or "",
                 "planned_slot": item.get("planned_slot") or "",
                 "planned_slot_myt": myt_datetime_label(item.get("planned_slot")),
+                "publish_window_status": manual_publish_timing(item).get("publish_window_status") or "",
+                "publish_timing_label": manual_publish_timing(item).get("publish_timing_label") or "",
                 "manual_label_suggestion": manual_publish_label(item),
                 "caption_preview": safe_csv_text(item.get("caption")),
                 "media_urls": " | ".join([url for url in item.get("media_urls") or [] if url]),
@@ -26109,6 +26149,7 @@ async def publishing_closeout_payload(limit: int = 50):
                 "handoff_blockers": handoff_blockers,
                 "manual_label_suggestion": manual_publish_label(item),
                 "planned_slot_myt": myt_datetime_label(item.get("planned_slot")),
+                **manual_publish_timing(item),
                 "metrics_due_date": manual_publish_metric_due_date(item),
                 "metric_window": "7d",
             }
@@ -26129,6 +26170,7 @@ async def publishing_closeout_payload(limit: int = 50):
             "raw_metric": raw_metric,
             "outcome": outcome,
             "planned_slot_myt": myt_datetime_label(item.get("planned_slot")),
+            **manual_publish_timing(item),
             "metrics_due_date": manual_publish_metric_due_date(item),
             "metric_window": "7d",
         }
@@ -26348,6 +26390,8 @@ async def post_publish_next_steps_payload():
                 "format": item.get("format"),
                 "planned_slot": item.get("planned_slot"),
                 "planned_slot_myt": item.get("planned_slot_myt") or myt_datetime_label(item.get("planned_slot")),
+                "publish_window_status": item.get("publish_window_status") or manual_publish_timing(item).get("publish_window_status"),
+                "publish_timing_label": item.get("publish_timing_label") or manual_publish_timing(item).get("publish_timing_label"),
                 "media_count": len([url for url in item.get("media_urls") or [] if url]),
                 "manual_label_suggestion": manual_publish_label(item),
                 "metrics_due_date": item.get("metrics_due_date") or manual_publish_metric_due_date(item),

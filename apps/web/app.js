@@ -5789,13 +5789,14 @@ function renderHomePublishingCloseout(data) {
           <span>下一条要交接</span>
           <strong>${escapeHtml(nextReadyItem.channel || "post")} / ${escapeHtml(nextReadyItem.format || "content")}</strong>
           <small>${escapeHtml(nextReadyItem.planned_slot_myt || nextReadyItem.planned_slot || "未排程")}</small>
+          <small>${escapeHtml(homePublishTimingLabel(nextReadyItem))}</small>
           <small>数据回填建议：${escapeHtml(nextReadyItem.metrics_due_date || "发布后 7 天")}</small>
           <code class="home-queue-id">Queue ID: ${escapeHtml(nextReadyItem.id || "")}</code>
           <p>${escapeHtml((nextReadyItem.caption || "").slice(0, 150))}${(nextReadyItem.caption || "").length > 150 ? "..." : ""}</p>
         </div>
         <div class="home-handoff-actions">
-          <button type="button" data-home-copy-handoff-full="${escapeHtml(nextReadyItem.id || "")}">复制给发布人</button>
-          <button type="button" data-home-prepare-record-published="${escapeHtml(nextReadyItem.id || "")}">选择这条填 ID</button>
+          <button type="button" data-home-copy-handoff-full="${escapeHtml(nextReadyItem.id || "")}">1. 复制发布资料</button>
+          <button class="secondary-action" type="button" data-home-prepare-record-published="${escapeHtml(nextReadyItem.id || "")}">2. 发布后填 ID</button>
         </div>
       </article>
     ` : ""}
@@ -5808,13 +5809,14 @@ function renderHomePublishingCloseout(data) {
               <div>
                 <strong>${escapeHtml(index + 2)}. ${escapeHtml(item.channel || "post")} / ${escapeHtml(item.format || "content")}</strong>
                 <small>${escapeHtml(item.planned_slot_myt || item.planned_slot || "未排程")} · ${escapeHtml(item.id || "")}</small>
+                <small>${escapeHtml(homePublishTimingLabel(item))}</small>
                 <small>数据回填建议：${escapeHtml(item.metrics_due_date || "发布后 7 天")}</small>
                 <code class="home-queue-id">Queue ID: ${escapeHtml(item.id || "")}</code>
               </div>
               <p>${escapeHtml((item.caption || "").slice(0, 150))}${(item.caption || "").length > 150 ? "..." : ""}</p>
               <div class="home-handoff-actions">
-                <button type="button" data-home-copy-handoff-full="${escapeHtml(item.id || "")}">复制给发布人</button>
-                <button type="button" data-home-prepare-record-published="${escapeHtml(item.id || "")}">选择这条填 ID</button>
+                <button type="button" data-home-copy-handoff-full="${escapeHtml(item.id || "")}">1. 复制发布资料</button>
+                <button class="secondary-action" type="button" data-home-prepare-record-published="${escapeHtml(item.id || "")}">2. 发布后填 ID</button>
               </div>
               ${mediaUrls.length ? `
                 <details class="home-handoff-more">
@@ -5857,6 +5859,17 @@ function homeMetricsPayload(item) {
   }));
 }
 
+function homePublishTimingLabel(item) {
+  const status = item.publish_window_status || "";
+  const minutes = Number(item.minutes_until_planned);
+  if (status === "upcoming" && Number.isFinite(minutes)) return `未到发布点：约 ${Math.max(1, Math.round(minutes / 60))} 小时后`;
+  if (status === "due_soon" && Number.isFinite(minutes)) return `快到发布点：约 ${Math.max(1, minutes)} 分钟后`;
+  if (status === "due_now") return "已到发布点：可人工发布，发完回来填 ID";
+  if (status === "overdue_needs_post_id" && Number.isFinite(minutes)) return `已过发布时间：请确认是否已人工发布并回填 ID`;
+  if (item.publish_timing_label) return item.publish_timing_label;
+  return "发布时间状态：待确认";
+}
+
 function homeHandoffText(item) {
   const mediaUrls = (item.media_urls || []).filter(Boolean);
   const manualLabel = item.manual_label_suggestion || "非 Meta 发布时再填人工标签";
@@ -5873,6 +5886,7 @@ function homeHandoffText(item) {
     `格式: ${item.format || "content"}`,
     `计划时间: ${item.planned_slot_myt || item.planned_slot || "未排程"}`,
     `UTC 原始时间: ${item.planned_slot || "未排程"}`,
+    `发布时间状态: ${homePublishTimingLabel(item)}`,
     `Queue ID: ${item.id || ""}`,
     `媒体数量: ${mediaUrls.length}`,
     `无 Meta ID 时的人工标签建议: ${manualLabel}`,

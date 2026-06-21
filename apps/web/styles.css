@@ -918,6 +918,12 @@ header span { color: var(--muted); font-size: 12px; }
   color: #052E2A;
 }
 
+.home-handoff-actions button.secondary-action {
+  border-color: var(--line);
+  background: #FFF;
+  color: var(--navy);
+}
+
 .home-handoff-more {
   margin-top: 10px;
 }

@@ -4171,6 +4171,16 @@ const requiredSnippets = [
     text: "Malaysia time",
   },
   {
+    name: "api manual publish timing status",
+    file: "main",
+    text: "publish_window_status",
+  },
+  {
+    name: "web home publish timing label",
+    file: "web",
+    text: "homePublishTimingLabel",
+  },
+  {
     name: "api manual publish evidence myt column",
     file: "main",
     text: "planned_slot_myt",
@@ -5358,7 +5368,7 @@ const requiredSnippets = [
   {
     name: "web home handoff prepare record button copy",
     file: "web",
-    text: "选择这条填 ID",
+    text: "发布后填 ID",
   },
   {
     name: "web home handoff queue id visible",
