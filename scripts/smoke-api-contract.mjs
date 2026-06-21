@@ -2810,6 +2810,31 @@ const requiredSnippets = [
     text: "data-project-completion",
   },
   {
+    name: "web home progress card",
+    file: "webIndex",
+    text: "home-progress-card",
+  },
+  {
+    name: "web home project completion loader",
+    file: "web",
+    text: "loadProjectCompletionAudit",
+  },
+  {
+    name: "web home progress download completion",
+    file: "web",
+    text: "data-home-download-completion",
+  },
+  {
+    name: "web home progress download unblock",
+    file: "web",
+    text: "data-home-download-unblock",
+  },
+  {
+    name: "web home progress styles",
+    file: "styles",
+    text: ".home-progress",
+  },
+  {
     name: "web notion carousel source card",
     file: "web",
     text: "data-notion-carousel-source",

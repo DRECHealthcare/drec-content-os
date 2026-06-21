@@ -294,6 +294,78 @@ header span { color: var(--muted); font-size: 12px; }
   flex-basis: 100%;
 }
 
+.home-progress {
+  margin-bottom: 14px;
+  border-left: 6px solid var(--green);
+}
+
+.home-progress[hidden] {
+  display: none;
+}
+
+.home-progress-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.home-progress-head span,
+.home-progress small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.home-progress-head h2 {
+  margin: 4px 0 6px;
+  font-size: 18px;
+}
+
+.home-progress-head p {
+  color: var(--ink);
+}
+
+.home-progress-bars {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.home-progress-bars span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.home-progress-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.home-progress-pills span {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #F8FAFC;
+  color: var(--navy);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.home-progress-next {
+  margin: 12px 0 0 18px;
+  color: var(--ink);
+}
+
+.home-progress-next li {
+  margin: 4px 0;
+}
+
 .dashboard-details {
   margin-top: 14px;
 }

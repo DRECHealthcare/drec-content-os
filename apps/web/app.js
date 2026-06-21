@@ -2446,6 +2446,69 @@ function renderWorkflowNext(data) {
   `;
 }
 
+function renderHomeProjectCompletion(data) {
+  const card = document.getElementById("home-progress-card");
+  const container = document.getElementById("home-progress-content");
+  if (!card || !container) return;
+  const completion = data.completion || {};
+  const nextActions = data.next_actions || [];
+  const monthly = data.monthly_acceptance || {};
+  const launch = data.launch || {};
+  const percent = Math.max(0, Math.min(100, Number(completion.percent || 0)));
+  const firstCycle = Math.max(0, Math.min(100, Number(completion.first_cycle_percent || 0)));
+  card.hidden = false;
+  container.innerHTML = `
+    <div class="home-progress-head">
+      <div>
+        <span>项目进度</span>
+        <h2>${escapeHtml(percent)}% 完成 · 首轮 ${escapeHtml(firstCycle)}%</h2>
+        <p>${escapeHtml(translateText(completion.next_requirement || nextActions[0] || "继续按首页下一步操作。"))}</p>
+      </div>
+      <button type="button" data-home-refresh-progress>刷新</button>
+    </div>
+    <div class="home-progress-bars">
+      <div>
+        <span>整体系统</span>
+        <div class="completion-track"><i style="width:${escapeHtml(String(percent))}%"></i></div>
+      </div>
+      <div>
+        <span>首轮闭环</span>
+        <div class="completion-track"><i style="width:${escapeHtml(String(firstCycle))}%"></i></div>
+      </div>
+    </div>
+    <div class="home-progress-pills">
+      <span>Launch: ${escapeHtml(translateText(launch.overall_status || "unknown"))}</span>
+      <span>月度 ready: ${escapeHtml(String(monthly.ready_count || 0))}</span>
+      <span>waiting: ${escapeHtml(String(monthly.waiting_count || 0))}</span>
+      <span>blocked: ${escapeHtml(String(monthly.blocked_count || 0))}</span>
+    </div>
+    ${nextActions.length ? `
+      <ul class="home-progress-next">
+        ${nextActions.slice(0, 3).map((item) => `<li>${escapeHtml(translateText(item))}</li>`).join("")}
+      </ul>
+    ` : ""}
+    <div class="form-actions">
+      <button type="button" data-home-download-completion>下载完成度审计</button>
+      <button type="button" data-home-download-unblock>下载解锁清单</button>
+    </div>
+    <small>这个卡片只读，不会批准、排程、发布或调用 Meta。</small>
+  `;
+}
+
+async function loadProjectCompletionAudit() {
+  const card = document.getElementById("home-progress-card");
+  const container = document.getElementById("home-progress-content");
+  try {
+    const data = await fetchJson("/operations/project-completion-audit");
+    renderHomeProjectCompletion(data);
+  } catch (error) {
+    if (card && container) {
+      card.hidden = false;
+      container.innerHTML = `<p class="status-note">${escapeHtml(error.message === "Access token required" ? translateText("Set the access token first.") : "无法读取项目进度。")}</p>`;
+    }
+  }
+}
+
 function renderSimpleOperator(data, monthly = null) {
   const container = document.getElementById("simple-operator");
   if (!container) return;
@@ -5809,6 +5872,30 @@ document.getElementById("workflow-next").addEventListener("click", (event) => {
   const button = event.target.closest("[data-workflow-screen]");
   if (!button) return;
   showScreen(button.dataset.workflowScreen);
+});
+
+document.getElementById("home-progress-card")?.addEventListener("click", async (event) => {
+  const refresh = event.target.closest("[data-home-refresh-progress]");
+  const downloadCompletion = event.target.closest("[data-home-download-completion]");
+  const downloadUnblock = event.target.closest("[data-home-download-unblock]");
+  if (!refresh && !downloadCompletion && !downloadUnblock) return;
+  if (refresh) {
+    await Promise.all([loadLoopStatus(), loadProjectCompletionAudit()]);
+    return;
+  }
+  try {
+    if (downloadCompletion) {
+      await downloadProtectedFile("/operations/project-completion-audit.zh.md", "drec-project-completion-audit-zh.md", "text/markdown");
+      return;
+    }
+    await downloadProtectedFile("/operations/project-unblock-board.zh.md", "drec-project-unblock-board-zh.md", "text/markdown");
+  } catch (error) {
+    const container = document.getElementById("home-progress-content");
+    if (container) {
+      const note = error.message === "Access token required" ? translateText("Set the access token first.") : "无法下载项目进度文件。";
+      container.insertAdjacentHTML("beforeend", `<p class="status-note">${escapeHtml(note)}</p>`);
+    }
+  }
 });
 
 document.getElementById("refresh-workflow").addEventListener("click", async () => {
@@ -10323,6 +10410,7 @@ document.getElementById("outcome-form").addEventListener("submit", async (event)
 
 storeAccessTokenFromUrl();
 loadLoopStatus();
+loadProjectCompletionAudit();
 loadLaunchReadiness();
 loadDashboardNotionRefreshStatus();
 loadDashboardMonthlyActionQueue();
