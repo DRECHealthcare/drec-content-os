@@ -2902,6 +2902,21 @@ const requiredSnippets = [
     text: "data-home-download-completion",
   },
   {
+    name: "web home progress open next action",
+    file: "web",
+    text: "data-home-open-next",
+  },
+  {
+    name: "web home progress next screen router",
+    file: "web",
+    text: "homeProgressNextScreen",
+  },
+  {
+    name: "web home progress primary action styles",
+    file: "styles",
+    text: ".home-progress-actions button.primary",
+  },
+  {
     name: "web simple operator cycle command endpoint",
     file: "web",
     text: "/operations/cycle-command-center",

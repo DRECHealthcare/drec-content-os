@@ -2488,6 +2488,7 @@ function renderHomeProjectCompletion(data) {
   if (!card || !container) return;
   const completion = data.completion || {};
   const nextActions = data.next_actions || [];
+  const blockers = completion.blockers || [];
   const monthly = data.monthly_acceptance || {};
   const launch = data.launch || {};
   const security = data.security || {};
@@ -2496,15 +2497,20 @@ function renderHomeProjectCompletion(data) {
   const needsServiceRoleSmoke = !serviceRoleMissing && serviceRoleSmoke.status !== "recent";
   const percent = Math.max(0, Math.min(100, Number(completion.percent || 0)));
   const firstCycle = Math.max(0, Math.min(100, Number(completion.first_cycle_percent || 0)));
+  const primaryNext = completion.next_requirement || nextActions[0] || blockers[0] || "继续按首页下一步操作。";
+  const nextScreen = homeProgressNextScreen(primaryNext, data);
   card.hidden = false;
   container.innerHTML = `
     <div class="home-progress-head">
       <div>
         <span>项目进度</span>
         <h2>${escapeHtml(percent)}% 完成 · 首轮 ${escapeHtml(firstCycle)}%</h2>
-        <p>${escapeHtml(translateText(completion.next_requirement || nextActions[0] || "继续按首页下一步操作。"))}</p>
+        <p>${escapeHtml(translateText(primaryNext))}</p>
       </div>
-      <button type="button" data-home-refresh-progress>刷新</button>
+      <div class="home-progress-actions">
+        <button class="primary" type="button" data-home-open-next="${escapeHtml(nextScreen)}">打开下一步</button>
+        <button type="button" data-home-refresh-progress>刷新</button>
+      </div>
     </div>
     <div class="home-progress-bars">
       <div>
@@ -2527,6 +2533,12 @@ function renderHomeProjectCompletion(data) {
         ${nextActions.slice(0, 3).map((item) => `<li>${escapeHtml(translateText(item))}</li>`).join("")}
       </ul>
     ` : ""}
+    ${blockers.length ? `
+      <div class="home-progress-blockers">
+        <strong>目前还差</strong>
+        <ul>${blockers.slice(0, 3).map((item) => `<li>${escapeHtml(translateText(item))}</li>`).join("")}</ul>
+      </div>
+    ` : ""}
     ${serviceRoleMissing || needsServiceRoleSmoke ? `
       <div class="home-security-unblock">
         <div>
@@ -2547,6 +2559,21 @@ function renderHomeProjectCompletion(data) {
     </details>
     <small>这个卡片只读，不会批准、排程、发布或调用 Meta。</small>
   `;
+}
+
+function homeProgressNextScreen(text, data = {}) {
+  const source = `${text || ""} ${(data.completion?.next_requirement || "")}`.toLowerCase();
+  const monthly = data.monthly_acceptance || {};
+  if (source.includes("service-role") || source.includes("service role") || source.includes("rls") || source.includes("supabase")) return "meta";
+  if (source.includes("meta credential") || source.includes("meta permission") || source.includes("meta readiness") || source.includes("live-switch")) return "meta";
+  if (source.includes("doctor") || source.includes("human approval") || source.includes("approval evidence") || source.includes("asset")) return "assets";
+  if (source.includes("queue review") || source.includes("review approval") || source.includes("reviewer_action")) return "review";
+  if (source.includes("planned slot") || source.includes("schedule") || source.includes("handoff") || source.includes("manual publishing") || source.includes("publish_queue.status=scheduled")) return "scheduler";
+  if (source.includes("metrics") || source.includes("post id") || source.includes("published evidence")) return "outcomes";
+  if (source.includes("learning") || source.includes("closeout") || source.includes("report")) return "learning";
+  if (source.includes("next plan") || source.includes("notion") || source.includes("monthly refresh")) return "plan";
+  if (Number(monthly.blocked_count || 0) || Number(monthly.waiting_count || 0)) return "assets";
+  return "dashboard";
 }
 
 async function loadProjectCompletionAudit() {
@@ -6154,13 +6181,18 @@ document.getElementById("workflow-next").addEventListener("click", (event) => {
 });
 
 document.getElementById("home-progress-card")?.addEventListener("click", async (event) => {
+  const openNext = event.target.closest("[data-home-open-next]");
   const refresh = event.target.closest("[data-home-refresh-progress]");
   const downloadOperatorGuide = event.target.closest("[data-home-download-operator-guide]");
   const downloadCompletion = event.target.closest("[data-home-download-completion]");
   const downloadUnblock = event.target.closest("[data-home-download-unblock]");
   const downloadServiceRolePack = event.target.closest("[data-home-download-service-role-pack]");
   const runServiceRoleSmoke = event.target.closest("[data-home-run-service-role-smoke]");
-  if (!refresh && !downloadOperatorGuide && !downloadCompletion && !downloadUnblock && !downloadServiceRolePack && !runServiceRoleSmoke) return;
+  if (!openNext && !refresh && !downloadOperatorGuide && !downloadCompletion && !downloadUnblock && !downloadServiceRolePack && !runServiceRoleSmoke) return;
+  if (openNext) {
+    showScreen(openNext.dataset.homeOpenNext || "dashboard");
+    return;
+  }
   if (refresh) {
     await Promise.all([loadLoopStatus(), loadProjectCompletionAudit()]);
     return;
