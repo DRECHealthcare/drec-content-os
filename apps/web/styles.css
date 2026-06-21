@@ -416,6 +416,45 @@ header span { color: var(--muted); font-size: 12px; }
   border-left-color: var(--teal);
 }
 
+.home-closeout-status {
+  margin-top: 12px;
+}
+
+.home-closeout-next {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #F8FAFC;
+}
+
+.home-closeout-next strong {
+  color: var(--navy);
+}
+
+.home-closeout-next small {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.home-closeout-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.home-closeout-pills span {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #FFFFFF;
+  color: var(--navy);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .home-doctor-reply[hidden],
 .home-production-reply[hidden],
 .home-queue-action[hidden],

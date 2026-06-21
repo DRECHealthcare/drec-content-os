@@ -5276,7 +5276,7 @@ async function recordPublishedItem(itemId, button, options = {}) {
       method: "PATCH",
       body: JSON.stringify({ status: "published", external_post_id: postId.trim() }),
     });
-    await Promise.all([loadPublishQueue(), loadLoopStatus(), loadMetaReadiness(), loadPublishingCloseout()]);
+    await Promise.all([loadPublishQueue(), loadLoopStatus(), loadMetaReadiness(), loadPublishingCloseout(), loadHomePublishingCloseout(), loadProjectCompletionAudit()]);
     if (options.refreshHandoff) {
       const data = await fetchJson("/publishing-handoff");
       renderHandoff(data);
@@ -5524,6 +5524,31 @@ function renderPublishingCloseout(data) {
   applyLanguage();
 }
 
+function renderHomePublishingCloseout(data) {
+  const container = document.getElementById("home-publish-closeout-status");
+  if (!container) return;
+  const counts = data.counts || {};
+  const next = data.next_action || {};
+  const scheduledReady = Number(counts.scheduled_ready || 0);
+  const waitingPostId = Number(counts.waiting_for_post_id || 0);
+  const waitingMetrics = Number(counts.waiting_for_metrics || 0);
+  const waitingRollup = Number(counts.waiting_for_rollup || 0);
+  const complete = Number(counts.complete || 0);
+  container.innerHTML = `
+    <div class="home-closeout-next">
+      <strong>${escapeHtml(translateText(next.label || "Build handoff and publish manually"))}</strong>
+      <small>${escapeHtml(translateText(next.detail || "人工发布后，再回填帖子 ID 和数据。"))}</small>
+    </div>
+    <div class="home-closeout-pills">
+      <span>可人工发布 ${escapeHtml(String(scheduledReady))}</span>
+      <span>等回填 ID ${escapeHtml(String(waitingPostId))}</span>
+      <span>等数据 ${escapeHtml(String(waitingMetrics))}</span>
+      <span>等学习汇总 ${escapeHtml(String(waitingRollup))}</span>
+      <span>已闭环 ${escapeHtml(String(complete))}</span>
+    </div>
+  `;
+}
+
 async function loadPublishingCloseout() {
   const container = document.getElementById("publishing-closeout");
   if (!container) return;
@@ -5532,6 +5557,17 @@ async function loadPublishingCloseout() {
     renderPublishingCloseout(data);
   } catch (error) {
     container.innerHTML = `<p class="status-note">${escapeHtml(error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not load publishing closeout."))}</p>`;
+  }
+}
+
+async function loadHomePublishingCloseout() {
+  const container = document.getElementById("home-publish-closeout-status");
+  if (!container) return;
+  try {
+    const data = await fetchJson("/operations/publishing-closeout");
+    renderHomePublishingCloseout(data);
+  } catch (error) {
+    container.innerHTML = `<p class="status-note">${escapeHtml(error.message === "Access token required" ? translateText("Set the access token first.") : "无法读取发布后收尾状态。")}</p>`;
   }
 }
 
@@ -5939,6 +5975,7 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   if (refresh) {
     await loadLoopStatus();
     await loadDashboardMonthlyActionQueue();
+    await loadHomePublishingCloseout();
     return;
   }
   if (openReview) {
@@ -6198,7 +6235,7 @@ document.getElementById("home-schedule-approved-items")?.addEventListener("click
     messageId: "home-review-schedule-message",
     stayOnHome: true,
   });
-  await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit()]);
+  await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit(), loadHomePublishingCloseout()]);
 });
 
 async function downloadHomePublishCloseout(path, filename, mediaType, doneMessage) {
@@ -10373,7 +10410,7 @@ document.getElementById("metric-form").addEventListener("submit", async (event) 
   try {
     await saveRawMetricFromCurrentForm();
     message.textContent = "Raw metrics saved.";
-    await Promise.all([loadPublishingCloseout(), loadLoopStatus()]);
+    await Promise.all([loadPublishingCloseout(), loadHomePublishingCloseout(), loadLoopStatus(), loadProjectCompletionAudit()]);
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not save raw metrics.";
   }
@@ -10390,7 +10427,7 @@ document.getElementById("save-rollup-metric").addEventListener("click", async ()
     await saveRawMetricFromCurrentForm();
     await rollupLatestMetricFromCurrentForm();
     message.textContent = "Metrics saved and outcome created.";
-    await Promise.all([loadOutcomes(), loadLoopStatus(), loadLearningSummary()]);
+    await Promise.all([loadOutcomes(), loadLoopStatus(), loadLearningSummary(), loadPublishingCloseout(), loadHomePublishingCloseout(), loadProjectCompletionAudit()]);
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not save and roll up metrics.";
   } finally {
@@ -10405,7 +10442,7 @@ document.getElementById("rollup-metric").addEventListener("click", async () => {
   try {
     await rollupLatestMetricFromCurrentForm();
     message.textContent = "Outcome created from latest metrics.";
-    await Promise.all([loadOutcomes(), loadLoopStatus(), loadLearningSummary()]);
+    await Promise.all([loadOutcomes(), loadLoopStatus(), loadLearningSummary(), loadPublishingCloseout(), loadHomePublishingCloseout(), loadProjectCompletionAudit()]);
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not roll up metrics.";
   }
@@ -10436,7 +10473,7 @@ document.getElementById("outcome-form").addEventListener("submit", async (event)
     await fetchJson("/outcomes", { method: "POST", body: JSON.stringify(payload) });
     event.currentTarget.reset();
     message.textContent = "Result saved.";
-    await Promise.all([loadOutcomes(), loadLoopStatus(), loadLearningSummary()]);
+    await Promise.all([loadOutcomes(), loadLoopStatus(), loadLearningSummary(), loadPublishingCloseout(), loadHomePublishingCloseout(), loadProjectCompletionAudit()]);
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not save result.";
   }
@@ -10445,6 +10482,7 @@ document.getElementById("outcome-form").addEventListener("submit", async (event)
 storeAccessTokenFromUrl();
 loadLoopStatus();
 loadProjectCompletionAudit();
+loadHomePublishingCloseout();
 loadLaunchReadiness();
 loadDashboardNotionRefreshStatus();
 loadDashboardMonthlyActionQueue();

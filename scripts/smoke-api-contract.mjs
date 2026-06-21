@@ -4860,6 +4860,21 @@ const requiredSnippets = [
     text: "home-publish-closeout-card",
   },
   {
+    name: "web home publish closeout status",
+    file: "webIndex",
+    text: "home-publish-closeout-status",
+  },
+  {
+    name: "web home publish closeout loader",
+    file: "web",
+    text: "loadHomePublishingCloseout",
+  },
+  {
+    name: "web home publish closeout renderer",
+    file: "web",
+    text: "renderHomePublishingCloseout",
+  },
+  {
     name: "web home today safe pack action",
     file: "webIndex",
     text: "home-download-today-safe-pack",
@@ -4883,6 +4898,11 @@ const requiredSnippets = [
     name: "web home publish closeout styles",
     file: "styles",
     text: ".home-publish-closeout",
+  },
+  {
+    name: "web home closeout pills styles",
+    file: "styles",
+    text: ".home-closeout-pills",
   },
   {
     name: "web review log action",
