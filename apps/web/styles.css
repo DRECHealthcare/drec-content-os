@@ -923,8 +923,9 @@ header span { color: var(--muted); font-size: 12px; }
 }
 
 .danger-safe-action {
-  border-color: #FDBA74 !important;
-  background: #FFF7ED !important;
+  border-color: var(--green) !important;
+  background: #ECFDF5 !important;
+  color: #14523F !important;
 }
 
 .advanced-actions {
@@ -1878,9 +1879,8 @@ button[type="submit"] {
 
 .asset-toolbar {
   margin-top: 10px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  display: grid;
+  gap: 12px;
 }
 
 .asset-toolbar button {
@@ -1925,6 +1925,71 @@ button[type="submit"] {
   color: var(--navy);
   font-weight: 800;
   cursor: pointer;
+}
+
+.primary-toolbar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.2fr) repeat(2, minmax(150px, .75fr));
+  align-items: stretch;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #BFE7E3;
+  border-left: 6px solid var(--teal);
+  border-radius: 8px;
+  background: #F6FEFC;
+}
+
+.primary-toolbar .toolbar-kicker {
+  grid-column: 1 / -1;
+  color: #176B65;
+}
+
+.primary-toolbar button {
+  min-height: 48px;
+  white-space: normal;
+}
+
+.primary-toolbar .primary-action {
+  font-size: 15px;
+}
+
+.compact-tool-group {
+  overflow: hidden;
+}
+
+.compact-tool-group summary {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+}
+
+.compact-tool-group summary::after {
+  content: "展开";
+  margin-left: auto;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #F1F5F8;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.compact-tool-group[open] summary::after {
+  content: "收起";
+}
+
+.compact-tool-group .learning-actions {
+  max-height: 360px;
+  overflow: auto;
+  padding: 10px 2px 2px;
+}
+
+.home-stage-more summary,
+.simple-extra-actions summary {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 10px;
+  background: #FFF;
 }
 
 .queue-list {
@@ -2080,8 +2145,10 @@ button[type="submit"] {
   body { display: block; }
   aside { width: 100%; }
   header { flex-wrap: wrap; height: auto; padding: 14px 18px; }
-  .token-panel { width: 100%; margin-left: 0; }
+  .token-panel { width: 100%; margin-left: 0; flex-wrap: wrap; }
   .token-panel input { flex: 1; width: auto; }
+  .token-panel button { flex: 1 1 76px; }
+  .token-remember { flex: 0 0 auto; }
   .token-button { margin-left: auto; }
   .screen { padding: 18px; }
   .grid, .loop, .split-form, .learning-grid, .handoff-summary, .creative-preview, .weight-row, .scheduler-toolbar, .week-schedule, .workflow-steps, .test-path-list, .quick-composer, .sprint-board, .completion-bars { grid-template-columns: 1fr; }
@@ -2099,5 +2166,11 @@ button[type="submit"] {
   .workflow-head, .workflow-primary { align-items: stretch; flex-direction: column; }
   .completion-head { flex-direction: column; }
   .workflow-primary button { width: 100%; }
+  .primary-toolbar { grid-template-columns: 1fr; }
+  .primary-toolbar .toolbar-kicker { grid-column: 1; }
+  .asset-toolbar button,
+  .asset-toolbar .file-action,
+  .compact-tool-group[open] button,
+  .compact-tool-group[open] .file-action { width: 100%; }
   .loop div { border-right: 0; border-bottom: 1px solid var(--line); }
 }

@@ -78,8 +78,8 @@
           <input id="home-doctor-reply-reviewer" placeholder="Dr. name">
         </label>
         <div class="form-actions">
-          <button id="home-preview-doctor-replies-safe-advance" type="button">检查回复</button>
-          <button id="home-import-doctor-replies-safe-advance" class="danger-safe-action" type="button">导入通过项</button>
+          <button id="home-preview-doctor-replies-safe-advance" type="button">1. 先检查</button>
+          <button id="home-import-doctor-replies-safe-advance" class="danger-safe-action" type="button">2. 确认导入</button>
         </div>
         <div id="home-doctor-reply-message" class="status-note"></div>
         <div id="home-doctor-reply-preview" class="learning-grid"></div>
@@ -102,8 +102,8 @@
           <input id="home-production-reply-producer" placeholder="Designer or producer">
         </label>
         <div class="form-actions">
-          <button id="home-preview-production-replies" type="button">检查图片</button>
-          <button id="home-import-production-replies" class="danger-safe-action" type="button">导入图片</button>
+          <button id="home-preview-production-replies" type="button">1. 先检查</button>
+          <button id="home-import-production-replies" class="danger-safe-action" type="button">2. 确认导入</button>
         </div>
         <div id="home-production-reply-message" class="status-note"></div>
         <div id="home-production-reply-preview" class="learning-grid"></div>
@@ -116,8 +116,8 @@
           </div>
         </div>
         <div class="form-actions">
-          <button id="home-preview-monthly-queue-ready" type="button">检查可入队</button>
-          <button id="home-run-monthly-queue-ready" class="danger-safe-action" type="button">加入队列</button>
+          <button id="home-preview-monthly-queue-ready" type="button">1. 先检查</button>
+          <button id="home-run-monthly-queue-ready" class="danger-safe-action" type="button">2. 加入队列</button>
           <details class="simple-extra-actions home-stage-more">
             <summary>更多</summary>
             <button id="home-download-queue-readiness" type="button">下载检查表</button>
@@ -134,9 +134,9 @@
           </div>
         </div>
         <div class="form-actions">
-          <button id="home-preview-review-queue-decisions" type="button">检查审核决定</button>
-          <button id="home-import-review-queue-decisions" class="danger-safe-action" type="button">导入审核决定</button>
-          <button id="home-schedule-approved-items" class="danger-safe-action" type="button">排程</button>
+          <button id="home-preview-review-queue-decisions" type="button">1. 先检查</button>
+          <button id="home-import-review-queue-decisions" class="danger-safe-action" type="button">2. 确认导入</button>
+          <button id="home-schedule-approved-items" class="danger-safe-action" type="button">3. 安排时间</button>
           <details class="simple-extra-actions home-stage-more">
             <summary>更多</summary>
             <button id="home-download-monthly-review-queue" type="button">下载审核队列</button>
@@ -163,8 +163,8 @@
         <details class="simple-extra-actions home-stage-more home-manual-more">
           <summary>更多：看排程 / 下载资料 / 已发布后记录 ID</summary>
           <div class="home-manual-more-actions">
-            <button id="home-open-scheduler" type="button">看排程</button>
-            <button id="home-download-publishing-handoff" type="button">发布交接包</button>
+            <button id="home-open-scheduler" type="button">查看排程</button>
+            <button id="home-download-publishing-handoff" type="button">下载交接包</button>
             <button id="home-download-manual-publish-evidence" type="button">发布证据表</button>
             <button id="home-download-post-publish-next" type="button">发布后下一步</button>
             <button id="home-download-post-publish-metrics" type="button">数据记录表</button>
@@ -180,7 +180,8 @@
               真实 Meta Post ID 或人工标签
               <input id="home-record-published-id" placeholder="例如 447572..._123 或 manual-facebook-20260621">
             </label>
-            <button id="home-record-published-save" class="danger-safe-action" type="button">只记录，不发布</button>
+            <small class="safety-inline-note">只记录，不发布。</small>
+            <button id="home-record-published-save" class="danger-safe-action" type="button">保存发布记录</button>
           </div>
         </details>
         <div id="home-publish-closeout-message" class="status-note"></div>
@@ -194,7 +195,7 @@
           <button id="home-use-learning-topics" class="primary" type="button">带入计划</button>
         </div>
         <div class="form-actions">
-          <button id="home-open-learning" type="button">看学习页</button>
+          <button id="home-open-learning" type="button">查看学习页</button>
           <details class="simple-extra-actions home-stage-more">
             <summary>下载资料</summary>
             <button id="home-download-weekly-report-zh" type="button">中文周报</button>
@@ -238,7 +239,7 @@
             Spend
             <input id="home-metrics-spend" type="number" min="0" step="0.01" placeholder="0">
           </label>
-          <button id="home-save-rollup-metrics" class="danger-safe-action" type="button">保存数据并学习</button>
+          <button id="home-save-rollup-metrics" class="danger-safe-action" type="button">保存并学习</button>
         </div>
         <div id="home-learning-handback-message" class="status-note"></div>
       </div>
@@ -607,12 +608,12 @@
         <div class="asset-toolbar">
           <div class="toolbar-panel primary-toolbar">
             <span class="toolbar-kicker">月度 Carousel 主路径</span>
-            <button id="download-monthly-carousel-doctor-handoff-pack" class="primary-action" type="button">1. 下载医生包</button>
-            <button id="download-monthly-carousel-next-action-queue" type="button">2. 今天下一步</button>
-            <button id="download-monthly-carousel-status-board-zh" type="button">3. 全部状态</button>
+            <button id="download-monthly-carousel-doctor-handoff-pack" class="primary-action" type="button">下载医生包</button>
+            <button id="download-monthly-carousel-next-action-queue" type="button">今天下一步</button>
+            <button id="download-monthly-carousel-status-board-zh" type="button">全部状态</button>
           </div>
           <details class="advanced-actions compact-tool-group">
-            <summary>更多工具（医生包 / 图片制作 / CSV 导入）</summary>
+            <summary>更多工具（需要时才打开）</summary>
             <div class="learning-actions">
               <button id="download-monthly-carousel-doctor-send-message" type="button">只下载医生消息</button>
               <button id="download-monthly-carousel-doctor-import-rules" type="button">下载医生导入规则</button>
@@ -632,28 +633,28 @@
               <button id="download-monthly-carousel-evidence-bridge" type="button">下载证据桥接表</button>
               <button id="download-monthly-carousel-queue-readiness" type="button">下载入队检查表</button>
               <button id="download-monthly-carousel-queue-execution-pack" type="button">下载入队执行包</button>
-              <button id="preview-monthly-carousel-queue-ready" type="button">预览月度入队</button>
-              <button id="queue-monthly-carousel-ready" type="button">月度内容加入队列</button>
-              <button id="preview-monthly-carousel-safe-advance" type="button">预览安全推进</button>
-              <button id="run-monthly-carousel-safe-advance" type="button">执行安全推进</button>
+              <button id="preview-monthly-carousel-queue-ready" type="button">先检查入队</button>
+              <button id="queue-monthly-carousel-ready" type="button">确认加入队列</button>
+              <button id="preview-monthly-carousel-safe-advance" type="button">先检查推进</button>
+              <button id="run-monthly-carousel-safe-advance" type="button">确认安全推进</button>
               <button id="run-monthly-carousel-production-smoke" type="button">运行图片 Smoke Test</button>
               <label class="file-action">
                 医生审核 CSV
                 <input id="monthly-carousel-doctor-worksheet-file" type="file" accept=".csv,text/csv">
               </label>
-              <button id="preview-monthly-carousel-doctor-worksheet" type="button">预览医生审核表</button>
-              <button id="import-monthly-carousel-doctor-worksheet" type="button">导入医生审核表</button>
+              <button id="preview-monthly-carousel-doctor-worksheet" type="button">先检查医生表</button>
+              <button id="import-monthly-carousel-doctor-worksheet" type="button">导入医生表</button>
               <label class="file-action">
                 图片制作 CSV
                 <input id="monthly-carousel-production-worksheet-file" type="file" accept=".csv,text/csv">
               </label>
-              <button id="preview-monthly-carousel-production-worksheet" type="button">预览图片制作表</button>
+              <button id="preview-monthly-carousel-production-worksheet" type="button">先检查制作表</button>
               <button id="import-monthly-carousel-production-worksheet" type="button">导入图片制作表</button>
               <label class="file-action">
                 证据桥接 CSV
                 <input id="monthly-carousel-evidence-bridge-file" type="file" accept=".csv,text/csv">
               </label>
-              <button id="preview-monthly-carousel-evidence-bridge" type="button">预览证据桥接表</button>
+              <button id="preview-monthly-carousel-evidence-bridge" type="button">先检查证据表</button>
               <button id="import-monthly-carousel-evidence-bridge" type="button">导入证据桥接表</button>
             </div>
           </details>
