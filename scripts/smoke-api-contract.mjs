@@ -5663,6 +5663,21 @@ const requiredSnippets = [
     text: "does not approve, import, queue, schedule, publish, update Notion, store secrets, or call Meta",
   },
   {
+    name: "github project completion summary extraction",
+    file: "projectCompletionWorkflow",
+    text: "Extract completion highlights",
+  },
+  {
+    name: "github project completion percent summary",
+    file: "projectCompletionWorkflow",
+    text: ".completion.percent",
+  },
+  {
+    name: "github project completion blockers summary",
+    file: "projectCompletionWorkflow",
+    text: "Top blockers:",
+  },
+  {
     name: "real metrics workflow job",
     file: "realMetricsWorkflow",
     text: "/jobs/nightly-meta-metrics?dry_run=${DREC_METRICS_DRY_RUN}&limit=25&rollup=true",

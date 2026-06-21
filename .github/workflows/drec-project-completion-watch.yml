@@ -57,6 +57,24 @@ jobs:
             "${DREC_API_BASE_URL}/launch-readiness" \
             | tee launch-readiness.json
 
+      - name: Extract completion highlights
+        if: ${{ env.DREC_ACCESS_TOKEN != '' }}
+        run: |
+          {
+            echo "### Current Completion"
+            echo ""
+            echo "- Overall: $(jq -r '.completion.percent // \"unknown\"' project-completion-audit.json)%"
+            echo "- First cycle: $(jq -r '.completion.first_cycle_percent // \"unknown\"' project-completion-audit.json)%"
+            echo "- Readiness: $(jq -r '.readiness // \"unknown\"' project-completion-audit.json)"
+            echo "- Next requirement: $(jq -r '.completion.next_requirement // .next_actions[0] // \"No next requirement reported\"' project-completion-audit.json)"
+            echo "- Unblock board: $(jq -r '(.ready_count // 0 | tostring) + \" ready / \" + (.blocked_count // 0 | tostring) + \" blocked\"' project-unblock-board.json)"
+            echo "- Launch status: $(jq -r '.overall_status // \"unknown\"' launch-readiness.json)"
+            echo ""
+            echo "Top blockers:"
+            jq -r '(.completion.blockers // .next_actions // [])[:5][]? | \"- \" + .' project-completion-audit.json
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Write completion watch summary
         if: ${{ always() }}
         run: |
