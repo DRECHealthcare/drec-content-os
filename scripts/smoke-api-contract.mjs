@@ -111,6 +111,7 @@ const requiredRoutes = [
   "GET /operations/monthly-carousel-doctor-import-rules",
   "GET /operations/monthly-carousel-doctor-import-rules.zh.md",
   "GET /operations/monthly-carousel-doctor-import-rules.csv",
+  "GET /operations/monthly-carousel-doctor-reply-templates",
   "GET /operations/monthly-carousel-doctor-evidence-sheet.csv",
   "GET /operations/monthly-carousel-production-import-rules",
   "GET /operations/monthly-carousel-production-import-rules.zh.md",
@@ -3318,6 +3319,16 @@ const requiredSnippets = [
     name: "web dashboard doctor reply inbox endpoint",
     file: "web",
     text: "/operations/doctor-reply-inbox-pack",
+  },
+  {
+    name: "web monthly doctor reply template fallback",
+    file: "web",
+    text: "/operations/monthly-carousel-doctor-reply-templates",
+  },
+  {
+    name: "api monthly doctor reply template json route",
+    file: "main",
+    text: '@app.get("/operations/monthly-carousel-doctor-reply-templates")',
   },
   {
     name: "web dashboard monthly production worksheet action",

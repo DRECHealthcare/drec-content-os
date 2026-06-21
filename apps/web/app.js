@@ -8200,9 +8200,15 @@ async function fillDoctorReplyTemplate({
   if (message) message.textContent = "Loading doctor reply template...";
   try {
     const data = await fetchJson("/operations/doctor-reply-inbox-pack");
-    const template = data.reply_paste_template || (data.reply_items || []).map((item) => item.reply_template || "").filter(Boolean).join("\n\n");
+    let template = data.reply_paste_template || (data.reply_items || []).map((item) => item.reply_template || "").filter(Boolean).join("\n\n");
+    let templateSource = "通用医生";
     if (!template) {
-      if (message) message.textContent = "现在没有待医生回复的内容。当前下一步是预览可入队内容，确认后执行月度入队。";
+      const monthly = await fetchJson("/operations/monthly-carousel-doctor-reply-templates");
+      template = monthly.reply_paste_template || (monthly.reply_items || []).map((item) => item.reply_template || "").filter(Boolean).join("\n\n");
+      templateSource = "月度 Carousel 医生";
+    }
+    if (!template) {
+      if (message) message.textContent = "现在没有可填入的医生回复模板。请先确认是否已有等待医生审核的内容。";
       return false;
     }
     const textInput = document.getElementById(textInputId);
@@ -8211,7 +8217,7 @@ async function fillDoctorReplyTemplate({
       textInput.focus();
       if (scroll) textInput.scrollIntoView({ behavior: "smooth", block: "center" });
     }
-    if (message) message.textContent = "模板已填入。收到医生回复后，请把 Decision / Safety 改成实际结果，再先预览。";
+    if (message) message.textContent = `${templateSource}模板已填入。收到医生回复后，请把 Decision / Safety / doctor_check_* / Notes 改成实际结果，再先预览。`;
     return true;
   } catch (error) {
     if (message) message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : "Could not load doctor reply template.";
@@ -8860,26 +8866,11 @@ document.getElementById("dashboard-monthly-action-queue")?.addEventListener("cli
     return;
   }
   if (fillDoctorReplyTemplateButton) {
-    const message = document.getElementById("test-path-message");
-    if (message) message.textContent = "Loading doctor reply template...";
-    try {
-      const data = await fetchJson("/operations/doctor-reply-inbox-pack");
-      const template = data.reply_paste_template || (data.reply_items || []).map((item) => item.reply_template || "").filter(Boolean).join("\n\n");
-      if (!template) {
-        if (message) message.textContent = "现在没有待医生回复的内容。当前下一步是预览可入队内容，确认后执行月度入队。";
-        return;
-      }
-      showScreen("assets");
-      const textInput = document.getElementById("doctor-reply-text");
-      if (textInput) {
-        textInput.value = template;
-        textInput.focus();
-        textInput.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-      if (message) message.textContent = "医生回复模板已填入。收到医生回复后，请把 Decision / Safety 改成实际结果，再用 Preview Reply + Safe Advance 检查。";
-    } catch (error) {
-      if (message) message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : "Could not load doctor reply template.";
-    }
+    showScreen("assets");
+    await fillDoctorReplyTemplate({
+      textInputId: "doctor-reply-text",
+      messageId: "test-path-message",
+    });
     return;
   }
   if (previewDoctorReplySafe || importDoctorReplySafe) {

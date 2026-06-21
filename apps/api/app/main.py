@@ -10568,19 +10568,78 @@ async def operations_monthly_carousel_doctor_review_zh(_: None = Depends(require
     )
 
 
-@app.get("/operations/monthly-carousel-doctor-reply-templates.zh.md")
-async def operations_monthly_carousel_doctor_reply_templates_zh(_: None = Depends(require_access_token)):
+async def monthly_carousel_doctor_reply_templates_payload():
     generated_at = datetime.now(timezone.utc).isoformat()
     payload = await monthly_carousel_review_payload()
     source = payload.get("source") or {}
     items = payload.get("items") or []
+    blocks = []
+    for index, item in enumerate(items, start=1):
+        blocks.append(
+            "\n".join(
+                [
+                    f"--- {index} / {len(items)} ---",
+                    f"Topic ID: {item.get('topic_id')}",
+                    f"Topic: {item.get('topic')}",
+                    f"Asset ID: {item.get('asset_id')}",
+                    "Decision: approve / needs edits / reject",
+                    "Safety: clear / needs review / blocked",
+                    "Use polished copy: no",
+                    "doctor_check_educational_not_diagnostic: yes / no",
+                    "doctor_check_no_guaranteed_outcome: yes / no",
+                    "doctor_check_no_medication_instruction: yes / no",
+                    "doctor_check_mandarin_accurate: yes / no",
+                    "doctor_check_cta_appropriate: yes / no",
+                    "Notes:",
+                ]
+            )
+        )
+    return {
+        "phase": "monthly_carousel_doctor_reply_templates",
+        "mode": "monthly_doctor_reply_paste_template",
+        "generated_at": generated_at,
+        "source": source,
+        "item_count": len(items),
+        "reply_block_count": len(blocks),
+        "reply_paste_template": "\n\n".join(blocks),
+        "reply_items": [
+            {
+                "topic_id": item.get("topic_id"),
+                "topic": item.get("topic"),
+                "asset_id": item.get("asset_id"),
+                "reply_template": blocks[index],
+            }
+            for index, item in enumerate(items)
+        ],
+        "rules": [
+            "Each block must keep its Asset ID.",
+            "Approve requires Decision: approve, Safety: clear, reviewer name, Notes, and all five doctor_check_* fields as yes/pass.",
+            "Needs edits, needs review, blocked, reject, or unclear replies must not advance.",
+        ],
+        "safety": [
+            "This payload is read-only.",
+            "It does not approve, modify, queue, schedule, publish, update Notion, or call Meta.",
+        ],
+    }
+
+
+@app.get("/operations/monthly-carousel-doctor-reply-templates")
+async def operations_monthly_carousel_doctor_reply_templates(_: None = Depends(require_access_token)):
+    return await monthly_carousel_doctor_reply_templates_payload()
+
+
+@app.get("/operations/monthly-carousel-doctor-reply-templates.zh.md")
+async def operations_monthly_carousel_doctor_reply_templates_zh(_: None = Depends(require_access_token)):
+    payload = await monthly_carousel_doctor_reply_templates_payload()
+    source = payload.get("source") or {}
+    blocks = payload.get("reply_paste_template") or ""
     lines = [
         "# DREC 月度 Carousel 医生回复模板包",
         "",
-        f"生成时间：{generated_at}",
+        f"生成时间：{payload.get('generated_at')}",
         f"Notion 来源：{source.get('name')}",
         f"月度刷新日：每月 {source.get('monthly_refresh_day')} 日",
-        f"本包项目数：{len(items)}",
+        f"本包项目数：{payload.get('item_count')}",
         "",
         "用途：把本月每个 Topic ID 的医生回复格式集中给医生或助理填写。这个文件只读，不会批准、修改、入队、排程、发布或调用 Meta。",
         "",
@@ -10596,27 +10655,10 @@ async def operations_monthly_carousel_doctor_reply_templates_zh(_: None = Depend
         "",
         "```text",
     ]
-    if not items:
+    if not blocks:
         lines.append("暂无月度 carousel 项目。")
-    for index, item in enumerate(items, start=1):
-        lines.extend(
-            [
-                f"--- {index} / {len(items)} ---",
-                f"Topic ID: {item.get('topic_id')}",
-                f"Topic: {item.get('topic')}",
-                f"Asset ID: {item.get('asset_id')}",
-                "Decision: approve / needs edits / reject",
-                "Safety: clear / needs review / blocked",
-                "Use polished copy: no",
-                "doctor_check_educational_not_diagnostic: yes / no",
-                "doctor_check_no_guaranteed_outcome: yes / no",
-                "doctor_check_no_medication_instruction: yes / no",
-                "doctor_check_mandarin_accurate: yes / no",
-                "doctor_check_cta_appropriate: yes / no",
-                "Notes:",
-                "",
-            ]
-        )
+    else:
+        lines.append(blocks)
     lines.extend(
         [
             "```",
