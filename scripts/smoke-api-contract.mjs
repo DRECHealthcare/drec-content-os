@@ -4196,9 +4196,29 @@ const requiredSnippets = [
     text: "publish_window_status",
   },
   {
+    name: "api manual publish early evidence blocker",
+    file: "main",
+    text: "Manual publish evidence cannot be recorded before the planned publish time.",
+  },
+  {
+    name: "api manual publish record blockers helper",
+    file: "main",
+    text: "manual_publish_record_blockers",
+  },
+  {
     name: "web home publish timing label",
     file: "web",
     text: "homePublishTimingLabel",
+  },
+  {
+    name: "web home publish record timing gate",
+    file: "web",
+    text: "homeCanRecordPublished",
+  },
+  {
+    name: "web home publish record disabled copy",
+    file: "web",
+    text: "到点后填 ID",
   },
   {
     name: "api manual publish evidence myt column",

@@ -5761,7 +5761,8 @@ function renderHomePublishingCloseout(data) {
           ...readyItems.map((item) => {
             const plannedLabel = item.planned_slot_myt || item.planned_slot || "未排程";
             const label = `${item.channel || "post"} / ${item.format || "content"} · ${plannedLabel} · ${(item.caption || "").slice(0, 48)}`;
-            return `<option value="${escapeHtml(item.id)}">${escapeHtml(label)}</option>`;
+            const disabled = homeCanRecordPublished(item) ? "" : " disabled";
+            return `<option value="${escapeHtml(item.id)}"${disabled}>${escapeHtml(label)}${disabled ? " · 未到发布点" : ""}</option>`;
           }),
         ].join("")
       : '<option value="">暂无可记录项目</option>';
@@ -5822,7 +5823,7 @@ function renderHomePublishingCloseout(data) {
         </div>
         <div class="home-handoff-actions">
           <button type="button" data-home-copy-handoff-full="${escapeHtml(nextReadyItem.id || "")}">1. 复制发布资料</button>
-          <button class="secondary-action" type="button" data-home-prepare-record-published="${escapeHtml(nextReadyItem.id || "")}">2. 发布后填 ID</button>
+          <button class="secondary-action" type="button" data-home-prepare-record-published="${escapeHtml(nextReadyItem.id || "")}" ${homeCanRecordPublished(nextReadyItem) ? "" : "disabled"}>${escapeHtml(homeRecordButtonLabel(nextReadyItem))}</button>
         </div>
       </article>
     ` : ""}
@@ -5842,7 +5843,7 @@ function renderHomePublishingCloseout(data) {
               <p>${escapeHtml((item.caption || "").slice(0, 150))}${(item.caption || "").length > 150 ? "..." : ""}</p>
               <div class="home-handoff-actions">
                 <button type="button" data-home-copy-handoff-full="${escapeHtml(item.id || "")}">1. 复制发布资料</button>
-                <button class="secondary-action" type="button" data-home-prepare-record-published="${escapeHtml(item.id || "")}">2. 发布后填 ID</button>
+                <button class="secondary-action" type="button" data-home-prepare-record-published="${escapeHtml(item.id || "")}" ${homeCanRecordPublished(item) ? "" : "disabled"}>${escapeHtml(homeRecordButtonLabel(item))}</button>
               </div>
               ${mediaUrls.length ? `
                 <details class="home-handoff-more">
@@ -5894,6 +5895,14 @@ function homePublishTimingLabel(item) {
   if (status === "overdue_needs_post_id" && Number.isFinite(minutes)) return `已过发布时间：请确认是否已人工发布并回填 ID`;
   if (item.publish_timing_label) return item.publish_timing_label;
   return "发布时间状态：待确认";
+}
+
+function homeCanRecordPublished(item) {
+  return ["due_now", "overdue_needs_post_id"].includes(item.publish_window_status || "");
+}
+
+function homeRecordButtonLabel(item) {
+  return homeCanRecordPublished(item) ? "2. 发布后填 ID" : "2. 到点后填 ID";
 }
 
 function homeHandoffText(item) {
@@ -6889,6 +6898,13 @@ document.getElementById("home-record-published-save")?.addEventListener("click",
     if (message) message.textContent = "请输入真实 Meta Post ID；如果不是 Meta，可填人工标签。";
     return;
   }
+  const statusContainer = document.getElementById("home-publish-closeout-status");
+  const readyItems = JSON.parse(statusContainer?.dataset.readyItems || "[]");
+  const item = readyItems.find((row) => row.id === itemId);
+  if (item && !homeCanRecordPublished(item)) {
+    if (message) message.textContent = `还没到发布点，不能提前保存 ID。${homePublishTimingLabel(item)}`;
+    return;
+  }
   await recordPublishedItem(itemId, event.currentTarget, {
     postId,
     messageId: "home-publish-closeout-message",
@@ -6933,6 +6949,10 @@ document.getElementById("home-publish-closeout-status")?.addEventListener("click
     return;
   }
   if (recordButton) {
+    if (!homeCanRecordPublished(item)) {
+      if (message) message.textContent = `还没到发布点，先复制资料给发布人；到时间发布后再回来填 ID。${homePublishTimingLabel(item)}`;
+      return;
+    }
     const more = document.querySelector(".home-manual-more");
     const select = document.getElementById("home-record-published-item");
     const input = document.getElementById("home-record-published-id");

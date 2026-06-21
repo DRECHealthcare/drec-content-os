@@ -24239,7 +24239,7 @@ async def update_publish_queue_item(
 ):
     existing = await fetch_row(
         """
-        select status, compliance_status
+        select status, compliance_status, planned_slot
         from publish_queue
         where id = $1
         """,
@@ -24248,7 +24248,7 @@ async def update_publish_queue_item(
     if existing is None and supabase_rest.configured():
         rows = await supabase_rest.select(
             "publish_queue",
-            {"select": "status,compliance_status", "id": f"eq.{item_id}", "limit": "1"},
+            {"select": "status,compliance_status,planned_slot", "id": f"eq.{item_id}", "limit": "1"},
         )
         existing = rows[0] if rows else None
     if existing is None:
@@ -24278,6 +24278,18 @@ async def update_publish_queue_item(
             status_code=422,
             detail="Published items need a Meta post ID.",
         )
+    if update.status == "published":
+        early_blockers = manual_publish_record_blockers(existing or {})
+        if early_blockers:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "message": "Manual publish evidence cannot be recorded before the planned publish time.",
+                    "blockers": early_blockers,
+                    "planned_slot_myt": myt_datetime_label((existing or {}).get("planned_slot")),
+                    "publish_timing": manual_publish_timing(existing or {}),
+                },
+            )
     row = await fetch_row(
         """
         update publish_queue
@@ -24856,6 +24868,18 @@ def manual_publish_timing_label_zh(item: dict):
     if status == "overdue_needs_post_id" and isinstance(minutes, int):
         return f"已过发布时间约 {abs(minutes)} 分钟：请确认是否已人工发布，并回填真实 Post ID。"
     return timing.get("publish_timing_label") or "发布时间状态待确认。"
+
+
+def manual_publish_record_blockers(item: dict):
+    timing = manual_publish_timing(item)
+    status = timing.get("publish_window_status")
+    if status == "unscheduled":
+        return ["Cannot record manual publish evidence without a planned publish time."]
+    if status in {"upcoming", "due_soon"}:
+        return [
+            f"Planned publish time has not arrived yet: {manual_publish_timing_label_zh(item)}",
+        ]
+    return []
 
 
 def manual_publish_evidence_csv(payload: dict):
@@ -25910,6 +25934,17 @@ async def import_manual_publish_evidence(
         blockers = monthly_handoff_blockers(item)
         if blockers:
             skipped.append({"row": index, "queue_id": queue_id, "reason": "Queue item is not ready for manual publish evidence.", "blockers": blockers})
+            continue
+        record_blockers = manual_publish_record_blockers(item)
+        if record_blockers:
+            skipped.append({
+                "row": index,
+                "queue_id": queue_id,
+                "reason": "Manual publish evidence is too early.",
+                "blockers": record_blockers,
+                "planned_slot_myt": myt_datetime_label(item.get("planned_slot")),
+                "publish_window_status": manual_publish_timing(item).get("publish_window_status"),
+            })
             continue
         external_post_id = manual_publish_external_id(row)
         if not external_post_id:
