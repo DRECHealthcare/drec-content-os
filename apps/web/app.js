@@ -2909,14 +2909,15 @@ function renderDashboardMonthlyActionQueue(data) {
         `).join("")}</ul>
       ` : "<p class=\"status-note\">暂无可行动项目。</p>"}
       <div class="learning-actions simple-primary-actions">
+        <button type="button" data-download-dashboard-monthly-doctor-message>下载医生发送消息</button>
         <button type="button" data-download-dashboard-monthly-doctor-handoff>下载医生交接 ZIP</button>
-        <button type="button" data-download-dashboard-monthly-doctor-triage>下载医生快速判定包</button>
+        <button type="button" data-download-dashboard-monthly-action-queue>下载今日行动队列</button>
       </div>
       <details class="advanced-actions">
         <summary>高级工具（平时不用打开）</summary>
         <div class="learning-actions">
         <button type="button" data-open-monthly-assets-review>打开月度素材审核</button>
-        <button type="button" data-download-dashboard-monthly-doctor-message>下载医生发送消息</button>
+        <button type="button" data-download-dashboard-monthly-doctor-triage>下载医生快速判定包</button>
         <button type="button" data-download-dashboard-monthly-doctor-review>下载医生审核总包</button>
         <button type="button" data-download-dashboard-monthly-doctor-import-rules>下载医生导入规则</button>
         <button type="button" data-download-dashboard-monthly-png-assets>下载全部 PNG</button>
@@ -6368,6 +6369,16 @@ document.getElementById("download-monthly-carousel-doctor-handoff-pack")?.addEve
     message.textContent = translateText("Monthly carousel doctor handoff ZIP downloaded.");
   } catch (error) {
     message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download monthly carousel doctor handoff ZIP.");
+  }
+});
+
+document.getElementById("download-monthly-carousel-doctor-send-message")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/monthly-carousel-doctor-send-message.zh.md", "drec-monthly-carousel-doctor-send-message-zh.md", "text/markdown");
+    message.textContent = translateText("Monthly carousel doctor send message downloaded.");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download monthly carousel doctor send message.");
   }
 });
 

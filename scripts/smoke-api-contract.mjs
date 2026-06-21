@@ -2864,6 +2864,16 @@ const requiredSnippets = [
     text: "data-simple-download-monthly-doctor-message",
   },
   {
+    name: "web asset toolbar primary monthly action",
+    file: "web",
+    text: "download-monthly-carousel-doctor-send-message",
+  },
+  {
+    name: "web asset toolbar compact tool groups",
+    file: "styles",
+    text: "compact-tool-group",
+  },
+  {
     name: "web dashboard monthly doctor send message action",
     file: "web",
     text: "data-download-dashboard-monthly-doctor-message",

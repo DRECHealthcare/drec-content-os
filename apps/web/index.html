@@ -405,102 +405,116 @@
         <div id="media-items" class="queue-list"></div>
         <h3 class="subsection-heading">Draft Assets</h3>
         <div class="asset-toolbar">
-          <button id="approve-clear-assets" type="button">Approve Clear Assets</button>
-          <button id="queue-ready-assets" type="button">Queue Ready Assets</button>
-          <button id="download-creative-pack" type="button">Download Creative Pack</button>
-          <button id="download-media-shot-list" type="button">Download Shot List</button>
-          <button id="download-asset-review" type="button">Download Asset Review CSV</button>
-          <button id="download-asset-review-decisions" type="button">Download Review Decisions</button>
-          <button id="download-asset-media-attachments" type="button">Download Media Attachments</button>
-          <button id="download-asset-worklist" type="button">Download Asset Worklist</button>
-          <button id="download-asset-safety-review" type="button">Download Safety Review</button>
-          <button id="download-asset-review-session" type="button">Download Review Session</button>
-          <button id="download-asset-review-session-zh" type="button">Download Review Session 中文</button>
-          <button id="download-doctor-approval-pack" type="button">Download Doctor Approval</button>
-          <button id="download-doctor-approval-request" type="button">Download Doctor Request</button>
-          <button id="download-doctor-review-bridge" type="button">Download Doctor Bridge</button>
-          <button id="download-doctor-review-bridge-zh" type="button">下载中文医生审核桥接包</button>
-          <button id="download-monthly-carousel-doctor-handoff-pack" type="button">下载医生交接 ZIP</button>
-          <button id="download-monthly-carousel-doctor-import-rules" type="button">下载医生导入规则</button>
-          <button id="download-monthly-carousel-doctor-triage" type="button">下载医生快速判定包</button>
-          <button id="download-monthly-carousel-doctor-review-zh" type="button">下载月度 Carousel 医生审核总包</button>
-          <button id="download-monthly-carousel-doctor-reply-templates" type="button">下载月度医生回复模板</button>
-          <button id="download-monthly-carousel-png-assets" type="button">下载月度 Carousel 全部图片 ZIP</button>
-          <button id="run-monthly-carousel-production-smoke" type="button">运行月度图片 Smoke Test</button>
-          <button id="download-monthly-carousel-status-board-zh" type="button">下载月度 Carousel 状态板</button>
-          <button id="download-monthly-carousel-status-board-csv" type="button">下载月度 Carousel 状态 CSV</button>
-          <button id="download-monthly-carousel-doctor-worksheet" type="button">下载月度医生审核表</button>
-          <button id="download-monthly-carousel-action-pack" type="button">下载月度下一步操作包</button>
-          <button id="download-monthly-carousel-ops-cockpit" type="button">下载月度运营驾驶舱</button>
-          <button id="download-monthly-carousel-next-action-queue" type="button">下载月度行动队列</button>
-          <button id="download-monthly-carousel-next-action-queue-csv" type="button">下载月度行动 CSV</button>
-          <button id="download-doctor-send-queue" type="button">Download Send Queue</button>
-          <button id="download-doctor-review-polish" type="button">Download Doctor Polish</button>
-          <button id="download-doctor-reply-inbox" type="button">Download Reply Inbox</button>
-          <button id="download-doctor-reply-inbox-zh" type="button">下载中文医生回复收件箱</button>
-          <button id="download-doctor-decision-worksheet" type="button">Download Doctor Worksheet</button>
-          <button id="download-approval-cockpit" type="button">Download Approval Cockpit</button>
-          <button id="download-approval-cockpit-zh" type="button">下载中文审批控制台</button>
-          <button id="download-asset-rewrite-pack" type="button">Download Rewrite Pack</button>
-          <button id="download-first-cycle-sprint-pack" type="button">Download Sprint Pack</button>
-          <button id="download-first-cycle-sprint-pack-zh" type="button">下载中文首轮冲刺包</button>
-          <button id="download-first-cycle-sprint-tracker" type="button">Download Sprint Tracker</button>
-          <button id="download-today-runbook" type="button">Download Today Runbook</button>
-          <button id="download-today-runbook-zh" type="button">下载中文今日执行手册</button>
-          <button id="download-first-cycle-handoff" type="button">Download First Cycle Handoff</button>
-          <button id="download-first-cycle-handoff-zh" type="button">下载中文首轮交接包</button>
-          <button id="download-post-approval-production" type="button">Download Production Pack</button>
-          <button id="download-production-handoff-bridge" type="button">Download Production Bridge</button>
-          <button id="download-production-handoff-bridge-zh" type="button">下载中文制作交接桥接包</button>
-          <button id="download-production-reply-inbox" type="button">Download Production Inbox</button>
-          <button id="download-production-reply-inbox-zh" type="button">下载中文制作回复收件箱</button>
-          <button id="download-production-design-worksheet" type="button">Download Design Worksheet</button>
-          <button id="download-monthly-carousel-production-worksheet" type="button">下载月度制作设计表</button>
-          <button id="download-monthly-carousel-production-qa-pack" type="button">下载月度制作 QA 包</button>
-          <button id="download-monthly-carousel-production-import-rules" type="button">下载制作导入规则</button>
-          <button id="download-monthly-carousel-evidence-bridge" type="button">下载月度证据桥接表</button>
-          <button id="download-monthly-carousel-queue-readiness" type="button">下载月度入队检查表</button>
-          <button id="download-monthly-carousel-queue-execution-pack" type="button">下载月度入队执行包</button>
-          <button id="preview-monthly-carousel-queue-ready" type="button">预览月度入队</button>
-          <button id="queue-monthly-carousel-ready" type="button">月度内容加入队列</button>
-          <button id="preview-monthly-carousel-safe-advance" type="button">预览月度安全推进</button>
-          <button id="run-monthly-carousel-safe-advance" type="button">执行月度安全推进</button>
-          <label class="file-action">
-            Monthly Production CSV
-            <input id="monthly-carousel-production-worksheet-file" type="file" accept=".csv,text/csv">
-          </label>
-          <button id="preview-monthly-carousel-production-worksheet" type="button">Preview Monthly Production</button>
-          <button id="import-monthly-carousel-production-worksheet" type="button">Import Monthly Production</button>
-          <label class="file-action">
-            Monthly Evidence CSV
-            <input id="monthly-carousel-evidence-bridge-file" type="file" accept=".csv,text/csv">
-          </label>
-          <button id="preview-monthly-carousel-evidence-bridge" type="button">Preview Monthly Evidence</button>
-          <button id="import-monthly-carousel-evidence-bridge" type="button">Import Monthly Evidence</button>
-          <label class="file-action">
-            Design CSV
-            <input id="production-design-worksheet-file" type="file" accept=".csv,text/csv">
-          </label>
-          <button id="preview-production-design-worksheet" type="button">Preview Design</button>
-          <button id="import-production-design-worksheet" type="button">Import Design</button>
-          <label class="file-action">
-            Review CSV
-            <input id="asset-review-decisions-file" type="file" accept=".csv,text/csv">
-          </label>
-          <button id="preview-asset-review-decisions" type="button">Preview Decisions</button>
-          <button id="import-asset-review-decisions" type="button">Import Decisions</button>
-          <label class="file-action">
-            Monthly Doctor CSV
-            <input id="monthly-carousel-doctor-worksheet-file" type="file" accept=".csv,text/csv">
-          </label>
-          <button id="preview-monthly-carousel-doctor-worksheet" type="button">Preview Monthly Doctor</button>
-          <button id="import-monthly-carousel-doctor-worksheet" type="button">Import Monthly Doctor</button>
-          <label class="file-action">
-            Media CSV
-            <input id="asset-media-attachments-file" type="file" accept=".csv,text/csv">
-          </label>
-          <button id="preview-asset-media-attachments" type="button">Preview Media</button>
-          <button id="import-asset-media-attachments" type="button">Import Media</button>
+          <div class="toolbar-panel primary-toolbar">
+            <span class="toolbar-kicker">现在常用</span>
+            <button id="download-monthly-carousel-doctor-send-message" class="primary-action" type="button">下载医生发送消息</button>
+            <button id="download-monthly-carousel-doctor-handoff-pack" type="button">下载医生交接 ZIP</button>
+            <button id="download-monthly-carousel-next-action-queue" type="button">下载今日行动队列</button>
+            <button id="download-monthly-carousel-status-board-zh" type="button">下载状态板</button>
+          </div>
+          <details class="advanced-actions compact-tool-group">
+            <summary>月度 Carousel 工具</summary>
+            <div class="learning-actions">
+              <button id="download-monthly-carousel-doctor-import-rules" type="button">下载医生导入规则</button>
+              <button id="download-monthly-carousel-doctor-triage" type="button">下载医生快速判定包</button>
+              <button id="download-monthly-carousel-doctor-review-zh" type="button">下载医生审核总包</button>
+              <button id="download-monthly-carousel-doctor-reply-templates" type="button">下载医生回复模板</button>
+              <button id="download-monthly-carousel-png-assets" type="button">下载全部 PNG</button>
+              <button id="download-monthly-carousel-status-board-csv" type="button">下载状态 CSV</button>
+              <button id="download-monthly-carousel-doctor-worksheet" type="button">下载医生审核表</button>
+              <button id="download-monthly-carousel-action-pack" type="button">下载下一步操作包</button>
+              <button id="download-monthly-carousel-ops-cockpit" type="button">下载运营驾驶舱</button>
+              <button id="download-monthly-carousel-next-action-queue-csv" type="button">下载行动 CSV</button>
+              <button id="download-monthly-carousel-production-worksheet" type="button">下载制作设计表</button>
+              <button id="download-monthly-carousel-production-qa-pack" type="button">下载制作 QA 包</button>
+              <button id="download-monthly-carousel-production-import-rules" type="button">下载制作导入规则</button>
+              <button id="download-monthly-carousel-evidence-bridge" type="button">下载证据桥接表</button>
+              <button id="download-monthly-carousel-queue-readiness" type="button">下载入队检查表</button>
+              <button id="download-monthly-carousel-queue-execution-pack" type="button">下载入队执行包</button>
+              <button id="preview-monthly-carousel-queue-ready" type="button">预览月度入队</button>
+              <button id="queue-monthly-carousel-ready" type="button">月度内容加入队列</button>
+              <button id="preview-monthly-carousel-safe-advance" type="button">预览安全推进</button>
+              <button id="run-monthly-carousel-safe-advance" type="button">执行安全推进</button>
+              <button id="run-monthly-carousel-production-smoke" type="button">运行图片 Smoke Test</button>
+              <label class="file-action">
+                Monthly Doctor CSV
+                <input id="monthly-carousel-doctor-worksheet-file" type="file" accept=".csv,text/csv">
+              </label>
+              <button id="preview-monthly-carousel-doctor-worksheet" type="button">Preview Monthly Doctor</button>
+              <button id="import-monthly-carousel-doctor-worksheet" type="button">Import Monthly Doctor</button>
+              <label class="file-action">
+                Monthly Production CSV
+                <input id="monthly-carousel-production-worksheet-file" type="file" accept=".csv,text/csv">
+              </label>
+              <button id="preview-monthly-carousel-production-worksheet" type="button">Preview Monthly Production</button>
+              <button id="import-monthly-carousel-production-worksheet" type="button">Import Monthly Production</button>
+              <label class="file-action">
+                Monthly Evidence CSV
+                <input id="monthly-carousel-evidence-bridge-file" type="file" accept=".csv,text/csv">
+              </label>
+              <button id="preview-monthly-carousel-evidence-bridge" type="button">Preview Monthly Evidence</button>
+              <button id="import-monthly-carousel-evidence-bridge" type="button">Import Monthly Evidence</button>
+            </div>
+          </details>
+          <details class="advanced-actions compact-tool-group">
+            <summary>其它工具</summary>
+            <div class="learning-actions">
+              <button id="approve-clear-assets" type="button">Approve Clear Assets</button>
+              <button id="queue-ready-assets" type="button">Queue Ready Assets</button>
+              <button id="download-creative-pack" type="button">Download Creative Pack</button>
+              <button id="download-media-shot-list" type="button">Download Shot List</button>
+              <button id="download-asset-review" type="button">Download Asset Review CSV</button>
+              <button id="download-asset-review-decisions" type="button">Download Review Decisions</button>
+              <button id="download-asset-media-attachments" type="button">Download Media Attachments</button>
+              <button id="download-asset-worklist" type="button">Download Asset Worklist</button>
+              <button id="download-asset-safety-review" type="button">Download Safety Review</button>
+              <button id="download-asset-review-session" type="button">Download Review Session</button>
+              <button id="download-asset-review-session-zh" type="button">Download Review Session 中文</button>
+              <button id="download-doctor-approval-pack" type="button">Download Doctor Approval</button>
+              <button id="download-doctor-approval-request" type="button">Download Doctor Request</button>
+              <button id="download-doctor-review-bridge" type="button">Download Doctor Bridge</button>
+              <button id="download-doctor-review-bridge-zh" type="button">下载中文医生审核桥接包</button>
+              <button id="download-doctor-send-queue" type="button">Download Send Queue</button>
+              <button id="download-doctor-review-polish" type="button">Download Doctor Polish</button>
+              <button id="download-doctor-reply-inbox" type="button">Download Reply Inbox</button>
+              <button id="download-doctor-reply-inbox-zh" type="button">下载中文医生回复收件箱</button>
+              <button id="download-doctor-decision-worksheet" type="button">Download Doctor Worksheet</button>
+              <button id="download-approval-cockpit" type="button">Download Approval Cockpit</button>
+              <button id="download-approval-cockpit-zh" type="button">下载中文审批控制台</button>
+              <button id="download-asset-rewrite-pack" type="button">Download Rewrite Pack</button>
+              <button id="download-first-cycle-sprint-pack" type="button">Download Sprint Pack</button>
+              <button id="download-first-cycle-sprint-pack-zh" type="button">下载中文首轮冲刺包</button>
+              <button id="download-first-cycle-sprint-tracker" type="button">Download Sprint Tracker</button>
+              <button id="download-today-runbook" type="button">Download Today Runbook</button>
+              <button id="download-today-runbook-zh" type="button">下载中文今日执行手册</button>
+              <button id="download-first-cycle-handoff" type="button">Download First Cycle Handoff</button>
+              <button id="download-first-cycle-handoff-zh" type="button">下载中文首轮交接包</button>
+              <button id="download-post-approval-production" type="button">Download Production Pack</button>
+              <button id="download-production-handoff-bridge" type="button">Download Production Bridge</button>
+              <button id="download-production-handoff-bridge-zh" type="button">下载中文制作交接桥接包</button>
+              <button id="download-production-reply-inbox" type="button">Download Production Inbox</button>
+              <button id="download-production-reply-inbox-zh" type="button">下载中文制作回复收件箱</button>
+              <button id="download-production-design-worksheet" type="button">Download Design Worksheet</button>
+              <label class="file-action">
+                Design CSV
+                <input id="production-design-worksheet-file" type="file" accept=".csv,text/csv">
+              </label>
+              <button id="preview-production-design-worksheet" type="button">Preview Design</button>
+              <button id="import-production-design-worksheet" type="button">Import Design</button>
+              <label class="file-action">
+                Review CSV
+                <input id="asset-review-decisions-file" type="file" accept=".csv,text/csv">
+              </label>
+              <button id="preview-asset-review-decisions" type="button">Preview Decisions</button>
+              <button id="import-asset-review-decisions" type="button">Import Decisions</button>
+              <label class="file-action">
+                Media CSV
+                <input id="asset-media-attachments-file" type="file" accept=".csv,text/csv">
+              </label>
+              <button id="preview-asset-media-attachments" type="button">Preview Media</button>
+              <button id="import-asset-media-attachments" type="button">Import Media</button>
+            </div>
+          </details>
         </div>
         <div class="quick-composer">
           <label>

@@ -273,6 +273,10 @@ header span { color: var(--muted); font-size: 12px; }
   margin-top: 12px;
 }
 
+.advanced-actions:not([open]) > .learning-actions {
+  display: none;
+}
+
 .dashboard-advanced-tools {
   min-width: min(100%, 420px);
   align-self: flex-start;
@@ -708,6 +712,29 @@ button[type="submit"] {
   gap: 10px;
 }
 
+.asset-toolbar {
+  display: grid;
+  gap: 12px;
+}
+
+.toolbar-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #F8FAFC;
+}
+
+.toolbar-kicker {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .form-actions button[type="button"] {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -716,6 +743,29 @@ button[type="submit"] {
   color: var(--navy);
   font-weight: 800;
   cursor: pointer;
+}
+
+.asset-toolbar button,
+.asset-toolbar .file-action {
+  min-height: 40px;
+}
+
+.asset-toolbar .primary-action {
+  border-color: var(--teal);
+  background: var(--teal);
+  color: #052E2A;
+}
+
+.compact-tool-group {
+  margin-top: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #FFF;
+}
+
+.compact-tool-group summary {
+  list-style-position: inside;
 }
 
 .file-action,
