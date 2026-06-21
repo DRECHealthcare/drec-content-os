@@ -55,6 +55,30 @@
       <div id="simple-operator" class="simple-operator card wide">
         <p class="status-note">正在读取下一步</p>
       </div>
+      <div id="home-doctor-reply-card" class="card wide home-doctor-reply" hidden>
+        <div class="workflow-head">
+          <div>
+            <h2>收到医生回复后贴这里</h2>
+            <p class="section-note">先预览，确认 Decision: approve 和 Safety: clear 都明确，再导入。导入不会发布到 Facebook / Instagram。</p>
+          </div>
+          <button id="home-fill-doctor-reply-template" type="button">填入模板</button>
+        </div>
+        <label>
+          医生回复内容
+          <textarea id="home-doctor-reply-text" placeholder="Asset ID: ...&#10;Decision: approve / needs edits / reject&#10;Safety: clear / needs review / blocked&#10;Use polished copy: yes / no&#10;Notes: ..."></textarea>
+        </label>
+        <label>
+          医生/审核人姓名
+          <input id="home-doctor-reply-reviewer" placeholder="Dr. name">
+        </label>
+        <div class="form-actions">
+          <button id="home-preview-doctor-replies-safe-advance" type="button">预览医生回复</button>
+          <button id="home-import-doctor-replies-safe-advance" class="danger-safe-action" type="button">导入医生回复</button>
+        </div>
+        <div id="home-doctor-reply-message" class="status-note"></div>
+        <div id="home-doctor-reply-preview" class="learning-grid"></div>
+        <div id="home-doctor-safe-advance-preview" class="learning-grid"></div>
+      </div>
       <details class="dashboard-details">
         <summary>查看系统详情和高级测试</summary>
         <div class="card wide">

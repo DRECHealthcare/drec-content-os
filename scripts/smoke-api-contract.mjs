@@ -2885,6 +2885,21 @@ const requiredSnippets = [
     text: "dashboard-details",
   },
   {
+    name: "web home doctor reply card",
+    file: "webIndex",
+    text: "home-doctor-reply-card",
+  },
+  {
+    name: "web home doctor reply safe preview",
+    file: "web",
+    text: "home-preview-doctor-replies-safe-advance",
+  },
+  {
+    name: "web simple paste doctor reply action",
+    file: "web",
+    text: "data-simple-paste-doctor-reply",
+  },
+  {
     name: "web dashboard monthly doctor send message action",
     file: "web",
     text: "data-download-dashboard-monthly-doctor-message",

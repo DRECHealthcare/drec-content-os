@@ -319,6 +319,45 @@ header span { color: var(--muted); font-size: 12px; }
   display: none;
 }
 
+.home-doctor-reply {
+  margin-top: 14px;
+  border-left: 6px solid var(--orange);
+}
+
+.home-doctor-reply[hidden] {
+  display: none;
+}
+
+.home-doctor-reply label {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  color: var(--navy);
+  font-weight: 800;
+}
+
+.home-doctor-reply textarea,
+.home-doctor-reply input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #FFF;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 500;
+}
+
+.home-doctor-reply textarea {
+  min-height: 170px;
+  resize: vertical;
+}
+
+.danger-safe-action {
+  border-color: #FDBA74 !important;
+  background: #FFF7ED !important;
+}
+
 .advanced-actions {
   margin-top: 14px;
   border-top: 1px solid var(--line);

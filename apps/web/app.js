@@ -2481,6 +2481,7 @@ function renderSimpleOperator(data, monthly = null) {
     actions = `
       <button class="primary" type="button" data-simple-download-monthly-doctor-message>下载医生发送消息</button>
       <button class="primary" type="button" data-simple-download-monthly-doctor-handoff>下载医生交接 ZIP</button>
+      <button type="button" data-simple-paste-doctor-reply>粘贴医生回复</button>
       <button type="button" data-simple-download-monthly-action-queue>下载今日行动队列</button>
       <button type="button" data-simple-refresh>刷新状态</button>
     `;
@@ -2555,6 +2556,10 @@ function renderSimpleOperator(data, monthly = null) {
     </div>
     <small>${escapeHtml(safetyNote)} 下面的详细区域是高级工具，平时不用找。</small>
   `;
+  const homeDoctorReplyCard = document.getElementById("home-doctor-reply-card");
+  if (homeDoctorReplyCard) {
+    homeDoctorReplyCard.hidden = Number(monthlyGateCounts.waiting_doctor_safety_clear || 0) <= 0;
+  }
 }
 
 function securityGateSummary(security = {}) {
@@ -5803,6 +5808,7 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   const openAssets = event.target.closest("[data-simple-open-assets]");
   const openReview = event.target.closest("[data-simple-open-review]");
   const openScheduler = event.target.closest("[data-simple-open-scheduler]");
+  const pasteDoctorReply = event.target.closest("[data-simple-paste-doctor-reply]");
   const downloadMonthlyDoctorHandoff = event.target.closest("[data-simple-download-monthly-doctor-handoff]");
   const downloadMonthlyDoctorMessage = event.target.closest("[data-simple-download-monthly-doctor-message]");
   const downloadMonthlyActionQueue = event.target.closest("[data-simple-download-monthly-action-queue]");
@@ -5815,7 +5821,7 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   const downloadPostPublish = event.target.closest("[data-simple-download-post-publish]");
   const downloadPostMetrics = event.target.closest("[data-simple-download-post-metrics]");
   const refresh = event.target.closest("[data-simple-refresh]");
-  if (!runReadyAssets && !openAssets && !openReview && !openScheduler && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadTodayPack && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !refresh) return;
+  if (!runReadyAssets && !openAssets && !openReview && !openScheduler && !pasteDoctorReply && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadTodayPack && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !refresh) return;
   if (refresh) {
     await loadLoopStatus();
     await loadDashboardMonthlyActionQueue();
@@ -5831,6 +5837,15 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   }
   if (openAssets) {
     showScreen("assets");
+    return;
+  }
+  if (pasteDoctorReply) {
+    const card = document.getElementById("home-doctor-reply-card");
+    if (card) {
+      card.hidden = false;
+      card.scrollIntoView({ behavior: "smooth", block: "start" });
+      document.getElementById("home-doctor-reply-text")?.focus();
+    }
     return;
   }
   if (downloadMonthlyDoctorHandoff) {
@@ -5880,6 +5895,36 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   showScreen("assets");
   await runAssetBatchAction(runReadyAssets, "/assets/queue-ready?limit=20", "Queue ready assets");
   showScreen("review");
+  await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit()]);
+});
+
+document.getElementById("home-fill-doctor-reply-template")?.addEventListener("click", async () => {
+  await fillDoctorReplyTemplate({
+    textInputId: "home-doctor-reply-text",
+    messageId: "home-doctor-reply-message",
+  });
+});
+
+document.getElementById("home-preview-doctor-replies-safe-advance")?.addEventListener("click", async () => {
+  await importDoctorRepliesAndSafeAdvance({
+    dryRun: true,
+    textInputId: "home-doctor-reply-text",
+    reviewerInputId: "home-doctor-reply-reviewer",
+    messageId: "home-doctor-reply-message",
+    previewTargetId: "home-doctor-reply-preview",
+    safeAdvanceTargetId: "home-doctor-safe-advance-preview",
+  });
+});
+
+document.getElementById("home-import-doctor-replies-safe-advance")?.addEventListener("click", async () => {
+  await importDoctorRepliesAndSafeAdvance({
+    dryRun: false,
+    textInputId: "home-doctor-reply-text",
+    reviewerInputId: "home-doctor-reply-reviewer",
+    messageId: "home-doctor-reply-message",
+    previewTargetId: "home-doctor-reply-preview",
+    safeAdvanceTargetId: "home-doctor-safe-advance-preview",
+  });
   await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit()]);
 });
 
@@ -6913,8 +6958,8 @@ document.getElementById("download-manual-reel-csv")?.addEventListener("click", a
   }
 });
 
-function renderAssetReviewDecisionPreview(data) {
-  const container = document.getElementById("asset-review-decision-preview");
+function renderAssetReviewDecisionPreview(data, targetId = "asset-review-decision-preview") {
+  const container = document.getElementById(targetId);
   if (!container) return;
   const rows = data.planned || data.imported || [];
   const skipped = data.skipped || [];
@@ -6940,8 +6985,8 @@ function renderAssetReviewDecisionPreview(data) {
   `;
 }
 
-function renderAssetMediaAttachmentPreview(data) {
-  const container = document.getElementById("asset-media-attachment-preview");
+function renderAssetMediaAttachmentPreview(data, targetId = "asset-media-attachment-preview") {
+  const container = document.getElementById(targetId);
   if (!container) return;
   const rows = data.planned || data.imported || [];
   const skipped = data.skipped || [];
@@ -6971,8 +7016,8 @@ function renderAssetMediaAttachmentPreview(data) {
   `;
 }
 
-function renderMonthlyQueueResult(data) {
-  const container = document.getElementById("asset-media-attachment-preview");
+function renderMonthlyQueueResult(data, targetId = "asset-media-attachment-preview") {
+  const container = document.getElementById(targetId);
   if (!container) return;
   const rows = data.items || [];
   container.innerHTML = `
@@ -6997,8 +7042,8 @@ function renderMonthlyQueueResult(data) {
   `;
 }
 
-function renderMonthlySafeAdvanceResult(data) {
-  const container = document.getElementById("asset-media-attachment-preview");
+function renderMonthlySafeAdvanceResult(data, targetId = "asset-media-attachment-preview") {
+  const container = document.getElementById(targetId);
   if (!container) return;
   const actions = data.actions || [];
   const gates = data.current_gates || {};
@@ -7070,16 +7115,50 @@ async function uploadAssetReviewDecisions({ dryRun, fileInputId = "asset-review-
   }
 }
 
-async function importDoctorReplies({ dryRun }) {
-  const message = document.getElementById("media-message");
-  const textInput = document.getElementById("doctor-reply-text");
-  const reviewerInput = document.getElementById("doctor-reply-reviewer");
+async function fillDoctorReplyTemplate({
+  textInputId = "doctor-reply-text",
+  messageId = "media-message",
+  scroll = true,
+} = {}) {
+  const message = document.getElementById(messageId);
+  if (message) message.textContent = "Loading doctor reply template...";
+  try {
+    const data = await fetchJson("/operations/doctor-reply-inbox-pack");
+    const template = data.reply_paste_template || (data.reply_items || []).map((item) => item.reply_template || "").filter(Boolean).join("\n\n");
+    if (!template) {
+      if (message) message.textContent = "现在没有待医生回复的内容。当前下一步是预览可入队内容，确认后执行月度入队。";
+      return false;
+    }
+    const textInput = document.getElementById(textInputId);
+    if (textInput) {
+      textInput.value = template;
+      textInput.focus();
+      if (scroll) textInput.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    if (message) message.textContent = "模板已填入。收到医生回复后，请把 Decision / Safety 改成实际结果，再先预览。";
+    return true;
+  } catch (error) {
+    if (message) message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : "Could not load doctor reply template.";
+    return false;
+  }
+}
+
+async function importDoctorReplies({
+  dryRun,
+  textInputId = "doctor-reply-text",
+  reviewerInputId = "doctor-reply-reviewer",
+  messageId = "media-message",
+  previewTargetId = "asset-review-decision-preview",
+} = {}) {
+  const message = document.getElementById(messageId);
+  const textInput = document.getElementById(textInputId);
+  const reviewerInput = document.getElementById(reviewerInputId);
   const replyText = textInput?.value?.trim() || "";
   if (!replyText) {
-    message.textContent = "Paste the doctor reply text first.";
+    if (message) message.textContent = "Paste the doctor reply text first.";
     return;
   }
-  message.textContent = dryRun ? "Previewing doctor reply..." : "Importing doctor reply...";
+  if (message) message.textContent = dryRun ? "Previewing doctor reply..." : "Importing doctor reply...";
   try {
     const data = await fetchJson("/operations/import-doctor-replies", {
       method: "POST",
@@ -7090,24 +7169,31 @@ async function importDoctorReplies({ dryRun }) {
       }),
     });
     if (!dryRun) textInput.value = "";
-    message.textContent = data.message || (dryRun ? "Doctor reply previewed." : "Doctor reply imported.");
-    renderAssetReviewDecisionPreview(data);
+    if (message) message.textContent = data.message || (dryRun ? "Doctor reply previewed." : "Doctor reply imported.");
+    renderAssetReviewDecisionPreview(data, previewTargetId);
     if (!dryRun) await Promise.all([loadAssets(), loadFirstCycleEvidenceWorkbench(), loadDoctorSendQueue(), loadDoctorReplyInboxPack(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
   } catch (error) {
-    message.textContent = error.message === "Access token required" ? "Set the access token first." : dryRun ? "Could not preview doctor reply." : "Could not import doctor reply.";
+    if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : dryRun ? "Could not preview doctor reply." : "Could not import doctor reply.";
   }
 }
 
-async function importDoctorRepliesAndSafeAdvance({ dryRun }) {
-  const message = document.getElementById("media-message");
-  const textInput = document.getElementById("doctor-reply-text");
-  const reviewerInput = document.getElementById("doctor-reply-reviewer");
+async function importDoctorRepliesAndSafeAdvance({
+  dryRun,
+  textInputId = "doctor-reply-text",
+  reviewerInputId = "doctor-reply-reviewer",
+  messageId = "media-message",
+  previewTargetId = "asset-review-decision-preview",
+  safeAdvanceTargetId = "asset-media-attachment-preview",
+} = {}) {
+  const message = document.getElementById(messageId);
+  const textInput = document.getElementById(textInputId);
+  const reviewerInput = document.getElementById(reviewerInputId);
   const replyText = textInput?.value?.trim() || "";
   if (!replyText) {
-    message.textContent = "Paste the doctor reply text first.";
+    if (message) message.textContent = "Paste the doctor reply text first.";
     return;
   }
-  message.textContent = dryRun
+  if (message) message.textContent = dryRun
     ? translateText("Previewing doctor reply and safe advance...")
     : translateText("Importing doctor reply and running safe advance...");
   try {
@@ -7120,11 +7206,11 @@ async function importDoctorRepliesAndSafeAdvance({ dryRun }) {
       }),
     });
     if (!dryRun) textInput.value = "";
-    message.textContent = data.message || (dryRun
+    if (message) message.textContent = data.message || (dryRun
       ? translateText("Doctor reply safe intake previewed.")
       : translateText("Doctor reply safe intake completed."));
-    renderAssetReviewDecisionPreview(data.reply_import || data);
-    renderMonthlySafeAdvanceResult(data.safe_advance || {});
+    renderAssetReviewDecisionPreview(data.reply_import || data, previewTargetId);
+    renderMonthlySafeAdvanceResult(data.safe_advance || {}, safeAdvanceTargetId);
     if (!dryRun) {
       await Promise.all([
         loadAssets(),
@@ -7145,7 +7231,7 @@ async function importDoctorRepliesAndSafeAdvance({ dryRun }) {
       ]);
     }
   } catch (error) {
-    message.textContent = error.message === "Access token required"
+    if (message) message.textContent = error.message === "Access token required"
       ? translateText("Set the access token first.")
       : dryRun
         ? translateText("Could not preview doctor reply safe intake.")
