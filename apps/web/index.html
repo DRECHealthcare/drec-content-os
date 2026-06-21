@@ -601,18 +601,18 @@
         <div id="media-message" class="status-note"></div>
         <h3 class="subsection-heading">Media Library</h3>
         <div id="media-items" class="queue-list"></div>
-        <h3 class="subsection-heading">Draft Assets</h3>
+        <h3 class="subsection-heading">月度内容工作区</h3>
         <div class="asset-toolbar">
           <div class="toolbar-panel primary-toolbar">
-            <span class="toolbar-kicker">现在常用</span>
-            <button id="download-monthly-carousel-doctor-send-message" class="primary-action" type="button">下载医生发送消息</button>
-            <button id="download-monthly-carousel-doctor-handoff-pack" type="button">下载医生交接 ZIP</button>
-            <button id="download-monthly-carousel-next-action-queue" type="button">下载今日行动队列</button>
-            <button id="download-monthly-carousel-status-board-zh" type="button">下载状态板</button>
+            <span class="toolbar-kicker">现在只需要看这里</span>
+            <button id="download-monthly-carousel-doctor-send-message" class="primary-action" type="button">1. 给医生审核</button>
+            <button id="download-monthly-carousel-next-action-queue" type="button">2. 看今日下一步</button>
+            <button id="download-monthly-carousel-status-board-zh" type="button">查看状态</button>
           </div>
           <details class="advanced-actions compact-tool-group">
-            <summary>月度 Carousel 工具</summary>
+            <summary>更多：医生包 / 图片制作 / CSV 导入</summary>
             <div class="learning-actions">
+              <button id="download-monthly-carousel-doctor-handoff-pack" type="button">下载医生交接 ZIP</button>
               <button id="download-monthly-carousel-doctor-import-rules" type="button">下载医生导入规则</button>
               <button id="download-monthly-carousel-doctor-triage" type="button">下载医生快速判定包</button>
               <button id="download-monthly-carousel-doctor-review-zh" type="button">下载医生审核总包</button>
@@ -655,7 +655,7 @@
             </div>
           </details>
           <details class="advanced-actions compact-tool-group">
-            <summary>其它工具</summary>
+            <summary>高级工具（平时不用）</summary>
             <div class="learning-actions">
               <button id="approve-clear-assets" type="button">Approve Clear Assets</button>
               <button id="queue-ready-assets" type="button">Queue Ready Assets</button>
@@ -714,40 +714,43 @@
             </div>
           </details>
         </div>
-        <div class="quick-composer">
-          <label>
-            Review Decision CSV
-            <textarea id="asset-review-decisions-text" placeholder="Paste the one-row decision CSV here, then fill reviewer_safety_decision and reviewer_review_decision before import."></textarea>
-          </label>
-          <button id="preview-asset-review-decisions-text" type="button">Preview Pasted Decisions</button>
-          <button id="import-asset-review-decisions-text" type="button">Import Pasted Decisions</button>
-        </div>
-        <div class="quick-composer">
-          <label>
-            Doctor Reply Text
-            <textarea id="doctor-reply-text" placeholder="Asset ID: ...&#10;Decision: approve / needs edits / reject&#10;Safety: clear / needs review / blocked&#10;Use polished copy: yes / no&#10;Notes: ..."></textarea>
-          </label>
-          <label>
-            Reviewer Name
-            <input id="doctor-reply-reviewer" placeholder="Dr. name">
-          </label>
-          <button id="preview-doctor-replies" type="button">Preview Doctor Reply</button>
-          <button id="import-doctor-replies" type="button">Import Doctor Reply</button>
-          <button id="preview-doctor-replies-safe-advance" type="button">Preview Reply + Safe Advance</button>
-          <button id="import-doctor-replies-safe-advance" type="button">Import Reply + Safe Advance</button>
-        </div>
-        <div class="quick-composer">
-          <label>
-            Production Reply Text
-            <textarea id="production-reply-text" placeholder="Asset ID: ...&#10;Media URLs: https://...&#10;Visual QA: passed / pending / needs_work&#10;Rights: owned / licensed / approved stock&#10;Notes: ..."></textarea>
-          </label>
-          <label>
-            Producer Name
-            <input id="production-reply-producer" placeholder="Designer or producer">
-          </label>
-          <button id="preview-production-replies" type="button">Preview Production Reply</button>
-          <button id="import-production-replies" type="button">Import Production Reply</button>
-        </div>
+        <details class="advanced-actions compact-tool-group manual-entry-tools">
+          <summary>手动粘贴医生 / 图片回复</summary>
+          <div class="quick-composer">
+            <label>
+              审核决定 CSV
+              <textarea id="asset-review-decisions-text" placeholder="把一行审核决定贴在这里，再预览。"></textarea>
+            </label>
+            <button id="preview-asset-review-decisions-text" type="button">预览决定</button>
+            <button id="import-asset-review-decisions-text" type="button">导入决定</button>
+          </div>
+          <div class="quick-composer">
+            <label>
+              医生回复
+              <textarea id="doctor-reply-text" placeholder="Asset ID: ...&#10;Decision: approve / needs edits / reject&#10;Safety: clear / needs review / blocked&#10;Notes: ..."></textarea>
+            </label>
+            <label>
+              审核人
+              <input id="doctor-reply-reviewer" placeholder="医生或审核人姓名">
+            </label>
+            <button id="preview-doctor-replies" type="button">预览医生回复</button>
+            <button id="import-doctor-replies" type="button">导入医生回复</button>
+            <button id="preview-doctor-replies-safe-advance" type="button">安全预览</button>
+            <button id="import-doctor-replies-safe-advance" type="button">导入通过项</button>
+          </div>
+          <div class="quick-composer">
+            <label>
+              图片制作回复
+              <textarea id="production-reply-text" placeholder="Asset ID: ...&#10;Media URLs: https://...&#10;Visual QA: passed / pending / needs_work&#10;Rights: owned / licensed / approved stock&#10;Notes: ..."></textarea>
+            </label>
+            <label>
+              制作人
+              <input id="production-reply-producer" placeholder="设计/制作人姓名">
+            </label>
+            <button id="preview-production-replies" type="button">预览图片回复</button>
+            <button id="import-production-replies" type="button">导入图片回复</button>
+          </div>
+        </details>
         <div id="first-cycle-evidence-workbench" class="learning-grid"></div>
         <div id="doctor-send-queue" class="learning-grid"></div>
         <div id="doctor-reply-inbox" class="learning-grid"></div>
@@ -769,36 +772,41 @@
 
     <section id="review" class="screen">
       <div class="card wide">
-        <h2>Review Queue</h2>
-        <p class="section-note">Review queued content and send approval signals into the learning spine.</p>
+        <h2>审核队列</h2>
+        <p class="section-note">先检查队列决定，再导入通过项。通过后才会进入排程；这里不会发布。</p>
         <div class="asset-toolbar review-toolbar">
-          <button id="schedule-approved-items" type="button">Schedule Approved</button>
-          <button id="download-pre-schedule-gate" type="button">Download Pre-Schedule Gate</button>
-          <button id="download-editorial-qa" type="button">Download Editorial QA</button>
-          <button id="download-review-schedule-pack" type="button">Download Review-to-Schedule</button>
-          <button id="download-review-schedule-pack-zh" type="button">Download Review-to-Schedule 中文</button>
-          <button id="download-review-queue" type="button">Download Review Queue CSV</button>
-          <button id="download-review-queue-decisions" type="button">Download Queue Decisions</button>
-          <button id="download-monthly-carousel-review-queue" type="button">下载月度队列审核 CSV</button>
-          <button id="download-monthly-carousel-review-queue-decisions" type="button">下载月度队列决定表</button>
-          <button id="download-review-log" type="button">Download Review Log</button>
+          <button id="download-monthly-carousel-review-queue" type="button">1. 下载审核表</button>
           <label class="file-action">
-            Monthly Queue CSV
+            选择审核 CSV
             <input id="monthly-carousel-review-queue-decisions-file" type="file" accept=".csv,text/csv">
           </label>
-          <button id="preview-monthly-carousel-review-queue-decisions" type="button">预览月度队列决定</button>
-          <button id="import-monthly-carousel-review-queue-decisions" type="button">导入月度队列决定</button>
-          <button id="preview-monthly-carousel-review-queue-safe-advance" type="button">预览队列决定 + 安全推进</button>
-          <button id="import-monthly-carousel-review-queue-safe-advance" type="button">导入队列决定 + 安全推进</button>
-          <label class="file-action">
-            Queue CSV
-            <input id="review-queue-decisions-file" type="file" accept=".csv,text/csv">
-          </label>
-          <button id="preview-review-queue-decisions" type="button">Preview Queue Decisions</button>
-          <button id="import-review-queue-decisions" type="button">Import Queue Decisions</button>
-          <textarea id="review-queue-decisions-text" placeholder="Paste one-row queue decision CSV here, then fill reviewer_action before import."></textarea>
-          <button id="preview-review-queue-decisions-text" type="button">Preview Pasted Queue Decisions</button>
-          <button id="import-review-queue-decisions-text" type="button">Import Pasted Queue Decisions</button>
+          <button id="preview-monthly-carousel-review-queue-safe-advance" type="button">2. 检查决定</button>
+          <button id="import-monthly-carousel-review-queue-safe-advance" type="button">3. 导入通过项</button>
+          <button id="schedule-approved-items" type="button">4. 排程</button>
+          <details class="advanced-actions compact-tool-group">
+            <summary>更多：下载 / 旧审核工具</summary>
+            <div class="learning-actions">
+              <button id="download-pre-schedule-gate" type="button">Download Pre-Schedule Gate</button>
+              <button id="download-editorial-qa" type="button">Download Editorial QA</button>
+              <button id="download-review-schedule-pack" type="button">Download Review-to-Schedule</button>
+              <button id="download-review-schedule-pack-zh" type="button">Download Review-to-Schedule 中文</button>
+              <button id="download-review-queue" type="button">Download Review Queue CSV</button>
+              <button id="download-review-queue-decisions" type="button">Download Queue Decisions</button>
+              <button id="download-monthly-carousel-review-queue-decisions" type="button">下载月度队列决定表</button>
+              <button id="download-review-log" type="button">Download Review Log</button>
+              <button id="preview-monthly-carousel-review-queue-decisions" type="button">预览月度队列决定</button>
+              <button id="import-monthly-carousel-review-queue-decisions" type="button">导入月度队列决定</button>
+              <label class="file-action">
+                Queue CSV
+                <input id="review-queue-decisions-file" type="file" accept=".csv,text/csv">
+              </label>
+              <button id="preview-review-queue-decisions" type="button">Preview Queue Decisions</button>
+              <button id="import-review-queue-decisions" type="button">Import Queue Decisions</button>
+              <textarea id="review-queue-decisions-text" placeholder="Paste one-row queue decision CSV here, then fill reviewer_action before import."></textarea>
+              <button id="preview-review-queue-decisions-text" type="button">Preview Pasted Queue Decisions</button>
+              <button id="import-review-queue-decisions-text" type="button">Import Pasted Queue Decisions</button>
+            </div>
+          </details>
         </div>
         <div id="pre-schedule-gate" class="learning-grid"></div>
         <div id="review-queue-decision-preview" class="learning-grid"></div>
@@ -808,8 +816,8 @@
 
     <section id="scheduler" class="screen">
       <div class="card wide">
-        <h2>Scheduler</h2>
-        <p class="section-note">Create scheduler-ready records now. Real Meta publishing connects after Facebook and Instagram credentials are added.</p>
+        <h2>排程</h2>
+        <p class="section-note">这里只保存排程和交接资料，不会自动发布到 Facebook / Instagram。</p>
         <form id="queue-form" class="split-form">
           <label>
             Channel
@@ -848,34 +856,39 @@
             <textarea name="media_urls" placeholder="One image or video URL per line"></textarea>
           </label>
           <div class="form-actions">
-            <button id="check-compliance" type="button">Check Safety</button>
-            <button id="queue-submit" type="submit">Add To Queue</button>
-            <button id="cancel-queue-edit" type="button" hidden>Cancel Edit</button>
-            <button id="build-handoff" type="button">Build Handoff</button>
-            <button id="download-publishing-handoff-zh" type="button">Download Publishing Handoff 中文</button>
-            <button id="download-monthly-carousel-publishing-handoff" type="button">下载月度发布交接包</button>
-            <button id="download-run-sheet" type="button">Download Run Sheet</button>
-            <button id="download-scheduler-pre-schedule-gate" type="button">Download Pre-Schedule Gate</button>
-            <button id="download-schedule-csv" type="button">Download Schedule CSV</button>
-            <button id="download-schedule-worksheet" type="button">Download Schedule Worksheet</button>
-            <button id="download-monthly-carousel-schedule-worksheet" type="button">下载月度排程表</button>
-            <button id="download-monthly-carousel-schedule-execution-pack" type="button">下载月度排程执行包</button>
+            <button id="check-compliance" type="button">1. 检查安全</button>
+            <button id="queue-submit" type="submit">2. 加入排程</button>
+            <button id="cancel-queue-edit" type="button" hidden>取消编辑</button>
+            <button id="build-handoff" type="button">3. 生成交接</button>
+            <button id="download-monthly-carousel-publishing-handoff" type="button">4. 下载发布交接包</button>
             <label class="file-action">
-              Schedule CSV
-              <input id="schedule-worksheet-file" type="file" accept=".csv,text/csv">
-            </label>
-            <button id="preview-schedule-worksheet" type="button">Preview Schedule</button>
-            <button id="import-schedule-worksheet" type="button">Import Schedule</button>
-            <label class="file-action">
-              Monthly Schedule CSV
+              月度排程 CSV
               <input id="monthly-carousel-schedule-worksheet-file" type="file" accept=".csv,text/csv">
             </label>
             <button id="preview-monthly-carousel-schedule-worksheet" type="button">预览月度排程</button>
             <button id="import-monthly-carousel-schedule-worksheet" type="button">导入月度排程</button>
-            <button id="download-schedule-audit" type="button">Download Schedule Audit</button>
-            <button id="download-calendar" type="button">Download Calendar</button>
-            <button id="dry-run-facebook" type="button">Dry Run Facebook</button>
-            <button id="dry-run-instagram" type="button">Dry Run Instagram</button>
+            <details class="advanced-actions compact-tool-group">
+              <summary>更多：下载 / 测试工具</summary>
+              <div class="learning-actions">
+                <button id="download-publishing-handoff-zh" type="button">Download Publishing Handoff 中文</button>
+                <button id="download-run-sheet" type="button">Download Run Sheet</button>
+                <button id="download-scheduler-pre-schedule-gate" type="button">Download Pre-Schedule Gate</button>
+                <button id="download-schedule-csv" type="button">Download Schedule CSV</button>
+                <button id="download-schedule-worksheet" type="button">Download Schedule Worksheet</button>
+                <button id="download-monthly-carousel-schedule-worksheet" type="button">下载月度排程表</button>
+                <button id="download-monthly-carousel-schedule-execution-pack" type="button">下载月度排程执行包</button>
+                <label class="file-action">
+                  Schedule CSV
+                  <input id="schedule-worksheet-file" type="file" accept=".csv,text/csv">
+                </label>
+                <button id="preview-schedule-worksheet" type="button">Preview Schedule</button>
+                <button id="import-schedule-worksheet" type="button">Import Schedule</button>
+                <button id="download-schedule-audit" type="button">Download Schedule Audit</button>
+                <button id="download-calendar" type="button">Download Calendar</button>
+                <button id="dry-run-facebook" type="button">Dry Run Facebook</button>
+                <button id="dry-run-instagram" type="button">Dry Run Instagram</button>
+              </div>
+            </details>
           </div>
         </form>
         <div id="compliance-result" class="compliance-result"></div>
