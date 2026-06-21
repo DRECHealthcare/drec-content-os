@@ -26059,7 +26059,13 @@ async def publishing_closeout_payload(limit: int = 50):
             if not item.get("planned_slot"):
                 handoff_blockers.append("Needs a planned publish time.")
             handoff_blockers.extend(visual_media_blockers(item))
-            enriched = {**item, "handoff_blockers": handoff_blockers}
+            enriched = {
+                **item,
+                "handoff_blockers": handoff_blockers,
+                "manual_label_suggestion": manual_publish_label(item),
+                "metrics_due_date": manual_publish_metric_due_date(item),
+                "metric_window": "7d",
+            }
             if handoff_blockers:
                 scheduled_blocked.append(enriched)
             else:
@@ -26072,7 +26078,13 @@ async def publishing_closeout_payload(limit: int = 50):
             continue
         raw_metric = raw_by_post.get(external_id)
         outcome = outcome_by_post.get(external_id)
-        enriched = {**item, "raw_metric": raw_metric, "outcome": outcome}
+        enriched = {
+            **item,
+            "raw_metric": raw_metric,
+            "outcome": outcome,
+            "metrics_due_date": manual_publish_metric_due_date(item),
+            "metric_window": "7d",
+        }
         if not raw_metric:
             waiting_for_metrics.append(enriched)
         elif not outcome:
@@ -26290,6 +26302,8 @@ async def post_publish_next_steps_payload():
                 "planned_slot": item.get("planned_slot"),
                 "media_count": len([url for url in item.get("media_urls") or [] if url]),
                 "manual_label_suggestion": manual_publish_label(item),
+                "metrics_due_date": item.get("metrics_due_date") or manual_publish_metric_due_date(item),
+                "metric_window": item.get("metric_window") or "7d",
                 "caption": item.get("caption"),
                 "media_urls": item.get("media_urls") or [],
                 "after_publish_steps": [

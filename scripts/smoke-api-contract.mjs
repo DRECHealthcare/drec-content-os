@@ -4016,6 +4016,16 @@ const requiredSnippets = [
     text: "This endpoint only records evidence after a human/manual publish. It never calls Meta and never publishes content.",
   },
   {
+    name: "api publishing closeout metrics due date",
+    file: "main",
+    text: "\"metrics_due_date\": manual_publish_metric_due_date(item)",
+  },
+  {
+    name: "web manual publish metrics due cue",
+    file: "web",
+    text: "数据回填建议",
+  },
+  {
     name: "web post-publish metrics template action",
     file: "web",
     text: "download-post-publish-metrics-template",

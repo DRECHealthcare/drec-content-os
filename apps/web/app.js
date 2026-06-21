@@ -5788,6 +5788,7 @@ function renderHomePublishingCloseout(data) {
           <span>下一条要交接</span>
           <strong>${escapeHtml(nextReadyItem.channel || "post")} / ${escapeHtml(nextReadyItem.format || "content")}</strong>
           <small>${escapeHtml(nextReadyItem.planned_slot || "未排程")}</small>
+          <small>数据回填建议：${escapeHtml(nextReadyItem.metrics_due_date || "发布后 7 天")}</small>
           <code class="home-queue-id">Queue ID: ${escapeHtml(nextReadyItem.id || "")}</code>
           <p>${escapeHtml((nextReadyItem.caption || "").slice(0, 150))}${(nextReadyItem.caption || "").length > 150 ? "..." : ""}</p>
         </div>
@@ -5806,6 +5807,7 @@ function renderHomePublishingCloseout(data) {
               <div>
                 <strong>${escapeHtml(index + 2)}. ${escapeHtml(item.channel || "post")} / ${escapeHtml(item.format || "content")}</strong>
                 <small>${escapeHtml(item.planned_slot || "未排程")} · ${escapeHtml(item.id || "")}</small>
+                <small>数据回填建议：${escapeHtml(item.metrics_due_date || "发布后 7 天")}</small>
                 <code class="home-queue-id">Queue ID: ${escapeHtml(item.id || "")}</code>
               </div>
               <p>${escapeHtml((item.caption || "").slice(0, 150))}${(item.caption || "").length > 150 ? "..." : ""}</p>
@@ -5862,6 +5864,7 @@ function homeHandoffText(item) {
     `格式: ${item.format || "content"}`,
     `计划时间: ${item.planned_slot || "未排程"}`,
     `Queue ID: ${item.id || ""}`,
+    `数据回填建议: ${item.metrics_due_date || "发布后 7 天"}`,
     "",
     "文案:",
     item.caption || "",
@@ -5871,6 +5874,7 @@ function homeHandoffText(item) {
     "",
     "发布后回填:",
     "请把真实 Meta Post ID 或人工标签填回系统；这里不会自动发布。",
+    "发布后 7 天请回填 Reach / Likes / Comments / Saves / Shares / Leads / Spend。",
   ].join("\n");
 }
 
