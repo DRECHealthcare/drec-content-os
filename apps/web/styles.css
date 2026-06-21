@@ -377,6 +377,36 @@ header span { color: var(--muted); font-size: 12px; }
   margin: 4px 0;
 }
 
+.home-security-unblock {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-top: 12px;
+  border: 1px solid #F59E0B;
+  border-radius: 8px;
+  padding: 12px;
+  background: #FFFBEB;
+}
+
+.home-security-unblock strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #92400E;
+}
+
+.home-security-unblock p {
+  margin: 0;
+  color: var(--ink);
+}
+
+.home-security-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .dashboard-details {
   margin-top: 14px;
 }

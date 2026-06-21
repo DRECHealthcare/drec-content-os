@@ -2897,9 +2897,24 @@ const requiredSnippets = [
     text: "data-home-download-unblock",
   },
   {
+    name: "web home service role unblock action",
+    file: "web",
+    text: "data-home-download-service-role-pack",
+  },
+  {
+    name: "web home service role smoke action",
+    file: "web",
+    text: "data-home-run-service-role-smoke",
+  },
+  {
     name: "web home progress styles",
     file: "styles",
     text: ".home-progress",
+  },
+  {
+    name: "web home service role unblock styles",
+    file: "styles",
+    text: ".home-security-unblock",
   },
   {
     name: "web notion carousel source card",

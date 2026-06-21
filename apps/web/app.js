@@ -2454,6 +2454,10 @@ function renderHomeProjectCompletion(data) {
   const nextActions = data.next_actions || [];
   const monthly = data.monthly_acceptance || {};
   const launch = data.launch || {};
+  const security = data.security || {};
+  const serviceRoleSmoke = security.service_role_smoke || {};
+  const serviceRoleMissing = security.service_role_key !== "configured";
+  const needsServiceRoleSmoke = !serviceRoleMissing && serviceRoleSmoke.status !== "recent";
   const percent = Math.max(0, Math.min(100, Number(completion.percent || 0)));
   const firstCycle = Math.max(0, Math.min(100, Number(completion.first_cycle_percent || 0)));
   card.hidden = false;
@@ -2486,6 +2490,18 @@ function renderHomeProjectCompletion(data) {
       <ul class="home-progress-next">
         ${nextActions.slice(0, 3).map((item) => `<li>${escapeHtml(translateText(item))}</li>`).join("")}
       </ul>
+    ` : ""}
+    ${serviceRoleMissing || needsServiceRoleSmoke ? `
+      <div class="home-security-unblock">
+        <div>
+          <strong>${serviceRoleMissing ? "安全解锁：缺 Supabase service-role key" : "安全解锁：需要运行 service-role smoke"}</strong>
+          <p>${escapeHtml(security.next_step || "完成这个安全证据后，RLS 加固 blocker 才能解除。")}</p>
+        </div>
+        <div class="home-security-actions">
+          <button type="button" data-home-download-service-role-pack>下载安装包</button>
+          ${needsServiceRoleSmoke ? `<button type="button" data-home-run-service-role-smoke>运行 smoke</button>` : ""}
+        </div>
+      </div>
     ` : ""}
     <details class="simple-extra-actions home-progress-more">
       <summary>进度资料</summary>
@@ -6003,9 +6019,27 @@ document.getElementById("home-progress-card")?.addEventListener("click", async (
   const downloadOperatorGuide = event.target.closest("[data-home-download-operator-guide]");
   const downloadCompletion = event.target.closest("[data-home-download-completion]");
   const downloadUnblock = event.target.closest("[data-home-download-unblock]");
-  if (!refresh && !downloadOperatorGuide && !downloadCompletion && !downloadUnblock) return;
+  const downloadServiceRolePack = event.target.closest("[data-home-download-service-role-pack]");
+  const runServiceRoleSmoke = event.target.closest("[data-home-run-service-role-smoke]");
+  if (!refresh && !downloadOperatorGuide && !downloadCompletion && !downloadUnblock && !downloadServiceRolePack && !runServiceRoleSmoke) return;
   if (refresh) {
     await Promise.all([loadLoopStatus(), loadProjectCompletionAudit()]);
+    return;
+  }
+  if (runServiceRoleSmoke) {
+    const container = document.getElementById("home-progress-content");
+    try {
+      const data = await fetchJson("/security/service-role-smoke-test", { method: "POST" });
+      if (container) {
+        container.insertAdjacentHTML("beforeend", `<p class="status-note">${escapeHtml(data.passed ? "Service-role smoke 已通过。" : data.message || "Service-role key 仍缺。")}</p>`);
+      }
+      await Promise.all([loadLoopStatus(), loadProjectCompletionAudit()]);
+    } catch (error) {
+      if (container) {
+        const note = error.message === "Access token required" ? translateText("Set the access token first.") : "无法运行 service-role smoke。";
+        container.insertAdjacentHTML("beforeend", `<p class="status-note">${escapeHtml(note)}</p>`);
+      }
+    }
     return;
   }
   try {
@@ -6015,6 +6049,10 @@ document.getElementById("home-progress-card")?.addEventListener("click", async (
     }
     if (downloadCompletion) {
       await downloadProtectedFile("/operations/project-completion-audit.zh.md", "drec-project-completion-audit-zh.md", "text/markdown");
+      return;
+    }
+    if (downloadServiceRolePack) {
+      await downloadProtectedFile("/security/service-role-install-pack.md", "drec-service-role-install-pack.md", "text/markdown");
       return;
     }
     await downloadProtectedFile("/operations/project-unblock-board.zh.md", "drec-project-unblock-board-zh.md", "text/markdown");
