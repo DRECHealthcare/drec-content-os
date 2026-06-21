@@ -90,6 +90,10 @@ const uiZh = {
   "Access Role": "访问权限",
   "Automation Gate": "自动化门槛",
   "Project Completion": "项目完成度",
+  "postgres": "Postgres",
+  "supabase_rest": "Supabase REST",
+  "not_connected": "未连接",
+  "unknown": "未知",
   "System Build": "系统建设",
   "First Cycle": "首轮发布",
   "Main blockers": "主要阻碍",
@@ -2494,6 +2498,7 @@ function renderHomeProjectCompletion(data) {
   const monthly = data.monthly_acceptance || {};
   const launch = data.launch || {};
   const security = data.security || {};
+  const dataBackend = security.data_backend || (security.data_connection || {}).data_backend || "unknown";
   const serviceRoleSmoke = security.service_role_smoke || {};
   const serviceRoleMissing = security.service_role_key !== "configured";
   const needsServiceRoleSmoke = !serviceRoleMissing && serviceRoleSmoke.status !== "recent";
@@ -2525,6 +2530,7 @@ function renderHomeProjectCompletion(data) {
     </div>
     <div class="home-progress-pills">
       <span>Launch: ${escapeHtml(translateText(launch.overall_status || "unknown"))}</span>
+      <span>数据: ${escapeHtml(translateText(dataBackend))}</span>
       <span>月度 ready: ${escapeHtml(String(monthly.ready_count || 0))}</span>
       <span>waiting: ${escapeHtml(String(monthly.waiting_count || 0))}</span>
       <span>blocked: ${escapeHtml(String(monthly.blocked_count || 0))}</span>

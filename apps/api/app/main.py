@@ -1558,9 +1558,11 @@ def security_status_payload():
 
 async def strict_security_status_payload():
     security = security_status_payload()
+    data_connection = await data_connection_status_payload()
     smoke = await latest_service_role_smoke()
     has_service_role = security.get("service_role_key") == "configured"
     has_supabase_rest = security.get("supabase_rest") == "configured"
+    data_backend_ready = data_connection.get("data_backend") in {"postgres", "supabase_rest"}
     smoke_recent = smoke.get("status") == "recent"
     strict_ready = bool(has_service_role and has_supabase_rest and smoke_recent)
     if strict_ready:
@@ -1578,6 +1580,13 @@ async def strict_security_status_payload():
     checks = list(security.get("checks") or [])
     checks.append(
         {
+            "label": "Server data backend can read Content OS tables",
+            "status": "ready" if data_backend_ready else "blocked",
+            "detail": data_connection.get("summary"),
+        }
+    )
+    checks.append(
+        {
             "label": "Recent service-role smoke test passed",
             "status": "ready" if smoke_recent else smoke.get("status", "missing"),
         }
@@ -1586,6 +1595,8 @@ async def strict_security_status_payload():
     return {
         **security,
         "overall_status": overall_status,
+        "data_connection": data_connection,
+        "data_backend": data_connection.get("data_backend"),
         "rls_hardening_ready": strict_ready,
         "rls_advisor": rls_advisor,
         "service_role_smoke": smoke,
@@ -27231,6 +27242,7 @@ def zh_completion_label(value: str | None):
         "Scheduling and handoff path": "排程与交接路径",
         "Learning loop": "学习复盘闭环",
         "Meta test workers": "Meta 测试任务",
+        "Server data connection": "服务端数据连接",
         "Security hardening": "安全加固",
         "First publish cycle": "首轮发布闭环",
     }.get(value or "", value or "未知")
@@ -27260,7 +27272,8 @@ def build_completion_status(loop, workflow, security, automation):
     scheduled_queue = int(automation_summary.get("scheduled_queue") or 0)
     published_queue = int(automation_summary.get("published_queue") or 0)
     meta_ready = (automation_gates.get("meta") or {}).get("status") == "ready"
-    supabase_ready = security.get("supabase_rest") == "configured"
+    data_connection = security.get("data_connection") or {}
+    data_backend_ready = (security.get("data_backend") or data_connection.get("data_backend")) in {"postgres", "supabase_rest"}
     browser_protected = security.get("direct_browser_supabase") == "disabled_by_design"
     strict_security_ready = bool(security.get("rls_hardening_ready"))
 
@@ -27342,10 +27355,18 @@ def build_completion_status(loop, workflow, security, automation):
             (automation_gates.get("meta") or {}).get("detail") or "Meta workers remain locked until controlled testing.",
         ),
         completion_item(
+            "data_connection",
+            "Server data connection",
+            4 if data_backend_ready and browser_protected else 0,
+            4,
+            "ready" if data_backend_ready and browser_protected else "blocked",
+            data_connection.get("summary") or "Server data connection evidence is missing.",
+        ),
+        completion_item(
             "security_hardening",
             "Security hardening",
-            8 if strict_security_ready else 4 if supabase_ready and browser_protected else 0,
-            8,
+            4 if strict_security_ready else 0,
+            4,
             "ready" if strict_security_ready else "blocked",
             security.get("next_step") or "Add service-role key before strict RLS hardening.",
         ),
@@ -27449,6 +27470,7 @@ async def project_completion_audit_payload():
             "monthly_next_action_queue": "/operations/monthly-carousel-next-action-queue.zh.md",
             "meta_readiness": "/meta/readiness",
             "meta_preflight": "/meta/preflight-audit.md",
+            "data_connection": "/security/data-connection",
             "project_completion_audit": "/operations/project-completion-audit.zh.md",
             "project_completion_audit_csv": "/operations/project-completion-audit.csv",
         },
@@ -27470,6 +27492,8 @@ async def project_unblock_board_payload():
     launch = audit.get("launch") or {}
     meta = audit.get("meta") or {}
     monthly = audit.get("monthly_acceptance") or {}
+    data_connection = security.get("data_connection") or {}
+    data_backend_ready = (security.get("data_backend") or data_connection.get("data_backend")) in {"postgres", "supabase_rest"}
 
     ready_assets = int(workflow_summary.get("queue_ready_asset_count") or automation_summary.get("ready_assets") or 0)
     queue_total = int(workflow_summary.get("queue_total") or automation_summary.get("queue_total") or 0)
@@ -27495,6 +27519,16 @@ async def project_unblock_board_payload():
             "required_evidence": "publish_queue contains one item linked to the approved asset with compliance_status=clear.",
             "link": "/operations/review-to-schedule-pack.zh.md",
             "safe_auto_action": "/operations/first-publish-safe-advance-loop?dry_run=false&max_steps=8 can queue only when gates are green.",
+        },
+        {
+            "gate": "server_data_connection",
+            "status": "ready" if data_backend_ready else "blocked",
+            "blocker": "" if data_backend_ready else "Server cannot verify a working Content OS data backend.",
+            "current_status": data_connection.get("summary") or "No data connection diagnostic has been recorded.",
+            "required_action": "Keep browser clients on the Fly API. Add DATABASE_URL later only if direct Postgres pooling is required.",
+            "required_evidence": "/health reports data_backend=postgres or data_backend=supabase_rest, and /security/data-connection can read Content OS tables.",
+            "link": "/security/data-connection",
+            "safe_auto_action": "/security/data-connection is read-only and never returns secrets.",
         },
         {
             "gate": "supabase_service_role",

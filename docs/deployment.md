@@ -50,6 +50,11 @@ system look fully disconnected. `GET /security/data-connection` is protected by
 the DREC access token and shows the per-table REST diagnostic without exposing
 database passwords, API keys, or service-role tokens.
 
+Project completion scoring treats server data connection evidence separately
+from strict RLS hardening. A working Supabase REST backend can satisfy the data
+connection gate, while the RLS/service-role gate remains blocked until
+`SUPABASE_SERVICE_ROLE_KEY` and the service-role smoke test are complete.
+
 The API exposes:
 
 - `GET /health`

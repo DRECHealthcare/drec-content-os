@@ -491,6 +491,26 @@ const requiredSnippets = [
     text: "security_data_connection",
   },
   {
+    name: "project completion data connection item",
+    file: "main",
+    text: "\"Server data connection\"",
+  },
+  {
+    name: "project unblock data connection gate",
+    file: "main",
+    text: "\"gate\": \"server_data_connection\"",
+  },
+  {
+    name: "security status includes data backend",
+    file: "main",
+    text: "\"data_backend\": data_connection.get(\"data_backend\")",
+  },
+  {
+    name: "home progress data backend pill",
+    file: "web",
+    text: "security.data_backend",
+  },
+  {
     name: "health data backend status",
     file: "main",
     text: "\"data_backend\": data_connection.get(\"data_backend\")",
