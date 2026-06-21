@@ -2651,6 +2651,7 @@ async function loadProjectCompletionAudit() {
 function renderSimpleOperator(data, monthly = null, cycle = null) {
   const container = document.getElementById("simple-operator");
   if (!container) return;
+  hideHomeActionCards();
   const summary = data.workflow?.summary || data.summary || {};
   const monthlyPrimary = monthly?.primary_action || {};
   const monthlyGateCounts = monthly?.gate_counts || {};
@@ -2677,6 +2678,7 @@ function renderSimpleOperator(data, monthly = null, cycle = null) {
     <button class="primary" type="button" data-simple-refresh>重新检查</button>
   `;
   let safetyNote = "这里不会发布到 Facebook / Instagram。";
+  let nextSteps = ["看这里的主按钮", "执行后重新检查", "只有绿灯才进入下一步"];
   const cycleScreen = ["dashboard", "assets", "review", "scheduler", "learning", "plan", "compose", "creative", "templates", "video", "meta", "outcomes", "kb", "insights"].includes(cycleAction.screen)
     ? cycleAction.screen
     : "dashboard";
@@ -2694,6 +2696,7 @@ function renderSimpleOperator(data, monthly = null, cycle = null) {
       </details>
     `;
     safetyNote = "指挥中心只负责带路和收集证据；不会批准、排程、发布或调用 Meta。";
+    nextSteps = ["按继续这一步", "完成指定证据", "回首页重新检查"];
   }
 
   if (Number(monthlyGateCounts.waiting_doctor_safety_clear || 0) > 0) {
@@ -2702,12 +2705,12 @@ function renderSimpleOperator(data, monthly = null, cycle = null) {
     body = monthlyPrimary.detail || "先把医生审核消息发给医生。收到回复后，点“粘贴回复”贴回来检查。";
     status = "等待医生审核 · 不会发布";
     actions = `
-      <button class="primary" type="button" data-simple-download-monthly-doctor-handoff>下载医生包</button>
+      <button class="primary" type="button" data-simple-copy-monthly-doctor-message>复制医生消息</button>
       <details class="simple-extra-actions">
-        <summary>我已收到医生回复 / 更多资料</summary>
-        <button type="button" data-simple-copy-monthly-doctor-message>复制医生消息</button>
+        <summary>医生回复回来后 / 更多</summary>
         <button type="button" data-simple-upload-doctor-worksheet>上传医生表 CSV</button>
         <button type="button" data-simple-paste-doctor-reply>粘贴文字回复</button>
+        <button type="button" data-simple-download-monthly-doctor-handoff>下载完整医生包</button>
         <button type="button" data-simple-download-monthly-doctor-message>只下载医生消息</button>
         <button type="button" data-simple-download-monthly-doctor-evidence>医生证据表</button>
         <button type="button" data-simple-download-monthly-action-queue>行动队列</button>
@@ -2715,6 +2718,7 @@ function renderSimpleOperator(data, monthly = null, cycle = null) {
       </details>
     `;
     safetyNote = "安全锁：医生未 approve + Safety clear 前，我不会推进制作、入队、排程或发布。";
+    nextSteps = ["复制医生消息", "发给医生审核", "收到回复后再导入"];
   } else if (Number(monthlyGateCounts.waiting_final_media || 0) > 0 || Number(monthlyGateCounts.waiting_visual_qa || 0) > 0) {
     eyebrow = "月度内容下一步";
     title = "等待最终图片和视觉 QA";
@@ -2730,6 +2734,7 @@ function renderSimpleOperator(data, monthly = null, cycle = null) {
       </details>
     `;
     safetyNote = "安全锁：制作导入不能替代医生审核，也不会入队、排程或发布。";
+    nextSteps = ["下载制作规则", "交给制作人员", "收到图片后导入检查"];
   } else if (Number(monthlyGateCounts.ready_to_queue || 0) > 0) {
     eyebrow = "月度内容下一步";
     title = `${Number(monthlyGateCounts.ready_to_queue || 0)} 条内容可以加入队列`;
@@ -2745,6 +2750,7 @@ function renderSimpleOperator(data, monthly = null, cycle = null) {
       </details>
     `;
     safetyNote = "安全锁：入队后仍需队列审核、排程检查和发布交接。";
+    nextSteps = ["先检查", "确认加入队列", "再做队列审核"];
   } else if (readyAssets > 0 && queueTotal === 0) {
     eyebrow = "下一步：安全入队";
     title = `${readyAssets} 条内容已安全通过，可以入队`;
@@ -2752,8 +2758,13 @@ function renderSimpleOperator(data, monthly = null, cycle = null) {
     status = "安全通过，可以进入发布队列";
     actions = `
       <button class="primary" type="button" data-simple-run-ready-assets>加入队列</button>
-      <button type="button" data-simple-open-assets>看素材</button>
+      <details class="simple-extra-actions">
+        <summary>更多</summary>
+        <button type="button" data-simple-open-assets>看素材</button>
+        <button type="button" data-simple-refresh>重新检查</button>
+      </details>
     `;
+    nextSteps = ["加入队列", "去审核队列批准", "再安排发布时间"];
   } else if (queueTotal > 0 && scheduledQueue === 0) {
     eyebrow = "下一步：审核和排程";
     title = `${queueTotal} 条内容已入队，在首页完成审核`;
@@ -2769,6 +2780,7 @@ function renderSimpleOperator(data, monthly = null, cycle = null) {
       </details>
     `;
     safetyNote = "安全锁：审核和排程都不会发布到 Facebook / Instagram。";
+    nextSteps = ["粘贴审核决定", "检查后导入", "安排发布时间"];
   } else if (scheduledQueue > 0) {
     eyebrow = "下一步：人工发布交接";
     title = "现在只需要下载安全包";
@@ -2787,6 +2799,7 @@ function renderSimpleOperator(data, monthly = null, cycle = null) {
       </details>
     `;
     safetyNote = "安全锁：我不会点测试 Facebook、测试 Instagram 或记录已发布。";
+    nextSteps = ["下载安全包", "真人按时间发布", "发布后再回填 ID"];
   } else if (outcomeCount > 0) {
     eyebrow = "下一步：学习回流";
     title = "把表现结果带回下一轮计划";
@@ -2802,6 +2815,7 @@ function renderSimpleOperator(data, monthly = null, cycle = null) {
       </details>
     `;
     safetyNote = "安全锁：学习回流只准备下一轮计划，不创建 Notion 新主题，也不会发布。";
+    nextSteps = ["录入表现数据", "保存学习", "带入下月计划"];
   }
 
   container.innerHTML = `
@@ -2809,36 +2823,42 @@ function renderSimpleOperator(data, monthly = null, cycle = null) {
       <span>${escapeHtml(eyebrow)} · ${escapeHtml(status)}</span>
       <h2>${escapeHtml(title)}</h2>
       <p>${escapeHtml(body)}</p>
+      <ol class="simple-operator-steps">
+        ${nextSteps.slice(0, 3).map((step, index) => `<li><span>${escapeHtml(String(index + 1))}</span>${escapeHtml(step)}</li>`).join("")}
+      </ol>
     </div>
     <div class="simple-operator-actions">
       ${actions}
     </div>
     <small>${escapeHtml(safetyNote)} 找不到东西时，优先看这个卡片，不用进高级工具。</small>
   `;
-  const homeDoctorReplyCard = document.getElementById("home-doctor-reply-card");
-  if (homeDoctorReplyCard) {
-    homeDoctorReplyCard.hidden = true;
-  }
-  const homeProductionReplyCard = document.getElementById("home-production-reply-card");
-  if (homeProductionReplyCard) {
-    homeProductionReplyCard.hidden = true;
-  }
-  const homeQueueActionCard = document.getElementById("home-queue-action-card");
-  if (homeQueueActionCard) {
-    homeQueueActionCard.hidden = true;
-  }
-  const homeReviewScheduleCard = document.getElementById("home-review-schedule-card");
-  if (homeReviewScheduleCard) {
-    homeReviewScheduleCard.hidden = true;
-  }
-  const homePublishCloseoutCard = document.getElementById("home-publish-closeout-card");
-  if (homePublishCloseoutCard) {
-    homePublishCloseoutCard.hidden = scheduledQueue <= 0;
-  }
-  const homeLearningHandbackCard = document.getElementById("home-learning-handback-card");
-  if (homeLearningHandbackCard) {
-    homeLearningHandbackCard.hidden = outcomeCount <= 0;
-  }
+}
+
+function homeActionCardIds() {
+  return [
+    "home-doctor-reply-card",
+    "home-production-reply-card",
+    "home-queue-action-card",
+    "home-review-schedule-card",
+    "home-publish-closeout-card",
+    "home-learning-handback-card",
+  ];
+}
+
+function hideHomeActionCards() {
+  homeActionCardIds().forEach((id) => {
+    const card = document.getElementById(id);
+    if (card) card.hidden = true;
+  });
+}
+
+function showHomeActionCard(id) {
+  hideHomeActionCards();
+  const card = document.getElementById(id);
+  if (!card) return null;
+  card.hidden = false;
+  card.scrollIntoView({ behavior: "smooth", block: "start" });
+  return card;
 }
 
 function securityGateSummary(security = {}) {
@@ -6473,10 +6493,8 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
     return;
   }
   if (pasteDoctorReply || uploadDoctorWorksheet) {
-    const card = document.getElementById("home-doctor-reply-card");
+    const card = showHomeActionCard("home-doctor-reply-card");
     if (card) {
-      card.hidden = false;
-      card.scrollIntoView({ behavior: "smooth", block: "start" });
       const replyText = document.getElementById("home-doctor-reply-text");
       if (pasteDoctorReply && replyText && !replyText.value.trim()) {
         await fillDoctorReplyTemplate({
@@ -6497,20 +6515,14 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
     return;
   }
   if (pasteProductionReply) {
-    const card = document.getElementById("home-production-reply-card");
+    const card = showHomeActionCard("home-production-reply-card");
     if (card) {
-      card.hidden = false;
-      card.scrollIntoView({ behavior: "smooth", block: "start" });
       document.getElementById("home-production-reply-text")?.focus();
     }
     return;
   }
   if (previewMonthlyQueue || runMonthlyQueue) {
-    const card = document.getElementById("home-queue-action-card");
-    if (card) {
-      card.hidden = false;
-      card.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
+    showHomeActionCard("home-queue-action-card");
     await runMonthlyCarouselQueueReady({
       dryRun: Boolean(previewMonthlyQueue),
       messageId: "home-queue-action-message",
@@ -6524,20 +6536,14 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
     return;
   }
   if (pasteReviewDecisions) {
-    const card = document.getElementById("home-review-schedule-card");
+    const card = showHomeActionCard("home-review-schedule-card");
     if (card) {
-      card.hidden = false;
-      card.scrollIntoView({ behavior: "smooth", block: "start" });
       document.getElementById("home-review-queue-decisions-text")?.focus();
     }
     return;
   }
   if (scheduleApprovedFromHome) {
-    const card = document.getElementById("home-review-schedule-card");
-    if (card) {
-      card.hidden = false;
-      card.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
+    showHomeActionCard("home-review-schedule-card");
     await scheduleApprovedItems({ messageId: "home-review-schedule-message", stayOnHome: true });
     await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit()]);
     return;

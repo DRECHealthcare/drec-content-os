@@ -3021,6 +3021,31 @@ const requiredSnippets = [
     text: "data-simple-download-cycle-command-center",
   },
   {
+    name: "web simple operator visible stepper",
+    file: "web",
+    text: "simple-operator-steps",
+  },
+  {
+    name: "web simple operator hides action cards by default",
+    file: "web",
+    text: "hideHomeActionCards();",
+  },
+  {
+    name: "web simple operator single expanded card helper",
+    file: "web",
+    text: "function showHomeActionCard",
+  },
+  {
+    name: "web simple operator doctor primary copy action",
+    file: "web",
+    text: "data-simple-copy-monthly-doctor-message",
+  },
+  {
+    name: "web simple operator stepper styles",
+    file: "styles",
+    text: ".simple-operator-steps",
+  },
+  {
     name: "web home operator guide action",
     file: "web",
     text: "data-home-download-operator-guide",
