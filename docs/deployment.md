@@ -317,6 +317,37 @@ Notion, or call Meta. Use the Action summary after a manual post to spot any
 missing external post ID, missing metrics, pending rollup, or learning report
 issue before the next planning cycle.
 
+## GitHub Project Completion Watch
+
+The repository includes `.github/workflows/drec-project-completion-watch.yml`.
+It runs daily at 09:45 Asia/Kuala_Lumpur after the morning closeout check to
+capture the current project completion percentage, the live unblock board,
+workflow status, and launch readiness in one Action summary.
+
+It uses the same GitHub Actions secret as the other safe monitors:
+
+```text
+DREC_ACCESS_TOKEN
+```
+
+Optional repository variable:
+
+```text
+DREC_API_BASE_URL=https://drec-content-os-api.fly.dev
+```
+
+The workflow is read-only. It calls:
+
+- `/operations/project-completion-audit`
+- `/operations/project-unblock-board`
+- `/workflow/status`
+- `/launch-readiness`
+
+It does not approve, import, queue, schedule, publish, update Notion, store
+secrets, or call Meta. Use the Action summary to see whether the next blocker is
+doctor/human approval, production media, queue review, scheduling evidence,
+metrics closeout, Supabase service-role/RLS, or Meta activation.
+
 ## GitHub Nightly Meta Metrics Scheduler
 
 The repository also includes `.github/workflows/drec-nightly-meta-metrics.yml`.

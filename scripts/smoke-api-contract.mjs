@@ -12,6 +12,7 @@ const files = {
   styles: "apps/web/styles.css",
   schedulerWorkflow: ".github/workflows/drec-scheduler-dry-run.yml",
   realMetricsWorkflow: ".github/workflows/drec-nightly-meta-metrics.yml",
+  projectCompletionWorkflow: ".github/workflows/drec-project-completion-watch.yml",
   strictRlsMigration: "supabase/migrations/20260617040906_strict_server_only_rls.sql",
 };
 
@@ -5630,6 +5631,36 @@ const requiredSnippets = [
     name: "github scheduler self-check heartbeat",
     file: "schedulerWorkflow",
     text: "record_heartbeat=true",
+  },
+  {
+    name: "github project completion workflow",
+    file: "projectCompletionWorkflow",
+    text: "DREC Project Completion Watch",
+  },
+  {
+    name: "github project completion audit check",
+    file: "projectCompletionWorkflow",
+    text: "/operations/project-completion-audit",
+  },
+  {
+    name: "github project unblock board check",
+    file: "projectCompletionWorkflow",
+    text: "/operations/project-unblock-board",
+  },
+  {
+    name: "github project completion workflow status check",
+    file: "projectCompletionWorkflow",
+    text: "/workflow/status",
+  },
+  {
+    name: "github project completion launch readiness check",
+    file: "projectCompletionWorkflow",
+    text: "/launch-readiness",
+  },
+  {
+    name: "github project completion watch safety",
+    file: "projectCompletionWorkflow",
+    text: "does not approve, import, queue, schedule, publish, update Notion, store secrets, or call Meta",
   },
   {
     name: "real metrics workflow job",

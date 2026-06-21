@@ -1,0 +1,77 @@
+name: DREC Project Completion Watch
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Daily 09:45 MYT after the morning closeout checks.
+    - cron: "45 1 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: drec-project-completion-watch
+  cancel-in-progress: false
+
+jobs:
+  completion-watch:
+    runs-on: ubuntu-latest
+    env:
+      DREC_API_BASE_URL: ${{ vars.DREC_API_BASE_URL || 'https://drec-content-os-api.fly.dev' }}
+      DREC_ACCESS_TOKEN: ${{ secrets.DREC_ACCESS_TOKEN }}
+    steps:
+      - name: Skip when access token is missing
+        if: ${{ env.DREC_ACCESS_TOKEN == '' }}
+        run: |
+          echo "DREC_ACCESS_TOKEN is not configured. Skipping project completion watch."
+
+      - name: Check project completion audit
+        if: ${{ env.DREC_ACCESS_TOKEN != '' }}
+        run: |
+          curl --fail --silent --show-error --retry 3 --retry-delay 10 --max-time 120 \
+            --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
+            "${DREC_API_BASE_URL}/operations/project-completion-audit" \
+            | tee project-completion-audit.json
+
+      - name: Check project unblock board
+        if: ${{ env.DREC_ACCESS_TOKEN != '' }}
+        run: |
+          curl --fail --silent --show-error --retry 3 --retry-delay 10 --max-time 120 \
+            --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
+            "${DREC_API_BASE_URL}/operations/project-unblock-board" \
+            | tee project-unblock-board.json
+
+      - name: Check workflow status
+        if: ${{ env.DREC_ACCESS_TOKEN != '' }}
+        run: |
+          curl --fail --silent --show-error --retry 3 --retry-delay 10 --max-time 120 \
+            --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
+            "${DREC_API_BASE_URL}/workflow/status" \
+            | tee workflow-status.json
+
+      - name: Check launch readiness
+        if: ${{ env.DREC_ACCESS_TOKEN != '' }}
+        run: |
+          curl --fail --silent --show-error --retry 3 --retry-delay 10 --max-time 120 \
+            --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
+            "${DREC_API_BASE_URL}/launch-readiness" \
+            | tee launch-readiness.json
+
+      - name: Write completion watch summary
+        if: ${{ always() }}
+        run: |
+          {
+            echo "## DREC Project Completion Watch"
+            echo ""
+            echo "- API: ${DREC_API_BASE_URL}"
+            echo "- Event: ${GITHUB_EVENT_NAME}"
+            echo "- Schedule: ${GITHUB_EVENT_SCHEDULE:-manual}"
+            echo "- Token configured: $([ -n "${DREC_ACCESS_TOKEN}" ] && echo yes || echo no)"
+            echo "- Safety: read-only completion checks only; this workflow does not approve, import, queue, schedule, publish, update Notion, store secrets, or call Meta."
+            echo ""
+            echo "Checks:"
+            echo "- /operations/project-completion-audit"
+            echo "- /operations/project-unblock-board"
+            echo "- /workflow/status"
+            echo "- /launch-readiness"
+          } >> "$GITHUB_STEP_SUMMARY"
