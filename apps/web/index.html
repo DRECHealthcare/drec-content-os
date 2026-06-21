@@ -14,10 +14,10 @@
     </div>
     <nav>
       <button class="active" data-screen="dashboard">首页</button>
-      <button data-screen="assets">月度内容</button>
-      <button data-screen="scheduler">排程</button>
+      <button data-screen="assets">月度工作台</button>
+      <button data-screen="scheduler">排程 / 交接</button>
       <details class="nav-more">
-        <summary>更多 / 设置</summary>
+        <summary>更多页面</summary>
         <div class="nav-more-list">
           <button data-screen="learning">学习复盘</button>
           <button data-screen="review">审核队列</button>
@@ -242,7 +242,7 @@
         <div id="home-learning-handback-message" class="status-note"></div>
       </div>
       <details class="dashboard-details">
-        <summary>查看系统详情和高级测试</summary>
+        <summary>系统详情（平时不用）</summary>
         <div class="card wide">
         <h2>本周内容循环</h2>
         <div class="loop">
@@ -604,13 +604,13 @@
         <h3 class="subsection-heading">月度内容工作区</h3>
         <div class="asset-toolbar">
           <div class="toolbar-panel primary-toolbar">
-            <span class="toolbar-kicker">现在只需要看这里</span>
-            <button id="download-monthly-carousel-doctor-send-message" class="primary-action" type="button">1. 给医生审核</button>
-            <button id="download-monthly-carousel-next-action-queue" type="button">2. 看今日下一步</button>
-            <button id="download-monthly-carousel-status-board-zh" type="button">查看状态</button>
+            <span class="toolbar-kicker">月度 Carousel 主路径</span>
+            <button id="download-monthly-carousel-doctor-send-message" class="primary-action" type="button">1. 下载给医生的审核消息</button>
+            <button id="download-monthly-carousel-next-action-queue" type="button">2. 看今天要做哪一步</button>
+            <button id="download-monthly-carousel-status-board-zh" type="button">3. 查看全部状态</button>
           </div>
           <details class="advanced-actions compact-tool-group">
-            <summary>更多：医生包 / 图片制作 / CSV 导入</summary>
+            <summary>更多工具（医生包 / 图片制作 / CSV 导入）</summary>
             <div class="learning-actions">
               <button id="download-monthly-carousel-doctor-handoff-pack" type="button">下载医生交接 ZIP</button>
               <button id="download-monthly-carousel-doctor-import-rules" type="button">下载医生导入规则</button>
@@ -715,7 +715,7 @@
           </details>
         </div>
         <details class="advanced-actions compact-tool-group manual-entry-tools">
-          <summary>手动粘贴医生 / 图片回复</summary>
+          <summary>手动粘贴区（有回复才打开）</summary>
           <div class="quick-composer">
             <label>
               审核决定 CSV

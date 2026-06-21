@@ -28,9 +28,9 @@ const titleMapEn = {
   creative: "Creative Studio",
   templates: "Template Studio",
   video: "Video Studio",
-  assets: "Monthly Carousel",
+  assets: "Monthly Workspace",
   review: "Review Queue",
-  scheduler: "Scheduler",
+  scheduler: "Schedule / Handoff",
   meta: "Meta Setup",
   outcomes: "Performance",
   learning: "Insights & Learning",
@@ -45,9 +45,9 @@ const titleMapZh = {
   creative: "创意工作室",
   templates: "模板工作室",
   video: "视频工作室",
-  assets: "月度内容",
+  assets: "月度工作台",
   review: "审核队列",
-  scheduler: "排程",
+  scheduler: "排程 / 交接",
   meta: "Meta 设置",
   outcomes: "表现数据",
   learning: "学习复盘",
@@ -66,8 +66,10 @@ const uiZh = {
   "Video Studio": "视频工作室",
   "Assets": "素材与内容资产",
   "Monthly Carousel": "月度 Carousel",
+  "Monthly Workspace": "月度工作台",
   "Review Queue": "审核队列",
   "Scheduler": "排程",
+  "Schedule / Handoff": "排程 / 交接",
   "Meta Setup": "Meta 设置",
   "Performance": "表现数据",
   "Learning": "学习复盘",
@@ -2508,8 +2510,7 @@ function renderHomeProjectCompletion(data) {
         <p>${escapeHtml(translateText(primaryNext))}</p>
       </div>
       <div class="home-progress-actions">
-        <button class="primary" type="button" data-home-open-next="${escapeHtml(nextScreen)}">打开下一步</button>
-        <button type="button" data-home-refresh-progress>刷新</button>
+        <button class="primary" type="button" data-home-open-next="${escapeHtml(nextScreen)}">继续下一步</button>
       </div>
     </div>
     <div class="home-progress-bars">
@@ -2552,7 +2553,8 @@ function renderHomeProjectCompletion(data) {
       </div>
     ` : ""}
     <details class="simple-extra-actions home-progress-more">
-      <summary>进度资料</summary>
+      <summary>更多：刷新 / 进度资料</summary>
+      <button type="button" data-home-refresh-progress>刷新</button>
       <button type="button" data-home-download-operator-guide>首页说明</button>
       <button type="button" data-home-download-completion>完成度审计</button>
       <button type="button" data-home-download-unblock>解锁清单</button>
@@ -2628,10 +2630,10 @@ function renderSimpleOperator(data, monthly = null, cycle = null) {
     body = cycleAction.action || "打开指挥中心，执行第一个未完成步骤。";
     status = `${cycle?.overall_status || "manual_cycle"} · ${Number(cycleSummary.manual_cycle_done || 0)}/${Number(cycleSummary.manual_cycle_required || 0)} 证据`;
     actions = `
-      <button class="primary" type="button" data-simple-open-cycle-screen="${escapeHtml(cycleScreen)}">打开对应页面</button>
-      <button type="button" data-simple-download-cycle-command-center>下载指挥中心</button>
+      <button class="primary" type="button" data-simple-open-cycle-screen="${escapeHtml(cycleScreen)}">继续这一步</button>
       <details class="simple-extra-actions">
         <summary>更多</summary>
+        <button type="button" data-simple-download-cycle-command-center>下载指挥中心</button>
         <button type="button" data-simple-refresh>刷新状态</button>
       </details>
     `;
@@ -2644,10 +2646,10 @@ function renderSimpleOperator(data, monthly = null, cycle = null) {
     body = monthlyPrimary.detail || "先把医生审核消息发给医生。收到回复后，点“粘贴回复”贴回来检查。";
     status = "等待医生审核 · 不会发布";
     actions = `
-      <button class="primary" type="button" data-simple-download-monthly-doctor-message>给医生的消息</button>
-      <button type="button" data-simple-paste-doctor-reply>粘贴回复</button>
+      <button class="primary" type="button" data-simple-download-monthly-doctor-message>下载给医生</button>
+      <button type="button" data-simple-paste-doctor-reply>我已有医生回复</button>
       <details class="simple-extra-actions">
-        <summary>其他资料</summary>
+        <summary>更多资料</summary>
         <button type="button" data-simple-download-monthly-doctor-handoff>医生交接 ZIP</button>
         <button type="button" data-simple-download-monthly-action-queue>行动队列</button>
         <button type="button" data-simple-refresh>刷新状态</button>
@@ -2660,10 +2662,10 @@ function renderSimpleOperator(data, monthly = null, cycle = null) {
     body = monthlyPrimary.detail || "先给制作端规则；收到图片链接后，点“粘贴图片回复”贴回来检查。";
     status = "制作阶段 · 不会发布";
     actions = `
-      <button class="primary" type="button" data-simple-download-monthly-production-rules>制作规则</button>
-      <button type="button" data-simple-paste-production-reply>粘贴图片回复</button>
+      <button class="primary" type="button" data-simple-download-monthly-production-rules>下载制作规则</button>
+      <button type="button" data-simple-paste-production-reply>我已有图片回复</button>
       <details class="simple-extra-actions">
-        <summary>其他资料</summary>
+        <summary>更多资料</summary>
         <button type="button" data-simple-download-monthly-production-qa>制作 QA 包</button>
         <button type="button" data-simple-refresh>刷新状态</button>
       </details>
@@ -2675,10 +2677,10 @@ function renderSimpleOperator(data, monthly = null, cycle = null) {
     body = "先检查可入队内容，再加入队列。入队不是发布。";
     status = "可预览入队 · 不会发布";
     actions = `
-      <button class="primary" type="button" data-simple-preview-monthly-queue>检查入队</button>
-      <button type="button" data-simple-run-monthly-queue>加入队列</button>
+      <button class="primary" type="button" data-simple-preview-monthly-queue>先检查</button>
+      <button type="button" data-simple-run-monthly-queue>确认加入队列</button>
       <details class="simple-extra-actions">
-        <summary>其他资料</summary>
+        <summary>更多资料</summary>
         <button type="button" data-simple-download-monthly-queue-readiness>入队检查表</button>
         <button type="button" data-simple-refresh>刷新状态</button>
       </details>
@@ -2699,10 +2701,10 @@ function renderSimpleOperator(data, monthly = null, cycle = null) {
     body = "粘贴审核决定，检查后导入；导入后再排程。不会发布。";
     status = "已入队 · 不会发布";
     actions = `
-      <button class="primary" type="button" data-simple-paste-review-decisions>粘贴审核</button>
-      <button type="button" data-simple-schedule-approved>排程</button>
+      <button class="primary" type="button" data-simple-paste-review-decisions>粘贴审核决定</button>
+      <button type="button" data-simple-schedule-approved>排程已通过内容</button>
       <details class="simple-extra-actions">
-        <summary>其他资料</summary>
+        <summary>更多资料</summary>
         <button type="button" data-simple-download-monthly-review-queue>下载审核队列</button>
         <button type="button" data-simple-refresh>刷新状态</button>
       </details>
@@ -2714,7 +2716,7 @@ function renderSimpleOperator(data, monthly = null, cycle = null) {
     body = `已有 ${scheduledQueue} 条内容排好时间。下载安全包给真人检查；系统不会自动发到 Facebook / Instagram。`;
     status = "已排程 · 未发布";
     actions = `
-      <button class="primary" type="button" data-simple-download-today-pack>下载安全包</button>
+      <button class="primary" type="button" data-simple-download-today-pack>下载给发布人的安全包</button>
       <details class="simple-extra-actions">
         <summary>看排程 / 其他资料</summary>
         <button type="button" data-simple-open-scheduler>看排程</button>
@@ -2731,10 +2733,10 @@ function renderSimpleOperator(data, monthly = null, cycle = null) {
     body = `已有 ${outcomeCount} 条结果进入学习系统。可以带入计划页继续准备下一轮。`;
     status = "学习已准备 · 不会发布";
     actions = `
-      <button class="primary" type="button" data-simple-use-learning-topics>带入计划</button>
-      <button type="button" data-simple-open-learning>看学习</button>
+      <button class="primary" type="button" data-simple-use-learning-topics>带入下月计划</button>
       <details class="simple-extra-actions">
         <summary>更多</summary>
+        <button type="button" data-simple-open-learning>看学习页</button>
         <button type="button" data-simple-download-weekly-report-zh>中文周报</button>
         <button type="button" data-simple-download-next-plan-handback>下月回流包</button>
       </details>
