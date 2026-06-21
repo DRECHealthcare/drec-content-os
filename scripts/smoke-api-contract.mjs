@@ -4982,6 +4982,16 @@ const requiredSnippets = [
     text: "data-home-copy-handoff-caption",
   },
   {
+    name: "web home handoff copy full action",
+    file: "web",
+    text: "data-home-copy-handoff-full",
+  },
+  {
+    name: "web home handoff full text helper",
+    file: "web",
+    text: "DREC 人工发布资料",
+  },
+  {
     name: "web home handoff copy media action",
     file: "web",
     text: "data-home-copy-handoff-media",

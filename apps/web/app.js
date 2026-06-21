@@ -5672,6 +5672,7 @@ function renderHomePublishingCloseout(data) {
               </div>
               <p>${escapeHtml((item.caption || "").slice(0, 150))}${(item.caption || "").length > 150 ? "..." : ""}</p>
               <div class="home-handoff-actions">
+                <button type="button" data-home-copy-handoff-full="${escapeHtml(item.id || "")}">复制整套资料</button>
                 <button type="button" data-home-copy-handoff-caption="${escapeHtml(item.id || "")}">复制文案</button>
                 ${mediaUrls.length ? `<button type="button" data-home-copy-handoff-media="${escapeHtml(item.id || "")}">复制媒体链接</button>` : ""}
               </div>
@@ -5682,6 +5683,26 @@ function renderHomePublishingCloseout(data) {
     ` : ""}
   `;
   container.dataset.readyItems = JSON.stringify(readyItems);
+}
+
+function homeHandoffText(item) {
+  const mediaUrls = (item.media_urls || []).filter(Boolean);
+  return [
+    "DREC 人工发布资料",
+    `平台: ${item.channel || "manual"}`,
+    `格式: ${item.format || "content"}`,
+    `计划时间: ${item.planned_slot || "未排程"}`,
+    `Queue ID: ${item.id || ""}`,
+    "",
+    "文案:",
+    item.caption || "",
+    "",
+    "媒体链接:",
+    mediaUrls.length ? mediaUrls.join("\n") : "无",
+    "",
+    "发布后回填:",
+    "请把真实 Meta Post ID 或人工标签填回系统；这里不会自动发布。",
+  ].join("\n");
 }
 
 async function loadPublishingCloseout() {
@@ -6478,10 +6499,14 @@ document.getElementById("home-record-published-save")?.addEventListener("click",
 });
 
 document.getElementById("home-publish-closeout-status")?.addEventListener("click", async (event) => {
+  const fullButton = event.target.closest("[data-home-copy-handoff-full]");
   const captionButton = event.target.closest("[data-home-copy-handoff-caption]");
   const mediaButton = event.target.closest("[data-home-copy-handoff-media]");
-  if (!captionButton && !mediaButton) return;
-  const itemId = captionButton?.dataset.homeCopyHandoffCaption || mediaButton?.dataset.homeCopyHandoffMedia || "";
+  if (!fullButton && !captionButton && !mediaButton) return;
+  const itemId = fullButton?.dataset.homeCopyHandoffFull
+    || captionButton?.dataset.homeCopyHandoffCaption
+    || mediaButton?.dataset.homeCopyHandoffMedia
+    || "";
   const container = document.getElementById("home-publish-closeout-status");
   const message = document.getElementById("home-publish-closeout-message");
   const readyItems = JSON.parse(container?.dataset.readyItems || "[]");
@@ -6490,12 +6515,16 @@ document.getElementById("home-publish-closeout-status")?.addEventListener("click
     if (message) message.textContent = "找不到这条交接内容，请刷新。";
     return;
   }
-  const text = captionButton
+  const text = fullButton
+    ? homeHandoffText(item)
+    : captionButton
     ? item.caption || ""
     : (item.media_urls || []).filter(Boolean).join("\n");
   try {
     await navigator.clipboard.writeText(text);
-    if (message) message.textContent = captionButton ? "文案已复制。" : "媒体链接已复制。";
+    if (message) {
+      message.textContent = fullButton ? "整套发布资料已复制。" : captionButton ? "文案已复制。" : "媒体链接已复制。";
+    }
   } catch {
     if (message) message.textContent = "浏览器挡住了复制，请下载安全包后手动复制。";
   }
