@@ -4946,6 +4946,26 @@ const requiredSnippets = [
     text: "home-use-learning-topics",
   },
   {
+    name: "web home metrics quick selector",
+    file: "webIndex",
+    text: "home-metrics-post",
+  },
+  {
+    name: "web home metrics quick save action",
+    file: "webIndex",
+    text: "home-save-rollup-metrics",
+  },
+  {
+    name: "web home metrics quick handler",
+    file: "web",
+    text: "home-save-rollup-metrics",
+  },
+  {
+    name: "web home metrics quick rollup endpoint",
+    file: "web",
+    text: "/metrics/rollup",
+  },
+  {
     name: "web simple learning topics action",
     file: "web",
     text: "data-simple-use-learning-topics",
@@ -4969,6 +4989,11 @@ const requiredSnippets = [
     name: "web home learning handback styles",
     file: "styles",
     text: ".home-learning-handback",
+  },
+  {
+    name: "web home metrics quick styles",
+    file: "styles",
+    text: ".home-metrics-quick",
   },
   {
     name: "web home closeout pills styles",

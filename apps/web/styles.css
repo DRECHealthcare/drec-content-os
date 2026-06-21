@@ -465,6 +465,38 @@ header span { color: var(--muted); font-size: 12px; }
   font-weight: 500;
 }
 
+.home-metrics-quick {
+  display: grid;
+  grid-template-columns: minmax(210px, 2fr) repeat(7, minmax(78px, 1fr)) auto;
+  gap: 10px;
+  align-items: end;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #F8FAFC;
+}
+
+.home-metrics-quick label {
+  display: grid;
+  gap: 6px;
+  color: var(--navy);
+  font-weight: 800;
+}
+
+.home-metrics-quick select,
+.home-metrics-quick input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 10px;
+  background: #FFF;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 500;
+}
+
 .home-closeout-next {
   display: grid;
   gap: 4px;
@@ -1694,6 +1726,9 @@ button[type="submit"] {
   .simple-operator-actions { justify-content: stretch; }
   .simple-operator-actions button { width: 100%; white-space: normal; }
   .home-record-published { grid-template-columns: 1fr; }
+  .home-metrics-quick { grid-template-columns: 1fr 1fr; }
+  .home-metrics-quick label:first-child,
+  .home-metrics-quick button { grid-column: 1 / -1; }
   .workflow-head, .workflow-primary { align-items: stretch; flex-direction: column; }
   .completion-head { flex-direction: column; }
   .workflow-primary button { width: 100%; }

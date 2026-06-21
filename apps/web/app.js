@@ -5576,11 +5576,34 @@ function renderHomePublishingCloseout(data) {
         ].join("")
       : '<option value="">暂无可记录项目</option>';
   }
+  const metricsSelect = document.getElementById("home-metrics-post");
+  const waitingMetrics = data.waiting_for_metrics || [];
+  if (metricsSelect) {
+    metricsSelect.innerHTML = waitingMetrics.length
+      ? [
+          '<option value="">选择要回填数据的帖子</option>',
+          ...waitingMetrics.map((item) => {
+            const payload = encodeURIComponent(JSON.stringify({
+              external_post_id: item.external_post_id || "",
+              source: item.channel === "instagram" ? "instagram" : "facebook",
+              channel: item.channel || "manual",
+              format: item.format || "carousel",
+            }));
+            const label = `${item.channel || "post"} / ${item.format || "content"} · ${item.external_post_id || item.id || ""} · ${(item.caption || "").slice(0, 42)}`;
+            return `<option value="${payload}">${escapeHtml(label)}</option>`;
+          }),
+        ].join("")
+      : '<option value="">暂无等待数据的帖子</option>';
+  }
   const scheduledReady = Number(counts.scheduled_ready || 0);
   const waitingPostId = Number(counts.waiting_for_post_id || 0);
-  const waitingMetrics = Number(counts.waiting_for_metrics || 0);
+  const waitingMetricsCount = Number(counts.waiting_for_metrics || 0);
   const waitingRollup = Number(counts.waiting_for_rollup || 0);
   const complete = Number(counts.complete || 0);
+  const learningCard = document.getElementById("home-learning-handback-card");
+  if (learningCard && (waitingMetricsCount > 0 || waitingRollup > 0 || complete > 0)) {
+    learningCard.hidden = false;
+  }
   container.innerHTML = `
     <div class="home-closeout-next">
       <strong>${escapeHtml(translateText(next.label || "Build handoff and publish manually"))}</strong>
@@ -5589,7 +5612,7 @@ function renderHomePublishingCloseout(data) {
     <div class="home-closeout-pills">
       <span>可人工发布 ${escapeHtml(String(scheduledReady))}</span>
       <span>等回填 ID ${escapeHtml(String(waitingPostId))}</span>
-      <span>等数据 ${escapeHtml(String(waitingMetrics))}</span>
+      <span>等数据 ${escapeHtml(String(waitingMetricsCount))}</span>
       <span>等学习汇总 ${escapeHtml(String(waitingRollup))}</span>
       <span>已闭环 ${escapeHtml(String(complete))}</span>
     </div>
@@ -6393,6 +6416,90 @@ document.getElementById("home-download-next-plan-handback")?.addEventListener("c
 
 document.getElementById("home-download-next-plan-csv")?.addEventListener("click", async () => {
   await downloadHomeLearningHandback("/operations/monthly-carousel-next-plan-handback.csv", "drec-monthly-carousel-next-plan-handback.csv", "text/csv", "下月候选 CSV 已下载。");
+});
+
+function homeMetricNumber(id) {
+  const value = document.getElementById(id)?.value;
+  const parsed = Number(value || 0);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+}
+
+function clearHomeMetricInputs() {
+  [
+    "home-metrics-reach",
+    "home-metrics-likes",
+    "home-metrics-comments",
+    "home-metrics-saves",
+    "home-metrics-shares",
+    "home-metrics-leads",
+    "home-metrics-spend",
+  ].forEach((id) => {
+    const input = document.getElementById(id);
+    if (input) input.value = "";
+  });
+}
+
+document.getElementById("home-save-rollup-metrics")?.addEventListener("click", async (event) => {
+  const message = document.getElementById("home-learning-handback-message");
+  const selected = document.getElementById("home-metrics-post")?.value || "";
+  if (!selected) {
+    if (message) message.textContent = "请选择已经发布、等待录数据的帖子。";
+    return;
+  }
+  let post;
+  try {
+    post = JSON.parse(decodeURIComponent(selected));
+  } catch {
+    if (message) message.textContent = "无法读取所选帖子，请刷新首页后再试。";
+    return;
+  }
+  if (!post.external_post_id) {
+    if (message) message.textContent = "这个帖子缺少 Post ID，请先在发布交接卡记录。";
+    return;
+  }
+  const button = event.currentTarget;
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = "保存中";
+  if (message) message.textContent = "正在保存数据并生成学习结果。";
+  try {
+    const metrics = {
+      reach: Math.trunc(homeMetricNumber("home-metrics-reach")),
+      likes: Math.trunc(homeMetricNumber("home-metrics-likes")),
+      comments: Math.trunc(homeMetricNumber("home-metrics-comments")),
+      saves: Math.trunc(homeMetricNumber("home-metrics-saves")),
+      shares: Math.trunc(homeMetricNumber("home-metrics-shares")),
+      leads: Math.trunc(homeMetricNumber("home-metrics-leads")),
+      spend: homeMetricNumber("home-metrics-spend"),
+    };
+    await fetchJson("/metrics", {
+      method: "POST",
+      body: JSON.stringify({
+        source: post.source || "manual",
+        external_post_id: post.external_post_id,
+        captured_at: new Date().toISOString(),
+        metrics,
+      }),
+    });
+    await fetchJson("/metrics/rollup", {
+      method: "POST",
+      body: JSON.stringify({
+        external_post_id: post.external_post_id,
+        metric_window: "7d",
+        format: post.format || "carousel",
+        channel: post.channel === "instagram" ? "instagram" : post.channel === "facebook" ? "facebook" : "manual",
+        pillar: "metabolic_education",
+      }),
+    });
+    clearHomeMetricInputs();
+    if (message) message.textContent = "数据已保存，并已回流到学习系统。";
+    await Promise.all([loadOutcomes(), loadLearningSummary(), loadHomePublishingCloseout(), loadLoopStatus(), loadProjectCompletionAudit()]);
+  } catch (error) {
+    if (message) message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : "无法保存数据或生成学习结果。";
+  } finally {
+    button.disabled = false;
+    button.textContent = originalText;
+  }
 });
 
 document.getElementById("copy-test-path")?.addEventListener("click", async () => {
