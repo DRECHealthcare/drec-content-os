@@ -5087,6 +5087,16 @@ const requiredSnippets = [
     text: "保存数据并学习",
   },
   {
+    name: "web home after metrics plan action",
+    file: "web",
+    text: "data-home-after-metrics-plan",
+  },
+  {
+    name: "web home after metrics plan copy",
+    file: "web",
+    text: "带入下一轮计划",
+  },
+  {
     name: "web home metrics quick save action",
     file: "webIndex",
     text: "home-save-rollup-metrics",
@@ -5130,6 +5140,11 @@ const requiredSnippets = [
     name: "web home metrics quick styles",
     file: "styles",
     text: ".home-metrics-quick",
+  },
+  {
+    name: "web home learning next styles",
+    file: "styles",
+    text: ".home-learning-next",
   },
   {
     name: "web home closeout pills styles",

@@ -6639,6 +6639,17 @@ function clearHomeMetricInputs() {
   });
 }
 
+function renderHomeLearningNextAction(message) {
+  if (!message) return;
+  message.innerHTML = `
+    <div class="home-learning-next">
+      <strong>数据已保存，并已回流到学习系统。</strong>
+      <span>下一步可以把学习建议带入下一轮内容计划；这里只准备计划，不会发布，也不会创建 Notion 新行。</span>
+      <button type="button" data-home-after-metrics-plan>带入下一轮计划</button>
+    </div>
+  `;
+}
+
 document.getElementById("home-save-rollup-metrics")?.addEventListener("click", async (event) => {
   const message = document.getElementById("home-learning-handback-message");
   const selected = document.getElementById("home-metrics-post")?.value || "";
@@ -6692,7 +6703,7 @@ document.getElementById("home-save-rollup-metrics")?.addEventListener("click", a
       }),
     });
     clearHomeMetricInputs();
-    if (message) message.textContent = "数据已保存，并已回流到学习系统。";
+    renderHomeLearningNextAction(message);
     await Promise.all([loadOutcomes(), loadLearningSummary(), loadHomePublishingCloseout(), loadLoopStatus(), loadProjectCompletionAudit()]);
   } catch (error) {
     if (message) message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : "无法保存数据或生成学习结果。";
@@ -6700,6 +6711,13 @@ document.getElementById("home-save-rollup-metrics")?.addEventListener("click", a
     button.disabled = false;
     button.textContent = originalText;
   }
+});
+
+document.getElementById("home-learning-handback-card")?.addEventListener("click", async (event) => {
+  const planButton = event.target.closest("[data-home-after-metrics-plan]");
+  if (!planButton) return;
+  const message = document.getElementById("home-learning-handback-message") || document.getElementById("plan-message");
+  await loadLearningTopicsIntoPlan(message, { openPlan: true });
 });
 
 document.getElementById("copy-test-path")?.addEventListener("click", async () => {
