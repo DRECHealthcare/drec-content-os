@@ -3872,6 +3872,16 @@ const requiredSnippets = [
     text: "loadLearningTopicsIntoPlan",
   },
   {
+    name: "web learning plan next action",
+    file: "web",
+    text: "data-plan-generate-after-learning",
+  },
+  {
+    name: "web learning plan next button copy",
+    file: "web",
+    text: "生成下一轮计划",
+  },
+  {
     name: "web outcome insights card",
     file: "web",
     text: "Outcome Insights",
@@ -5145,6 +5155,11 @@ const requiredSnippets = [
     name: "web home learning next styles",
     file: "styles",
     text: ".home-learning-next",
+  },
+  {
+    name: "web plan next action styles",
+    file: "styles",
+    text: ".plan-next-action",
   },
   {
     name: "web home closeout pills styles",

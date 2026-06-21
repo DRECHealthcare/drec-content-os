@@ -602,6 +602,36 @@ header span { color: var(--muted); font-size: 12px; }
   cursor: pointer;
 }
 
+.plan-next-action {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  border: 1px solid #99F6E4;
+  border-radius: 8px;
+  padding: 12px;
+  background: #F0FDFA;
+}
+
+.plan-next-action strong {
+  color: #115E59;
+}
+
+.plan-next-action span {
+  color: var(--ink);
+}
+
+.plan-next-action button {
+  justify-self: start;
+  border: 1px solid var(--blue);
+  border-radius: 8px;
+  padding: 9px 12px;
+  background: var(--blue);
+  color: #FFF;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
 .home-closeout-next {
   display: grid;
   gap: 4px;

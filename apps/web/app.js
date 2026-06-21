@@ -8380,6 +8380,19 @@ document.getElementById("plan-form").addEventListener("submit", async (event) =>
   }
 });
 
+function renderPlanNextAction(message, topicCount, signals = {}) {
+  const countText = `${Number(topicCount) || 0} 个主题`;
+  const outcomeCount = Number(signals.outcome_count) || 0;
+  const weightCount = Number(signals.weight_count) || 0;
+  message.innerHTML = `
+    <div class="plan-next-action">
+      <strong>已带入 ${escapeHtml(countText)}，下一步可以直接生成计划。</strong>
+      <span>来源：${escapeHtml(outcomeCount)} 个结果记录，${escapeHtml(weightCount)} 个学习权重。这里只生成内部内容计划，不会发布到 FB/IG。</span>
+      <button type="button" data-plan-generate-after-learning>生成下一轮计划</button>
+    </div>
+  `;
+}
+
 async function loadLearningTopicsIntoPlan(message, options = {}) {
   const form = document.getElementById("plan-form");
   const data = new FormData(form);
@@ -8390,12 +8403,28 @@ async function loadLearningTopicsIntoPlan(message, options = {}) {
     const recommendation = await fetchJson(`/weekly-plan/recommendations?language=${encodeURIComponent(language)}&count=${encodeURIComponent(count)}`);
     form.elements.topics.value = (recommendation.topics || []).join("\n");
     const signals = recommendation.signals || {};
-    if (options.openPlan) showScreen("plan");
-    message.textContent = `Loaded ${recommendation.topics?.length || 0} topic(s) from ${signals.outcome_count || 0} result(s) and ${signals.weight_count || 0} active weight(s).`;
+    let targetMessage = message;
+    if (options.openPlan) {
+      showScreen("plan");
+      targetMessage = document.getElementById("plan-message") || message;
+      if (message !== targetMessage) message.textContent = "已带入计划页。";
+    }
+    renderPlanNextAction(targetMessage, recommendation.topics?.length || 0, signals);
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not load learning topics.";
   }
 }
+
+document.getElementById("plan-message")?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-plan-generate-after-learning]");
+  if (!button) return;
+  const form = document.getElementById("plan-form");
+  if (form?.requestSubmit) {
+    form.requestSubmit();
+  } else {
+    form?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+  }
+});
 
 document.getElementById("load-learning-topics").addEventListener("click", async () => {
   await loadLearningTopicsIntoPlan(document.getElementById("plan-message"));
