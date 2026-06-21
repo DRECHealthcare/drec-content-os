@@ -1796,14 +1796,14 @@ def service_role_install_pack_markdown(security: dict):
     generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
     commands = [
         "# 1. In Supabase Dashboard, copy the service_role key for this project.",
-        "# 2. Paste it into this local shell only. Do not put it in chat, GitHub, Vercel, or browser env vars.",
+        "# 2. Paste it into this local Terminal only. Do not put it in chat, GitHub, Vercel, screenshots, or browser env vars.",
         "read -s SUPABASE_SERVICE_ROLE_KEY",
         "fly secrets set -a drec-content-os-api SUPABASE_SERVICE_ROLE_KEY=\"$SUPABASE_SERVICE_ROLE_KEY\"",
         "unset SUPABASE_SERVICE_ROLE_KEY",
-        "# 3. Fly restarts machines after the secret is set. Then verify the gate:",
-        "DREC_ACCESS_TOKEN=\"***\" curl -H \"X-DREC-Access-Token: $DREC_ACCESS_TOKEN\" https://drec-content-os-api.fly.dev/security/status",
-        "# 4. Run the service-role smoke test. This writes one audit heartbeat and never displays the key:",
-        "DREC_ACCESS_TOKEN=\"***\" curl -X POST -H \"X-DREC-Access-Token: $DREC_ACCESS_TOKEN\" https://drec-content-os-api.fly.dev/security/service-role-smoke-test",
+        "# 3. Fly restarts machines after the secret is set. Verify the secret exists:",
+        "fly secrets list -a drec-content-os-api | grep SUPABASE_SERVICE_ROLE_KEY",
+        "# 4. Run the service-role smoke test from inside Fly. This uses the deployed app token, writes one audit heartbeat, and never displays the service-role key:",
+        "fly ssh console -a drec-content-os-api --command 'python -c '\\''import os,urllib.request; req=urllib.request.Request(\"http://127.0.0.1:8080/security/service-role-smoke-test\", method=\"POST\", headers={\"X-DREC-Access-Token\":os.environ[\"DREC_ACCESS_TOKEN\"],\"X-DREC-Actor\":\"service-role-install\"}); print(urllib.request.urlopen(req, timeout=30).read().decode())'\\'''",
         "# 5. Run live smoke before applying strict RLS:",
         "DREC_ACCESS_TOKEN=\"***\" DREC_WEB_URL=\"https://drec-content-os-api.fly.dev/ui/\" npm run smoke:live",
     ]
@@ -1839,6 +1839,7 @@ def service_role_install_pack_markdown(security: dict):
         "## Success Evidence",
         "",
         "- `fly secrets list -a drec-content-os-api` shows `SUPABASE_SERVICE_ROLE_KEY` deployed.",
+        "- The Fly-internal smoke command returns `passed: true` without printing the service-role key.",
         "- `/security/status` returns `ready_for_rls_hardening` and `service_role_smoke.status=recent`.",
         "- `/security/service-role-smoke-test` returns `passed` and records one feedback audit heartbeat.",
         "- `npm run smoke:live` passes against the Fly URL.",

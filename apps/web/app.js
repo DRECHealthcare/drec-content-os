@@ -22,9 +22,12 @@ let latestFirstPublishPreviewUrls = [];
 
 const SERVICE_ROLE_INSTALL_COMMAND = [
   "# Paste your Supabase service_role key only into Terminal when prompted.",
+  "# Get it from Supabase Dashboard > Project Settings > API > service_role.",
   "read -s SUPABASE_SERVICE_ROLE_KEY",
   "fly secrets set -a drec-content-os-api SUPABASE_SERVICE_ROLE_KEY=\"$SUPABASE_SERVICE_ROLE_KEY\"",
   "unset SUPABASE_SERVICE_ROLE_KEY",
+  "fly secrets list -a drec-content-os-api | grep SUPABASE_SERVICE_ROLE_KEY",
+  "fly ssh console -a drec-content-os-api --command 'python -c '\\''import os,urllib.request; req=urllib.request.Request(\"http://127.0.0.1:8080/security/service-role-smoke-test\", method=\"POST\", headers={\"X-DREC-Access-Token\":os.environ[\"DREC_ACCESS_TOKEN\"],\"X-DREC-Actor\":\"service-role-install\"}); print(urllib.request.urlopen(req, timeout=30).read().decode())'\\'''",
 ].join("\n");
 
 const titleMapEn = {

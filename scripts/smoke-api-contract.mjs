@@ -576,6 +576,16 @@ const requiredSnippets = [
     text: "fly secrets set -a drec-content-os-api SUPABASE_SERVICE_ROLE_KEY",
   },
   {
+    name: "security service role install pack internal smoke",
+    file: "main",
+    text: "fly ssh console -a drec-content-os-api --command",
+  },
+  {
+    name: "security service role install pack avoids manual app token",
+    file: "main",
+    text: "This uses the deployed app token, writes one audit heartbeat, and never displays the service-role key",
+  },
+  {
     name: "security service role install pack hard stop",
     file: "main",
     text: "Do not paste the service-role key into chat, GitHub Actions logs, Vercel browser variables, screenshots, or Markdown files.",
@@ -3029,6 +3039,11 @@ const requiredSnippets = [
     name: "web service role command uses terminal prompt",
     file: "web",
     text: "read -s SUPABASE_SERVICE_ROLE_KEY",
+  },
+  {
+    name: "web service role command runs internal smoke",
+    file: "web",
+    text: "service-role-install",
   },
   {
     name: "web home service role smoke action",
