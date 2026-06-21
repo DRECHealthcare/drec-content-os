@@ -24882,6 +24882,31 @@ def manual_publish_record_blockers(item: dict):
     return []
 
 
+def manual_publish_record_state(item: dict):
+    blockers = manual_publish_record_blockers(item)
+    can_record_now = not blockers
+    return {
+        "can_record_now": can_record_now,
+        "record_blockers": blockers,
+        "record_status_label": "Ready to record after manual publishing." if can_record_now else "Wait until the planned publish time before recording evidence.",
+        "record_status_label_zh": "可以回填：人工发布完成后，填真实 Meta Post ID 或帖子链接。" if can_record_now else "暂不能回填：还没到发布点，先不要记录已发布。",
+        "required_evidence": [
+            "real_meta_post_id preferred; posted_url accepted after real manual publishing",
+            "posted_at",
+            "published_by",
+            "recorded_in_drec=yes only after the app shows the queue item as published",
+            "metrics_due_date for the 7-day performance check",
+        ],
+        "required_evidence_zh": [
+            "优先填真实 Meta Post ID；如果没有，填真实帖子链接",
+            "填写实际发布时间 posted_at",
+            "填写发布人 published_by",
+            "只有系统显示已发布后，recorded_in_drec 才改 yes",
+            "按 metrics_due_date 回来填 7 天表现数据",
+        ],
+    }
+
+
 def manual_publish_evidence_csv(payload: dict):
     output = StringIO()
     fieldnames = [
@@ -24933,7 +24958,7 @@ def manual_publish_evidence_csv(payload: dict):
                 "published_by": "",
                 "recorded_in_drec": "no",
                 "metrics_due_date": manual_publish_metric_due_date(item),
-                "notes": "Fill the real Meta post ID after a human publishes. Do not mark recorded_in_drec=yes until DREC shows this queue item as published.",
+                "notes": "Fill posted_at and published_by after real manual publishing. Use real_meta_post_id if available; posted_url is accepted. Manual label only for non-Meta publishing and requires posted_at + published_by. Do not mark recorded_in_drec=yes until DREC shows this queue item as published.",
             }
         )
     for item in payload.get("blocked_items") or []:
@@ -26203,6 +26228,7 @@ async def publishing_closeout_payload(limit: int = 50):
                 "manual_label_suggestion": manual_publish_label(item),
                 "planned_slot_myt": myt_datetime_label(item.get("planned_slot")),
                 **manual_publish_timing(item),
+                **manual_publish_record_state(item),
                 "metrics_due_date": manual_publish_metric_due_date(item),
                 "metric_window": "7d",
             }
@@ -26224,6 +26250,7 @@ async def publishing_closeout_payload(limit: int = 50):
             "outcome": outcome,
             "planned_slot_myt": myt_datetime_label(item.get("planned_slot")),
             **manual_publish_timing(item),
+            **manual_publish_record_state(item),
             "metrics_due_date": manual_publish_metric_due_date(item),
             "metric_window": "7d",
         }
@@ -26357,9 +26384,33 @@ async def operations_publishing_closeout_zh(_: None = Depends(require_access_tok
         "4. 在表现数据页录入触达、点赞、评论、收藏、分享、线索和花费。",
         "5. 保存并汇总，让学习复盘能够生成下一轮建议。",
         "",
-        "## 等待录数据的帖子",
+        "## 可以人工发布/回填的项目",
         "",
     ]
+    ready = payload.get("scheduled_ready") or []
+    if ready:
+        for item in ready:
+            lines.extend(
+                [
+                    f"### {item.get('channel')} / {item.get('format')} · {item.get('id')}",
+                    f"- 计划时间：{item.get('planned_slot_myt') or item.get('planned_slot') or '尚未设置'}",
+                    f"- 当前状态：{item.get('record_status_label_zh') or manual_publish_record_state(item).get('record_status_label_zh')}",
+                    f"- 发布时间状态：{manual_publish_timing_label_zh(item)}",
+                    f"- 人工标签建议：`{item.get('manual_label_suggestion') or manual_publish_label(item)}`",
+                    f"- 数据回填日期：{item.get('metrics_due_date') or manual_publish_metric_due_date(item) or '发布后 7 天'}",
+                    "",
+                    "需要的证据：",
+                    "",
+                    *markdown_list(item.get("required_evidence_zh") or manual_publish_record_state(item).get("required_evidence_zh")),
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["目前没有可以人工发布/回填的项目。", ""])
+    lines.extend([
+        "## 等待录数据的帖子",
+        "",
+    ])
     waiting_for_metrics = payload.get("waiting_for_metrics") or []
     if waiting_for_metrics:
         for item in waiting_for_metrics:
@@ -26445,6 +26496,7 @@ async def post_publish_next_steps_payload():
                 "planned_slot_myt": item.get("planned_slot_myt") or myt_datetime_label(item.get("planned_slot")),
                 "publish_window_status": item.get("publish_window_status") or manual_publish_timing(item).get("publish_window_status"),
                 "publish_timing_label": item.get("publish_timing_label") or manual_publish_timing(item).get("publish_timing_label"),
+                **manual_publish_record_state(item),
                 "media_count": len([url for url in item.get("media_urls") or [] if url]),
                 "manual_label_suggestion": manual_publish_label(item),
                 "metrics_due_date": item.get("metrics_due_date") or manual_publish_metric_due_date(item),
@@ -26520,8 +26572,13 @@ async def operations_post_publish_next_steps_zh(_: None = Depends(require_access
                 f"- Queue ID：{item.get('queue_id')}",
                 f"- Asset ID：{item.get('asset_id')}",
                 f"- 计划发布时间：{item.get('planned_slot')}",
+                f"- 回填状态：{item.get('record_status_label_zh')}",
                 f"- 媒体数量：{item.get('media_count')}",
                 f"- 如果没有 Meta ID，可用人工标签：`{item.get('manual_label_suggestion')}`",
+                "",
+                "回填需要的证据：",
+                "",
+                *markdown_list(item.get("required_evidence_zh")),
                 "",
                 "发布后步骤：",
                 "",

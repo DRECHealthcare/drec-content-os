@@ -4276,6 +4276,26 @@ const requiredSnippets = [
     text: "manual_publish_record_blockers",
   },
   {
+    name: "api manual publish record state helper",
+    file: "main",
+    text: "manual_publish_record_state",
+  },
+  {
+    name: "api manual publish can record field",
+    file: "main",
+    text: "can_record_now",
+  },
+  {
+    name: "api manual publish evidence checklist zh",
+    file: "main",
+    text: "回填需要的证据",
+  },
+  {
+    name: "api manual publish non-meta label guard",
+    file: "main",
+    text: "Manual label only for non-Meta publishing",
+  },
+  {
     name: "web home publish timing label",
     file: "web",
     text: "homePublishTimingLabel",
@@ -4289,6 +4309,16 @@ const requiredSnippets = [
     name: "web home publish record disabled copy",
     file: "web",
     text: "到点后填 ID",
+  },
+  {
+    name: "web home publish record status text",
+    file: "web",
+    text: "homeRecordStatusText",
+  },
+  {
+    name: "web home publish evidence short list",
+    file: "web",
+    text: "回填要填：Post ID 或帖子链接、发布时间、发布人",
   },
   {
     name: "api manual publish evidence myt column",

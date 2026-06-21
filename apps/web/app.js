@@ -5851,6 +5851,8 @@ function renderHomePublishingCloseout(data) {
           <strong>${escapeHtml(nextReadyItem.channel || "post")} / ${escapeHtml(nextReadyItem.format || "content")}</strong>
           <small>${escapeHtml(nextReadyItem.planned_slot_myt || nextReadyItem.planned_slot || "未排程")}</small>
           <small>${escapeHtml(homePublishTimingLabel(nextReadyItem))}</small>
+          <small>${escapeHtml(homeRecordStatusText(nextReadyItem))}</small>
+          <small>回填要填：Post ID 或帖子链接、发布时间、发布人</small>
           <small>数据回填建议：${escapeHtml(nextReadyItem.metrics_due_date || "发布后 7 天")}</small>
           <code class="home-queue-id">Queue ID: ${escapeHtml(nextReadyItem.id || "")}</code>
           <p>${escapeHtml((nextReadyItem.caption || "").slice(0, 150))}${(nextReadyItem.caption || "").length > 150 ? "..." : ""}</p>
@@ -5871,6 +5873,8 @@ function renderHomePublishingCloseout(data) {
                 <strong>${escapeHtml(index + 2)}. ${escapeHtml(item.channel || "post")} / ${escapeHtml(item.format || "content")}</strong>
                 <small>${escapeHtml(item.planned_slot_myt || item.planned_slot || "未排程")} · ${escapeHtml(item.id || "")}</small>
                 <small>${escapeHtml(homePublishTimingLabel(item))}</small>
+                <small>${escapeHtml(homeRecordStatusText(item))}</small>
+                <small>回填要填：Post ID 或帖子链接、发布时间、发布人</small>
                 <small>数据回填建议：${escapeHtml(item.metrics_due_date || "发布后 7 天")}</small>
                 <code class="home-queue-id">Queue ID: ${escapeHtml(item.id || "")}</code>
               </div>
@@ -5932,11 +5936,18 @@ function homePublishTimingLabel(item) {
 }
 
 function homeCanRecordPublished(item) {
+  if (typeof item.can_record_now === "boolean") return item.can_record_now;
   return ["due_now", "overdue_needs_post_id"].includes(item.publish_window_status || "");
 }
 
 function homeRecordButtonLabel(item) {
   return homeCanRecordPublished(item) ? "2. 发布后填 ID" : "2. 到点后填 ID";
+}
+
+function homeRecordStatusText(item) {
+  if (item.record_status_label_zh) return item.record_status_label_zh;
+  if (homeCanRecordPublished(item)) return "可以回填：人工发布完成后，填真实 Post ID 或帖子链接";
+  return "暂不能回填：还没到发布点，先不要记录已发布";
 }
 
 function homeHandoffText(item) {
