@@ -2494,6 +2494,7 @@ function renderSimpleOperator(data, monthly = null) {
     actions = `
       <button class="primary" type="button" data-simple-download-monthly-production-rules>下载制作导入规则</button>
       <button type="button" data-simple-download-monthly-production-qa>下载制作 QA 包</button>
+      <button type="button" data-simple-paste-production-reply>粘贴图片回复</button>
       <button type="button" data-simple-refresh>刷新状态</button>
     `;
     safetyNote = "安全锁：制作导入不能替代医生审核，也不会入队、排程或发布。";
@@ -2559,6 +2560,10 @@ function renderSimpleOperator(data, monthly = null) {
   const homeDoctorReplyCard = document.getElementById("home-doctor-reply-card");
   if (homeDoctorReplyCard) {
     homeDoctorReplyCard.hidden = Number(monthlyGateCounts.waiting_doctor_safety_clear || 0) <= 0;
+  }
+  const homeProductionReplyCard = document.getElementById("home-production-reply-card");
+  if (homeProductionReplyCard) {
+    homeProductionReplyCard.hidden = Number(monthlyGateCounts.waiting_final_media || 0) <= 0 && Number(monthlyGateCounts.waiting_visual_qa || 0) <= 0;
   }
 }
 
@@ -5809,6 +5814,7 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   const openReview = event.target.closest("[data-simple-open-review]");
   const openScheduler = event.target.closest("[data-simple-open-scheduler]");
   const pasteDoctorReply = event.target.closest("[data-simple-paste-doctor-reply]");
+  const pasteProductionReply = event.target.closest("[data-simple-paste-production-reply]");
   const downloadMonthlyDoctorHandoff = event.target.closest("[data-simple-download-monthly-doctor-handoff]");
   const downloadMonthlyDoctorMessage = event.target.closest("[data-simple-download-monthly-doctor-message]");
   const downloadMonthlyActionQueue = event.target.closest("[data-simple-download-monthly-action-queue]");
@@ -5821,7 +5827,7 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   const downloadPostPublish = event.target.closest("[data-simple-download-post-publish]");
   const downloadPostMetrics = event.target.closest("[data-simple-download-post-metrics]");
   const refresh = event.target.closest("[data-simple-refresh]");
-  if (!runReadyAssets && !openAssets && !openReview && !openScheduler && !pasteDoctorReply && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadTodayPack && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !refresh) return;
+  if (!runReadyAssets && !openAssets && !openReview && !openScheduler && !pasteDoctorReply && !pasteProductionReply && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadTodayPack && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !refresh) return;
   if (refresh) {
     await loadLoopStatus();
     await loadDashboardMonthlyActionQueue();
@@ -5845,6 +5851,15 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
       card.hidden = false;
       card.scrollIntoView({ behavior: "smooth", block: "start" });
       document.getElementById("home-doctor-reply-text")?.focus();
+    }
+    return;
+  }
+  if (pasteProductionReply) {
+    const card = document.getElementById("home-production-reply-card");
+    if (card) {
+      card.hidden = false;
+      card.scrollIntoView({ behavior: "smooth", block: "start" });
+      document.getElementById("home-production-reply-text")?.focus();
     }
     return;
   }
@@ -5924,6 +5939,34 @@ document.getElementById("home-import-doctor-replies-safe-advance")?.addEventList
     messageId: "home-doctor-reply-message",
     previewTargetId: "home-doctor-reply-preview",
     safeAdvanceTargetId: "home-doctor-safe-advance-preview",
+  });
+  await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit()]);
+});
+
+document.getElementById("home-fill-production-reply-template")?.addEventListener("click", async () => {
+  await fillProductionReplyTemplate({
+    textInputId: "home-production-reply-text",
+    messageId: "home-production-reply-message",
+  });
+});
+
+document.getElementById("home-preview-production-replies")?.addEventListener("click", async () => {
+  await importProductionReplies({
+    dryRun: true,
+    textInputId: "home-production-reply-text",
+    producerInputId: "home-production-reply-producer",
+    messageId: "home-production-reply-message",
+    previewTargetId: "home-production-reply-preview",
+  });
+});
+
+document.getElementById("home-import-production-replies")?.addEventListener("click", async () => {
+  await importProductionReplies({
+    dryRun: false,
+    textInputId: "home-production-reply-text",
+    producerInputId: "home-production-reply-producer",
+    messageId: "home-production-reply-message",
+    previewTargetId: "home-production-reply-preview",
   });
   await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit()]);
 });
@@ -7143,6 +7186,34 @@ async function fillDoctorReplyTemplate({
   }
 }
 
+async function fillProductionReplyTemplate({
+  textInputId = "production-reply-text",
+  messageId = "media-message",
+  scroll = true,
+} = {}) {
+  const message = document.getElementById(messageId);
+  if (message) message.textContent = "Loading production reply template...";
+  try {
+    const data = await fetchJson("/operations/production-reply-inbox-pack");
+    const template = data.reply_paste_template || (data.reply_items || []).map((item) => item.reply_template || "").filter(Boolean).join("\n\n");
+    if (!template) {
+      if (message) message.textContent = "No production reply template is ready yet. Doctor approval may still be pending.";
+      return false;
+    }
+    const textInput = document.getElementById(textInputId);
+    if (textInput) {
+      textInput.value = template;
+      textInput.focus();
+      if (scroll) textInput.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    if (message) message.textContent = "制作回复模板已填入。收到设计/媒体 URL 后，请替换实际 Media URLs / Visual QA / Rights，再先预览。";
+    return true;
+  } catch (error) {
+    if (message) message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : "Could not load production reply template.";
+    return false;
+  }
+}
+
 async function importDoctorReplies({
   dryRun,
   textInputId = "doctor-reply-text",
@@ -7262,16 +7333,22 @@ async function uploadAssetMediaAttachments({ dryRun }) {
   }
 }
 
-async function importProductionReplies({ dryRun }) {
-  const message = document.getElementById("media-message");
-  const textInput = document.getElementById("production-reply-text");
-  const producerInput = document.getElementById("production-reply-producer");
+async function importProductionReplies({
+  dryRun,
+  textInputId = "production-reply-text",
+  producerInputId = "production-reply-producer",
+  messageId = "media-message",
+  previewTargetId = "asset-media-attachment-preview",
+} = {}) {
+  const message = document.getElementById(messageId);
+  const textInput = document.getElementById(textInputId);
+  const producerInput = document.getElementById(producerInputId);
   const replyText = textInput?.value?.trim() || "";
   if (!replyText) {
-    message.textContent = "Paste the production reply text first.";
+    if (message) message.textContent = "Paste the production reply text first.";
     return;
   }
-  message.textContent = dryRun ? "Previewing production reply..." : "Importing production reply...";
+  if (message) message.textContent = dryRun ? "Previewing production reply..." : "Importing production reply...";
   try {
     const data = await fetchJson("/operations/import-production-replies", {
       method: "POST",
@@ -7282,11 +7359,11 @@ async function importProductionReplies({ dryRun }) {
       }),
     });
     if (!dryRun) textInput.value = "";
-    message.textContent = data.message || (dryRun ? "Production reply previewed." : "Production reply imported.");
-    renderAssetMediaAttachmentPreview(data);
+    if (message) message.textContent = data.message || (dryRun ? "Production reply previewed." : "Production reply imported.");
+    renderAssetMediaAttachmentPreview(data, previewTargetId);
     if (!dryRun) await Promise.all([loadAssets(), loadFirstCycleEvidenceWorkbench(), loadDoctorSendQueue(), loadDoctorReplyInboxPack(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadPreScheduleGate(), loadLoopStatus()]);
   } catch (error) {
-    message.textContent = error.message === "Access token required" ? "Set the access token first." : dryRun ? "Could not preview production reply." : "Could not import production reply.";
+    if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : dryRun ? "Could not preview production reply." : "Could not import production reply.";
   }
 }
 
@@ -7667,13 +7744,13 @@ document.getElementById("dashboard-monthly-action-queue")?.addEventListener("cli
   const downloadDoctorReview = event.target.closest("[data-download-dashboard-monthly-doctor-review]");
   const downloadPngAssets = event.target.closest("[data-download-dashboard-monthly-png-assets]");
   const downloadDoctorWorksheet = event.target.closest("[data-download-dashboard-monthly-doctor-worksheet]");
-  const fillDoctorReplyTemplate = event.target.closest("[data-fill-dashboard-doctor-reply-template]");
+  const fillDoctorReplyTemplateButton = event.target.closest("[data-fill-dashboard-doctor-reply-template]");
   const previewDoctorReplySafe = event.target.closest("[data-preview-dashboard-doctor-reply-safe]");
   const importDoctorReplySafe = event.target.closest("[data-import-dashboard-doctor-reply-safe]");
   const downloadProductionWorksheet = event.target.closest("[data-download-dashboard-monthly-production-worksheet]");
   const downloadProductionQa = event.target.closest("[data-download-dashboard-monthly-production-qa]");
   const downloadProductionImportRules = event.target.closest("[data-download-dashboard-monthly-production-import-rules]");
-  const fillProductionReplyTemplate = event.target.closest("[data-fill-dashboard-production-reply-template]");
+  const fillProductionReplyTemplateButton = event.target.closest("[data-fill-dashboard-production-reply-template]");
   const downloadQueueReadiness = event.target.closest("[data-download-dashboard-monthly-queue-readiness]");
   const downloadQueueExecution = event.target.closest("[data-download-dashboard-monthly-queue-execution]");
   const previewQueueReady = event.target.closest("[data-preview-dashboard-monthly-queue-ready]");
@@ -7692,14 +7769,14 @@ document.getElementById("dashboard-monthly-action-queue")?.addEventListener("cli
   const downloadNextPlanCsv = event.target.closest("[data-download-dashboard-monthly-next-plan-csv]");
   const downloadQueue = event.target.closest("[data-download-dashboard-monthly-action-queue]");
   const downloadCsv = event.target.closest("[data-download-dashboard-monthly-action-csv]");
-  if (!openAssets && !downloadDoctorHandoff && !downloadDoctorMessage && !downloadDoctorTriage && !downloadDoctorImportRules && !downloadDoctorReview && !downloadPngAssets && !downloadDoctorWorksheet && !fillDoctorReplyTemplate && !previewDoctorReplySafe && !importDoctorReplySafe && !downloadProductionWorksheet && !downloadProductionQa && !downloadProductionImportRules && !fillProductionReplyTemplate && !downloadQueueReadiness && !downloadQueueExecution && !previewQueueReady && !runQueueReady && !previewSafeAdvance && !runSafeAdvance && !downloadScheduleWorksheet && !downloadSchedulePack && !downloadScheduleAudit && !downloadPublishingHandoff && !downloadMetricsTemplate && !downloadMetricsPack && !downloadLearningCloseout && !downloadLearningCsv && !downloadNextPlanHandback && !downloadNextPlanCsv && !downloadQueue && !downloadCsv) return;
+  if (!openAssets && !downloadDoctorHandoff && !downloadDoctorMessage && !downloadDoctorTriage && !downloadDoctorImportRules && !downloadDoctorReview && !downloadPngAssets && !downloadDoctorWorksheet && !fillDoctorReplyTemplateButton && !previewDoctorReplySafe && !importDoctorReplySafe && !downloadProductionWorksheet && !downloadProductionQa && !downloadProductionImportRules && !fillProductionReplyTemplateButton && !downloadQueueReadiness && !downloadQueueExecution && !previewQueueReady && !runQueueReady && !previewSafeAdvance && !runSafeAdvance && !downloadScheduleWorksheet && !downloadSchedulePack && !downloadScheduleAudit && !downloadPublishingHandoff && !downloadMetricsTemplate && !downloadMetricsPack && !downloadLearningCloseout && !downloadLearningCsv && !downloadNextPlanHandback && !downloadNextPlanCsv && !downloadQueue && !downloadCsv) return;
   if (openAssets) {
     showScreen("assets");
     const card = document.getElementById("monthly-carousel-status-board");
     card?.scrollIntoView({ behavior: "smooth", block: "start" });
     return;
   }
-  if (fillDoctorReplyTemplate) {
+  if (fillDoctorReplyTemplateButton) {
     const message = document.getElementById("test-path-message");
     if (message) message.textContent = "Loading doctor reply template...";
     try {
@@ -7730,27 +7807,9 @@ document.getElementById("dashboard-monthly-action-queue")?.addEventListener("cli
     await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit()]);
     return;
   }
-  if (fillProductionReplyTemplate) {
-    const message = document.getElementById("test-path-message");
-    if (message) message.textContent = "Loading production reply template...";
-    try {
-      const data = await fetchJson("/operations/production-reply-inbox-pack");
-      const template = data.reply_paste_template || (data.reply_items || []).map((item) => item.reply_template || "").filter(Boolean).join("\n\n");
-      if (!template) {
-        if (message) message.textContent = "No production reply template is ready yet. Doctor approval may still be pending.";
-        return;
-      }
-      showScreen("assets");
-      const textInput = document.getElementById("production-reply-text");
-      if (textInput) {
-        textInput.value = template;
-        textInput.focus();
-        textInput.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-      if (message) message.textContent = "制作回复模板已填入。收到设计/媒体 URL 后，请替换实际 Media URLs / Visual QA / Rights，再先 Preview Production Reply。";
-    } catch (error) {
-      if (message) message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : "Could not load production reply template.";
-    }
+  if (fillProductionReplyTemplateButton) {
+    showScreen("assets");
+    await fillProductionReplyTemplate({ messageId: "test-path-message" });
     return;
   }
   if (previewQueueReady || runQueueReady || previewSafeAdvance || runSafeAdvance) {

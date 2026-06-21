@@ -79,6 +79,29 @@
         <div id="home-doctor-reply-preview" class="learning-grid"></div>
         <div id="home-doctor-safe-advance-preview" class="learning-grid"></div>
       </div>
+      <div id="home-production-reply-card" class="card wide home-production-reply" hidden>
+        <div class="workflow-head">
+          <div>
+            <h2>收到设计/图片后贴这里</h2>
+            <p class="section-note">先预览媒体 URL、Visual QA 和 Rights；只有医生已通过且资料完整，才会挂最终图片。不会发布到 Facebook / Instagram。</p>
+          </div>
+          <button id="home-fill-production-reply-template" type="button">填入模板</button>
+        </div>
+        <label>
+          制作回复内容
+          <textarea id="home-production-reply-text" placeholder="Asset ID: ...&#10;Media URLs: https://...&#10;Visual QA: passed / pending / needs_work&#10;Rights: owned / licensed / approved stock&#10;Notes: ..."></textarea>
+        </label>
+        <label>
+          设计/制作人姓名
+          <input id="home-production-reply-producer" placeholder="Designer or producer">
+        </label>
+        <div class="form-actions">
+          <button id="home-preview-production-replies" type="button">预览图片回复</button>
+          <button id="home-import-production-replies" class="danger-safe-action" type="button">导入图片回复</button>
+        </div>
+        <div id="home-production-reply-message" class="status-note"></div>
+        <div id="home-production-reply-preview" class="learning-grid"></div>
+      </div>
       <details class="dashboard-details">
         <summary>查看系统详情和高级测试</summary>
         <div class="card wide">

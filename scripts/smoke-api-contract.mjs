@@ -2900,6 +2900,21 @@ const requiredSnippets = [
     text: "data-simple-paste-doctor-reply",
   },
   {
+    name: "web home production reply card",
+    file: "webIndex",
+    text: "home-production-reply-card",
+  },
+  {
+    name: "web home production reply preview",
+    file: "web",
+    text: "home-preview-production-replies",
+  },
+  {
+    name: "web simple paste production reply action",
+    file: "web",
+    text: "data-simple-paste-production-reply",
+  },
+  {
     name: "web dashboard monthly doctor send message action",
     file: "web",
     text: "data-download-dashboard-monthly-doctor-message",
