@@ -5780,11 +5780,12 @@ function renderHomePublishingCloseout(data) {
           <span>下一条要交接</span>
           <strong>${escapeHtml(nextReadyItem.channel || "post")} / ${escapeHtml(nextReadyItem.format || "content")}</strong>
           <small>${escapeHtml(nextReadyItem.planned_slot || "未排程")}</small>
+          <code class="home-queue-id">Queue ID: ${escapeHtml(nextReadyItem.id || "")}</code>
           <p>${escapeHtml((nextReadyItem.caption || "").slice(0, 150))}${(nextReadyItem.caption || "").length > 150 ? "..." : ""}</p>
         </div>
         <div class="home-handoff-actions">
           <button type="button" data-home-copy-handoff-full="${escapeHtml(nextReadyItem.id || "")}">复制给发布人</button>
-          <button type="button" data-home-prepare-record-published="${escapeHtml(nextReadyItem.id || "")}">发布后填 ID</button>
+          <button type="button" data-home-prepare-record-published="${escapeHtml(nextReadyItem.id || "")}">选择这条填 ID</button>
         </div>
       </article>
     ` : ""}
@@ -5797,11 +5798,12 @@ function renderHomePublishingCloseout(data) {
               <div>
                 <strong>${escapeHtml(index + 2)}. ${escapeHtml(item.channel || "post")} / ${escapeHtml(item.format || "content")}</strong>
                 <small>${escapeHtml(item.planned_slot || "未排程")} · ${escapeHtml(item.id || "")}</small>
+                <code class="home-queue-id">Queue ID: ${escapeHtml(item.id || "")}</code>
               </div>
               <p>${escapeHtml((item.caption || "").slice(0, 150))}${(item.caption || "").length > 150 ? "..." : ""}</p>
               <div class="home-handoff-actions">
                 <button type="button" data-home-copy-handoff-full="${escapeHtml(item.id || "")}">复制给发布人</button>
-                <button type="button" data-home-prepare-record-published="${escapeHtml(item.id || "")}">发布后填 ID</button>
+                <button type="button" data-home-prepare-record-published="${escapeHtml(item.id || "")}">选择这条填 ID</button>
               </div>
               ${mediaUrls.length ? `
                 <details class="home-handoff-more">

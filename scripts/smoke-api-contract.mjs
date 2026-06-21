@@ -5281,9 +5281,19 @@ const requiredSnippets = [
     text: "data-home-prepare-record-published",
   },
   {
+    name: "web home handoff prepare record button copy",
+    file: "web",
+    text: "选择这条填 ID",
+  },
+  {
+    name: "web home handoff queue id visible",
+    file: "web",
+    text: "home-queue-id",
+  },
+  {
     name: "web home handoff prepare record safety copy",
     file: "web",
-    text: "只记录，不发布",
+    text: "已选中这条内容。人工发布完成后，把真实 Meta Post ID 填进来",
   },
   {
     name: "web home today safe pack action",
@@ -5328,7 +5338,12 @@ const requiredSnippets = [
   {
     name: "web home record published safety copy",
     file: "webIndex",
-    text: "只记录，不发布",
+    text: "只保存人工发布证据，不会发到 Meta。",
+  },
+  {
+    name: "web home record published safe save label",
+    file: "webIndex",
+    text: "保存记录（不会发布）",
   },
   {
     name: "web home record published styles",

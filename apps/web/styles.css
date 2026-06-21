@@ -834,6 +834,19 @@ header span { color: var(--muted); font-size: 12px; }
   color: var(--ink);
 }
 
+.home-queue-id {
+  display: inline-block;
+  margin-top: 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px 6px;
+  background: #FFFFFF;
+  color: var(--muted);
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+
 .home-handoff-item {
   border: 1px solid var(--line);
   border-radius: 8px;
