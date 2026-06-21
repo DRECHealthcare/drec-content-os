@@ -21,14 +21,14 @@ let latestFirstPublishReadiness = null;
 let latestFirstPublishPreviewUrls = [];
 
 const titleMapEn = {
-  dashboard: "Dashboard",
+  dashboard: "Home",
   insights: "Insight Inbox",
   plan: "Weekly Plan",
   compose: "Create A Post",
   creative: "Creative Studio",
   templates: "Template Studio",
   video: "Video Studio",
-  assets: "Assets",
+  assets: "Monthly Carousel",
   review: "Review Queue",
   scheduler: "Scheduler",
   meta: "Meta Setup",
@@ -38,14 +38,14 @@ const titleMapEn = {
 };
 
 const titleMapZh = {
-  dashboard: "总览",
+  dashboard: "首页",
   insights: "洞察收件箱",
   plan: "每周内容计划",
   compose: "创建帖子",
   creative: "创意工作室",
   templates: "模板工作室",
   video: "视频工作室",
-  assets: "素材与内容资产",
+  assets: "月度 Carousel",
   review: "审核队列",
   scheduler: "排程",
   meta: "Meta 设置",
@@ -56,6 +56,7 @@ const titleMapZh = {
 
 const uiZh = {
   "Dashboard": "总览",
+  "Home": "首页",
   "Insight Inbox": "洞察收件箱",
   "Weekly Plan": "每周内容计划",
   "Create Post": "创建帖子",
@@ -64,6 +65,7 @@ const uiZh = {
   "Template Studio": "模板工作室",
   "Video Studio": "视频工作室",
   "Assets": "素材与内容资产",
+  "Monthly Carousel": "月度 Carousel",
   "Review Queue": "审核队列",
   "Scheduler": "排程",
   "Meta Setup": "Meta 设置",
@@ -71,6 +73,9 @@ const uiZh = {
   "Learning": "学习复盘",
   "Insights & Learning": "洞察与学习",
   "Knowledge Base": "知识库",
+  "More Tools": "更多功能",
+  "View System Details And Advanced Tests": "查看系统详情和高级测试",
+  "Safety mode: no auto-publishing to FB / IG": "安全模式：不会自动发布到 FB / IG",
   "Stage 1: Thin Core + Publish/Sense rails": "第 1 阶段：核心流程 + 发布/洞察轨道",
   "This Week Through The Loop": "本周内容循环",
   "Publish Queue": "发布队列",
@@ -1075,7 +1080,7 @@ function translateTextNode(node) {
 }
 
 function translateTree(root = document) {
-  root.querySelectorAll?.("main h2,main h3,main h4,main p,main b,main span,main strong,main small,main label,main button,main li,main option,aside .brand span,aside .brand strong,aside .loop-note").forEach((element) => {
+  root.querySelectorAll?.("main h2,main h3,main h4,main p,main b,main span,main strong,main small,main label,main button,main li,main option,aside .brand span,aside .brand strong,aside .loop-note,aside summary").forEach((element) => {
     if (element.children.length) {
       translateDirectTextNodes(element);
       return;

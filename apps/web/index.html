@@ -13,22 +13,27 @@
       <strong>内容系统</strong>
     </div>
     <nav>
-      <button class="active" data-screen="dashboard">总览</button>
-      <button data-screen="insights">洞察收件箱</button>
-      <button data-screen="plan">每周内容计划</button>
-      <button data-screen="compose">创建帖子</button>
-      <button data-screen="creative">创意工作室</button>
-      <button data-screen="templates">模板工作室</button>
-      <button data-screen="video">视频工作室</button>
-      <button data-screen="assets">素材与内容资产</button>
+      <button class="active" data-screen="dashboard">首页</button>
+      <button data-screen="assets">月度 Carousel</button>
       <button data-screen="review">审核队列</button>
       <button data-screen="scheduler">排程</button>
-      <button data-screen="meta">Meta 设置</button>
-      <button data-screen="outcomes">表现数据</button>
-      <button data-screen="learning">学习复盘</button>
-      <button data-screen="kb">知识库</button>
+      <details class="nav-more">
+        <summary>更多功能</summary>
+        <div class="nav-more-list">
+          <button data-screen="insights">洞察收件箱</button>
+          <button data-screen="plan">内容计划</button>
+          <button data-screen="compose">创建帖子</button>
+          <button data-screen="creative">创意工作室</button>
+          <button data-screen="templates">模板工作室</button>
+          <button data-screen="video">视频工作室</button>
+          <button data-screen="meta">Meta 设置</button>
+          <button data-screen="outcomes">表现数据</button>
+          <button data-screen="learning">学习复盘</button>
+          <button data-screen="kb">知识库</button>
+        </div>
+      </details>
     </nav>
-    <div class="loop-note">第 1 阶段：核心流程 + 发布/洞察轨道</div>
+    <div class="loop-note">安全模式：不会自动发布到 FB / IG</div>
   </aside>
 
   <main>
@@ -50,7 +55,9 @@
       <div id="simple-operator" class="simple-operator card wide">
         <p class="status-note">正在读取下一步</p>
       </div>
-      <div class="card wide">
+      <details class="dashboard-details">
+        <summary>查看系统详情和高级测试</summary>
+        <div class="card wide">
         <h2>本周内容循环</h2>
         <div class="loop">
           <div><b>洞察</b><span>数据已准备</span></div>
@@ -60,8 +67,8 @@
           <div><b>发布</b><span>发布队列基础</span></div>
           <div><b>学习</b><span>反馈学习主线</span></div>
         </div>
-      </div>
-      <div class="grid">
+        </div>
+        <div class="grid">
         <article class="card"><h2>发布队列</h2><p id="queue-count">等待系统连接</p></article>
         <article class="card"><h2>内容简报</h2><p id="brief-count">等待系统连接</p></article>
         <article class="card"><h2>可发布素材</h2><p id="asset-count">等待系统连接</p></article>
@@ -71,8 +78,8 @@
         <article class="card"><h2>安全门槛</h2><p id="security-count">等待系统连接</p></article>
         <article class="card"><h2>访问权限</h2><p id="access-role-count">等待系统连接</p></article>
         <article class="card"><h2>自动化门槛</h2><p id="automation-count">等待系统连接</p></article>
-      </div>
-      <div class="card wide workflow-card">
+        </div>
+        <div class="card wide workflow-card">
         <div class="workflow-head">
           <div>
             <h2>下一步最佳动作</h2>
@@ -86,8 +93,8 @@
         <div id="launch-readiness" class="learning-grid"></div>
         <div id="dashboard-notion-refresh-status" class="learning-grid"></div>
         <div id="dashboard-monthly-action-queue" class="learning-grid"></div>
-      </div>
-      <div class="card wide test-path-card">
+        </div>
+        <div class="card wide test-path-card">
         <div class="workflow-head">
           <div>
             <h2>测试路径</h2>
@@ -154,7 +161,8 @@
         <div id="first-cycle-rehearsal" class="learning-grid"></div>
         <div id="first-publish-safe-advance-loop" class="learning-grid"></div>
         <div id="risk-audit-result" class="learning-grid"></div>
-      </div>
+        </div>
+      </details>
     </section>
 
     <section id="insights" class="screen">

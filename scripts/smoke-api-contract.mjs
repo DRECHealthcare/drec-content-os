@@ -8,6 +8,7 @@ const files = {
   dockerfile: "apps/api/Dockerfile",
   schema: "supabase/schema.sql",
   web: "apps/web/app.js",
+  webIndex: "apps/web/index.html",
   styles: "apps/web/styles.css",
   schedulerWorkflow: ".github/workflows/drec-scheduler-dry-run.yml",
   realMetricsWorkflow: ".github/workflows/drec-nightly-meta-metrics.yml",
@@ -2872,6 +2873,16 @@ const requiredSnippets = [
     name: "web asset toolbar compact tool groups",
     file: "styles",
     text: "compact-tool-group",
+  },
+  {
+    name: "web compact primary navigation",
+    file: "webIndex",
+    text: "nav-more",
+  },
+  {
+    name: "web dashboard details are folded",
+    file: "webIndex",
+    text: "dashboard-details",
   },
   {
     name: "web dashboard monthly doctor send message action",
