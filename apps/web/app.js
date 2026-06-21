@@ -45,7 +45,7 @@ const titleMapZh = {
   creative: "创意工作室",
   templates: "模板工作室",
   video: "视频工作室",
-  assets: "月度 Carousel",
+  assets: "月度内容",
   review: "审核队列",
   scheduler: "排程",
   meta: "Meta 设置",
@@ -73,7 +73,7 @@ const uiZh = {
   "Learning": "学习复盘",
   "Insights & Learning": "洞察与学习",
   "Knowledge Base": "知识库",
-  "More Tools": "更多功能",
+  "More Tools": "更多 / 设置",
   "View System Details And Advanced Tests": "查看系统详情和高级测试",
   "Safety mode: no auto-publishing to FB / IG": "安全模式：不会自动发布到 FB / IG",
   "Stage 1: Thin Core + Publish/Sense rails": "第 1 阶段：核心流程 + 发布/洞察轨道",
@@ -2556,7 +2556,7 @@ function renderSimpleOperator(data, monthly = null) {
   let safetyNote = "这里不会发布到 Facebook / Instagram。";
 
   if (Number(monthlyGateCounts.waiting_doctor_safety_clear || 0) > 0) {
-    eyebrow = "月度 Carousel 下一步";
+    eyebrow = "月度内容下一步";
     title = `${Number(monthlyGateCounts.waiting_doctor_safety_clear || 0)} 条内容等待医生 Safety clear`;
     body = monthlyPrimary.detail || "先把医生审核消息发给医生。收到回复后，点“粘贴回复”贴回来检查。";
     status = "等待医生审核 · 不会发布";
@@ -2564,7 +2564,7 @@ function renderSimpleOperator(data, monthly = null) {
       <button class="primary" type="button" data-simple-download-monthly-doctor-message>给医生的消息</button>
       <button type="button" data-simple-paste-doctor-reply>粘贴回复</button>
       <details class="simple-extra-actions">
-        <summary>更多</summary>
+        <summary>其他资料</summary>
         <button type="button" data-simple-download-monthly-doctor-handoff>医生交接 ZIP</button>
         <button type="button" data-simple-download-monthly-action-queue>行动队列</button>
         <button type="button" data-simple-refresh>刷新状态</button>
@@ -2572,7 +2572,7 @@ function renderSimpleOperator(data, monthly = null) {
     `;
     safetyNote = "安全锁：医生未 approve + Safety clear 前，我不会推进制作、入队、排程或发布。";
   } else if (Number(monthlyGateCounts.waiting_final_media || 0) > 0 || Number(monthlyGateCounts.waiting_visual_qa || 0) > 0) {
-    eyebrow = "月度 Carousel 下一步";
+    eyebrow = "月度内容下一步";
     title = "等待最终图片和视觉 QA";
     body = monthlyPrimary.detail || "先给制作端规则；收到图片链接后，点“粘贴图片回复”贴回来检查。";
     status = "制作阶段 · 不会发布";
@@ -2580,22 +2580,22 @@ function renderSimpleOperator(data, monthly = null) {
       <button class="primary" type="button" data-simple-download-monthly-production-rules>制作规则</button>
       <button type="button" data-simple-paste-production-reply>粘贴图片回复</button>
       <details class="simple-extra-actions">
-        <summary>更多</summary>
+        <summary>其他资料</summary>
         <button type="button" data-simple-download-monthly-production-qa>制作 QA 包</button>
         <button type="button" data-simple-refresh>刷新状态</button>
       </details>
     `;
     safetyNote = "安全锁：制作导入不能替代医生审核，也不会入队、排程或发布。";
   } else if (Number(monthlyGateCounts.ready_to_queue || 0) > 0) {
-    eyebrow = "月度 Carousel 下一步";
-    title = `${Number(monthlyGateCounts.ready_to_queue || 0)} 条月度内容可预览入队`;
+    eyebrow = "月度内容下一步";
+    title = `${Number(monthlyGateCounts.ready_to_queue || 0)} 条内容可以加入队列`;
     body = "先检查可入队内容，再加入队列。入队不是发布。";
     status = "可预览入队 · 不会发布";
     actions = `
       <button class="primary" type="button" data-simple-preview-monthly-queue>检查入队</button>
       <button type="button" data-simple-run-monthly-queue>加入队列</button>
       <details class="simple-extra-actions">
-        <summary>更多</summary>
+        <summary>其他资料</summary>
         <button type="button" data-simple-download-monthly-queue-readiness>入队检查表</button>
         <button type="button" data-simple-refresh>刷新状态</button>
       </details>
@@ -2619,7 +2619,7 @@ function renderSimpleOperator(data, monthly = null) {
       <button class="primary" type="button" data-simple-paste-review-decisions>粘贴审核</button>
       <button type="button" data-simple-schedule-approved>排程</button>
       <details class="simple-extra-actions">
-        <summary>更多</summary>
+        <summary>其他资料</summary>
         <button type="button" data-simple-download-monthly-review-queue>下载审核队列</button>
         <button type="button" data-simple-refresh>刷新状态</button>
       </details>
@@ -2632,9 +2632,9 @@ function renderSimpleOperator(data, monthly = null) {
     status = "已排程 · 未发布";
     actions = `
       <button class="primary" type="button" data-simple-download-today-pack>下载安全包</button>
-      <button type="button" data-simple-open-scheduler>看排程</button>
       <details class="simple-extra-actions">
-        <summary>其他下载</summary>
+        <summary>看排程 / 其他资料</summary>
+        <button type="button" data-simple-open-scheduler>看排程</button>
         <button type="button" data-simple-download-handoff>交接包</button>
         <button type="button" data-simple-download-reel>Reel 制作包</button>
         <button type="button" data-simple-download-post-publish>发布后下一步</button>
@@ -2672,19 +2672,19 @@ function renderSimpleOperator(data, monthly = null) {
   `;
   const homeDoctorReplyCard = document.getElementById("home-doctor-reply-card");
   if (homeDoctorReplyCard) {
-    homeDoctorReplyCard.hidden = Number(monthlyGateCounts.waiting_doctor_safety_clear || 0) <= 0;
+    homeDoctorReplyCard.hidden = true;
   }
   const homeProductionReplyCard = document.getElementById("home-production-reply-card");
   if (homeProductionReplyCard) {
-    homeProductionReplyCard.hidden = Number(monthlyGateCounts.waiting_final_media || 0) <= 0 && Number(monthlyGateCounts.waiting_visual_qa || 0) <= 0;
+    homeProductionReplyCard.hidden = true;
   }
   const homeQueueActionCard = document.getElementById("home-queue-action-card");
   if (homeQueueActionCard) {
-    homeQueueActionCard.hidden = Number(monthlyGateCounts.ready_to_queue || 0) <= 0;
+    homeQueueActionCard.hidden = true;
   }
   const homeReviewScheduleCard = document.getElementById("home-review-schedule-card");
   if (homeReviewScheduleCard) {
-    homeReviewScheduleCard.hidden = !(queueTotal > 0 && scheduledQueue === 0);
+    homeReviewScheduleCard.hidden = true;
   }
   const homePublishCloseoutCard = document.getElementById("home-publish-closeout-card");
   if (homePublishCloseoutCard) {

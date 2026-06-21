@@ -14,12 +14,12 @@
     </div>
     <nav>
       <button class="active" data-screen="dashboard">首页</button>
-      <button data-screen="assets">月度 Carousel</button>
+      <button data-screen="assets">月度内容</button>
       <button data-screen="scheduler">排程</button>
-      <button data-screen="learning">学习复盘</button>
       <details class="nav-more">
-        <summary>更多功能</summary>
+        <summary>更多 / 设置</summary>
         <div class="nav-more-list">
+          <button data-screen="learning">学习复盘</button>
           <button data-screen="review">审核队列</button>
           <button data-screen="insights">洞察收件箱</button>
           <button data-screen="plan">内容计划</button>
@@ -154,33 +154,33 @@
         <div class="workflow-head">
           <div>
             <h2>人工发布交接</h2>
-            <p class="section-note">下载安全包给真人检查。这里不会自动发布；只有你手动填 Post ID，系统才记录已发布。</p>
+            <p class="section-note">先下载安全包给真人检查。这里不会自动发布到 Facebook / Instagram。</p>
           </div>
-          <button id="home-download-today-safe-pack" type="button">下载安全包</button>
+          <button id="home-download-today-safe-pack" class="primary" type="button">下载安全包</button>
         </div>
-        <div class="form-actions">
-          <button id="home-open-scheduler" type="button">看排程</button>
-          <details class="simple-extra-actions home-stage-more">
-            <summary>更多下载</summary>
+        <div id="home-publish-closeout-status" class="home-closeout-status"></div>
+        <details class="simple-extra-actions home-stage-more home-manual-more">
+          <summary>更多：看排程 / 下载资料 / 已发布后记录 ID</summary>
+          <div class="home-manual-more-actions">
+            <button id="home-open-scheduler" type="button">看排程</button>
             <button id="home-download-publishing-handoff" type="button">发布交接包</button>
             <button id="home-download-post-publish-next" type="button">发布后下一步</button>
             <button id="home-download-post-publish-metrics" type="button">数据记录表</button>
-          </details>
-        </div>
-        <div class="home-record-published">
-          <label>
-            已人工发布的项目
-            <select id="home-record-published-item">
-              <option value="">先等待可发布项目</option>
-            </select>
-          </label>
-          <label>
-            真实 Meta Post ID 或人工标签
-            <input id="home-record-published-id" placeholder="例如 447572..._123 或 manual-facebook-20260621">
-          </label>
-          <button id="home-record-published-save" class="danger-safe-action" type="button">只记录，不发布</button>
-        </div>
-        <div id="home-publish-closeout-status" class="home-closeout-status"></div>
+          </div>
+          <div class="home-record-published">
+            <label>
+              已人工发布的项目
+              <select id="home-record-published-item">
+                <option value="">先等待可发布项目</option>
+              </select>
+            </label>
+            <label>
+              真实 Meta Post ID 或人工标签
+              <input id="home-record-published-id" placeholder="例如 447572..._123 或 manual-facebook-20260621">
+            </label>
+            <button id="home-record-published-save" class="danger-safe-action" type="button">只记录，不发布</button>
+          </div>
+        </details>
         <div id="home-publish-closeout-message" class="status-note"></div>
       </div>
       <div id="home-learning-handback-card" class="card wide home-learning-handback" hidden>

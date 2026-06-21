@@ -2,6 +2,7 @@
   --navy: #0F2A4A;
   --navy2: #143A63;
   --teal: #1FA9A0;
+  --green: #2E7D62;
   --orange: #F58220;
   --bg: #F1F5F8;
   --card: #FFFFFF;
@@ -253,7 +254,7 @@ header span { color: var(--muted); font-size: 12px; }
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
-  max-width: 420px;
+  max-width: 360px;
 }
 
 .simple-operator-actions button {
@@ -273,6 +274,7 @@ header span { color: var(--muted); font-size: 12px; }
   background: var(--teal);
   color: #052E2A;
   box-shadow: 0 8px 20px rgba(31,169,160,.18);
+  min-width: 180px;
 }
 
 .simple-extra-actions {
@@ -303,6 +305,11 @@ header span { color: var(--muted); font-size: 12px; }
 
 .simple-extra-actions[open] button {
   background: #F8FAFC;
+}
+
+.simple-operator .simple-extra-actions {
+  margin-top: 2px;
+  opacity: .86;
 }
 
 .home-progress {
@@ -472,13 +479,30 @@ header span { color: var(--muted); font-size: 12px; }
 }
 
 .home-stage-more {
-  flex-basis: auto;
+  flex-basis: 100%;
   min-width: 150px;
+  margin-top: 10px;
   text-align: left;
 }
 
 .home-stage-more[open] {
   flex-basis: 100%;
+}
+
+.home-manual-more {
+  display: block;
+  text-align: left;
+}
+
+.home-manual-more[open] {
+  display: block;
+}
+
+.home-manual-more-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 0;
 }
 
 .home-closeout-status {
@@ -754,6 +778,12 @@ header span { color: var(--muted); font-size: 12px; }
 
 .workflow-head button {
   padding: 8px 12px;
+}
+
+.workflow-head button.primary {
+  border-color: var(--teal);
+  background: var(--teal);
+  color: #052E2A;
 }
 
 .workflow-next {
