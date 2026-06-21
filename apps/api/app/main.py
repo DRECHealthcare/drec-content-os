@@ -19014,12 +19014,25 @@ def notion_monthly_refresh_workbench_payload():
             active_refresh = now_myt.replace(month=now_myt.month - 1, day=refresh_day, hour=0, minute=0, second=0, microsecond=0)
         next_refresh = refresh_this_month
     due_today = now_myt.day == refresh_day
+    days_since_active_refresh = (now_myt.date() - active_refresh.date()).days
+    days_until_next_refresh = (next_refresh.date() - now_myt.date()).days
+    if due_today:
+        refresh_window_label = "refresh_due_today"
+    elif 0 < days_since_active_refresh <= 2:
+        refresh_window_label = "fresh_refresh_window"
+    elif days_until_next_refresh <= 3:
+        refresh_window_label = "prepare_next_refresh"
+    else:
+        refresh_window_label = "active_monthly_cycle"
     return {
         "source": notion_carousel_source_payload(),
         "generated_at_myt": now_myt.isoformat(),
         "refresh_day": refresh_day,
         "active_cycle_start": active_refresh.date().isoformat(),
         "next_refresh_date": next_refresh.date().isoformat(),
+        "days_since_active_refresh": days_since_active_refresh,
+        "days_until_next_refresh": days_until_next_refresh,
+        "refresh_window_label": refresh_window_label,
         "connector_status": {
             "schema": NOTION_CAROUSEL_SOURCE.get("direct_connector_schema"),
             "schema_verified_at": NOTION_CAROUSEL_SOURCE.get("direct_connector_schema_verified_at"),
@@ -19156,6 +19169,9 @@ async def notion_monthly_refresh_status_payload():
         "generated_at_myt": workbench.get("generated_at_myt"),
         "active_cycle_start": workbench.get("active_cycle_start"),
         "next_refresh_date": workbench.get("next_refresh_date"),
+        "days_since_active_refresh": workbench.get("days_since_active_refresh"),
+        "days_until_next_refresh": workbench.get("days_until_next_refresh"),
+        "refresh_window_label": workbench.get("refresh_window_label"),
         "local_monthly_asset_count": len(assets),
         "imported_since_refresh_count": len(imported_since_refresh),
         "latest_local_import_at": latest_local_import_at,
@@ -19169,6 +19185,7 @@ async def notion_monthly_refresh_status_payload():
         "next_action": next_action,
         "evidence": [
             f"Active monthly cycle starts on {workbench.get('active_cycle_start')} MYT.",
+            f"Current date is {workbench.get('days_since_active_refresh')} day(s) after the active refresh; next refresh is in {workbench.get('days_until_next_refresh')} day(s).",
             f"{len(assets)} non-published local monthly carousel asset(s) are visible.",
             f"{len(imported_since_refresh)} local monthly asset(s) were created after this cycle start.",
             f"{len(duplicate_topic_ids)} duplicate Topic ID value(s) were detected locally.",
@@ -19198,6 +19215,9 @@ def notion_monthly_refresh_workbench_zh_markdown(payload: dict):
         f"资料源：`{source['data_source_url']}`",
         f"本轮周期开始：{payload['active_cycle_start']}",
         f"下一次刷新：{payload['next_refresh_date']}",
+        f"距离本轮刷新：第 {payload.get('days_since_active_refresh')} 天",
+        f"距离下次刷新：还有 {payload.get('days_until_next_refresh')} 天",
+        f"刷新窗口：`{payload.get('refresh_window_label')}`",
         f"状态：{payload['status']}",
         "",
         "## Notion 连接状态",
@@ -19271,6 +19291,9 @@ def notion_monthly_refresh_workbench_en_markdown(payload: dict):
         f"Data source: `{source['data_source_url']}`",
         f"Active cycle start: {payload['active_cycle_start']}",
         f"Next refresh date: {payload['next_refresh_date']}",
+        f"Days since active refresh: {payload.get('days_since_active_refresh')}",
+        f"Days until next refresh: {payload.get('days_until_next_refresh')}",
+        f"Refresh window: `{payload.get('refresh_window_label')}`",
         f"Status: {payload['status']}",
         "",
         "## Notion Connector Status",
@@ -19619,6 +19642,9 @@ async def notion_monthly_refresh_evidence_csv(_: None = Depends(require_access_t
     write_row("summary", "monthly_refresh_status", status.get("status"), status.get("status"), status.get("next_action"), "Read-only app check.")
     write_row("summary", "active_cycle_start", status.get("active_cycle_start"), "info", "", "MYT monthly cycle date.")
     write_row("summary", "next_refresh_date", status.get("next_refresh_date"), "info", "", "Notion refreshes monthly on the 19th.")
+    write_row("summary", "days_since_active_refresh", status.get("days_since_active_refresh"), "info", "", "How many MYT calendar days have passed since the active 19th refresh.")
+    write_row("summary", "days_until_next_refresh", status.get("days_until_next_refresh"), "info", "", "How many MYT calendar days remain before the next 19th refresh.")
+    write_row("summary", "refresh_window_label", status.get("refresh_window_label"), "info", status.get("next_action"), "refresh_due_today / fresh_refresh_window / prepare_next_refresh / active_monthly_cycle.")
     write_row("summary", "local_monthly_asset_count", status.get("local_monthly_asset_count"), "info", "", "Non-published local monthly carousel assets.")
     write_row("summary", "imported_since_refresh_count", status.get("imported_since_refresh_count"), "info", "", "Assets created after active cycle start.")
     write_row("topic_id_guard", "duplicate_topic_ids", ", ".join(status.get("duplicate_topic_ids") or []) or "none", "blocked" if status.get("duplicate_topic_ids") else "clear", "Fix duplicates before image, caption, queue, or schedule work.", "Topic ID is the unique identifier.")

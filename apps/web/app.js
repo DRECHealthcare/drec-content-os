@@ -3083,12 +3083,16 @@ function renderNotionMonthlyRefreshStatus(data) {
   const topicIds = data.topic_ids || [];
   const diagnostics = data.diagnostics || [];
   const connectorStatus = data.connector_status || {};
+  const refreshWindow = data.refresh_window_label || "active_monthly_cycle";
   return `
     <article class="learning-card wide-learning" data-notion-refresh-status>
       <h3>Notion 月度刷新状态</h3>
       <p>${escapeHtml(statusLabel)}</p>
       <small>本轮开始 ${escapeHtml(data.active_cycle_start || "")} · 下次刷新 ${escapeHtml(data.next_refresh_date || "")}</small>
       <div class="summary-row">
+        <span>刷新后第 ${escapeHtml(String(data.days_since_active_refresh ?? ""))} 天</span>
+        <span>下次还有 ${escapeHtml(String(data.days_until_next_refresh ?? ""))} 天</span>
+        <span>${escapeHtml(refreshWindow)}</span>
         <span>本地月度内容 ${Number(data.local_monthly_asset_count || 0)}</span>
         <span>本轮导入 ${Number(data.imported_since_refresh_count || 0)}</span>
         <span>${escapeHtml(data.status || "checking")}</span>
@@ -3129,12 +3133,16 @@ function renderDashboardNotionRefreshStatus(data) {
   const missingTopicCount = Number(data.missing_topic_id_count || 0);
   const connectorStatus = data.connector_status || {};
   const health = duplicateCount || missingTopicCount ? "blocked" : data.status === "local_cycle_active" ? "done" : "open";
+  const refreshWindow = data.refresh_window_label || "active_monthly_cycle";
   container.innerHTML = `
     <article class="learning-card wide-learning ${escapeHtml(health)}" data-dashboard-notion-refresh-status>
       <h3>Notion 月度刷新</h3>
       <p>${escapeHtml(statusLabel)}</p>
       <small>本轮 ${escapeHtml(data.active_cycle_start || "")} · 下次 ${escapeHtml(data.next_refresh_date || "")}</small>
       <div class="summary-row">
+        <span>刷新后第 ${escapeHtml(String(data.days_since_active_refresh ?? ""))} 天</span>
+        <span>下次还有 ${escapeHtml(String(data.days_until_next_refresh ?? ""))} 天</span>
+        <span>${escapeHtml(refreshWindow)}</span>
         <span>本地月度内容 ${Number(data.local_monthly_asset_count || 0)}</span>
         <span>本轮导入 ${Number(data.imported_since_refresh_count || 0)}</span>
         <span>重复 Topic ID ${duplicateCount}</span>

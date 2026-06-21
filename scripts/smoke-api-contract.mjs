@@ -846,6 +846,16 @@ const requiredSnippets = [
     text: "monthly_refresh_day",
   },
   {
+    name: "notion carousel monthly refresh countdown",
+    file: "main",
+    text: "days_until_next_refresh",
+  },
+  {
+    name: "notion carousel monthly refresh window label",
+    file: "main",
+    text: "refresh_window_label",
+  },
+  {
     name: "notion connector csv fallback mode",
     file: "main",
     text: "csv_import_with_topic_id_dedupe",
@@ -3069,6 +3079,11 @@ const requiredSnippets = [
     name: "web dashboard notion refresh card",
     file: "web",
     text: "data-dashboard-notion-refresh-status",
+  },
+  {
+    name: "web dashboard notion refresh countdown",
+    file: "web",
+    text: "下次还有",
   },
   {
     name: "web dashboard notion refresh evidence action",
