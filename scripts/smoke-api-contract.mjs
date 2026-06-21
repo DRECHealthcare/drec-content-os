@@ -3727,6 +3727,21 @@ const requiredSnippets = [
     text: "download-metrics-template",
   },
   {
+    name: "web metrics primary load copy",
+    file: "webIndex",
+    text: "读取已发布帖子",
+  },
+  {
+    name: "web metrics primary save copy",
+    file: "webIndex",
+    text: "保存数据并学习",
+  },
+  {
+    name: "web metrics collapsed secondary tools",
+    file: "webIndex",
+    text: "更多：下载 / CSV 导入",
+  },
+  {
     name: "web metrics closeout action",
     file: "web",
     text: "download-metrics-closeout",

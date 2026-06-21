@@ -10953,17 +10953,17 @@ async function rollupLatestMetricFromCurrentForm() {
 
 document.getElementById("load-published-post").addEventListener("click", async () => {
   const message = document.getElementById("metric-message");
-  message.textContent = "Loading latest published post...";
+  message.textContent = "正在读取已发布帖子...";
   try {
     const data = await fetchJson("/metrics/published-source?limit=10");
     if (!data.latest) {
-      message.textContent = data.message || "No published post with a Meta ID is ready for metrics.";
+      message.textContent = data.message || "目前没有已发布并带 Post ID 的帖子等待录数据。";
       return;
     }
     prefillPerformanceFromQueueItem(data.latest);
-    message.textContent = `Loaded ${data.latest.channel} post ${data.latest.external_post_id}. Add metrics, then save or roll up.`;
+    message.textContent = `已读取 ${data.latest.channel} 帖子 ${data.latest.external_post_id}。填写数据后，按“保存数据并学习”。`;
   } catch (error) {
-    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not load a published post.";
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : "无法读取已发布帖子。";
   }
 });
 
@@ -10984,16 +10984,16 @@ document.getElementById("save-rollup-metric").addEventListener("click", async ()
   const message = document.getElementById("metric-message");
   const button = document.getElementById("save-rollup-metric");
   const originalText = button.textContent;
-  message.textContent = "Saving metrics and creating outcome...";
+  message.textContent = "正在保存数据并回流学习...";
   button.disabled = true;
-  button.textContent = "Working";
+  button.textContent = "处理中";
   try {
     await saveRawMetricFromCurrentForm();
     await rollupLatestMetricFromCurrentForm();
-    message.textContent = "Metrics saved and outcome created.";
+    message.textContent = "数据已保存，并已生成学习结果。";
     await Promise.all([loadOutcomes(), loadLoopStatus(), loadLearningSummary(), loadPublishingCloseout(), loadHomePublishingCloseout(), loadProjectCompletionAudit()]);
   } catch (error) {
-    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not save and roll up metrics.";
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : "无法保存数据或生成学习结果。";
   } finally {
     button.disabled = false;
     button.textContent = originalText;
