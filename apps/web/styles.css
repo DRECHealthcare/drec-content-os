@@ -320,7 +320,8 @@ header span { color: var(--muted); font-size: 12px; }
 }
 
 .home-doctor-reply,
-.home-production-reply {
+.home-production-reply,
+.home-queue-action {
   margin-top: 14px;
   border-left: 6px solid var(--orange);
 }
@@ -329,8 +330,13 @@ header span { color: var(--muted); font-size: 12px; }
   border-left-color: var(--teal);
 }
 
+.home-queue-action {
+  border-left-color: var(--navy2);
+}
+
 .home-doctor-reply[hidden],
-.home-production-reply[hidden] {
+.home-production-reply[hidden],
+.home-queue-action[hidden] {
   display: none;
 }
 

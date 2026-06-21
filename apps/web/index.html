@@ -102,6 +102,21 @@
         <div id="home-production-reply-message" class="status-note"></div>
         <div id="home-production-reply-preview" class="learning-grid"></div>
       </div>
+      <div id="home-queue-action-card" class="card wide home-queue-action" hidden>
+        <div class="workflow-head">
+          <div>
+            <h2>图片合格后，在这里加入队列</h2>
+            <p class="section-note">先预览，只会处理 ready_to_queue 的内容。入队不是发布，后面仍需审核、排程和人工发布交接。</p>
+          </div>
+          <button id="home-download-queue-readiness" type="button">下载入队检查表</button>
+        </div>
+        <div class="form-actions">
+          <button id="home-preview-monthly-queue-ready" type="button">预览入队</button>
+          <button id="home-run-monthly-queue-ready" class="danger-safe-action" type="button">执行入队</button>
+        </div>
+        <div id="home-queue-action-message" class="status-note"></div>
+        <div id="home-queue-action-preview" class="learning-grid"></div>
+      </div>
       <details class="dashboard-details">
         <summary>查看系统详情和高级测试</summary>
         <div class="card wide">

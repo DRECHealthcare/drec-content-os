@@ -2915,6 +2915,21 @@ const requiredSnippets = [
     text: "data-simple-paste-production-reply",
   },
   {
+    name: "web home queue action card",
+    file: "webIndex",
+    text: "home-queue-action-card",
+  },
+  {
+    name: "web home monthly queue preview",
+    file: "web",
+    text: "home-preview-monthly-queue-ready",
+  },
+  {
+    name: "web simple monthly queue action",
+    file: "web",
+    text: "data-simple-preview-monthly-queue",
+  },
+  {
     name: "web dashboard monthly doctor send message action",
     file: "web",
     text: "data-download-dashboard-monthly-doctor-message",

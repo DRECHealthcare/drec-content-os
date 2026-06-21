@@ -2505,7 +2505,8 @@ function renderSimpleOperator(data, monthly = null) {
     status = "可预览入队 · 不会发布";
     actions = `
       <button class="primary" type="button" data-simple-download-monthly-queue-readiness>下载入队检查表</button>
-      <button type="button" data-simple-open-assets>打开素材页查看</button>
+      <button type="button" data-simple-preview-monthly-queue>预览入队</button>
+      <button type="button" data-simple-run-monthly-queue>执行入队</button>
       <button type="button" data-simple-refresh>刷新状态</button>
     `;
     safetyNote = "安全锁：入队后仍需队列审核、排程检查和发布交接。";
@@ -2564,6 +2565,10 @@ function renderSimpleOperator(data, monthly = null) {
   const homeProductionReplyCard = document.getElementById("home-production-reply-card");
   if (homeProductionReplyCard) {
     homeProductionReplyCard.hidden = Number(monthlyGateCounts.waiting_final_media || 0) <= 0 && Number(monthlyGateCounts.waiting_visual_qa || 0) <= 0;
+  }
+  const homeQueueActionCard = document.getElementById("home-queue-action-card");
+  if (homeQueueActionCard) {
+    homeQueueActionCard.hidden = Number(monthlyGateCounts.ready_to_queue || 0) <= 0;
   }
 }
 
@@ -5815,6 +5820,8 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   const openScheduler = event.target.closest("[data-simple-open-scheduler]");
   const pasteDoctorReply = event.target.closest("[data-simple-paste-doctor-reply]");
   const pasteProductionReply = event.target.closest("[data-simple-paste-production-reply]");
+  const previewMonthlyQueue = event.target.closest("[data-simple-preview-monthly-queue]");
+  const runMonthlyQueue = event.target.closest("[data-simple-run-monthly-queue]");
   const downloadMonthlyDoctorHandoff = event.target.closest("[data-simple-download-monthly-doctor-handoff]");
   const downloadMonthlyDoctorMessage = event.target.closest("[data-simple-download-monthly-doctor-message]");
   const downloadMonthlyActionQueue = event.target.closest("[data-simple-download-monthly-action-queue]");
@@ -5827,7 +5834,7 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   const downloadPostPublish = event.target.closest("[data-simple-download-post-publish]");
   const downloadPostMetrics = event.target.closest("[data-simple-download-post-metrics]");
   const refresh = event.target.closest("[data-simple-refresh]");
-  if (!runReadyAssets && !openAssets && !openReview && !openScheduler && !pasteDoctorReply && !pasteProductionReply && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadTodayPack && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !refresh) return;
+  if (!runReadyAssets && !openAssets && !openReview && !openScheduler && !pasteDoctorReply && !pasteProductionReply && !previewMonthlyQueue && !runMonthlyQueue && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadTodayPack && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !refresh) return;
   if (refresh) {
     await loadLoopStatus();
     await loadDashboardMonthlyActionQueue();
@@ -5861,6 +5868,20 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
       card.scrollIntoView({ behavior: "smooth", block: "start" });
       document.getElementById("home-production-reply-text")?.focus();
     }
+    return;
+  }
+  if (previewMonthlyQueue || runMonthlyQueue) {
+    const card = document.getElementById("home-queue-action-card");
+    if (card) {
+      card.hidden = false;
+      card.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    await runMonthlyCarouselQueueReady({
+      dryRun: Boolean(previewMonthlyQueue),
+      messageId: "home-queue-action-message",
+      targetId: "home-queue-action-preview",
+    });
+    await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit()]);
     return;
   }
   if (downloadMonthlyDoctorHandoff) {
@@ -5967,6 +5988,33 @@ document.getElementById("home-import-production-replies")?.addEventListener("cli
     producerInputId: "home-production-reply-producer",
     messageId: "home-production-reply-message",
     previewTargetId: "home-production-reply-preview",
+  });
+  await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit()]);
+});
+
+document.getElementById("home-download-queue-readiness")?.addEventListener("click", async () => {
+  const message = document.getElementById("home-queue-action-message");
+  try {
+    await downloadProtectedFile("/operations/monthly-carousel-queue-readiness.zh.md", "drec-monthly-carousel-queue-readiness-zh.md", "text/markdown");
+    if (message) message.textContent = "入队检查表已下载。";
+  } catch (error) {
+    if (message) message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : "无法下载入队检查表。";
+  }
+});
+
+document.getElementById("home-preview-monthly-queue-ready")?.addEventListener("click", async () => {
+  await runMonthlyCarouselQueueReady({
+    dryRun: true,
+    messageId: "home-queue-action-message",
+    targetId: "home-queue-action-preview",
+  });
+});
+
+document.getElementById("home-run-monthly-queue-ready")?.addEventListener("click", async () => {
+  await runMonthlyCarouselQueueReady({
+    dryRun: false,
+    messageId: "home-queue-action-message",
+    targetId: "home-queue-action-preview",
   });
   await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit()]);
 });
@@ -7440,20 +7488,24 @@ async function uploadMonthlyCarouselEvidenceBridge({ dryRun }) {
   }
 }
 
-async function runMonthlyCarouselQueueReady({ dryRun }) {
-  const message = document.getElementById("media-message");
-  message.textContent = dryRun ? "Previewing monthly queue..." : "Queueing monthly ready items...";
+async function runMonthlyCarouselQueueReady({
+  dryRun,
+  messageId = "media-message",
+  targetId = "asset-media-attachment-preview",
+} = {}) {
+  const message = document.getElementById(messageId);
+  if (message) message.textContent = dryRun ? "Previewing monthly queue..." : "Queueing monthly ready items...";
   try {
     const data = await fetchJson(`/operations/monthly-carousel-queue-ready?dry_run=${dryRun ? "true" : "false"}`, {
       method: "POST",
     });
-    message.textContent = data.message || (dryRun
+    if (message) message.textContent = data.message || (dryRun
       ? translateText("Monthly carousel queue preview complete.")
       : translateText("Monthly carousel ready items queued."));
-    renderMonthlyQueueResult(data);
+    renderMonthlyQueueResult(data, targetId);
     if (!dryRun) await Promise.all([loadAssets(), loadMonthlyCarouselStatusBoard(), loadPreScheduleGate(), loadLoopStatus()]);
   } catch (error) {
-    message.textContent = error.message === "Access token required"
+    if (message) message.textContent = error.message === "Access token required"
       ? translateText("Set the access token first.")
       : dryRun
         ? translateText("Could not preview monthly carousel queue.")
