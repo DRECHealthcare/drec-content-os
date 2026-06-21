@@ -67,7 +67,7 @@
             <h2>医生回复区</h2>
             <p class="section-note">把医生回复贴进来，先检查，再导入。没有明确 approve + Safety clear 时，系统不会往下走。</p>
           </div>
-          <button id="home-fill-doctor-reply-template" type="button">重新填模板</button>
+          <button id="home-fill-doctor-reply-template" type="button">填回复模板</button>
         </div>
         <label>
           医生回复内容
@@ -77,9 +77,17 @@
           医生/审核人姓名
           <input id="home-doctor-reply-reviewer" placeholder="Dr. name">
         </label>
+        <div class="home-doctor-csv-import">
+          <label>
+            医生审核表 CSV
+            <input id="home-monthly-doctor-worksheet-file" type="file" accept=".csv,text/csv">
+          </label>
+          <button id="home-preview-monthly-doctor-worksheet" type="button">检查医生表</button>
+          <button id="home-import-monthly-doctor-worksheet" class="danger-safe-action" type="button">导入医生表</button>
+        </div>
         <div class="form-actions">
-          <button id="home-preview-doctor-replies-safe-advance" type="button">1. 先检查</button>
-          <button id="home-import-doctor-replies-safe-advance" class="danger-safe-action" type="button">2. 确认导入</button>
+          <button id="home-preview-doctor-replies-safe-advance" type="button">检查文字回复</button>
+          <button id="home-import-doctor-replies-safe-advance" class="danger-safe-action" type="button">导入文字回复</button>
         </div>
         <div id="home-doctor-reply-message" class="status-note"></div>
         <div id="home-doctor-reply-preview" class="learning-grid"></div>

@@ -926,6 +926,22 @@ header span { color: var(--muted); font-size: 12px; }
   resize: vertical;
 }
 
+.home-doctor-csv-import {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto auto;
+  gap: 10px;
+  align-items: end;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #F8FAFC;
+}
+
+.home-doctor-csv-import label {
+  margin-top: 0;
+}
+
 .danger-safe-action {
   border-color: var(--green) !important;
   background: #ECFDF5 !important;
@@ -2172,6 +2188,8 @@ button[type="submit"] {
   .workflow-primary button { width: 100%; }
   .primary-toolbar { grid-template-columns: 1fr; }
   .primary-toolbar .toolbar-kicker { grid-column: 1; }
+  .home-doctor-csv-import { grid-template-columns: 1fr; }
+  .home-doctor-csv-import button { width: 100%; }
   .asset-toolbar button,
   .asset-toolbar .file-action,
   .compact-tool-group[open] button,

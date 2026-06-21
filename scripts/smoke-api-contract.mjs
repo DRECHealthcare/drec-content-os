@@ -3156,6 +3156,26 @@ const requiredSnippets = [
     text: "textInputId: \"home-doctor-reply-text\"",
   },
   {
+    name: "web home monthly doctor worksheet file input",
+    file: "webIndex",
+    text: "home-monthly-doctor-worksheet-file",
+  },
+  {
+    name: "web home monthly doctor worksheet preview",
+    file: "web",
+    text: "home-preview-monthly-doctor-worksheet",
+  },
+  {
+    name: "web home monthly doctor worksheet import",
+    file: "web",
+    text: "home-import-monthly-doctor-worksheet",
+  },
+  {
+    name: "web monthly doctor worksheet can render on home card",
+    file: "web",
+    text: "renderAssetReviewDecisionPreview(data, previewTargetId)",
+  },
+  {
     name: "web home production reply card",
     file: "webIndex",
     text: "home-production-reply-card",

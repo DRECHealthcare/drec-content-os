@@ -6535,6 +6535,29 @@ document.getElementById("home-import-doctor-replies-safe-advance")?.addEventList
   await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit()]);
 });
 
+document.getElementById("home-preview-monthly-doctor-worksheet")?.addEventListener("click", async () => {
+  await uploadAssetReviewDecisions({
+    dryRun: true,
+    fileInputId: "home-monthly-doctor-worksheet-file",
+    allowPastedCsv: false,
+    source: "monthly_doctor",
+    messageId: "home-doctor-reply-message",
+    previewTargetId: "home-doctor-reply-preview",
+  });
+});
+
+document.getElementById("home-import-monthly-doctor-worksheet")?.addEventListener("click", async () => {
+  await uploadAssetReviewDecisions({
+    dryRun: false,
+    fileInputId: "home-monthly-doctor-worksheet-file",
+    allowPastedCsv: false,
+    source: "monthly_doctor",
+    messageId: "home-doctor-reply-message",
+    previewTargetId: "home-doctor-reply-preview",
+  });
+  await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit()]);
+});
+
 document.getElementById("home-fill-production-reply-template")?.addEventListener("click", async () => {
   await fillProductionReplyTemplate({
     textInputId: "home-production-reply-text",
@@ -8153,23 +8176,33 @@ function renderMonthlySafeAdvanceResult(data, targetId = "asset-media-attachment
   `;
 }
 
-async function uploadAssetReviewDecisions({ dryRun, fileInputId = "asset-review-decisions-file", allowPastedCsv = true, source = "review" }) {
-  const message = document.getElementById("media-message");
+async function uploadAssetReviewDecisions({
+  dryRun,
+  fileInputId = "asset-review-decisions-file",
+  allowPastedCsv = true,
+  source = "review",
+  messageId = "media-message",
+  textInputId = "asset-review-decisions-text",
+  previewTargetId = "asset-review-decision-preview",
+}) {
+  const message = document.getElementById(messageId);
   const fileInput = document.getElementById(fileInputId);
-  const textInput = document.getElementById("asset-review-decisions-text");
+  const textInput = document.getElementById(textInputId);
   const file = fileInput?.files?.[0];
   const pastedCsv = allowPastedCsv ? (textInput?.value?.trim() || "") : "";
   if (!file && !pastedCsv) {
-    message.textContent = translateText(source === "monthly_doctor" ? "Choose the monthly doctor worksheet CSV first." : "Choose a review decision CSV or paste decision CSV text first.");
+    if (message) message.textContent = translateText(source === "monthly_doctor" ? "Choose the monthly doctor worksheet CSV first." : "Choose a review decision CSV or paste decision CSV text first.");
     return;
   }
   const body = new FormData();
   const uploadFile = file || new File([pastedCsv], source === "monthly_doctor" ? "monthly-carousel-doctor-worksheet.csv" : "pasted-asset-review-decisions.csv", { type: "text/csv" });
   body.append("file", uploadFile);
   body.append("dry_run", dryRun ? "true" : "false");
-  message.textContent = dryRun
-    ? translateText(source === "monthly_doctor" ? "Previewing monthly doctor worksheet..." : "Previewing review decisions...")
-    : translateText(source === "monthly_doctor" ? "Importing monthly doctor worksheet..." : "Importing review decisions...");
+  if (message) {
+    message.textContent = dryRun
+      ? translateText(source === "monthly_doctor" ? "Previewing monthly doctor worksheet..." : "Previewing review decisions...")
+      : translateText(source === "monthly_doctor" ? "Importing monthly doctor worksheet..." : "Importing review decisions...");
+  }
   try {
     const endpoint = source === "monthly_doctor"
       ? "/operations/import-monthly-carousel-doctor-worksheet"
@@ -8177,17 +8210,21 @@ async function uploadAssetReviewDecisions({ dryRun, fileInputId = "asset-review-
     const data = await fetchForm(endpoint, body);
     if (!dryRun) fileInput.value = "";
     if (!dryRun && !file && textInput) textInput.value = "";
-    message.textContent = data.message || (dryRun
-      ? translateText(source === "monthly_doctor" ? "Monthly doctor worksheet previewed." : "Review decisions previewed.")
-      : translateText(source === "monthly_doctor" ? "Monthly doctor worksheet imported." : "Review decisions imported."));
-    renderAssetReviewDecisionPreview(data);
+    if (message) {
+      message.textContent = data.message || (dryRun
+        ? translateText(source === "monthly_doctor" ? "Monthly doctor worksheet previewed." : "Review decisions previewed.")
+        : translateText(source === "monthly_doctor" ? "Monthly doctor worksheet imported." : "Review decisions imported."));
+    }
+    renderAssetReviewDecisionPreview(data, previewTargetId);
     if (!dryRun) await Promise.all([loadAssets(), loadFirstCycleEvidenceWorkbench(), loadDoctorSendQueue(), loadDoctorReplyInboxPack(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadMonthlyCarouselStatusBoard(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
   } catch (error) {
-    message.textContent = error.message === "Access token required"
-      ? translateText("Set the access token first.")
-      : dryRun
-        ? translateText(source === "monthly_doctor" ? "Could not preview monthly doctor worksheet." : "Could not preview review decisions.")
-        : translateText(source === "monthly_doctor" ? "Could not import monthly doctor worksheet." : "Could not import review decisions.");
+    if (message) {
+      message.textContent = error.message === "Access token required"
+        ? translateText("Set the access token first.")
+        : dryRun
+          ? translateText(source === "monthly_doctor" ? "Could not preview monthly doctor worksheet." : "Could not preview review decisions.")
+          : translateText(source === "monthly_doctor" ? "Could not import monthly doctor worksheet." : "Could not import review decisions.");
+    }
   }
 }
 
