@@ -778,6 +778,12 @@ header span { color: var(--muted); font-size: 12px; }
   font-size: 12px;
 }
 
+.home-record-published-hint {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
 .home-closeout-steps li.active {
   border-color: var(--teal);
   background: #F0FDFA;

@@ -4146,6 +4146,11 @@ const requiredSnippets = [
     text: "记录人工发布",
   },
   {
+    name: "web manual publish suggested label hint",
+    file: "web",
+    text: "建议人工标签",
+  },
+  {
     name: "web manual publish prompt safety copy",
     file: "web",
     text: "这里不会自动发帖",

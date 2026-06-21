@@ -6872,13 +6872,20 @@ document.getElementById("home-publish-closeout-status")?.addEventListener("click
     const more = document.querySelector(".home-manual-more");
     const select = document.getElementById("home-record-published-item");
     const input = document.getElementById("home-record-published-id");
+    const hint = document.getElementById("home-record-published-hint");
+    const suggestedLabel = item.manual_label_suggestion || `manual-${item.channel || "post"}-${(item.planned_slot || "").slice(0, 10).replaceAll("-", "") || "date"}-${String(item.id || "").slice(0, 8)}`;
+    const dueDate = item.metrics_due_date || "发布后 7 天";
     if (more) more.open = true;
     if (select) select.value = itemId;
     if (input) {
       input.value = "";
+      input.placeholder = `真实 Meta Post ID；非 Meta 可用 ${suggestedLabel}`;
       input.focus();
     }
-    if (message) message.textContent = "已选中这条内容。人工发布完成后，把真实 Meta Post ID 填进来，再按“只记录，不发布”。";
+    if (hint) {
+      hint.textContent = `建议人工标签：${suggestedLabel}。数据回填建议：${dueDate}。优先填真实 Meta Post ID；如果不是 Meta 发布，才使用人工标签。`;
+    }
+    if (message) message.textContent = "已选中这条内容。人工发布完成后，把真实 Meta Post ID 填进来，再按“保存记录（不会发布）”。";
     return;
   }
   const text = fullButton
