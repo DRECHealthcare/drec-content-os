@@ -196,6 +196,7 @@ const requiredRoutes = [
   "GET /operations/publishing-handoff.zh.md",
   "GET /operations/post-publish-next-steps",
   "GET /operations/post-publish-next-steps.zh.md",
+  "GET /operations/manual-publish-evidence.csv",
   "GET /operations/post-publish-metrics-template.csv",
   "GET /briefs/plan.csv",
   "GET /briefs/asset-pack.md",
@@ -3851,6 +3852,11 @@ const requiredSnippets = [
     text: "/operations/post-publish-next-steps.zh.md",
   },
   {
+    name: "web manual publish evidence endpoint",
+    file: "web",
+    text: "/operations/manual-publish-evidence.csv",
+  },
+  {
     name: "web post-publish metrics template action",
     file: "web",
     text: "download-post-publish-metrics-template",
@@ -5144,6 +5150,11 @@ const requiredSnippets = [
     name: "web home publishing handoff action",
     file: "webIndex",
     text: "home-download-publishing-handoff",
+  },
+  {
+    name: "web home manual publish evidence action",
+    file: "webIndex",
+    text: "home-download-manual-publish-evidence",
   },
   {
     name: "web home post publish action",

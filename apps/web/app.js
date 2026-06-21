@@ -2727,6 +2727,7 @@ function renderSimpleOperator(data, monthly = null, cycle = null) {
         <summary>更多工具</summary>
         <button type="button" data-simple-open-scheduler>看排程</button>
         <button type="button" data-simple-download-handoff>交接包</button>
+        <button type="button" data-simple-download-manual-publish-evidence>发布证据表</button>
         <button type="button" data-simple-download-post-publish>发布后下一步</button>
         <button type="button" data-simple-download-post-metrics>数据表</button>
         <button type="button" data-simple-download-reel>Reel 制作包</button>
@@ -6300,6 +6301,7 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   const downloadMonthlyProductionQa = event.target.closest("[data-simple-download-monthly-production-qa]");
   const downloadMonthlyQueueReadiness = event.target.closest("[data-simple-download-monthly-queue-readiness]");
   const downloadHandoff = event.target.closest("[data-simple-download-handoff]");
+  const downloadManualPublishEvidence = event.target.closest("[data-simple-download-manual-publish-evidence]");
   const downloadTodayPack = event.target.closest("[data-simple-download-today-pack]");
   const downloadReel = event.target.closest("[data-simple-download-reel]");
   const downloadPostPublish = event.target.closest("[data-simple-download-post-publish]");
@@ -6311,7 +6313,7 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   const openCycleScreen = event.target.closest("[data-simple-open-cycle-screen]");
   const downloadCycleCommandCenter = event.target.closest("[data-simple-download-cycle-command-center]");
   const refresh = event.target.closest("[data-simple-refresh]");
-  if (!openAccess && !runReadyAssets && !openAssets && !openReview && !openScheduler && !pasteDoctorReply && !pasteProductionReply && !previewMonthlyQueue && !runMonthlyQueue && !downloadMonthlyReviewQueue && !pasteReviewDecisions && !scheduleApprovedFromHome && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadTodayPack && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !openLearning && !useLearningTopics && !downloadWeeklyReportZh && !downloadNextPlanHandback && !openCycleScreen && !downloadCycleCommandCenter && !refresh) return;
+  if (!openAccess && !runReadyAssets && !openAssets && !openReview && !openScheduler && !pasteDoctorReply && !pasteProductionReply && !previewMonthlyQueue && !runMonthlyQueue && !downloadMonthlyReviewQueue && !pasteReviewDecisions && !scheduleApprovedFromHome && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadManualPublishEvidence && !downloadTodayPack && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !openLearning && !useLearningTopics && !downloadWeeklyReportZh && !downloadNextPlanHandback && !openCycleScreen && !downloadCycleCommandCenter && !refresh) return;
   if (openAccess) {
     const panel = document.getElementById("token-panel");
     if (panel?.hidden) showTokenPanel();
@@ -6438,6 +6440,10 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   }
   if (downloadHandoff) {
     await downloadProtectedFile("/operations/publishing-handoff.zh.md", "drec-publishing-handoff-zh.md", "text/markdown");
+    return;
+  }
+  if (downloadManualPublishEvidence) {
+    await downloadProtectedFile("/operations/manual-publish-evidence.csv", "drec-manual-publish-evidence.csv", "text/csv");
     return;
   }
   if (downloadReel) {
@@ -6625,6 +6631,10 @@ document.getElementById("home-download-today-safe-pack")?.addEventListener("clic
 
 document.getElementById("home-download-publishing-handoff")?.addEventListener("click", async () => {
   await downloadHomePublishCloseout("/operations/publishing-handoff.zh.md", "drec-publishing-handoff-zh.md", "text/markdown", "发布交接包已下载。");
+});
+
+document.getElementById("home-download-manual-publish-evidence")?.addEventListener("click", async () => {
+  await downloadHomePublishCloseout("/operations/manual-publish-evidence.csv", "drec-manual-publish-evidence.csv", "text/csv", "发布证据表已下载。");
 });
 
 document.getElementById("home-download-post-publish-next")?.addEventListener("click", async () => {

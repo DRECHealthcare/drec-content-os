@@ -24482,6 +24482,92 @@ def post_publish_metrics_template_csv(payload: dict):
     return output.getvalue()
 
 
+def safe_csv_text(value, limit: int = 500):
+    text = str(value or "").replace("\r", " ").replace("\n", " ").strip()
+    return text[:limit]
+
+
+def manual_publish_metric_due_date(item: dict):
+    planned = parse_datetime(item.get("planned_slot"))
+    if not planned:
+        return ""
+    return (planned + timedelta(days=7)).date().isoformat()
+
+
+def manual_publish_evidence_csv(payload: dict):
+    output = StringIO()
+    fieldnames = [
+        "row_type",
+        "queue_id",
+        "asset_id",
+        "channel",
+        "format",
+        "planned_slot",
+        "manual_label_suggestion",
+        "caption_preview",
+        "media_urls",
+        "pre_publish_checklist",
+        "handoff_blockers",
+        "real_meta_post_id",
+        "posted_url",
+        "posted_at",
+        "published_by",
+        "recorded_in_drec",
+        "metrics_due_date",
+        "notes",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    ready_items = payload.get("ready_items") or []
+    for item in ready_items:
+        writer.writerow(
+            {
+                "row_type": "ready_to_publish",
+                "queue_id": item.get("queue_id") or "",
+                "asset_id": item.get("asset_id") or "",
+                "channel": item.get("channel") or "",
+                "format": item.get("format") or "",
+                "planned_slot": item.get("planned_slot") or "",
+                "manual_label_suggestion": item.get("manual_label_suggestion") or "",
+                "caption_preview": safe_csv_text(item.get("caption")),
+                "media_urls": " | ".join([url for url in item.get("media_urls") or [] if url]),
+                "pre_publish_checklist": "doctor/human approved; safety clear; media opens; caption matches plan; publish manually only",
+                "handoff_blockers": "",
+                "real_meta_post_id": "",
+                "posted_url": "",
+                "posted_at": "",
+                "published_by": "",
+                "recorded_in_drec": "no",
+                "metrics_due_date": manual_publish_metric_due_date(item),
+                "notes": "Fill the real Meta post ID after a human publishes. Do not mark recorded_in_drec=yes until DREC shows this queue item as published.",
+            }
+        )
+    for item in payload.get("blocked_items") or []:
+        writer.writerow(
+            {
+                "row_type": "blocked_do_not_publish",
+                "queue_id": item.get("id") or "",
+                "asset_id": item.get("asset_id") or "",
+                "channel": item.get("channel") or "",
+                "format": item.get("format") or "",
+                "planned_slot": item.get("planned_slot") or "",
+                "manual_label_suggestion": manual_publish_label(item),
+                "caption_preview": safe_csv_text(item.get("caption")),
+                "media_urls": " | ".join([url for url in item.get("media_urls") or [] if url]),
+                "pre_publish_checklist": "do not publish until blockers are fixed",
+                "handoff_blockers": "; ".join(item.get("handoff_blockers") or []),
+                "real_meta_post_id": "",
+                "posted_url": "",
+                "posted_at": "",
+                "published_by": "",
+                "recorded_in_drec": "no",
+                "metrics_due_date": "",
+                "notes": "This row is included so the operator can see why it must not be published.",
+            }
+        )
+    return output.getvalue()
+
+
 def today_safe_project_completion_snapshot(loop: dict, workflow: dict, security: dict, automation: dict):
     completion = workflow.get("completion") or build_completion_status(loop, workflow, security, automation)
     return {
@@ -24623,11 +24709,12 @@ def today_safe_operator_pack_readme(payload: dict):
         "1. `01-publishing-handoff.txt`：人工发布时复制文案和媒体链接。",
         "2. `02-monthly-carousel-publishing-handoff.txt`：只看月度 Carousel 的交接项目。",
         "3. `03-post-publish-next-steps.json`：发布后要回填 ID 和数据的清单。",
-        "4. `04-post-publish-metrics-template.csv`：发布 7 天后再填写，不要提前导入。",
-        "5. `05-schedule-audit.json`：排程阻碍和提醒。",
-        "6. `08-service-role-install-pack.md`：解除 93% 卡点的 Supabase service-role 安装步骤。",
-        "7. `09-project-completion-audit.json`：当前完成度、扣分项和证据。",
-        "8. `10-project-unblock-board.json`：从 93% 继续往完成走的真实证据清单。",
+        "4. `04-manual-publish-evidence.csv`：真人发布时勾选和回填 post ID 的证据表。",
+        "5. `05-post-publish-metrics-template.csv`：发布 7 天后再填写，不要提前导入。",
+        "6. `06-schedule-audit.json`：排程阻碍和提醒。",
+        "7. `09-service-role-install-pack.md`：解除 93% 卡点的 Supabase service-role 安装步骤。",
+        "8. `10-project-completion-audit.json`：当前完成度、扣分项和证据。",
+        "9. `11-project-unblock-board.json`：从 93% 继续往完成走的真实证据清单。",
         "",
         "## 下一步",
         "",
@@ -24653,14 +24740,18 @@ async def operations_today_safe_operator_pack_zip(_: None = Depends(require_acce
         archive.writestr("01-publishing-handoff.txt", (payload.get("handoff") or {}).get("handoff_text") or "暂无发布交接内容。")
         archive.writestr("02-monthly-carousel-publishing-handoff.txt", (payload.get("monthly_handoff") or {}).get("handoff_text") or "暂无月度 Carousel 交接内容。")
         archive.writestr("03-post-publish-next-steps.json", json.dumps(payload.get("post_publish") or {}, ensure_ascii=False, indent=2, default=str))
-        archive.writestr("04-post-publish-metrics-template.csv", post_publish_metrics_template_csv(payload.get("post_publish") or {}))
-        archive.writestr("05-schedule-audit.json", json.dumps(payload.get("schedule_audit") or {}, ensure_ascii=False, indent=2, default=str))
-        archive.writestr("06-security-status.json", json.dumps(payload.get("security") or {}, ensure_ascii=False, indent=2, default=str))
-        archive.writestr("07-workflow-status.json", json.dumps({
+        archive.writestr("04-manual-publish-evidence.csv", manual_publish_evidence_csv(payload.get("post_publish") or {}))
+        archive.writestr("05-post-publish-metrics-template.csv", post_publish_metrics_template_csv(payload.get("post_publish") or {}))
+        archive.writestr("06-schedule-audit.json", json.dumps(payload.get("schedule_audit") or {}, ensure_ascii=False, indent=2, default=str))
+        archive.writestr("07-security-status.json", json.dumps(payload.get("security") or {}, ensure_ascii=False, indent=2, default=str))
+        archive.writestr("08-workflow-status.json", json.dumps({
             "loop": payload.get("loop") or {},
             "workflow": payload.get("workflow") or {},
             "automation": payload.get("automation") or {},
         }, ensure_ascii=False, indent=2, default=str))
+        archive.writestr("09-service-role-install-pack.md", service_role_install_pack_markdown(payload.get("security") or {}))
+        archive.writestr("10-project-completion-audit.json", json.dumps(payload.get("project_completion") or {}, ensure_ascii=False, indent=2, default=str))
+        archive.writestr("11-project-unblock-board.json", json.dumps(payload.get("project_unblock") or {}, ensure_ascii=False, indent=2, default=str))
         archive.writestr("08-service-role-install-pack.md", service_role_install_pack_markdown(payload.get("security") or {}))
         archive.writestr("09-project-completion-audit.json", json.dumps(payload.get("project_completion") or {}, ensure_ascii=False, indent=2, default=str))
         archive.writestr("10-project-unblock-board.json", json.dumps(payload.get("project_unblock") or {}, ensure_ascii=False, indent=2, default=str))
@@ -25820,6 +25911,16 @@ async def post_publish_next_steps_payload():
 @app.get("/operations/post-publish-next-steps")
 async def operations_post_publish_next_steps(_: None = Depends(require_access_token)):
     return await post_publish_next_steps_payload()
+
+
+@app.get("/operations/manual-publish-evidence.csv")
+async def operations_manual_publish_evidence_csv(_: None = Depends(require_access_token)):
+    payload = await post_publish_next_steps_payload()
+    return Response(
+        manual_publish_evidence_csv(payload),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-manual-publish-evidence.csv"'},
+    )
 
 
 @app.get("/operations/post-publish-next-steps.zh.md")
