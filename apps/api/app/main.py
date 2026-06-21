@@ -10583,6 +10583,7 @@ async def monthly_carousel_doctor_reply_templates_payload():
                     f"Topic ID: {item.get('topic_id')}",
                     f"Topic: {item.get('topic')}",
                     f"Asset ID: {item.get('asset_id')}",
+                    "Reviewer Name:",
                     "Decision: approve / needs edits / reject",
                     "Safety: clear / needs review / blocked",
                     "Use polished copy: no",
@@ -16813,6 +16814,10 @@ def parse_doctor_reply_blocks(reply_text: str):
         if match:
             current["use_polished_copy"] = match.group(2).strip()
             continue
+        match = re.match(r"^(reviewer|reviewer\s*name|doctor|doctor\s*name|审核人|医生姓名)\s*[:：]\s*(.+)$", line, flags=re.IGNORECASE)
+        if match:
+            current["reviewer_name"] = match.group(2).strip()
+            continue
         match = re.match(r"^(doctor_check_[a-z0-9_]+)\s*[:：]\s*(.+)$", line, flags=re.IGNORECASE)
         if match:
             current[match.group(1).strip().lower()] = match.group(2).strip()
@@ -17297,6 +17302,7 @@ async def import_doctor_replies(
     if not rows:
         skipped.append({"row": 1, "reason": "No doctor reply blocks found. Use Asset ID, Decision, Safety, and Notes lines."})
     fallback_reviewer = (payload.reviewer_name or "").strip()
+    has_monthly_carousel_rows = False
     for index, row in enumerate(rows, start=1):
         asset_id = (row.get("asset_id") or "").strip()
         if not asset_id:
@@ -17317,13 +17323,15 @@ async def import_doctor_replies(
             skipped.append({"row": index, "asset_id": asset_id, "reason": "Asset not found."})
             continue
         target_safety = safety_decision or existing.get("compliance_status")
+        reviewer_name = (row.get("reviewer_name") or "").strip() or fallback_reviewer
         if review_decision == "approved" and target_safety != "clear":
             skipped.append({"row": index, "asset_id": asset_id, "reason": "Approval requires Safety: clear or an already clear asset."})
             continue
         is_monthly_carousel = bool(monthly_carousel_topic_id(existing))
+        has_monthly_carousel_rows = has_monthly_carousel_rows or is_monthly_carousel
         if is_monthly_carousel and review_decision == "approved":
             missing_evidence = []
-            if not fallback_reviewer:
+            if not reviewer_name:
                 missing_evidence.append("reviewer_name")
             if not notes:
                 missing_evidence.append("review_notes")
@@ -17363,7 +17371,6 @@ async def import_doctor_replies(
             if compliance.get("status") == "flagged":
                 skipped.append({"row": index, "asset_id": asset_id, "reason": "Polished copy was blocked by the compliance detector."})
                 continue
-        reviewer_name = fallback_reviewer
         reason_parts = ["Doctor reply text import."]
         if reviewer_name:
             reason_parts.append(f"Reviewer: {reviewer_name}.")
@@ -17432,6 +17439,7 @@ async def import_doctor_replies(
             if payload.dry_run
             else f"Imported {len(imported)} doctor reply decision(s), {len(skipped)} skipped."
         ),
+        "source": "monthly_carousel_doctor_reply_text" if has_monthly_carousel_rows else "doctor_reply_text",
         "safety": [
             "Doctor reply import records review and safety decisions, and can apply polished copy only when the doctor explicitly says yes with Decision: approve and Safety: clear.",
             "Monthly carousel approvals also require reviewer name, Notes, and every doctor_check_* field marked yes/pass.",

@@ -1471,6 +1471,21 @@ const requiredSnippets = [
     text: "Monthly carousel approval requires reviewer name, Notes, and all doctor_check_* fields marked yes/pass.",
   },
   {
+    name: "monthly doctor reply template reviewer name",
+    file: "main",
+    text: "Reviewer Name:",
+  },
+  {
+    name: "monthly doctor reply text source marker",
+    file: "main",
+    text: "monthly_carousel_doctor_reply_text",
+  },
+  {
+    name: "doctor reply block reviewer parser",
+    file: "main",
+    text: "reviewer\\s*name",
+  },
+  {
     name: "doctor reply inbox chinese export",
     file: "main",
     text: "drec-doctor-reply-inbox-pack-zh.md",
@@ -3209,6 +3224,21 @@ const requiredSnippets = [
     name: "web simple copy doctor message helper",
     file: "web",
     text: "copyMonthlyDoctorSendMessage",
+  },
+  {
+    name: "web doctor template monthly-first endpoint",
+    file: "web",
+    text: "/operations/monthly-carousel-doctor-reply-templates",
+  },
+  {
+    name: "web doctor template reviewer name instruction",
+    file: "web",
+    text: "Reviewer Name / Decision / Safety / doctor_check_* / Notes",
+  },
+  {
+    name: "web monthly doctor reply source preview",
+    file: "web",
+    text: "monthly_carousel_doctor_reply_text",
   },
   {
     name: "web simple extract doctor send message",

@@ -8229,7 +8229,7 @@ function renderAssetReviewDecisionPreview(data, targetId = "asset-review-decisio
   if (!container) return;
   const rows = data.planned || data.imported || [];
   const skipped = data.skipped || [];
-  const isMonthlyDoctor = data.source === "monthly_carousel_doctor_worksheet";
+  const isMonthlyDoctor = ["monthly_carousel_doctor_worksheet", "monthly_carousel_doctor_reply_text"].includes(data.source);
   const missingEvidence = skipped
     .flatMap((row) => Array.isArray(row.missing_evidence) ? row.missing_evidence : [])
     .reduce((acc, item) => {
@@ -8241,10 +8241,10 @@ function renderAssetReviewDecisionPreview(data, targetId = "asset-review-decisio
     .slice(0, 8);
   container.innerHTML = `
     <article class="insight-card">
-      <strong>${isMonthlyDoctor ? "月度医生表检查" : data.dry_run ? "Review Decision Preview" : "Review Decision Import"}</strong>
+      <strong>${isMonthlyDoctor ? "月度医生证据检查" : data.dry_run ? "Review Decision Preview" : "Review Decision Import"}</strong>
       <small>${rows.length} row(s) ready · ${skipped.length} skipped</small>
       ${isMonthlyDoctor ? `
-        <p class="status-note">${rows.length ? "这些行可以导入；导入只会记录医生审核和 Safety，不会制作、入队、排程或发布。" : "目前没有可导入行。先补齐医生证据，再重新检查。"}</p>
+        <p class="status-note">${rows.length ? "这些行可以导入；导入只会记录医生审核和 Safety，不会制作、入队、排程或发布。" : "目前没有可导入行。先补齐 Reviewer Name / Notes / doctor_check_*，再重新检查。"}</p>
         ${missingEvidenceRows.length ? `
           <h4>最常缺的医生证据</h4>
           <ul>${missingEvidenceRows.map(([field, count]) => `<li><strong>${escapeHtml(field)}</strong> · ${escapeHtml(String(count))} row(s)</li>`).join("")}</ul>
@@ -8429,13 +8429,18 @@ async function fillDoctorReplyTemplate({
   const message = document.getElementById(messageId);
   if (message) message.textContent = "Loading doctor reply template...";
   try {
-    const data = await fetchJson("/operations/doctor-reply-inbox-pack");
-    let template = data.reply_paste_template || (data.reply_items || []).map((item) => item.reply_template || "").filter(Boolean).join("\n\n");
-    let templateSource = "通用医生";
-    if (!template) {
+    let template = "";
+    let templateSource = "月度 Carousel 医生";
+    try {
       const monthly = await fetchJson("/operations/monthly-carousel-doctor-reply-templates");
       template = monthly.reply_paste_template || (monthly.reply_items || []).map((item) => item.reply_template || "").filter(Boolean).join("\n\n");
-      templateSource = "月度 Carousel 医生";
+    } catch {
+      template = "";
+    }
+    if (!template) {
+      const data = await fetchJson("/operations/doctor-reply-inbox-pack");
+      template = data.reply_paste_template || (data.reply_items || []).map((item) => item.reply_template || "").filter(Boolean).join("\n\n");
+      templateSource = "通用医生";
     }
     if (!template) {
       if (message) message.textContent = "现在没有可填入的医生回复模板。请先确认是否已有等待医生审核的内容。";
@@ -8447,7 +8452,7 @@ async function fillDoctorReplyTemplate({
       textInput.focus();
       if (scroll) textInput.scrollIntoView({ behavior: "smooth", block: "center" });
     }
-    if (message) message.textContent = `${templateSource}模板已填入。收到医生回复后，请把 Decision / Safety / doctor_check_* / Notes 改成实际结果，再先预览。`;
+    if (message) message.textContent = `${templateSource}模板已填入。收到医生回复后，请把 Reviewer Name / Decision / Safety / doctor_check_* / Notes 改成实际结果，再先预览。`;
     return true;
   } catch (error) {
     if (message) message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : "Could not load doctor reply template.";
