@@ -4166,6 +4166,16 @@ const requiredSnippets = [
     text: "Metrics due date",
   },
   {
+    name: "api publishing handoff malaysia time cue",
+    file: "main",
+    text: "Malaysia time",
+  },
+  {
+    name: "api manual publish evidence myt column",
+    file: "main",
+    text: "planned_slot_myt",
+  },
+  {
     name: "api publishing handoff pre-publish check",
     file: "main",
     text: "Pre-publish check",
@@ -5329,6 +5339,11 @@ const requiredSnippets = [
     name: "web home handoff manual label guidance",
     file: "web",
     text: "无 Meta ID 时的人工标签建议",
+  },
+  {
+    name: "web home handoff utc fallback",
+    file: "web",
+    text: "UTC 原始时间",
   },
   {
     name: "web home handoff copy media action",

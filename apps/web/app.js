@@ -5733,7 +5733,8 @@ function renderHomePublishingCloseout(data) {
       ? [
           '<option value="">选择已人工发布的项目</option>',
           ...readyItems.map((item) => {
-            const label = `${item.channel || "post"} / ${item.format || "content"} · ${item.planned_slot || "未排程"} · ${(item.caption || "").slice(0, 48)}`;
+            const plannedLabel = item.planned_slot_myt || item.planned_slot || "未排程";
+            const label = `${item.channel || "post"} / ${item.format || "content"} · ${plannedLabel} · ${(item.caption || "").slice(0, 48)}`;
             return `<option value="${escapeHtml(item.id)}">${escapeHtml(label)}</option>`;
           }),
         ].join("")
@@ -5787,7 +5788,7 @@ function renderHomePublishingCloseout(data) {
         <div>
           <span>下一条要交接</span>
           <strong>${escapeHtml(nextReadyItem.channel || "post")} / ${escapeHtml(nextReadyItem.format || "content")}</strong>
-          <small>${escapeHtml(nextReadyItem.planned_slot || "未排程")}</small>
+          <small>${escapeHtml(nextReadyItem.planned_slot_myt || nextReadyItem.planned_slot || "未排程")}</small>
           <small>数据回填建议：${escapeHtml(nextReadyItem.metrics_due_date || "发布后 7 天")}</small>
           <code class="home-queue-id">Queue ID: ${escapeHtml(nextReadyItem.id || "")}</code>
           <p>${escapeHtml((nextReadyItem.caption || "").slice(0, 150))}${(nextReadyItem.caption || "").length > 150 ? "..." : ""}</p>
@@ -5806,7 +5807,7 @@ function renderHomePublishingCloseout(data) {
             <article class="home-handoff-item">
               <div>
                 <strong>${escapeHtml(index + 2)}. ${escapeHtml(item.channel || "post")} / ${escapeHtml(item.format || "content")}</strong>
-                <small>${escapeHtml(item.planned_slot || "未排程")} · ${escapeHtml(item.id || "")}</small>
+                <small>${escapeHtml(item.planned_slot_myt || item.planned_slot || "未排程")} · ${escapeHtml(item.id || "")}</small>
                 <small>数据回填建议：${escapeHtml(item.metrics_due_date || "发布后 7 天")}</small>
                 <code class="home-queue-id">Queue ID: ${escapeHtml(item.id || "")}</code>
               </div>
@@ -5870,7 +5871,8 @@ function homeHandoffText(item) {
     "",
     `平台: ${item.channel || "manual"}`,
     `格式: ${item.format || "content"}`,
-    `计划时间: ${item.planned_slot || "未排程"}`,
+    `计划时间: ${item.planned_slot_myt || item.planned_slot || "未排程"}`,
+    `UTC 原始时间: ${item.planned_slot || "未排程"}`,
     `Queue ID: ${item.id || ""}`,
     `媒体数量: ${mediaUrls.length}`,
     `无 Meta ID 时的人工标签建议: ${manualLabel}`,

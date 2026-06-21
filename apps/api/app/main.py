@@ -24373,6 +24373,7 @@ async def publishing_handoff(_: None = Depends(require_access_token)):
             **item,
             "handoff_blockers": blockers,
             "manual_label_suggestion": manual_publish_label(item),
+            "planned_slot_myt": myt_datetime_label(item.get("planned_slot")),
             "metrics_due_date": manual_publish_metric_due_date(item),
             "metric_window": "7d",
         }
@@ -24403,6 +24404,7 @@ async def publishing_handoff(_: None = Depends(require_access_token)):
                 f"Channel: {item.get('channel')}",
                 f"Format: {item.get('format')}",
                 f"Planned time: {item.get('planned_slot') or 'Not set'}",
+                f"Malaysia time: {item.get('planned_slot_myt') or 'Not set'}",
                 f"Queue ID: {item.get('id')}",
                 f"Media count: {len(media_urls)}",
                 f"Manual label if no Meta ID: {item.get('manual_label_suggestion')}",
@@ -24461,6 +24463,7 @@ async def monthly_carousel_publishing_handoff_payload():
             "topic_id": topic_id,
             "handoff_blockers": blockers,
             "manual_label_suggestion": manual_publish_label(item),
+            "planned_slot_myt": myt_datetime_label(item.get("planned_slot")),
             "metrics_due_date": manual_publish_metric_due_date(item),
             "metric_window": "7d",
         }
@@ -24493,6 +24496,7 @@ async def monthly_carousel_publishing_handoff_payload():
                 f"Channel: {item.get('channel')}",
                 f"Format: {item.get('format')}",
                 f"Planned time: {item.get('planned_slot') or 'Not set'}",
+                f"Malaysia time: {item.get('planned_slot_myt') or 'Not set'}",
                 f"Queue ID: {item.get('id')}",
                 f"Media count: {len(media_urls)}",
                 f"Manual label if no Meta ID: {item.get('manual_label_suggestion')}",
@@ -24582,6 +24586,7 @@ def zh_handoff_item_lines(item: dict, index: int, heading: str):
         f"- 状态：{item.get('status')}",
         f"- 安全状态：{item.get('compliance_status')}",
         f"- 计划发布时间：{item.get('planned_slot') or '尚未设置'}",
+        f"- 马来西亚时间：{item.get('planned_slot_myt') or myt_datetime_label(item.get('planned_slot')) or '尚未设置'}",
         f"- 媒体数量：{len(media_urls)}",
         f"- 无 Meta ID 时的人工标签建议：{item.get('manual_label_suggestion') or manual_publish_label(item)}",
         f"- 数据回填建议：{item.get('metrics_due_date') or manual_publish_metric_due_date(item) or '发布后 7 天'}",
@@ -24793,6 +24798,14 @@ def manual_publish_metric_due_date(item: dict):
     return (planned + timedelta(days=7)).date().isoformat()
 
 
+def myt_datetime_label(value):
+    planned = parse_datetime(value)
+    if not planned:
+        return ""
+    local = planned.astimezone(MYT) if planned.tzinfo else planned.replace(tzinfo=timezone.utc).astimezone(MYT)
+    return local.strftime("%Y-%m-%d %H:%M MYT")
+
+
 def manual_publish_evidence_csv(payload: dict):
     output = StringIO()
     fieldnames = [
@@ -24802,6 +24815,7 @@ def manual_publish_evidence_csv(payload: dict):
         "channel",
         "format",
         "planned_slot",
+        "planned_slot_myt",
         "manual_label_suggestion",
         "caption_preview",
         "media_urls",
@@ -24827,6 +24841,7 @@ def manual_publish_evidence_csv(payload: dict):
                 "channel": item.get("channel") or "",
                 "format": item.get("format") or "",
                 "planned_slot": item.get("planned_slot") or "",
+                "planned_slot_myt": myt_datetime_label(item.get("planned_slot")),
                 "manual_label_suggestion": item.get("manual_label_suggestion") or "",
                 "caption_preview": safe_csv_text(item.get("caption")),
                 "media_urls": " | ".join([url for url in item.get("media_urls") or [] if url]),
@@ -24850,6 +24865,7 @@ def manual_publish_evidence_csv(payload: dict):
                 "channel": item.get("channel") or "",
                 "format": item.get("format") or "",
                 "planned_slot": item.get("planned_slot") or "",
+                "planned_slot_myt": myt_datetime_label(item.get("planned_slot")),
                 "manual_label_suggestion": manual_publish_label(item),
                 "caption_preview": safe_csv_text(item.get("caption")),
                 "media_urls": " | ".join([url for url in item.get("media_urls") or [] if url]),
@@ -25864,6 +25880,7 @@ async def import_manual_publish_evidence(
             "posted_at": (row.get("posted_at") or "").strip(),
             "published_by": (row.get("published_by") or "").strip(),
             "recorded_in_drec": truthy_csv_flag(row.get("recorded_in_drec")),
+            "planned_slot_myt": myt_datetime_label(item.get("planned_slot")),
             "metrics_due_date": manual_publish_metric_due_date(item),
             "metric_window": "7d",
             "next_step": "After the 7-day window, import reach, likes, comments, saves, shares, leads, and spend.",
@@ -26091,6 +26108,7 @@ async def publishing_closeout_payload(limit: int = 50):
                 **item,
                 "handoff_blockers": handoff_blockers,
                 "manual_label_suggestion": manual_publish_label(item),
+                "planned_slot_myt": myt_datetime_label(item.get("planned_slot")),
                 "metrics_due_date": manual_publish_metric_due_date(item),
                 "metric_window": "7d",
             }
@@ -26110,6 +26128,7 @@ async def publishing_closeout_payload(limit: int = 50):
             **item,
             "raw_metric": raw_metric,
             "outcome": outcome,
+            "planned_slot_myt": myt_datetime_label(item.get("planned_slot")),
             "metrics_due_date": manual_publish_metric_due_date(item),
             "metric_window": "7d",
         }
@@ -26328,6 +26347,7 @@ async def post_publish_next_steps_payload():
                 "channel": item.get("channel"),
                 "format": item.get("format"),
                 "planned_slot": item.get("planned_slot"),
+                "planned_slot_myt": item.get("planned_slot_myt") or myt_datetime_label(item.get("planned_slot")),
                 "media_count": len([url for url in item.get("media_urls") or [] if url]),
                 "manual_label_suggestion": manual_publish_label(item),
                 "metrics_due_date": item.get("metrics_due_date") or manual_publish_metric_due_date(item),
