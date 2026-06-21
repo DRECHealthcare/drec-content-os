@@ -2750,7 +2750,21 @@ async function loadLoopStatus() {
     const workflow = document.getElementById("workflow-next");
     if (workflow) workflow.innerHTML = `<p class="status-note">${escapeHtml(message)}</p>`;
     const simple = document.getElementById("simple-operator");
-    if (simple) simple.innerHTML = `<p class="status-note">${escapeHtml(message)}</p>`;
+    if (simple && accessToken()) {
+      simple.innerHTML = `<p class="status-note">${escapeHtml(message)}</p>`;
+    } else if (simple) {
+      simple.innerHTML = `
+        <div class="simple-operator-copy">
+          <span>第一步</span>
+          <h2>先输入访问码</h2>
+          <p>输入访问码后，首页会自动显示现在该按哪个按钮。这里不会发布到 Facebook / Instagram。</p>
+        </div>
+        <div class="simple-operator-actions">
+          <button class="primary" type="button" data-simple-open-access>输入访问码</button>
+        </div>
+        <small>如果看不到访问码输入框，按这里就会展开。保存后系统会刷新下一步。</small>
+      `;
+    }
   }
 }
 
@@ -6096,6 +6110,7 @@ document.getElementById("refresh-workflow").addEventListener("click", async () =
 });
 
 document.getElementById("simple-operator")?.addEventListener("click", async (event) => {
+  const openAccess = event.target.closest("[data-simple-open-access]");
   const runReadyAssets = event.target.closest("[data-simple-run-ready-assets]");
   const openAssets = event.target.closest("[data-simple-open-assets]");
   const openReview = event.target.closest("[data-simple-open-review]");
@@ -6123,7 +6138,13 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   const downloadWeeklyReportZh = event.target.closest("[data-simple-download-weekly-report-zh]");
   const downloadNextPlanHandback = event.target.closest("[data-simple-download-next-plan-handback]");
   const refresh = event.target.closest("[data-simple-refresh]");
-  if (!runReadyAssets && !openAssets && !openReview && !openScheduler && !pasteDoctorReply && !pasteProductionReply && !previewMonthlyQueue && !runMonthlyQueue && !downloadMonthlyReviewQueue && !pasteReviewDecisions && !scheduleApprovedFromHome && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadTodayPack && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !openLearning && !useLearningTopics && !downloadWeeklyReportZh && !downloadNextPlanHandback && !refresh) return;
+  if (!openAccess && !runReadyAssets && !openAssets && !openReview && !openScheduler && !pasteDoctorReply && !pasteProductionReply && !previewMonthlyQueue && !runMonthlyQueue && !downloadMonthlyReviewQueue && !pasteReviewDecisions && !scheduleApprovedFromHome && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadTodayPack && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !openLearning && !useLearningTopics && !downloadWeeklyReportZh && !downloadNextPlanHandback && !refresh) return;
+  if (openAccess) {
+    const panel = document.getElementById("token-panel");
+    if (panel?.hidden) showTokenPanel();
+    document.getElementById("token-input")?.focus();
+    return;
+  }
   if (refresh) {
     await loadLoopStatus();
     await loadDashboardMonthlyActionQueue();

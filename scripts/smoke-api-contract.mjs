@@ -3792,6 +3792,21 @@ const requiredSnippets = [
     text: "系统不会自动发到 Facebook / Instagram",
   },
   {
+    name: "web simple operator access code action",
+    file: "web",
+    text: "data-simple-open-access",
+  },
+  {
+    name: "web simple operator access code copy",
+    file: "web",
+    text: "先输入访问码",
+  },
+  {
+    name: "web header access code button",
+    file: "webIndex",
+    text: "访问码",
+  },
+  {
     name: "web simple operator monthly doctor blocker",
     file: "web",
     text: "data-simple-download-monthly-doctor-handoff",
