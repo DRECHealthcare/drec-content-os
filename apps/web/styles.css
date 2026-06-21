@@ -141,7 +141,25 @@ header span { color: var(--muted); font-size: 12px; }
   min-width: 0;
 }
 
+.token-panel.access-needed {
+  border: 1px solid #FBBF24;
+  border-radius: 8px;
+  padding: 6px;
+  background: #FFFBEB;
+}
+
 .token-panel[hidden] {
+  display: none;
+}
+
+.token-hint {
+  color: #92400E;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.token-hint[hidden] {
   display: none;
 }
 

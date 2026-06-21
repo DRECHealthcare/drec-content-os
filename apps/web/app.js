@@ -557,6 +557,7 @@ Object.assign(uiZh, {
   "Optional": "可选",
   "Access token": "访问码",
   "Actor name": "操作者姓名",
+  "Access token required": "请输入访问码",
   "Set the access token first.": "请先设置访问码。",
   "Could not load the live test checklist.": "无法读取实时测试清单。",
   "Set the access token to load knowledge entries.": "请先设置访问码，才能读取知识库。",
@@ -1223,16 +1224,41 @@ function refreshProtectedData() {
   loadFirstPublishReadiness();
 }
 
-function showTokenPanel() {
+function openTokenPanel(reason = "") {
   const panel = document.getElementById("token-panel");
   const input = document.getElementById("token-input");
   const actor = document.getElementById("actor-input");
   const remember = document.getElementById("token-remember");
-  panel.hidden = !panel.hidden;
+  const hint = document.getElementById("token-hint");
+  panel.hidden = false;
+  panel.classList.toggle("access-needed", Boolean(reason));
+  if (hint) {
+    hint.hidden = !reason;
+    hint.textContent = reason;
+  }
   input.value = accessToken();
   actor.value = accessActor();
   remember.checked = localStorage.getItem(rememberTokenKey) === "true" && Boolean(localStorage.getItem(tokenKey));
-  if (!panel.hidden) input.focus();
+  input.focus();
+}
+
+function showTokenPanel() {
+  const panel = document.getElementById("token-panel");
+  if (panel.hidden) {
+    openTokenPanel();
+    return;
+  }
+  panel.hidden = true;
+  panel.classList.remove("access-needed");
+  const hint = document.getElementById("token-hint");
+  if (hint) {
+    hint.hidden = true;
+    hint.textContent = "";
+  }
+}
+
+function promptForAccessToken() {
+  openTokenPanel(translateText("Access token required"));
 }
 
 function saveAccessTokenFromPanel() {
@@ -1254,6 +1280,12 @@ function saveAccessTokenFromPanel() {
     localStorage.removeItem(rememberTokenKey);
   }
   panel.hidden = true;
+  panel.classList.remove("access-needed");
+  const hint = document.getElementById("token-hint");
+  if (hint) {
+    hint.hidden = true;
+    hint.textContent = "";
+  }
   refreshProtectedData();
 }
 
@@ -1315,6 +1347,7 @@ async function fetchJson(path, options) {
     ...options,
   });
   if (res.status === 401) {
+    promptForAccessToken();
     throw new Error("Access token required");
   }
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
@@ -1328,6 +1361,7 @@ async function fetchForm(path, formData) {
     body: formData,
   });
   if (res.status === 401) {
+    promptForAccessToken();
     throw new Error("Access token required");
   }
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
@@ -1339,6 +1373,7 @@ async function fetchText(path) {
     headers: authHeaders(false),
   });
   if (res.status === 401) {
+    promptForAccessToken();
     throw new Error("Access token required");
   }
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
@@ -1350,6 +1385,7 @@ async function downloadProtectedFile(path, filename, type) {
     headers: authHeaders(false),
   });
   if (res.status === 401) {
+    promptForAccessToken();
     throw new Error("Access token required");
   }
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);

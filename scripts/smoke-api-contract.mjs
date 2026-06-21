@@ -2797,6 +2797,26 @@ const requiredSnippets = [
     text: "saveAccessTokenFromPanel",
   },
   {
+    name: "web auth error opens token panel",
+    file: "web",
+    text: "promptForAccessToken",
+  },
+  {
+    name: "web token panel forced open helper",
+    file: "web",
+    text: "openTokenPanel",
+  },
+  {
+    name: "web token hint element",
+    file: "webIndex",
+    text: "token-hint",
+  },
+  {
+    name: "web token needed style",
+    file: "styles",
+    text: ".token-panel.access-needed",
+  },
+  {
     name: "web security gate card",
     file: "web",
     text: "security-count",
