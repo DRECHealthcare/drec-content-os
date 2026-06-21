@@ -24591,7 +24591,7 @@ def zh_handoff_item_lines(item: dict, index: int, heading: str):
         f"- 安全状态：{item.get('compliance_status')}",
         f"- 计划发布时间：{item.get('planned_slot') or '尚未设置'}",
         f"- 马来西亚时间：{item.get('planned_slot_myt') or myt_datetime_label(item.get('planned_slot')) or '尚未设置'}",
-        f"- 发布时间状态：{item.get('publish_timing_label') or manual_publish_timing(item).get('publish_timing_label')}",
+        f"- 发布时间状态：{manual_publish_timing_label_zh(item)}",
         f"- 媒体数量：{len(media_urls)}",
         f"- 无 Meta ID 时的人工标签建议：{item.get('manual_label_suggestion') or manual_publish_label(item)}",
         f"- 数据回填建议：{item.get('metrics_due_date') or manual_publish_metric_due_date(item) or '发布后 7 天'}",
@@ -24838,6 +24838,24 @@ def manual_publish_timing(item: dict):
         "minutes_until_planned": delta_minutes,
         "publish_timing_label": label,
     }
+
+
+def manual_publish_timing_label_zh(item: dict):
+    timing = manual_publish_timing(item)
+    status = timing.get("publish_window_status")
+    minutes = timing.get("minutes_until_planned")
+    if status == "unscheduled":
+        return "尚未设置发布时间。"
+    if status == "upcoming" and isinstance(minutes, int):
+        hours = max(1, round(minutes / 60))
+        return f"未到发布点，约 {hours} 小时后。"
+    if status == "due_soon" and isinstance(minutes, int):
+        return f"快到发布点，约 {max(1, minutes)} 分钟后。"
+    if status == "due_now":
+        return "已到发布点：可人工发布；如果已经发布，请回来填真实 Post ID。"
+    if status == "overdue_needs_post_id" and isinstance(minutes, int):
+        return f"已过发布时间约 {abs(minutes)} 分钟：请确认是否已人工发布，并回填真实 Post ID。"
+    return timing.get("publish_timing_label") or "发布时间状态待确认。"
 
 
 def manual_publish_evidence_csv(payload: dict):
