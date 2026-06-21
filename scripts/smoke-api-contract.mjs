@@ -4795,6 +4795,41 @@ const requiredSnippets = [
     text: "schedule-approved-items",
   },
   {
+    name: "web home review schedule card",
+    file: "webIndex",
+    text: "home-review-schedule-card",
+  },
+  {
+    name: "web home review queue download",
+    file: "webIndex",
+    text: "home-download-monthly-review-queue",
+  },
+  {
+    name: "web home review queue preview",
+    file: "webIndex",
+    text: "home-preview-review-queue-decisions",
+  },
+  {
+    name: "web home review queue import",
+    file: "webIndex",
+    text: "home-import-review-queue-decisions",
+  },
+  {
+    name: "web home review schedule simple action",
+    file: "web",
+    text: "data-simple-paste-review-decisions",
+  },
+  {
+    name: "web home schedule approved simple action",
+    file: "web",
+    text: "data-simple-schedule-approved",
+  },
+  {
+    name: "web home review schedule preview target",
+    file: "web",
+    text: "home-review-schedule-preview",
+  },
+  {
     name: "web review log action",
     file: "web",
     text: "download-review-log",

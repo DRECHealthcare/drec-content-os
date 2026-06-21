@@ -2520,14 +2520,17 @@ function renderSimpleOperator(data, monthly = null) {
       <button type="button" data-simple-open-assets>打开素材页查看</button>
     `;
   } else if (queueTotal > 0 && scheduledQueue === 0) {
-    eyebrow = "下一步：审核或排程";
-    title = "内容已在队列，下一步是审核/排程";
-    body = `队列里已有 ${queueTotal} 条内容。下一步去审核队列或排程页继续。`;
-    status = "已入队，等待排程";
+    eyebrow = "下一步：审核和排程";
+    title = `${queueTotal} 条内容已入队，在首页完成审核`;
+    body = "先下载审核决定表，填 reviewer_action=approve，再粘贴回来预览和导入。排程只处理已审核通过、合规 clear 的项目。";
+    status = "已入队 · 不会发布";
     actions = `
-      <button class="primary" type="button" data-simple-open-review>打开审核队列</button>
-      <button type="button" data-simple-open-scheduler>打开排程</button>
+      <button class="primary" type="button" data-simple-download-monthly-review-queue>下载审核队列</button>
+      <button type="button" data-simple-paste-review-decisions>粘贴审核决定</button>
+      <button type="button" data-simple-schedule-approved>排程已审核内容</button>
+      <button type="button" data-simple-refresh>刷新状态</button>
     `;
+    safetyNote = "安全锁：审核和排程都不会发布到 Facebook / Instagram。";
   } else if (scheduledQueue > 0) {
     eyebrow = "下一步：人工发布交接";
     title = "现在只需要下载安全包";
@@ -2569,6 +2572,10 @@ function renderSimpleOperator(data, monthly = null) {
   const homeQueueActionCard = document.getElementById("home-queue-action-card");
   if (homeQueueActionCard) {
     homeQueueActionCard.hidden = Number(monthlyGateCounts.ready_to_queue || 0) <= 0;
+  }
+  const homeReviewScheduleCard = document.getElementById("home-review-schedule-card");
+  if (homeReviewScheduleCard) {
+    homeReviewScheduleCard.hidden = !(queueTotal > 0 && scheduledQueue === 0);
   }
 }
 
@@ -5822,6 +5829,9 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   const pasteProductionReply = event.target.closest("[data-simple-paste-production-reply]");
   const previewMonthlyQueue = event.target.closest("[data-simple-preview-monthly-queue]");
   const runMonthlyQueue = event.target.closest("[data-simple-run-monthly-queue]");
+  const downloadMonthlyReviewQueue = event.target.closest("[data-simple-download-monthly-review-queue]");
+  const pasteReviewDecisions = event.target.closest("[data-simple-paste-review-decisions]");
+  const scheduleApprovedFromHome = event.target.closest("[data-simple-schedule-approved]");
   const downloadMonthlyDoctorHandoff = event.target.closest("[data-simple-download-monthly-doctor-handoff]");
   const downloadMonthlyDoctorMessage = event.target.closest("[data-simple-download-monthly-doctor-message]");
   const downloadMonthlyActionQueue = event.target.closest("[data-simple-download-monthly-action-queue]");
@@ -5834,7 +5844,7 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   const downloadPostPublish = event.target.closest("[data-simple-download-post-publish]");
   const downloadPostMetrics = event.target.closest("[data-simple-download-post-metrics]");
   const refresh = event.target.closest("[data-simple-refresh]");
-  if (!runReadyAssets && !openAssets && !openReview && !openScheduler && !pasteDoctorReply && !pasteProductionReply && !previewMonthlyQueue && !runMonthlyQueue && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadTodayPack && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !refresh) return;
+  if (!runReadyAssets && !openAssets && !openReview && !openScheduler && !pasteDoctorReply && !pasteProductionReply && !previewMonthlyQueue && !runMonthlyQueue && !downloadMonthlyReviewQueue && !pasteReviewDecisions && !scheduleApprovedFromHome && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadTodayPack && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !refresh) return;
   if (refresh) {
     await loadLoopStatus();
     await loadDashboardMonthlyActionQueue();
@@ -5881,6 +5891,29 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
       messageId: "home-queue-action-message",
       targetId: "home-queue-action-preview",
     });
+    await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit()]);
+    return;
+  }
+  if (downloadMonthlyReviewQueue) {
+    await downloadProtectedFile("/operations/monthly-carousel-review-queue.csv", "drec-monthly-carousel-review-queue.csv", "text/csv");
+    return;
+  }
+  if (pasteReviewDecisions) {
+    const card = document.getElementById("home-review-schedule-card");
+    if (card) {
+      card.hidden = false;
+      card.scrollIntoView({ behavior: "smooth", block: "start" });
+      document.getElementById("home-review-queue-decisions-text")?.focus();
+    }
+    return;
+  }
+  if (scheduleApprovedFromHome) {
+    const card = document.getElementById("home-review-schedule-card");
+    if (card) {
+      card.hidden = false;
+      card.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    await scheduleApprovedItems({ messageId: "home-review-schedule-message", stayOnHome: true });
     await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit()]);
     return;
   }
@@ -6015,6 +6048,64 @@ document.getElementById("home-run-monthly-queue-ready")?.addEventListener("click
     dryRun: false,
     messageId: "home-queue-action-message",
     targetId: "home-queue-action-preview",
+  });
+  await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit()]);
+});
+
+document.getElementById("home-download-monthly-review-queue")?.addEventListener("click", async () => {
+  const message = document.getElementById("home-review-schedule-message");
+  try {
+    await downloadProtectedFile("/operations/monthly-carousel-review-queue.csv", "drec-monthly-carousel-review-queue.csv", "text/csv");
+    if (message) message.textContent = "审核队列已下载。";
+  } catch (error) {
+    if (message) message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : "无法下载审核队列。";
+  }
+});
+
+document.getElementById("home-download-monthly-review-decisions")?.addEventListener("click", async () => {
+  const message = document.getElementById("home-review-schedule-message");
+  try {
+    await downloadProtectedFile("/operations/monthly-carousel-review-queue-decisions.csv", "drec-monthly-carousel-review-queue-decisions.csv", "text/csv");
+    if (message) message.textContent = "审核决定表已下载。";
+  } catch (error) {
+    if (message) message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : "无法下载审核决定表。";
+  }
+});
+
+document.getElementById("home-preview-review-queue-decisions")?.addEventListener("click", async () => {
+  await uploadReviewQueueDecisions({
+    dryRun: true,
+    source: "monthly_carousel",
+    fileInputId: "home-review-queue-decisions-file",
+    allowPastedCsv: true,
+    safeAdvance: true,
+    textInputId: "home-review-queue-decisions-text",
+    messageId: "home-review-schedule-message",
+    previewTargetId: "home-review-schedule-preview",
+    safeAdvanceTargetId: "home-review-safe-advance-preview",
+  });
+});
+
+document.getElementById("home-import-review-queue-decisions")?.addEventListener("click", async () => {
+  await uploadReviewQueueDecisions({
+    dryRun: false,
+    source: "monthly_carousel",
+    fileInputId: "home-review-queue-decisions-file",
+    allowPastedCsv: true,
+    safeAdvance: true,
+    textInputId: "home-review-queue-decisions-text",
+    messageId: "home-review-schedule-message",
+    previewTargetId: "home-review-schedule-preview",
+    safeAdvanceTargetId: "home-review-safe-advance-preview",
+  });
+  await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit()]);
+});
+
+document.getElementById("home-schedule-approved-items")?.addEventListener("click", async (event) => {
+  await scheduleApprovedItems({
+    button: event.currentTarget,
+    messageId: "home-review-schedule-message",
+    stayOnHome: true,
   });
   await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit()]);
 });
@@ -9402,24 +9493,35 @@ document.getElementById("dry-run-meta-metrics").addEventListener("click", async 
   }
 });
 
-document.getElementById("schedule-approved-items").addEventListener("click", async (event) => {
-  const button = event.currentTarget;
-  const originalText = button.textContent;
-  const message = document.getElementById("queue-message");
-  button.disabled = true;
-  button.textContent = "Scheduling";
-  message.textContent = "Scheduling review-approved items...";
+async function scheduleApprovedItems({
+  button = null,
+  messageId = "queue-message",
+  stayOnHome = false,
+} = {}) {
+  const originalText = button?.textContent || "";
+  const message = document.getElementById(messageId);
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Scheduling";
+  }
+  if (message) message.textContent = "Scheduling review-approved items...";
   try {
     const data = await fetchJson("/publish-queue/schedule-approved?limit=20", { method: "POST" });
-    message.textContent = `Schedule approved complete: ${data.scheduled || 0} scheduled, ${data.already_scheduled || 0} already scheduled, ${data.skipped || 0} skipped.`;
+    if (message) message.textContent = `Schedule approved complete: ${data.scheduled || 0} scheduled, ${data.already_scheduled || 0} already scheduled, ${data.skipped || 0} skipped.`;
     await Promise.all([loadPublishQueue(), loadLoopStatus()]);
-    showScreen("scheduler");
+    if (!stayOnHome) showScreen("scheduler");
   } catch (error) {
-    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not schedule approved items.";
+    if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not schedule approved items.";
   } finally {
-    button.disabled = false;
-    button.textContent = originalText;
+    if (button) {
+      button.disabled = false;
+      button.textContent = originalText;
+    }
   }
+}
+
+document.getElementById("schedule-approved-items").addEventListener("click", async (event) => {
+  await scheduleApprovedItems({ button: event.currentTarget });
 });
 
 document.getElementById("download-review-log")?.addEventListener("click", async () => {
@@ -9502,8 +9604,8 @@ document.getElementById("download-monthly-carousel-review-queue-decisions")?.add
   }
 });
 
-function renderReviewQueueDecisionPreview(data) {
-  const container = document.getElementById("review-queue-decision-preview");
+function renderReviewQueueDecisionPreview(data, targetId = "review-queue-decision-preview") {
+  const container = document.getElementById(targetId);
   if (!container) return;
   const rows = data.planned || data.imported || [];
   const skipped = data.skipped || [];
@@ -9538,15 +9640,19 @@ async function uploadReviewQueueDecisions({
   fileInputId = "review-queue-decisions-file",
   allowPastedCsv = true,
   safeAdvance = false,
+  textInputId = "review-queue-decisions-text",
+  messageId = "queue-message",
+  previewTargetId = "review-queue-decision-preview",
+  safeAdvanceTargetId = "monthly-safe-advance-preview",
 }) {
-  const message = document.getElementById("queue-message");
+  const message = document.getElementById(messageId);
   const isMonthly = source === "monthly_carousel";
   const fileInput = document.getElementById(fileInputId);
-  const textInput = document.getElementById("review-queue-decisions-text");
+  const textInput = document.getElementById(textInputId);
   const file = fileInput?.files?.[0];
   const pastedCsv = allowPastedCsv ? (textInput?.value?.trim() || "") : "";
   if (!file && !pastedCsv) {
-    message.textContent = isMonthly
+    if (message) message.textContent = isMonthly
       ? translateText("Choose a monthly carousel queue decision CSV first.")
       : "Choose a review queue decision CSV or paste queue decision CSV text first.";
     return;
@@ -9555,7 +9661,7 @@ async function uploadReviewQueueDecisions({
   const uploadFile = file || new File([pastedCsv], isMonthly ? "monthly-carousel-review-queue-decisions.csv" : "pasted-review-queue-decisions.csv", { type: "text/csv" });
   body.append("file", uploadFile);
   body.append("dry_run", dryRun ? "true" : "false");
-  message.textContent = dryRun
+  if (message) message.textContent = dryRun
     ? (isMonthly ? translateText("Previewing monthly carousel queue decisions...") : "Previewing queue decisions...")
     : (isMonthly ? translateText("Importing monthly carousel queue decisions...") : "Importing queue decisions...");
   try {
@@ -9566,16 +9672,16 @@ async function uploadReviewQueueDecisions({
         : "/operations/import-review-queue-decisions";
     if (safeAdvance) body.append("max_actions", "20");
     const data = await fetchForm(endpoint, body);
-    if (!dryRun) fileInput.value = "";
+    if (!dryRun && fileInput) fileInput.value = "";
     if (!dryRun && !file && textInput) textInput.value = "";
-    message.textContent = data.message || (dryRun
+    if (message) message.textContent = data.message || (dryRun
       ? (isMonthly ? translateText("Monthly carousel queue decisions previewed.") : "Queue decisions previewed.")
       : (isMonthly ? translateText("Monthly carousel queue decisions imported.") : "Queue decisions imported."));
-    renderReviewQueueDecisionPreview(data.queue_review_import || data);
-    if (data.safe_advance) renderMonthlySafeAdvanceResult(data.safe_advance);
+    renderReviewQueueDecisionPreview(data.queue_review_import || data, previewTargetId);
+    if (data.safe_advance) renderMonthlySafeAdvanceResult(data.safe_advance, safeAdvanceTargetId);
     if (!dryRun) await Promise.all([loadPublishQueue(), loadPreScheduleGate(), loadMonthlyCarouselStatusBoard(), loadLoopStatus(), loadProjectCompletionAudit()]);
   } catch (error) {
-    message.textContent = error.message === "Access token required"
+    if (message) message.textContent = error.message === "Access token required"
       ? translateText("Set the access token first.")
       : dryRun
         ? (safeAdvance ? translateText("Could not preview monthly queue decision safe intake.") : (isMonthly ? translateText("Could not preview monthly carousel queue decisions.") : "Could not preview queue decisions."))

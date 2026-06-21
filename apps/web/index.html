@@ -117,6 +117,30 @@
         <div id="home-queue-action-message" class="status-note"></div>
         <div id="home-queue-action-preview" class="learning-grid"></div>
       </div>
+      <div id="home-review-schedule-card" class="card wide home-review-schedule" hidden>
+        <div class="workflow-head">
+          <div>
+            <h2>入队后，在这里审核和排程</h2>
+            <p class="section-note">先下载队列审核表，填 reviewer_action=approve 后粘贴回来预览。排程只处理已审核通过、合规 clear 的项目，不会发布。</p>
+          </div>
+          <button id="home-download-monthly-review-queue" type="button">下载审核队列</button>
+        </div>
+        <div class="form-actions">
+          <button id="home-download-monthly-review-decisions" type="button">下载审核决定表</button>
+          <button id="home-schedule-approved-items" class="danger-safe-action" type="button">排程已审核内容</button>
+        </div>
+        <label>
+          队列审核决定 CSV
+          <textarea id="home-review-queue-decisions-text" placeholder="queue_id,reviewer_action,reviewer_name,review_notes&#10;...,approve,Dr. name,Approved for scheduling"></textarea>
+        </label>
+        <div class="form-actions">
+          <button id="home-preview-review-queue-decisions" type="button">预览队列审核</button>
+          <button id="home-import-review-queue-decisions" class="danger-safe-action" type="button">导入队列审核</button>
+        </div>
+        <div id="home-review-schedule-message" class="status-note"></div>
+        <div id="home-review-schedule-preview" class="learning-grid"></div>
+        <div id="home-review-safe-advance-preview" class="learning-grid"></div>
+      </div>
       <details class="dashboard-details">
         <summary>查看系统详情和高级测试</summary>
         <div class="card wide">

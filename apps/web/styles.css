@@ -321,7 +321,8 @@ header span { color: var(--muted); font-size: 12px; }
 
 .home-doctor-reply,
 .home-production-reply,
-.home-queue-action {
+.home-queue-action,
+.home-review-schedule {
   margin-top: 14px;
   border-left: 6px solid var(--orange);
 }
@@ -334,14 +335,20 @@ header span { color: var(--muted); font-size: 12px; }
   border-left-color: var(--navy2);
 }
 
+.home-review-schedule {
+  border-left-color: var(--green);
+}
+
 .home-doctor-reply[hidden],
 .home-production-reply[hidden],
-.home-queue-action[hidden] {
+.home-queue-action[hidden],
+.home-review-schedule[hidden] {
   display: none;
 }
 
 .home-doctor-reply label,
-.home-production-reply label {
+.home-production-reply label,
+.home-review-schedule label {
   display: grid;
   gap: 6px;
   margin-top: 12px;
@@ -352,7 +359,9 @@ header span { color: var(--muted); font-size: 12px; }
 .home-doctor-reply textarea,
 .home-doctor-reply input,
 .home-production-reply textarea,
-.home-production-reply input {
+.home-production-reply input,
+.home-review-schedule textarea,
+.home-review-schedule input {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -364,7 +373,8 @@ header span { color: var(--muted); font-size: 12px; }
 }
 
 .home-doctor-reply textarea,
-.home-production-reply textarea {
+.home-production-reply textarea,
+.home-review-schedule textarea {
   min-height: 170px;
   resize: vertical;
 }
