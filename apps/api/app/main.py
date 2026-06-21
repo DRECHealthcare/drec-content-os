@@ -25864,6 +25864,9 @@ async def import_manual_publish_evidence(
             "posted_at": (row.get("posted_at") or "").strip(),
             "published_by": (row.get("published_by") or "").strip(),
             "recorded_in_drec": truthy_csv_flag(row.get("recorded_in_drec")),
+            "metrics_due_date": manual_publish_metric_due_date(item),
+            "metric_window": "7d",
+            "next_step": "After the 7-day window, import reach, likes, comments, saves, shares, leads, and spend.",
         }
         if dry_run:
             planned.append(planned_item)

@@ -784,6 +784,23 @@ header span { color: var(--muted); font-size: 12px; }
   line-height: 1.45;
 }
 
+.home-publish-next-metrics {
+  display: grid;
+  gap: 4px;
+  margin-top: 12px;
+  border: 1px solid #99F6E4;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #F0FDFA;
+  color: var(--navy);
+}
+
+.home-publish-next-metrics span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .home-closeout-steps li.active {
   border-color: var(--teal);
   background: #F0FDFA;

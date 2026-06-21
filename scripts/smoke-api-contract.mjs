@@ -4151,6 +4151,16 @@ const requiredSnippets = [
     text: "建议人工标签",
   },
   {
+    name: "web manual publish next metrics hint",
+    file: "web",
+    text: "发布记录已保存",
+  },
+  {
+    name: "api manual publish metrics due response",
+    file: "main",
+    text: "\"metrics_due_date\": manual_publish_metric_due_date(item)",
+  },
+  {
     name: "api publishing handoff metrics due cue",
     file: "main",
     text: "Metrics due date",

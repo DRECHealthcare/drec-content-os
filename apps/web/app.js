@@ -6756,7 +6756,18 @@ function renderManualPublishEvidencePreview(data, targetId = "manual-publish-evi
       </div>
       ${visibleRows.length ? `
         <h4>${data.mode === "dry_run" ? "可导入行" : "已导入行"}</h4>
-        <ul>${visibleRows.slice(0, 8).map((row) => `<li><strong>Row ${escapeHtml(row.row || "")}</strong> ${escapeHtml(row.channel || "")} · ${escapeHtml(row.external_post_id || "")}</li>`).join("")}</ul>
+        <ul>${visibleRows.slice(0, 8).map((row) => `
+          <li>
+            <strong>Row ${escapeHtml(row.row || "")}</strong> ${escapeHtml(row.channel || "")} · ${escapeHtml(row.external_post_id || "")}
+            ${row.metrics_due_date ? `<br><small>下一步：${escapeHtml(row.metrics_due_date)} 后回填 7 天数据。</small>` : ""}
+          </li>
+        `).join("")}</ul>
+      ` : ""}
+      ${data.mode !== "dry_run" && imported.length ? `
+        <div class="home-publish-next-metrics">
+          <strong>发布记录已保存。</strong>
+          <span>这些帖子现在会进入“等待数据”阶段；到回填日期后，在数据回流学习区录入表现数据。</span>
+        </div>
       ` : ""}
       ${skipped.length ? `
         <h4>跳过行</h4>
