@@ -2512,6 +2512,23 @@ function renderHomeProjectCompletion(data) {
   const serviceRoleSmoke = security.service_role_smoke || {};
   const serviceRoleMissing = security.service_role_key !== "configured";
   const needsServiceRoleSmoke = !serviceRoleMissing && serviceRoleSmoke.status !== "recent";
+  const serviceRoleSteps = [
+    {
+      label: "复制安装命令",
+      detail: "只在 Terminal 粘贴 Supabase service_role key。",
+      state: serviceRoleMissing ? "active" : "done",
+    },
+    {
+      label: "运行 smoke",
+      detail: "确认服务器能安全使用 service-role key。",
+      state: serviceRoleMissing ? "locked" : needsServiceRoleSmoke ? "active" : "done",
+    },
+    {
+      label: "解除 RLS 卡点",
+      detail: "smoke 通过后，才允许严格 RLS 加固。",
+      state: !serviceRoleMissing && !needsServiceRoleSmoke ? "active" : "locked",
+    },
+  ];
   const percent = Math.max(0, Math.min(100, Number(completion.percent || 0)));
   const firstCycle = Math.max(0, Math.min(100, Number(completion.first_cycle_percent || 0)));
   const primaryNext = completion.next_requirement || nextActions[0] || blockers[0] || "继续按首页下一步操作。";
@@ -2561,10 +2578,19 @@ function renderHomeProjectCompletion(data) {
         <div>
           <strong>${serviceRoleMissing ? "安全解锁：缺 Supabase service-role key" : "安全解锁：需要运行 service-role smoke"}</strong>
           <p>${escapeHtml(security.next_step || "完成这个安全证据后，RLS 加固 blocker 才能解除。")}</p>
+          <ol class="home-security-steps">
+            ${serviceRoleSteps.map((step, index) => `
+              <li class="${escapeHtml(step.state)}">
+                <span>${escapeHtml(String(index + 1))}</span>
+                <b>${escapeHtml(step.label)}</b>
+                <small>${escapeHtml(step.detail)}</small>
+              </li>
+            `).join("")}
+          </ol>
         </div>
         <div class="home-security-actions">
-          <button type="button" data-home-copy-service-role-command>复制终端命令</button>
-          <button type="button" data-home-download-service-role-pack>下载安装包</button>
+          <button class="${serviceRoleMissing ? "primary" : ""}" type="button" data-home-copy-service-role-command>复制安装命令</button>
+          <button type="button" data-home-download-service-role-pack>下载安全说明</button>
           ${needsServiceRoleSmoke ? `<button type="button" data-home-run-service-role-smoke>运行 smoke</button>` : ""}
         </div>
       </div>

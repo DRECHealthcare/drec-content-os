@@ -3046,6 +3046,21 @@ const requiredSnippets = [
     text: "data-home-copy-service-role-command",
   },
   {
+    name: "web home service role stepper copy",
+    file: "web",
+    text: "复制安装命令",
+  },
+  {
+    name: "web home service role stepper smoke",
+    file: "web",
+    text: "运行 smoke",
+  },
+  {
+    name: "web home service role stepper rls",
+    file: "web",
+    text: "解除 RLS 卡点",
+  },
+  {
     name: "web service role command uses terminal prompt",
     file: "web",
     text: "read -s SUPABASE_SERVICE_ROLE_KEY",
@@ -3069,6 +3084,11 @@ const requiredSnippets = [
     name: "web home service role unblock styles",
     file: "styles",
     text: ".home-security-unblock",
+  },
+  {
+    name: "web home service role stepper styles",
+    file: "styles",
+    text: ".home-security-steps",
   },
   {
     name: "web notion carousel source card",

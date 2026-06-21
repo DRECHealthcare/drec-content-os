@@ -497,6 +497,78 @@ header span { color: var(--muted); font-size: 12px; }
   justify-content: flex-end;
 }
 
+.home-security-actions button.primary {
+  border-color: var(--teal);
+  background: var(--teal);
+  color: #052E2A;
+}
+
+.home-security-steps {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.home-security-steps li {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 2px 8px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  background: #FFF;
+}
+
+.home-security-steps li span {
+  grid-row: span 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: #E5E7EB;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.home-security-steps li b {
+  color: var(--navy);
+  font-size: 13px;
+}
+
+.home-security-steps li small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.home-security-steps li.active {
+  border-color: #F59E0B;
+  background: #FFF7ED;
+}
+
+.home-security-steps li.active span {
+  background: #F59E0B;
+  color: #FFF;
+}
+
+.home-security-steps li.done {
+  border-color: #BBF7D0;
+  background: #F0FDF4;
+}
+
+.home-security-steps li.done span {
+  background: var(--green);
+  color: #052E2A;
+}
+
+.home-security-steps li.locked {
+  opacity: .72;
+}
+
 .dashboard-details {
   margin-top: 14px;
 }
