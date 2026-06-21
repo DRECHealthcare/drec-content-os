@@ -110,6 +110,7 @@ const requiredRoutes = [
   "GET /operations/monthly-carousel-doctor-import-rules",
   "GET /operations/monthly-carousel-doctor-import-rules.zh.md",
   "GET /operations/monthly-carousel-doctor-import-rules.csv",
+  "GET /operations/monthly-carousel-doctor-evidence-sheet.csv",
   "GET /operations/monthly-carousel-production-import-rules",
   "GET /operations/monthly-carousel-production-import-rules.zh.md",
   "GET /operations/monthly-carousel-production-import-rules.csv",
@@ -3072,9 +3073,24 @@ const requiredSnippets = [
     text: "download-monthly-carousel-doctor-handoff-pack",
   },
   {
+    name: "web monthly doctor evidence sheet action",
+    file: "web",
+    text: "download-monthly-carousel-doctor-evidence-sheet",
+  },
+  {
+    name: "web monthly doctor evidence sheet endpoint",
+    file: "web",
+    text: "/operations/monthly-carousel-doctor-evidence-sheet.csv",
+  },
+  {
     name: "web monthly doctor send message action",
     file: "web",
     text: "data-simple-download-monthly-doctor-message",
+  },
+  {
+    name: "web simple monthly doctor evidence action",
+    file: "web",
+    text: "data-simple-download-monthly-doctor-evidence",
   },
   {
     name: "web asset toolbar primary monthly action",
@@ -3190,6 +3206,21 @@ const requiredSnippets = [
     name: "monthly carousel doctor send message zip inclusion",
     file: "main",
     text: "00-doctor-send-message.zh.md",
+  },
+  {
+    name: "monthly carousel doctor evidence sheet zip inclusion",
+    file: "main",
+    text: "04-doctor-evidence-sheet.csv",
+  },
+  {
+    name: "monthly carousel doctor evidence sheet route",
+    file: "main",
+    text: "/operations/monthly-carousel-doctor-evidence-sheet.csv",
+  },
+  {
+    name: "monthly carousel doctor evidence sheet safe note",
+    file: "main",
+    text: "Approve requires reviewer_name, review_notes, all five doctor_check fields as yes/pass",
   },
   {
     name: "monthly carousel doctor handoff zip safety",

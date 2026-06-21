@@ -10823,6 +10823,88 @@ def monthly_carousel_doctor_decision_worksheet_csv_text(payload: dict):
     return output.getvalue()
 
 
+def monthly_carousel_doctor_evidence_sheet_csv_text(payload: dict):
+    output = StringIO()
+    fieldnames = [
+        "row_type",
+        "topic_id",
+        "topic",
+        "asset_id",
+        "planned_posting_date",
+        "reviewer_name",
+        "reviewer_review_decision",
+        "reviewer_safety_decision",
+        "doctor_check_educational_not_diagnostic",
+        "doctor_check_no_guaranteed_outcome",
+        "doctor_check_no_medication_instruction",
+        "doctor_check_mandarin_accurate",
+        "doctor_check_cta_appropriate",
+        "review_notes",
+        "use_polished_copy",
+        "preview_url",
+        "png_zip_url",
+        "risk_flag_text",
+        "slide_titles",
+        "caption_preview",
+        "doctor_reply_template",
+        "safe_import_note",
+        "brief_id",
+        "notion_overall_status",
+        "notion_image_status",
+        "notion_caption_status",
+        "current_safety",
+        "current_review",
+        "detector_status",
+        "slide_count",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for item in payload.get("items") or []:
+        writer.writerow(
+            {
+                "row_type": "doctor_review_required",
+                "topic_id": item.get("topic_id") or "",
+                "topic": item.get("topic") or "",
+                "asset_id": item.get("asset_id") or "",
+                "planned_posting_date": item.get("planned_posting_date") or "",
+                "reviewer_name": "",
+                "reviewer_review_decision": "",
+                "reviewer_safety_decision": "",
+                "doctor_check_educational_not_diagnostic": "",
+                "doctor_check_no_guaranteed_outcome": "",
+                "doctor_check_no_medication_instruction": "",
+                "doctor_check_mandarin_accurate": "",
+                "doctor_check_cta_appropriate": "",
+                "review_notes": "",
+                "use_polished_copy": "no",
+                "preview_url": item.get("preview_url") or "",
+                "png_zip_url": item.get("png_zip_url") or "",
+                "risk_flag_text": item.get("risk_flag_text") or "",
+                "slide_titles": " | ".join(item.get("slide_titles") or []),
+                "caption_preview": safe_csv_text(item.get("caption_preview"), 900),
+                "doctor_reply_template": "\n".join(
+                    [
+                        f"Asset ID: {item.get('asset_id') or ''}",
+                        "Decision: approve / needs edits / reject",
+                        "Safety: clear / needs review / blocked",
+                        "Use polished copy: no",
+                        "Notes:",
+                    ]
+                ),
+                "safe_import_note": "Approve requires reviewer_name, review_notes, all five doctor_check fields as yes/pass, reviewer_review_decision=approve, and reviewer_safety_decision=clear.",
+                "brief_id": item.get("brief_id") or "",
+                "notion_overall_status": item.get("overall_status") or "",
+                "notion_image_status": item.get("carousel_image_status") or "",
+                "notion_caption_status": item.get("caption_status") or "",
+                "current_safety": item.get("compliance_status") or "",
+                "current_review": item.get("review_status") or "",
+                "detector_status": item.get("detector_status") or "",
+                "slide_count": item.get("slide_count") or "",
+            }
+        )
+    return output.getvalue()
+
+
 def monthly_carousel_doctor_handoff_triage_markdown(payload: dict):
     source = payload.get("source") or {}
     level_counts = payload.get("level_counts") or {}
@@ -10906,9 +10988,10 @@ async def operations_monthly_carousel_doctor_handoff_pack_zip(_: None = Depends(
                     "2. 再看 `01-doctor-triage.zh.md`。",
                     "3. 需要细读时看 `02-doctor-review-summary.zh.md`。",
                     "4. 医生回复可用 `03-doctor-reply-templates.zh.md`。",
-                    "5. 助理记录可用 `04-doctor-decision-worksheet.csv`；若要 approve，`reviewer_name`、`review_notes` 和五个 `doctor_check_*` 栏位都必须填写 yes/pass。",
-                    "6. 图片素材下载链接在 `05-png-review-links.csv`；完整图片 ZIP 仍由系统端点 `/operations/monthly-carousel-png-assets.zip` 下载。",
-                    "7. 导入前规则在 `06-import-validation-rules.zh.md`；不符合规则的 approve/clear 会被 dry-run 和 import 跳过。",
+                    "5. 助理记录优先用 `04-doctor-evidence-sheet.csv`；它保留导入需要的字段，但把医生证据放在前面。",
+                    "6. 旧版兼容表是 `05-doctor-decision-worksheet.csv`；若要 approve，`reviewer_name`、`review_notes` 和五个 `doctor_check_*` 栏位都必须填写 yes/pass。",
+                    "7. 图片素材下载链接在 `06-png-review-links.csv`；完整图片 ZIP 仍由系统端点 `/operations/monthly-carousel-png-assets.zip` 下载。",
+                    "8. 导入前规则在 `07-import-validation-rules.zh.md`；不符合规则的 approve/clear 会被 dry-run 和 import 跳过。",
                     "",
                     "只有医生明确写 `Decision: approve` 且 `Safety: clear`，才可以进入后续导入和制作步骤。",
                     "导入时系统仍会检查 evidence，不会因为 CSV 误填 approve 就绕过医生审核门槛。",
@@ -10988,6 +11071,8 @@ async def operations_monthly_carousel_doctor_handoff_pack_zip(_: None = Depends(
                 ]
             ),
         )
+        archive.writestr("04-doctor-evidence-sheet.csv", monthly_carousel_doctor_evidence_sheet_csv_text(review_payload))
+        archive.writestr("05-doctor-decision-worksheet.csv", monthly_carousel_doctor_decision_worksheet_csv_text(review_payload))
         archive.writestr("04-doctor-decision-worksheet.csv", monthly_carousel_doctor_decision_worksheet_csv_text(review_payload))
         output = StringIO()
         writer = csv.DictWriter(
@@ -11007,7 +11092,9 @@ async def operations_monthly_carousel_doctor_handoff_pack_zip(_: None = Depends(
                     "risk_flag_text": item.get("risk_flag_text") or "",
                 }
             )
+        archive.writestr("06-png-review-links.csv", output.getvalue())
         archive.writestr("05-png-review-links.csv", output.getvalue())
+        archive.writestr("07-import-validation-rules.zh.md", monthly_doctor_import_rules_markdown())
         archive.writestr("06-import-validation-rules.zh.md", monthly_doctor_import_rules_markdown())
     buffer.seek(0)
     return Response(
@@ -11281,6 +11368,16 @@ async def operations_monthly_carousel_doctor_decision_worksheet_csv(_: None = De
         monthly_carousel_doctor_decision_worksheet_csv_text(payload),
         media_type="text/csv",
         headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-doctor-decision-worksheet.csv"'},
+    )
+
+
+@app.get("/operations/monthly-carousel-doctor-evidence-sheet.csv")
+async def operations_monthly_carousel_doctor_evidence_sheet_csv(_: None = Depends(require_access_token)):
+    payload = await monthly_carousel_review_payload()
+    return Response(
+        monthly_carousel_doctor_evidence_sheet_csv_text(payload),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-doctor-evidence-sheet.csv"'},
     )
 
 

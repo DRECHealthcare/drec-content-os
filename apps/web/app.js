@@ -2657,6 +2657,7 @@ function renderSimpleOperator(data, monthly = null, cycle = null) {
       <details class="simple-extra-actions">
         <summary>更多资料</summary>
         <button type="button" data-simple-download-monthly-doctor-handoff>医生交接 ZIP</button>
+        <button type="button" data-simple-download-monthly-doctor-evidence>医生证据表</button>
         <button type="button" data-simple-download-monthly-action-queue>行动队列</button>
         <button type="button" data-simple-refresh>刷新状态</button>
       </details>
@@ -6295,6 +6296,7 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   const pasteReviewDecisions = event.target.closest("[data-simple-paste-review-decisions]");
   const scheduleApprovedFromHome = event.target.closest("[data-simple-schedule-approved]");
   const downloadMonthlyDoctorHandoff = event.target.closest("[data-simple-download-monthly-doctor-handoff]");
+  const downloadMonthlyDoctorEvidence = event.target.closest("[data-simple-download-monthly-doctor-evidence]");
   const downloadMonthlyDoctorMessage = event.target.closest("[data-simple-download-monthly-doctor-message]");
   const downloadMonthlyActionQueue = event.target.closest("[data-simple-download-monthly-action-queue]");
   const downloadMonthlyProductionRules = event.target.closest("[data-simple-download-monthly-production-rules]");
@@ -6313,7 +6315,7 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   const openCycleScreen = event.target.closest("[data-simple-open-cycle-screen]");
   const downloadCycleCommandCenter = event.target.closest("[data-simple-download-cycle-command-center]");
   const refresh = event.target.closest("[data-simple-refresh]");
-  if (!openAccess && !runReadyAssets && !openAssets && !openReview && !openScheduler && !pasteDoctorReply && !pasteProductionReply && !previewMonthlyQueue && !runMonthlyQueue && !downloadMonthlyReviewQueue && !pasteReviewDecisions && !scheduleApprovedFromHome && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadManualPublishEvidence && !downloadTodayPack && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !openLearning && !useLearningTopics && !downloadWeeklyReportZh && !downloadNextPlanHandback && !openCycleScreen && !downloadCycleCommandCenter && !refresh) return;
+  if (!openAccess && !runReadyAssets && !openAssets && !openReview && !openScheduler && !pasteDoctorReply && !pasteProductionReply && !previewMonthlyQueue && !runMonthlyQueue && !downloadMonthlyReviewQueue && !pasteReviewDecisions && !scheduleApprovedFromHome && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorEvidence && !downloadMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadManualPublishEvidence && !downloadTodayPack && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !openLearning && !useLearningTopics && !downloadWeeklyReportZh && !downloadNextPlanHandback && !openCycleScreen && !downloadCycleCommandCenter && !refresh) return;
   if (openAccess) {
     const panel = document.getElementById("token-panel");
     if (panel?.hidden) showTokenPanel();
@@ -6412,6 +6414,10 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   }
   if (downloadMonthlyDoctorHandoff) {
     await downloadProtectedFile("/operations/monthly-carousel-doctor-handoff-pack.zip", "drec-monthly-carousel-doctor-handoff-pack.zip", "application/zip");
+    return;
+  }
+  if (downloadMonthlyDoctorEvidence) {
+    await downloadProtectedFile("/operations/monthly-carousel-doctor-evidence-sheet.csv", "drec-monthly-carousel-doctor-evidence-sheet.csv", "text/csv");
     return;
   }
   if (downloadMonthlyDoctorMessage) {
@@ -7420,6 +7426,16 @@ document.getElementById("download-monthly-carousel-doctor-reply-templates")?.add
     message.textContent = translateText("Monthly carousel doctor reply templates downloaded.");
   } catch (error) {
     message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : translateText("Could not download monthly carousel doctor reply templates.");
+  }
+});
+
+document.getElementById("download-monthly-carousel-doctor-evidence-sheet")?.addEventListener("click", async () => {
+  const message = document.getElementById("media-message");
+  try {
+    await downloadProtectedFile("/operations/monthly-carousel-doctor-evidence-sheet.csv", "drec-monthly-carousel-doctor-evidence-sheet.csv", "text/csv");
+    message.textContent = "医生证据表已下载。";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : "无法下载医生证据表。";
   }
 });
 
