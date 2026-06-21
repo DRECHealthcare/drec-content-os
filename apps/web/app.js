@@ -2640,6 +2640,10 @@ function renderSimpleOperator(data, monthly = null) {
   if (homeReviewScheduleCard) {
     homeReviewScheduleCard.hidden = !(queueTotal > 0 && scheduledQueue === 0);
   }
+  const homePublishCloseoutCard = document.getElementById("home-publish-closeout-card");
+  if (homePublishCloseoutCard) {
+    homePublishCloseoutCard.hidden = scheduledQueue <= 0;
+  }
 }
 
 function securityGateSummary(security = {}) {
@@ -6195,6 +6199,36 @@ document.getElementById("home-schedule-approved-items")?.addEventListener("click
     stayOnHome: true,
   });
   await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit()]);
+});
+
+async function downloadHomePublishCloseout(path, filename, mediaType, doneMessage) {
+  const message = document.getElementById("home-publish-closeout-message");
+  try {
+    await downloadProtectedFile(path, filename, mediaType);
+    if (message) message.textContent = doneMessage;
+  } catch (error) {
+    if (message) message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : "无法下载发布交接材料。";
+  }
+}
+
+document.getElementById("home-download-today-safe-pack")?.addEventListener("click", async () => {
+  await downloadHomePublishCloseout("/operations/today-safe-operator-pack.zip", "drec-today-safe-operator-pack.zip", "application/zip", "今日安全包已下载。");
+});
+
+document.getElementById("home-download-publishing-handoff")?.addEventListener("click", async () => {
+  await downloadHomePublishCloseout("/operations/publishing-handoff.zh.md", "drec-publishing-handoff-zh.md", "text/markdown", "发布交接包已下载。");
+});
+
+document.getElementById("home-download-post-publish-next")?.addEventListener("click", async () => {
+  await downloadHomePublishCloseout("/operations/post-publish-next-steps.zh.md", "drec-post-publish-next-steps-zh.md", "text/markdown", "发布后下一步已下载。");
+});
+
+document.getElementById("home-download-post-publish-metrics")?.addEventListener("click", async () => {
+  await downloadHomePublishCloseout("/operations/post-publish-metrics-template.csv", "drec-post-publish-metrics-template.csv", "text/csv", "数据记录表已下载。");
+});
+
+document.getElementById("home-open-scheduler")?.addEventListener("click", () => {
+  showScreen("scheduler");
 });
 
 document.getElementById("copy-test-path")?.addEventListener("click", async () => {

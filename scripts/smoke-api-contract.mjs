@@ -4855,6 +4855,36 @@ const requiredSnippets = [
     text: "home-review-schedule-preview",
   },
   {
+    name: "web home publish closeout card",
+    file: "webIndex",
+    text: "home-publish-closeout-card",
+  },
+  {
+    name: "web home today safe pack action",
+    file: "webIndex",
+    text: "home-download-today-safe-pack",
+  },
+  {
+    name: "web home publishing handoff action",
+    file: "webIndex",
+    text: "home-download-publishing-handoff",
+  },
+  {
+    name: "web home post publish action",
+    file: "webIndex",
+    text: "home-download-post-publish-next",
+  },
+  {
+    name: "web home post metrics action",
+    file: "webIndex",
+    text: "home-download-post-publish-metrics",
+  },
+  {
+    name: "web home publish closeout styles",
+    file: "styles",
+    text: ".home-publish-closeout",
+  },
+  {
     name: "web review log action",
     file: "web",
     text: "download-review-log",

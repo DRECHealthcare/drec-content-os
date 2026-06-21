@@ -394,7 +394,8 @@ header span { color: var(--muted); font-size: 12px; }
 .home-doctor-reply,
 .home-production-reply,
 .home-queue-action,
-.home-review-schedule {
+.home-review-schedule,
+.home-publish-closeout {
   margin-top: 14px;
   border-left: 6px solid var(--orange);
 }
@@ -411,10 +412,15 @@ header span { color: var(--muted); font-size: 12px; }
   border-left-color: var(--green);
 }
 
+.home-publish-closeout {
+  border-left-color: var(--teal);
+}
+
 .home-doctor-reply[hidden],
 .home-production-reply[hidden],
 .home-queue-action[hidden],
-.home-review-schedule[hidden] {
+.home-review-schedule[hidden],
+.home-publish-closeout[hidden] {
   display: none;
 }
 
