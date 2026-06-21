@@ -2882,6 +2882,21 @@ const requiredSnippets = [
     text: "data-home-download-completion",
   },
   {
+    name: "web simple operator cycle command endpoint",
+    file: "web",
+    text: "/operations/cycle-command-center",
+  },
+  {
+    name: "web simple operator cycle screen action",
+    file: "web",
+    text: "data-simple-open-cycle-screen",
+  },
+  {
+    name: "web simple operator cycle command download",
+    file: "web",
+    text: "data-simple-download-cycle-command-center",
+  },
+  {
     name: "web home operator guide action",
     file: "web",
     text: "data-home-download-operator-guide",

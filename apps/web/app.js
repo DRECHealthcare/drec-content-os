@@ -2527,12 +2527,14 @@ async function loadProjectCompletionAudit() {
   }
 }
 
-function renderSimpleOperator(data, monthly = null) {
+function renderSimpleOperator(data, monthly = null, cycle = null) {
   const container = document.getElementById("simple-operator");
   if (!container) return;
   const summary = data.workflow?.summary || data.summary || {};
   const monthlyPrimary = monthly?.primary_action || {};
   const monthlyGateCounts = monthly?.gate_counts || {};
+  const cycleAction = cycle?.immediate_action || {};
+  const cycleSummary = cycle?.summary || {};
   const loopQueue = Array.isArray(data.loop?.queue) ? data.loop.queue : [];
   const loopQueueTotal = loopQueue.reduce((total, row) => total + Number(row.count || 0), 0);
   const loopScheduledQueue = loopQueue
@@ -2554,6 +2556,24 @@ function renderSimpleOperator(data, monthly = null) {
     <button class="primary" type="button" data-simple-refresh>刷新状态</button>
   `;
   let safetyNote = "这里不会发布到 Facebook / Instagram。";
+  const cycleScreen = ["dashboard", "assets", "review", "scheduler", "learning", "plan", "compose", "creative", "templates", "video", "meta", "outcomes", "kb", "insights"].includes(cycleAction.screen)
+    ? cycleAction.screen
+    : "dashboard";
+  if (cycleAction.label || cycleAction.action) {
+    eyebrow = "今日指挥中心";
+    title = cycleAction.label || "继续人工安全流程";
+    body = cycleAction.action || "打开指挥中心，执行第一个未完成步骤。";
+    status = `${cycle?.overall_status || "manual_cycle"} · ${Number(cycleSummary.manual_cycle_done || 0)}/${Number(cycleSummary.manual_cycle_required || 0)} 证据`;
+    actions = `
+      <button class="primary" type="button" data-simple-open-cycle-screen="${escapeHtml(cycleScreen)}">打开对应页面</button>
+      <button type="button" data-simple-download-cycle-command-center>下载指挥中心</button>
+      <details class="simple-extra-actions">
+        <summary>更多</summary>
+        <button type="button" data-simple-refresh>刷新状态</button>
+      </details>
+    `;
+    safetyNote = "指挥中心只负责带路和收集证据；不会批准、排程、发布或调用 Meta。";
+  }
 
   if (Number(monthlyGateCounts.waiting_doctor_safety_clear || 0) > 0) {
     eyebrow = "月度内容下一步";
@@ -2709,10 +2729,16 @@ async function loadLoopStatus() {
   try {
     const data = await fetchJson("/workflow/status");
     let monthly = null;
+    let cycle = null;
     try {
       monthly = await fetchJson("/operations/monthly-carousel-next-action-queue");
     } catch {
       monthly = null;
+    }
+    try {
+      cycle = await fetchJson("/operations/cycle-command-center");
+    } catch {
+      cycle = null;
     }
     const loop = data.loop || data;
     const totalQueue = queueTotal(loop.queue);
@@ -2731,7 +2757,7 @@ async function loadLoopStatus() {
     document.getElementById("outcome-count").textContent = `${loop.outcome_count || 0} outcome(s) · ${loop.weight_count || 0} active weight(s)`;
     document.getElementById("security-count").textContent = securityGateSummary(security);
     document.getElementById("automation-count").textContent = `${automation.ready_count || 0} ready · ${automation.blocked_count || 0} blocked`;
-    renderSimpleOperator(data, monthly);
+    renderSimpleOperator(data, monthly, cycle);
     renderWorkflowNext(data.workflow || loop);
     loadLaunchReadiness();
     loadTestRunChecklist();
@@ -6179,8 +6205,10 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   const useLearningTopics = event.target.closest("[data-simple-use-learning-topics]");
   const downloadWeeklyReportZh = event.target.closest("[data-simple-download-weekly-report-zh]");
   const downloadNextPlanHandback = event.target.closest("[data-simple-download-next-plan-handback]");
+  const openCycleScreen = event.target.closest("[data-simple-open-cycle-screen]");
+  const downloadCycleCommandCenter = event.target.closest("[data-simple-download-cycle-command-center]");
   const refresh = event.target.closest("[data-simple-refresh]");
-  if (!openAccess && !runReadyAssets && !openAssets && !openReview && !openScheduler && !pasteDoctorReply && !pasteProductionReply && !previewMonthlyQueue && !runMonthlyQueue && !downloadMonthlyReviewQueue && !pasteReviewDecisions && !scheduleApprovedFromHome && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadTodayPack && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !openLearning && !useLearningTopics && !downloadWeeklyReportZh && !downloadNextPlanHandback && !refresh) return;
+  if (!openAccess && !runReadyAssets && !openAssets && !openReview && !openScheduler && !pasteDoctorReply && !pasteProductionReply && !previewMonthlyQueue && !runMonthlyQueue && !downloadMonthlyReviewQueue && !pasteReviewDecisions && !scheduleApprovedFromHome && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadTodayPack && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !openLearning && !useLearningTopics && !downloadWeeklyReportZh && !downloadNextPlanHandback && !openCycleScreen && !downloadCycleCommandCenter && !refresh) return;
   if (openAccess) {
     const panel = document.getElementById("token-panel");
     if (panel?.hidden) showTokenPanel();
@@ -6191,6 +6219,14 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
     await loadLoopStatus();
     await loadDashboardMonthlyActionQueue();
     await loadHomePublishingCloseout();
+    return;
+  }
+  if (openCycleScreen) {
+    showScreen(openCycleScreen.dataset.simpleOpenCycleScreen || "dashboard");
+    return;
+  }
+  if (downloadCycleCommandCenter) {
+    await downloadProtectedFile("/operations/cycle-command-center.md", "drec-cycle-command-center.md", "text/markdown");
     return;
   }
   if (openReview) {
