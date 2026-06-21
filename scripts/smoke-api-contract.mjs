@@ -4,6 +4,7 @@ const files = {
   main: "apps/api/app/main.py",
   auth: "apps/api/app/auth.py",
   config: "apps/api/app/config.py",
+  supabaseRest: "apps/api/app/supabase_rest.py",
   models: "apps/api/app/models.py",
   dockerfile: "apps/api/Dockerfile",
   schema: "supabase/schema.sql",
@@ -21,6 +22,7 @@ const requiredRoutes = [
   "GET /ui-status",
   "GET /workflow/status",
   "GET /security/status",
+  "GET /security/data-connection",
   "GET /security/access-policy",
   "GET /security/access-control-pack.md",
   "GET /security/service-role-install-pack.md",
@@ -482,6 +484,21 @@ const requiredSnippets = [
     name: "security rls requires recent smoke",
     file: "main",
     text: "service_role_smoke.status=recent",
+  },
+  {
+    name: "security data connection endpoint",
+    file: "main",
+    text: "security_data_connection",
+  },
+  {
+    name: "health data backend status",
+    file: "main",
+    text: "\"data_backend\": data_connection.get(\"data_backend\")",
+  },
+  {
+    name: "supabase strict count diagnostic",
+    file: "supabaseRest",
+    text: "count_strict",
   },
   {
     name: "security rls advisor evidence route",

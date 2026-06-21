@@ -43,10 +43,18 @@ The Dashboard `Download Access Pack` action calls
 naming rules, handoff policy, and rotation rules before full user login is
 added.
 
+`GET /health` reports both direct Postgres and Supabase REST status. If
+`DATABASE_URL` is not installed yet but Supabase REST can read the checked
+Content OS tables, `data_backend` reports `supabase_rest` instead of making the
+system look fully disconnected. `GET /security/data-connection` is protected by
+the DREC access token and shows the per-table REST diagnostic without exposing
+database passwords, API keys, or service-role tokens.
+
 The API exposes:
 
 - `GET /health`
 - `GET /loop-status`
+- `GET /security/data-connection`
 - `GET /security/access-policy`
 - `GET /security/access-control-pack.md`
 - `GET /operations/launch-evidence.md`

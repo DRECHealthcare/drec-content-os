@@ -341,13 +341,16 @@ if WEB_STATIC_DIR.exists():
 
 @app.get("/health")
 async def health():
-    postgres_status = "configured" if await fetch_row("select 1 as ok") else "not_connected"
-    supabase_status = "configured" if supabase_rest.configured() else "not_connected"
+    data_connection = await data_connection_status_payload(sample_tables=["kb_entries", "assets", "publish_queue", "feedback"])
+    postgres_status = data_connection.get("postgres_direct")
+    supabase_status = data_connection.get("supabase_rest")
     return {
         "ok": True,
         "service": "drec-content-os-api",
         "postgres": postgres_status,
         "supabase_rest": supabase_status,
+        "data_backend": data_connection.get("data_backend"),
+        "data_connection": data_connection.get("summary"),
     }
 
 
@@ -1433,6 +1436,69 @@ CONTENT_OS_RLS_TABLES = [
 ]
 
 
+async def supabase_table_probe(table: str):
+    if not supabase_rest.configured():
+        return {
+            "table": f"public.{table}",
+            "status": "not_configured",
+            "row_count": None,
+            "detail": "Supabase REST is not configured on the server.",
+        }
+    try:
+        row_count = await supabase_rest.count_strict(table)
+        return {
+            "table": f"public.{table}",
+            "status": "accessible",
+            "row_count": row_count,
+            "detail": "Server-side Supabase REST read succeeded.",
+        }
+    except httpx.HTTPStatusError as exc:
+        return {
+            "table": f"public.{table}",
+            "status": "blocked",
+            "row_count": None,
+            "http_status": exc.response.status_code,
+            "detail": "Server-side Supabase REST read was rejected.",
+        }
+    except Exception as exc:
+        return {
+            "table": f"public.{table}",
+            "status": "error",
+            "row_count": None,
+            "error_type": exc.__class__.__name__,
+            "detail": "Server-side Supabase REST read failed.",
+        }
+
+
+async def data_connection_status_payload(sample_tables: list[str] | None = None):
+    postgres_connected = bool(await fetch_row("select 1 as ok"))
+    tables = sample_tables or CONTENT_OS_RLS_TABLES
+    probes = [await supabase_table_probe(table) for table in tables]
+    accessible_count = sum(1 for probe in probes if probe.get("status") == "accessible")
+    supabase_configured = supabase_rest.configured()
+    rest_accessible = bool(supabase_configured and accessible_count == len(probes) and probes)
+    data_backend = "postgres" if postgres_connected else "supabase_rest" if rest_accessible else "not_connected"
+    return {
+        "mode": "server_side_data_connection",
+        "postgres_direct": "configured" if postgres_connected else "not_connected",
+        "supabase_rest": "accessible" if rest_accessible else "configured" if supabase_configured else "not_connected",
+        "data_backend": data_backend,
+        "rest_accessible_tables": accessible_count,
+        "rest_checked_tables": len(probes),
+        "summary": (
+            "Direct Postgres is configured."
+            if postgres_connected
+            else f"Direct Postgres is not configured; Supabase REST can access {accessible_count}/{len(probes)} checked table(s)."
+        ),
+        "tables": probes,
+        "safety": [
+            "This diagnostic never returns database passwords, API keys, or service-role tokens.",
+            "Browser clients still use only the protected Fly API.",
+            "Strict RLS hardening still requires SUPABASE_SERVICE_ROLE_KEY and a recent service-role smoke test.",
+        ],
+    }
+
+
 def rls_advisor_summary(has_service_role: bool, smoke_recent: bool = False):
     status = "ready_to_harden" if has_service_role and smoke_recent else "blocked_until_service_role_smoke"
     return {
@@ -1532,6 +1598,11 @@ async def strict_security_status_payload():
 @app.get("/security/status")
 async def security_status(_: None = Depends(require_access_token)):
     return await strict_security_status_payload()
+
+
+@app.get("/security/data-connection")
+async def security_data_connection(_: None = Depends(require_access_token)):
+    return await data_connection_status_payload()
 
 
 @app.post("/security/service-role-smoke-test")
