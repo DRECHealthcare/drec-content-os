@@ -3151,6 +3151,16 @@ const requiredSnippets = [
     text: "data-simple-paste-doctor-reply",
   },
   {
+    name: "web simple doctor worksheet upload action",
+    file: "web",
+    text: "data-simple-upload-doctor-worksheet",
+  },
+  {
+    name: "web simple doctor worksheet upload guidance",
+    file: "web",
+    text: "请选择医生回传的 CSV，然后点“检查医生表”。",
+  },
+  {
     name: "web simple paste doctor reply auto fills template",
     file: "web",
     text: "textInputId: \"home-doctor-reply-text\"",

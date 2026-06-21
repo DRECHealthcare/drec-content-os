@@ -2661,7 +2661,8 @@ function renderSimpleOperator(data, monthly = null, cycle = null) {
     status = "等待医生审核 · 不会发布";
     actions = `
       <button class="primary" type="button" data-simple-download-monthly-doctor-handoff>下载医生包</button>
-      <button type="button" data-simple-paste-doctor-reply>我已有医生回复</button>
+      <button type="button" data-simple-upload-doctor-worksheet>上传医生表 CSV</button>
+      <button type="button" data-simple-paste-doctor-reply>粘贴文字回复</button>
       <details class="simple-extra-actions">
         <summary>更多资料</summary>
         <button type="button" data-simple-download-monthly-doctor-message>只下载医生消息</button>
@@ -6308,6 +6309,7 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   const openReview = event.target.closest("[data-simple-open-review]");
   const openScheduler = event.target.closest("[data-simple-open-scheduler]");
   const pasteDoctorReply = event.target.closest("[data-simple-paste-doctor-reply]");
+  const uploadDoctorWorksheet = event.target.closest("[data-simple-upload-doctor-worksheet]");
   const pasteProductionReply = event.target.closest("[data-simple-paste-production-reply]");
   const previewMonthlyQueue = event.target.closest("[data-simple-preview-monthly-queue]");
   const runMonthlyQueue = event.target.closest("[data-simple-run-monthly-queue]");
@@ -6376,20 +6378,27 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
     showScreen("assets");
     return;
   }
-  if (pasteDoctorReply) {
+  if (pasteDoctorReply || uploadDoctorWorksheet) {
     const card = document.getElementById("home-doctor-reply-card");
     if (card) {
       card.hidden = false;
       card.scrollIntoView({ behavior: "smooth", block: "start" });
       const replyText = document.getElementById("home-doctor-reply-text");
-      if (replyText && !replyText.value.trim()) {
+      if (pasteDoctorReply && replyText && !replyText.value.trim()) {
         await fillDoctorReplyTemplate({
           textInputId: "home-doctor-reply-text",
           messageId: "home-doctor-reply-message",
           scroll: false,
         });
       }
-      replyText?.focus();
+      if (uploadDoctorWorksheet) {
+        const fileInput = document.getElementById("home-monthly-doctor-worksheet-file");
+        const message = document.getElementById("home-doctor-reply-message");
+        if (message) message.textContent = "请选择医生回传的 CSV，然后点“检查医生表”。";
+        fileInput?.focus();
+      } else {
+        replyText?.focus();
+      }
     }
     return;
   }
