@@ -571,6 +571,10 @@ header span { color: var(--muted); font-size: 12px; }
   margin: 10px 0 0;
 }
 
+.home-evidence-import {
+  grid-template-columns: minmax(220px, 1fr) auto auto;
+}
+
 .home-closeout-status {
   margin-top: 12px;
 }

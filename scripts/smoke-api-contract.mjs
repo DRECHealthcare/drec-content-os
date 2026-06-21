@@ -199,6 +199,7 @@ const requiredRoutes = [
   "GET /operations/post-publish-next-steps",
   "GET /operations/post-publish-next-steps.zh.md",
   "GET /operations/manual-publish-evidence.csv",
+  "POST /operations/import-manual-publish-evidence",
   "GET /operations/post-publish-metrics-template.csv",
   "GET /briefs/plan.csv",
   "GET /briefs/asset-pack.md",
@@ -3922,6 +3923,26 @@ const requiredSnippets = [
     name: "web manual publish evidence endpoint",
     file: "web",
     text: "/operations/manual-publish-evidence.csv",
+  },
+  {
+    name: "web manual publish evidence import endpoint",
+    file: "web",
+    text: "/operations/import-manual-publish-evidence",
+  },
+  {
+    name: "web manual publish evidence preview action",
+    file: "webIndex",
+    text: "preview-manual-publish-evidence",
+  },
+  {
+    name: "web home manual publish evidence import action",
+    file: "webIndex",
+    text: "home-import-manual-publish-evidence",
+  },
+  {
+    name: "api manual publish evidence safety",
+    file: "main",
+    text: "This endpoint only records evidence after a human/manual publish. It never calls Meta and never publishes content.",
   },
   {
     name: "web post-publish metrics template action",

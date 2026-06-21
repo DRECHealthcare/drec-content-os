@@ -25667,6 +25667,136 @@ async def decode_metrics_csv(file: UploadFile):
         raise HTTPException(status_code=400, detail="Metrics CSV must be UTF-8 text.") from exc
 
 
+async def decode_manual_publish_evidence_csv(file: UploadFile):
+    raw = await file.read()
+    if len(raw) > 512_000:
+        raise HTTPException(status_code=413, detail="Publish evidence CSV is too large. Keep imports below 512 KB.")
+    try:
+        return raw.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise HTTPException(status_code=400, detail="Publish evidence CSV must be UTF-8 text.") from exc
+
+
+def truthy_csv_flag(value):
+    return str(value or "").strip().lower() in {"yes", "y", "true", "1", "done", "recorded", "recorded_in_drec"}
+
+
+def manual_publish_external_id(row: dict):
+    real_post_id = (row.get("real_meta_post_id") or "").strip()
+    posted_url = (row.get("posted_url") or "").strip()
+    manual_label = (row.get("manual_label_suggestion") or "").strip()
+    posted_at = (row.get("posted_at") or "").strip()
+    published_by = (row.get("published_by") or "").strip()
+    if real_post_id:
+        return real_post_id
+    if posted_url.startswith(("http://", "https://")):
+        return posted_url
+    if manual_label and posted_at and published_by:
+        return manual_label
+    return ""
+
+
+@app.post("/operations/import-manual-publish-evidence")
+async def import_manual_publish_evidence(
+    file: UploadFile = File(...),
+    dry_run: bool = Form(True),
+    session: dict = Depends(require_schedule_access),
+):
+    csv_text = await decode_manual_publish_evidence_csv(file)
+    reader = csv.DictReader(StringIO(csv_text))
+    required = {"row_type", "queue_id", "real_meta_post_id", "posted_url", "posted_at", "published_by"}
+    headers = set(reader.fieldnames or [])
+    if not required.issubset(headers):
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": "Publish evidence CSV is missing required columns.",
+                "missing": sorted(required - headers),
+            },
+        )
+
+    queue_lookup = {str(item.get("id")): item for item in await fetch_publish_queue_items(200)}
+    planned = []
+    imported = []
+    skipped = []
+    for index, row in enumerate(reader, start=2):
+        row_type = (row.get("row_type") or "").strip().lower()
+        queue_id = (row.get("queue_id") or "").strip()
+        if row_type in {"instructions", "sample", ""}:
+            skipped.append({"row": index, "queue_id": queue_id, "reason": f"Skipped {row_type or 'blank'} row."})
+            continue
+        if row_type != "ready_to_publish":
+            skipped.append({"row": index, "queue_id": queue_id, "reason": "Only ready_to_publish rows can be imported."})
+            continue
+        if not queue_id:
+            skipped.append({"row": index, "reason": "Missing queue_id."})
+            continue
+        item = queue_lookup.get(queue_id)
+        if not item:
+            skipped.append({"row": index, "queue_id": queue_id, "reason": "Queue item not found."})
+            continue
+        if item.get("compliance_status") != "clear":
+            skipped.append({"row": index, "queue_id": queue_id, "reason": "Queue item is not compliance-clear."})
+            continue
+        blockers = monthly_handoff_blockers(item)
+        if blockers:
+            skipped.append({"row": index, "queue_id": queue_id, "reason": "Queue item is not ready for manual publish evidence.", "blockers": blockers})
+            continue
+        external_post_id = manual_publish_external_id(row)
+        if not external_post_id:
+            skipped.append({
+                "row": index,
+                "queue_id": queue_id,
+                "reason": "Missing real_meta_post_id or posted_url. Manual label requires posted_at and published_by.",
+            })
+            continue
+        existing_external = (item.get("external_post_id") or "").strip()
+        if item.get("status") == "published":
+            if existing_external == external_post_id:
+                skipped.append({"row": index, "queue_id": queue_id, "external_post_id": external_post_id, "reason": "Already recorded with the same ID."})
+            else:
+                skipped.append({"row": index, "queue_id": queue_id, "external_post_id": existing_external, "reason": "Already published with a different ID."})
+            continue
+        if item.get("status") != "scheduled":
+            skipped.append({"row": index, "queue_id": queue_id, "reason": "Only scheduled queue items can be marked published."})
+            continue
+        planned_item = {
+            "row": index,
+            "queue_id": queue_id,
+            "external_post_id": external_post_id,
+            "channel": item.get("channel"),
+            "format": item.get("format"),
+            "posted_at": (row.get("posted_at") or "").strip(),
+            "published_by": (row.get("published_by") or "").strip(),
+            "recorded_in_drec": truthy_csv_flag(row.get("recorded_in_drec")),
+        }
+        if dry_run:
+            planned.append(planned_item)
+            continue
+        updated = await update_publish_queue_item(
+            queue_id,
+            PublishQueueStatusIn(status="published", external_post_id=external_post_id),
+            session,
+        )
+        imported.append({**planned_item, "item": updated.get("item")})
+
+    return {
+        "mode": "dry_run" if dry_run else "import",
+        "planned_count": len(planned),
+        "imported_count": len(imported),
+        "skipped_count": len(skipped),
+        "planned": planned,
+        "imported": imported,
+        "skipped": skipped,
+        "message": (
+            f"Previewed {len(planned)} publish evidence row(s), skipped {len(skipped)} row(s)."
+            if dry_run
+            else f"Imported {len(imported)} publish evidence row(s), skipped {len(skipped)} row(s)."
+        ),
+        "safety": "This endpoint only records evidence after a human/manual publish. It never calls Meta and never publishes content.",
+    }
+
+
 @app.post("/metrics/import-csv")
 async def import_metrics_csv(
     file: UploadFile = File(...),

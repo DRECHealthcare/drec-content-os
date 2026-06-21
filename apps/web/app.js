@@ -6678,6 +6678,88 @@ document.getElementById("home-download-post-publish-metrics")?.addEventListener(
   await downloadHomePublishCloseout("/operations/post-publish-metrics-template.csv", "drec-post-publish-metrics-template.csv", "text/csv", "数据记录表已下载。");
 });
 
+function renderManualPublishEvidencePreview(data, targetId = "manual-publish-evidence-preview") {
+  const container = document.getElementById(targetId);
+  if (!container) return;
+  const planned = data.planned || [];
+  const imported = data.imported || [];
+  const skipped = data.skipped || [];
+  const visibleRows = planned.length ? planned : imported;
+  container.innerHTML = `
+    <article class="learning-card wide-learning">
+      <h3>发布证据检查</h3>
+      <p>${escapeHtml(data.message || "还没有检查发布证据。")}</p>
+      <small>${escapeHtml(data.mode === "dry_run" ? "只预览，不写入系统。" : "已导入发布记录。这里没有自动发布。")}</small>
+      <div class="summary-row">
+        <span>可导入/已导入: ${escapeHtml(data.mode === "dry_run" ? data.planned_count || 0 : data.imported_count || 0)}</span>
+        <span>跳过: ${escapeHtml(data.skipped_count || 0)}</span>
+      </div>
+      ${visibleRows.length ? `
+        <h4>${data.mode === "dry_run" ? "可导入行" : "已导入行"}</h4>
+        <ul>${visibleRows.slice(0, 8).map((row) => `<li><strong>Row ${escapeHtml(row.row || "")}</strong> ${escapeHtml(row.channel || "")} · ${escapeHtml(row.external_post_id || "")}</li>`).join("")}</ul>
+      ` : ""}
+      ${skipped.length ? `
+        <h4>跳过行</h4>
+        <ul>${skipped.slice(0, 8).map((row) => `<li><strong>Row ${escapeHtml(row.row || "")}</strong> ${escapeHtml(row.queue_id || "")}${row.queue_id ? " · " : ""}${escapeHtml(row.reason || "")}</li>`).join("")}</ul>
+      ` : ""}
+    </article>
+  `;
+}
+
+async function uploadManualPublishEvidence({
+  dryRun,
+  fileInputId = "manual-publish-evidence-file",
+  messageId = "metric-message",
+  previewTargetId = "manual-publish-evidence-preview",
+}) {
+  const message = document.getElementById(messageId);
+  const fileInput = document.getElementById(fileInputId);
+  const file = fileInput?.files?.[0];
+  if (!file) {
+    if (message) message.textContent = "请先选择发布证据 CSV。";
+    return;
+  }
+  const body = new FormData();
+  body.append("file", file);
+  body.append("dry_run", dryRun ? "true" : "false");
+  if (message) message.textContent = dryRun ? "正在检查发布证据..." : "正在导入发布记录...";
+  try {
+    const data = await fetchForm("/operations/import-manual-publish-evidence", body);
+    if (!dryRun) fileInput.value = "";
+    if (message) message.textContent = data.message || (dryRun ? "发布证据检查完成。" : "发布记录已导入。");
+    renderManualPublishEvidencePreview(data, previewTargetId);
+    if (!dryRun) {
+      await Promise.all([loadPublishQueue(), loadHomePublishingCloseout(), loadProjectCompletionAudit(), loadLoopStatus()]);
+    }
+  } catch (error) {
+    if (message) {
+      message.textContent = error.message === "Access token required"
+        ? translateText("Set the access token first.")
+        : dryRun
+        ? "无法检查发布证据。"
+        : "无法导入发布证据。";
+    }
+  }
+}
+
+document.getElementById("home-preview-manual-publish-evidence")?.addEventListener("click", async () => {
+  await uploadManualPublishEvidence({
+    dryRun: true,
+    fileInputId: "home-manual-publish-evidence-file",
+    messageId: "home-publish-closeout-message",
+    previewTargetId: "home-manual-publish-evidence-preview",
+  });
+});
+
+document.getElementById("home-import-manual-publish-evidence")?.addEventListener("click", async () => {
+  await uploadManualPublishEvidence({
+    dryRun: false,
+    fileInputId: "home-manual-publish-evidence-file",
+    messageId: "home-publish-closeout-message",
+    previewTargetId: "home-manual-publish-evidence-preview",
+  });
+});
+
 document.getElementById("home-open-scheduler")?.addEventListener("click", () => {
   showScreen("scheduler");
 });
@@ -10941,6 +11023,14 @@ document.getElementById("download-post-publish-metrics-template")?.addEventListe
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "请先设置访问码。" : "无法下载发布后数据表。";
   }
+});
+
+document.getElementById("preview-manual-publish-evidence")?.addEventListener("click", async () => {
+  await uploadManualPublishEvidence({ dryRun: true });
+});
+
+document.getElementById("import-manual-publish-evidence")?.addEventListener("click", async () => {
+  await uploadManualPublishEvidence({ dryRun: false });
 });
 
 function renderMetricsImportPreview(data) {

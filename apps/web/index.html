@@ -169,6 +169,15 @@
             <button id="home-download-post-publish-next" type="button">发布后下一步</button>
             <button id="home-download-post-publish-metrics" type="button">数据记录表</button>
           </div>
+          <div class="home-record-published home-evidence-import">
+            <label>
+              发布证据 CSV
+              <input id="home-manual-publish-evidence-file" type="file" accept=".csv,text/csv">
+            </label>
+            <button id="home-preview-manual-publish-evidence" type="button">先检查证据</button>
+            <button id="home-import-manual-publish-evidence" class="danger-safe-action" type="button">导入发布记录</button>
+          </div>
+          <div id="home-manual-publish-evidence-preview" class="learning-grid"></div>
           <div class="home-record-published">
             <label>
               已人工发布的项目
@@ -990,6 +999,12 @@
               <button id="download-publishing-closeout-zh" type="button">下载中文发布收尾包</button>
               <button id="download-post-publish-next-steps" type="button">下载发布后下一步</button>
               <button id="download-post-publish-metrics-template" type="button">下载发布后数据表</button>
+              <label class="file-action">
+                发布证据 CSV
+                <input id="manual-publish-evidence-file" type="file" accept=".csv,text/csv">
+              </label>
+              <button id="preview-manual-publish-evidence" type="button">预览发布证据</button>
+              <button id="import-manual-publish-evidence" type="button">导入发布证据</button>
               <label class="file-action">
                 数据 CSV
                 <input id="metrics-csv-file" type="file" accept=".csv,text/csv">
