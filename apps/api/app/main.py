@@ -19504,6 +19504,64 @@ async def notion_monthly_refresh_status(_: None = Depends(require_access_token))
     return await notion_monthly_refresh_status_payload()
 
 
+@app.get("/notion/monthly-refresh-evidence.csv")
+async def notion_monthly_refresh_evidence_csv(_: None = Depends(require_access_token)):
+    status = await notion_monthly_refresh_status_payload()
+    workbench = notion_monthly_refresh_workbench_payload()
+    output = StringIO()
+    fieldnames = ["section", "item", "status", "value", "required_action", "evidence"]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+
+    def write_row(section: str, item: str, value="", row_status="", required_action="", evidence=""):
+        writer.writerow({
+            "section": section,
+            "item": item,
+            "status": row_status,
+            "value": value,
+            "required_action": required_action,
+            "evidence": evidence,
+        })
+
+    write_row("summary", "monthly_refresh_status", status.get("status"), status.get("status"), status.get("next_action"), "Read-only app check.")
+    write_row("summary", "active_cycle_start", status.get("active_cycle_start"), "info", "", "MYT monthly cycle date.")
+    write_row("summary", "next_refresh_date", status.get("next_refresh_date"), "info", "", "Notion refreshes monthly on the 19th.")
+    write_row("summary", "local_monthly_asset_count", status.get("local_monthly_asset_count"), "info", "", "Non-published local monthly carousel assets.")
+    write_row("summary", "imported_since_refresh_count", status.get("imported_since_refresh_count"), "info", "", "Assets created after active cycle start.")
+    write_row("topic_id_guard", "duplicate_topic_ids", ", ".join(status.get("duplicate_topic_ids") or []) or "none", "blocked" if status.get("duplicate_topic_ids") else "clear", "Fix duplicates before image, caption, queue, or schedule work.", "Topic ID is the unique identifier.")
+    write_row("topic_id_guard", "missing_topic_id_count", status.get("missing_topic_id_count"), "blocked" if status.get("missing_topic_id_count") else "clear", "Fix missing Topic ID before work continues.", "Rows without Topic ID cannot be safely deduped.")
+
+    connector_status = (workbench.get("connector_status") or {})
+    write_row("notion_connector", "schema", connector_status.get("schema"), "info", "", f"Verified at {connector_status.get('schema_verified_at') or 'unknown'}.")
+    write_row("notion_connector", "row_query", connector_status.get("row_query"), "info", "Use CSV export/import while row query is unavailable.", connector_status.get("reason") or "")
+    write_row("notion_connector", "sync_mode", connector_status.get("fallback"), "info", "", "App preserves Topic ID and Notion status rules through protected CSV import.")
+
+    for diagnostic in status.get("diagnostics") or []:
+        write_row(
+            "diagnostic",
+            diagnostic.get("label"),
+            diagnostic.get("detail"),
+            diagnostic.get("status"),
+            status.get("next_action"),
+            "Monthly refresh diagnostic.",
+        )
+
+    for rule in status.get("safety") or []:
+        write_row("safety_rule", rule, "required", "required", "Follow before changing any monthly row.", "User workflow rule.")
+
+    for checklist_item in workbench.get("operator_checklist") or []:
+        write_row("operator_checklist", checklist_item, "pending_or_done", "operator_check", "", "Monthly 19th refresh checklist.")
+
+    for topic_id in status.get("topic_ids") or []:
+        write_row("topic_id", topic_id, "present", "tracked", "Do not create a duplicate topic.", "Local monthly asset Topic ID.")
+
+    return Response(
+        output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="drec-notion-monthly-refresh-evidence.csv"'},
+    )
+
+
 @app.get("/notion/monthly-refresh-workbench.md")
 async def notion_monthly_refresh_workbench_md(_: None = Depends(require_access_token)):
     payload = notion_monthly_refresh_workbench_payload()

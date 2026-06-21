@@ -2652,11 +2652,11 @@ function renderSimpleOperator(data, monthly = null, cycle = null) {
     body = monthlyPrimary.detail || "先把医生审核消息发给医生。收到回复后，点“粘贴回复”贴回来检查。";
     status = "等待医生审核 · 不会发布";
     actions = `
-      <button class="primary" type="button" data-simple-download-monthly-doctor-message>下载给医生</button>
+      <button class="primary" type="button" data-simple-download-monthly-doctor-handoff>下载医生包</button>
       <button type="button" data-simple-paste-doctor-reply>我已有医生回复</button>
       <details class="simple-extra-actions">
         <summary>更多资料</summary>
-        <button type="button" data-simple-download-monthly-doctor-handoff>医生交接 ZIP</button>
+        <button type="button" data-simple-download-monthly-doctor-message>只下载医生消息</button>
         <button type="button" data-simple-download-monthly-doctor-evidence>医生证据表</button>
         <button type="button" data-simple-download-monthly-action-queue>行动队列</button>
         <button type="button" data-simple-refresh>刷新状态</button>
@@ -3131,9 +3131,9 @@ function renderDashboardNotionRefreshStatus(data) {
         <span>行读取 ${escapeHtml(connectorStatus.row_query || "unknown")}</span>
       </div>
       <p>${escapeHtml(data.next_action || "")}</p>
-      <div class="learning-actions">
-        <button type="button" data-open-notion-monthly-workbench>打开月度工作台</button>
-        <button type="button" data-download-dashboard-notion-refresh>下载刷新清单</button>
+      <div class="learning-actions simple-primary-actions">
+        <button type="button" data-open-notion-monthly-workbench>打开月度同步</button>
+        <button type="button" data-download-dashboard-notion-refresh-evidence>下载证据表</button>
       </div>
     </article>
   `;
@@ -3179,13 +3179,13 @@ function renderDashboardMonthlyActionQueue(data) {
         `).join("")}</ul>
       ` : "<p class=\"status-note\">暂无可行动项目。</p>"}
       <div class="learning-actions simple-primary-actions">
-        <button type="button" data-download-dashboard-monthly-doctor-message>下载医生发送消息</button>
         <button type="button" data-download-dashboard-monthly-doctor-handoff>下载医生交接 ZIP</button>
-        <button type="button" data-download-dashboard-monthly-action-queue>下载今日行动队列</button>
+        <button type="button" data-download-dashboard-monthly-action-queue>今天下一步</button>
       </div>
       <details class="advanced-actions">
         <summary>高级工具（平时不用打开）</summary>
         <div class="learning-actions">
+        <button type="button" data-download-dashboard-monthly-doctor-message>只下载医生消息</button>
         <button type="button" data-open-monthly-assets-review>打开月度素材审核</button>
         <button type="button" data-download-dashboard-monthly-doctor-triage>下载医生快速判定包</button>
         <button type="button" data-download-dashboard-monthly-doctor-review>下载医生审核总包</button>
@@ -8630,12 +8630,23 @@ document.getElementById("refresh-notion-carousel-source")?.addEventListener("cli
 
 document.getElementById("download-notion-monthly-refresh")?.addEventListener("click", async () => {
   const message = document.getElementById("plan-message");
-  message.textContent = "Preparing Notion monthly refresh pack...";
+  message.textContent = "Preparing Notion monthly refresh guide...";
   try {
     await downloadProtectedFile("/notion/monthly-refresh-workbench.zh.md", "drec-notion-monthly-refresh-workbench.zh.md", "text/markdown");
-    message.textContent = "Notion monthly refresh pack downloaded.";
+    message.textContent = "Notion monthly refresh guide downloaded.";
   } catch (error) {
-    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download Notion monthly refresh pack.";
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download Notion monthly refresh guide.";
+  }
+});
+
+document.getElementById("download-notion-monthly-refresh-evidence")?.addEventListener("click", async () => {
+  const message = document.getElementById("plan-message");
+  message.textContent = "Preparing Notion monthly refresh evidence...";
+  try {
+    await downloadProtectedFile("/notion/monthly-refresh-evidence.csv", "drec-notion-monthly-refresh-evidence.csv", "text/csv");
+    message.textContent = "Notion monthly refresh evidence downloaded.";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download Notion monthly refresh evidence.";
   }
 });
 
@@ -8675,7 +8686,8 @@ document.getElementById("download-notion-carousel-template")?.addEventListener("
 document.getElementById("dashboard-notion-refresh-status")?.addEventListener("click", async (event) => {
   const openWorkbench = event.target.closest("[data-open-notion-monthly-workbench]");
   const downloadWorkbench = event.target.closest("[data-download-dashboard-notion-refresh]");
-  if (!openWorkbench && !downloadWorkbench) return;
+  const downloadEvidence = event.target.closest("[data-download-dashboard-notion-refresh-evidence]");
+  if (!openWorkbench && !downloadWorkbench && !downloadEvidence) return;
   if (openWorkbench) {
     showScreen("plan");
     const card = document.getElementById("notion-carousel-source");
@@ -8683,12 +8695,17 @@ document.getElementById("dashboard-notion-refresh-status")?.addEventListener("cl
     return;
   }
   const message = document.getElementById("test-path-message");
-  if (message) message.textContent = "Preparing Notion monthly refresh pack...";
+  if (message) message.textContent = downloadEvidence ? "Preparing Notion monthly refresh evidence..." : "Preparing Notion monthly refresh guide...";
   try {
+    if (downloadEvidence) {
+      await downloadProtectedFile("/notion/monthly-refresh-evidence.csv", "drec-notion-monthly-refresh-evidence.csv", "text/csv");
+      if (message) message.textContent = "Notion monthly refresh evidence downloaded.";
+      return;
+    }
     await downloadProtectedFile("/notion/monthly-refresh-workbench.zh.md", "drec-notion-monthly-refresh-workbench.zh.md", "text/markdown");
-    if (message) message.textContent = "Notion monthly refresh pack downloaded.";
+    if (message) message.textContent = "Notion monthly refresh guide downloaded.";
   } catch (error) {
-    if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download Notion monthly refresh pack.";
+    if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not download Notion monthly refresh file.";
   }
 });
 

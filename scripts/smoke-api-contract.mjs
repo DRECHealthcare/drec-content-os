@@ -48,6 +48,7 @@ const requiredRoutes = [
   "GET /notion/carousel-image-workflow.md",
   "GET /notion/connector-fallback-pack.md",
   "GET /notion/monthly-refresh-workbench",
+  "GET /notion/monthly-refresh-evidence.csv",
   "GET /notion/monthly-refresh-workbench.md",
   "GET /notion/monthly-refresh-workbench.zh.md",
   "POST /notion/carousel-row/import",
@@ -3033,9 +3034,9 @@ const requiredSnippets = [
     text: "data-dashboard-notion-refresh-status",
   },
   {
-    name: "web dashboard notion refresh action",
+    name: "web dashboard notion refresh evidence action",
     file: "web",
-    text: "download-dashboard-notion-refresh",
+    text: "download-dashboard-notion-refresh-evidence",
   },
   {
     name: "web dashboard monthly action queue card",
@@ -3441,6 +3442,16 @@ const requiredSnippets = [
     name: "web notion monthly refresh action",
     file: "web",
     text: "download-notion-monthly-refresh",
+  },
+  {
+    name: "web notion monthly refresh evidence action",
+    file: "web",
+    text: "download-notion-monthly-refresh-evidence",
+  },
+  {
+    name: "web notion monthly refresh evidence endpoint",
+    file: "web",
+    text: "/notion/monthly-refresh-evidence.csv",
   },
   {
     name: "web notion monthly refresh endpoint",
