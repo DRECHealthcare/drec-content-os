@@ -141,8 +141,8 @@ const uiZh = {
   "Ads Planning": "广告计划",
   "Planning Topics": "计划主题",
   "Signals": "信号",
-  "Load Learning Topics": "读取学习主题",
-  "Generate Weekly Plan": "生成每周内容计划",
+  "Load Learning Topics": "带入学习主题",
+  "Generate Weekly Plan": "生成内容计划",
   "Download Plan CSV": "下载计划 CSV",
   "Download Asset Pack": "下载素材包",
   "Save All Assets": "保存全部素材",
@@ -895,12 +895,12 @@ Object.assign(uiZh, {
   "Download Sense Brief": "下载洞察简报",
   "Refresh Ads Plan": "刷新广告计划",
   "Download Ads Plan": "下载广告计划",
-  "Generate Weekly Plan": "生成每周内容计划",
+  "Generate Weekly Plan": "生成内容计划",
   "Download Plan CSV": "下载计划 CSV",
   "Download Asset Pack": "下载素材包",
   "Save All Assets": "保存全部素材",
   "Archive Drafted": "归档已生成草稿",
-  "Refresh Notion Source": "刷新 Notion 真源",
+  "Refresh Notion Source": "刷新 Notion 来源",
   "Download Notion Image Workflow": "下载 Notion 图片工作流",
   "Download Notion Intake CSV": "下载 Notion 导入模板",
   "Review queued content and send approval signals into the learning spine.": "审核队列中的内容，并把批准信号送回学习主线。",
@@ -8916,6 +8916,7 @@ document.getElementById("save-all-assets").addEventListener("click", async () =>
   const message = document.getElementById("plan-message");
   const form = document.getElementById("plan-form");
   const limit = Number(new FormData(form).get("count")) || 5;
+  const originalText = button.textContent;
   button.disabled = true;
   button.textContent = "Saving";
   message.textContent = "Saving weekly briefs as draft assets...";
@@ -8928,7 +8929,7 @@ document.getElementById("save-all-assets").addEventListener("click", async () =>
     message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not save all draft assets.";
   } finally {
     button.disabled = false;
-    button.textContent = "Save All Assets";
+    button.textContent = originalText || "保存全部素材";
   }
 });
 

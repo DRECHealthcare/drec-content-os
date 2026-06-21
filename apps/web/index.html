@@ -394,23 +394,26 @@
             <textarea name="topics" placeholder="One topic per line. Leave blank to use DREC default metabolic education topics."></textarea>
           </label>
           <div class="form-actions full">
-            <button id="load-learning-topics" type="button">Load Learning Topics</button>
-            <button type="submit">Generate Weekly Plan</button>
-            <button id="download-plan-csv" type="button">Download Plan CSV</button>
-            <button id="download-brief-asset-pack" type="button">Download Asset Pack</button>
-            <button id="refresh-notion-carousel-source" type="button">Refresh Notion Source</button>
-            <button id="download-notion-monthly-refresh" type="button">Download Monthly Refresh 中文</button>
-            <button id="download-notion-carousel-workflow" type="button">Download Notion Image Workflow</button>
-            <button id="download-notion-connector-fallback" type="button">Download Notion CSV Fallback</button>
-            <button id="download-notion-carousel-template" type="button">Download Notion Intake CSV</button>
-            <label class="file-action">
-              Notion CSV
-              <input id="notion-carousel-csv-file" type="file" accept=".csv,text/csv">
-            </label>
-            <button id="preview-notion-carousel-csv" type="button">Preview Notion CSV</button>
-            <button id="import-notion-carousel-csv" type="button">Import Notion CSV</button>
-            <button id="save-all-assets" type="button">Save All Assets</button>
-            <button id="archive-drafted-briefs" type="button">Archive Drafted</button>
+            <button id="load-learning-topics" type="button">带入学习主题</button>
+            <button type="submit">生成内容计划</button>
+            <details class="simple-extra-actions compact-tool-group">
+              <summary>更多资料 / Notion 同步</summary>
+              <button id="download-plan-csv" type="button">下载计划 CSV</button>
+              <button id="download-brief-asset-pack" type="button">下载素材包</button>
+              <button id="refresh-notion-carousel-source" type="button">刷新 Notion 来源</button>
+              <button id="download-notion-monthly-refresh" type="button">下载月度刷新包</button>
+              <button id="download-notion-carousel-workflow" type="button">下载 Notion 图片流程</button>
+              <button id="download-notion-connector-fallback" type="button">下载 Notion CSV 备用包</button>
+              <button id="download-notion-carousel-template" type="button">下载 Notion 导入模板</button>
+              <label class="file-action">
+                Notion CSV
+                <input id="notion-carousel-csv-file" type="file" accept=".csv,text/csv">
+              </label>
+              <button id="preview-notion-carousel-csv" type="button">预览 Notion CSV</button>
+              <button id="import-notion-carousel-csv" type="button">导入 Notion CSV</button>
+              <button id="save-all-assets" type="button">保存全部素材</button>
+              <button id="archive-drafted-briefs" type="button">归档已生成草稿</button>
+            </details>
           </div>
         </form>
         <div id="plan-message" class="status-note"></div>
@@ -631,23 +634,23 @@
               <button id="run-monthly-carousel-safe-advance" type="button">执行安全推进</button>
               <button id="run-monthly-carousel-production-smoke" type="button">运行图片 Smoke Test</button>
               <label class="file-action">
-                Monthly Doctor CSV
+                医生审核 CSV
                 <input id="monthly-carousel-doctor-worksheet-file" type="file" accept=".csv,text/csv">
               </label>
-              <button id="preview-monthly-carousel-doctor-worksheet" type="button">Preview Monthly Doctor</button>
-              <button id="import-monthly-carousel-doctor-worksheet" type="button">Import Monthly Doctor</button>
+              <button id="preview-monthly-carousel-doctor-worksheet" type="button">预览医生审核表</button>
+              <button id="import-monthly-carousel-doctor-worksheet" type="button">导入医生审核表</button>
               <label class="file-action">
-                Monthly Production CSV
+                图片制作 CSV
                 <input id="monthly-carousel-production-worksheet-file" type="file" accept=".csv,text/csv">
               </label>
-              <button id="preview-monthly-carousel-production-worksheet" type="button">Preview Monthly Production</button>
-              <button id="import-monthly-carousel-production-worksheet" type="button">Import Monthly Production</button>
+              <button id="preview-monthly-carousel-production-worksheet" type="button">预览图片制作表</button>
+              <button id="import-monthly-carousel-production-worksheet" type="button">导入图片制作表</button>
               <label class="file-action">
-                Monthly Evidence CSV
+                证据桥接 CSV
                 <input id="monthly-carousel-evidence-bridge-file" type="file" accept=".csv,text/csv">
               </label>
-              <button id="preview-monthly-carousel-evidence-bridge" type="button">Preview Monthly Evidence</button>
-              <button id="import-monthly-carousel-evidence-bridge" type="button">Import Monthly Evidence</button>
+              <button id="preview-monthly-carousel-evidence-bridge" type="button">预览证据桥接表</button>
+              <button id="import-monthly-carousel-evidence-bridge" type="button">导入证据桥接表</button>
             </div>
           </details>
           <details class="advanced-actions compact-tool-group">
