@@ -8212,10 +8212,27 @@ function renderAssetReviewDecisionPreview(data, targetId = "asset-review-decisio
   if (!container) return;
   const rows = data.planned || data.imported || [];
   const skipped = data.skipped || [];
+  const isMonthlyDoctor = data.source === "monthly_carousel_doctor_worksheet";
+  const missingEvidence = skipped
+    .flatMap((row) => Array.isArray(row.missing_evidence) ? row.missing_evidence : [])
+    .reduce((acc, item) => {
+      acc[item] = (acc[item] || 0) + 1;
+      return acc;
+    }, {});
+  const missingEvidenceRows = Object.entries(missingEvidence)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8);
   container.innerHTML = `
     <article class="insight-card">
-      <strong>${data.dry_run ? "Review Decision Preview" : "Review Decision Import"}</strong>
+      <strong>${isMonthlyDoctor ? "月度医生表检查" : data.dry_run ? "Review Decision Preview" : "Review Decision Import"}</strong>
       <small>${rows.length} row(s) ready · ${skipped.length} skipped</small>
+      ${isMonthlyDoctor ? `
+        <p class="status-note">${rows.length ? "这些行可以导入；导入只会记录医生审核和 Safety，不会制作、入队、排程或发布。" : "目前没有可导入行。先补齐医生证据，再重新检查。"}</p>
+        ${missingEvidenceRows.length ? `
+          <h4>最常缺的医生证据</h4>
+          <ul>${missingEvidenceRows.map(([field, count]) => `<li><strong>${escapeHtml(field)}</strong> · ${escapeHtml(String(count))} row(s)</li>`).join("")}</ul>
+        ` : ""}
+      ` : ""}
       ${rows.length ? `
         <ul>${rows.slice(0, 10).map((row) => `
           <li>
@@ -8228,7 +8245,16 @@ function renderAssetReviewDecisionPreview(data, targetId = "asset-review-decisio
       ` : ""}
       ${skipped.length ? `
         <h4>Skipped Rows</h4>
-        <ul>${skipped.slice(0, 10).map((row) => `<li><strong>Row ${escapeHtml(row.row || "")}</strong> ${escapeHtml(row.asset_id || "")}${row.asset_id ? " · " : ""}${escapeHtml(row.reason || "")}</li>`).join("")}</ul>
+        <ul>${skipped.slice(0, 10).map((row) => `
+          <li>
+            <strong>Row ${escapeHtml(row.row || "")}</strong> ${escapeHtml(row.asset_id || "")}${row.asset_id ? " · " : ""}${escapeHtml(row.reason || "")}
+            ${Array.isArray(row.missing_evidence) && row.missing_evidence.length ? `<br><small>缺：${escapeHtml(row.missing_evidence.join(", "))}</small>` : ""}
+          </li>
+        `).join("")}</ul>
+      ` : ""}
+      ${isMonthlyDoctor && Array.isArray(data.safety) && data.safety.length ? `
+        <h4>安全线</h4>
+        <ul>${data.safety.slice(0, 6).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
       ` : ""}
     </article>
   `;

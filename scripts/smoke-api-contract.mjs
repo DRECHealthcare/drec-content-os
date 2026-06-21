@@ -3251,6 +3251,21 @@ const requiredSnippets = [
     text: "renderAssetReviewDecisionPreview(data, previewTargetId)",
   },
   {
+    name: "web monthly doctor worksheet dedicated preview title",
+    file: "web",
+    text: "月度医生表检查",
+  },
+  {
+    name: "web monthly doctor missing evidence summary",
+    file: "web",
+    text: "最常缺的医生证据",
+  },
+  {
+    name: "web monthly doctor missing evidence row detail",
+    file: "web",
+    text: "missing_evidence.join",
+  },
+  {
     name: "web home production reply card",
     file: "webIndex",
     text: "home-production-reply-card",
