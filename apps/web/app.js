@@ -20,6 +20,13 @@ let latestTestRunChecklist = null;
 let latestFirstPublishReadiness = null;
 let latestFirstPublishPreviewUrls = [];
 
+const SERVICE_ROLE_INSTALL_COMMAND = [
+  "# Paste your Supabase service_role key only into Terminal when prompted.",
+  "read -s SUPABASE_SERVICE_ROLE_KEY",
+  "fly secrets set -a drec-content-os-api SUPABASE_SERVICE_ROLE_KEY=\"$SUPABASE_SERVICE_ROLE_KEY\"",
+  "unset SUPABASE_SERVICE_ROLE_KEY",
+].join("\n");
+
 const titleMapEn = {
   dashboard: "Home",
   insights: "Insight Inbox",
@@ -2553,6 +2560,7 @@ function renderHomeProjectCompletion(data) {
           <p>${escapeHtml(security.next_step || "完成这个安全证据后，RLS 加固 blocker 才能解除。")}</p>
         </div>
         <div class="home-security-actions">
+          <button type="button" data-home-copy-service-role-command>复制终端命令</button>
           <button type="button" data-home-download-service-role-pack>下载安装包</button>
           ${needsServiceRoleSmoke ? `<button type="button" data-home-run-service-role-smoke>运行 smoke</button>` : ""}
         </div>
@@ -6223,15 +6231,26 @@ document.getElementById("home-progress-card")?.addEventListener("click", async (
   const downloadOperatorGuide = event.target.closest("[data-home-download-operator-guide]");
   const downloadCompletion = event.target.closest("[data-home-download-completion]");
   const downloadUnblock = event.target.closest("[data-home-download-unblock]");
+  const copyServiceRoleCommand = event.target.closest("[data-home-copy-service-role-command]");
   const downloadServiceRolePack = event.target.closest("[data-home-download-service-role-pack]");
   const runServiceRoleSmoke = event.target.closest("[data-home-run-service-role-smoke]");
-  if (!openNext && !refresh && !downloadOperatorGuide && !downloadCompletion && !downloadUnblock && !downloadServiceRolePack && !runServiceRoleSmoke) return;
+  if (!openNext && !refresh && !downloadOperatorGuide && !downloadCompletion && !downloadUnblock && !copyServiceRoleCommand && !downloadServiceRolePack && !runServiceRoleSmoke) return;
   if (openNext) {
     showScreen(openNext.dataset.homeOpenNext || "dashboard");
     return;
   }
   if (refresh) {
     await Promise.all([loadLoopStatus(), loadProjectCompletionAudit()]);
+    return;
+  }
+  if (copyServiceRoleCommand) {
+    const container = document.getElementById("home-progress-content");
+    try {
+      await navigator.clipboard.writeText(SERVICE_ROLE_INSTALL_COMMAND);
+      container?.insertAdjacentHTML("beforeend", "<p class=\"status-note\">已复制终端命令。只把 Supabase service_role key 粘到 Terminal，不要发到聊天、截图或网页。</p>");
+    } catch {
+      container?.insertAdjacentHTML("beforeend", `<pre class="handoff-panel">${escapeHtml(SERVICE_ROLE_INSTALL_COMMAND)}</pre><p class="status-note">浏览器阻止复制；请只在 Terminal 使用这段命令。</p>`);
+    }
     return;
   }
   if (runServiceRoleSmoke) {

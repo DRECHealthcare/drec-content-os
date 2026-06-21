@@ -3019,6 +3019,16 @@ const requiredSnippets = [
     text: "data-home-download-service-role-pack",
   },
   {
+    name: "web home copy service role command action",
+    file: "web",
+    text: "data-home-copy-service-role-command",
+  },
+  {
+    name: "web service role command uses terminal prompt",
+    file: "web",
+    text: "read -s SUPABASE_SERVICE_ROLE_KEY",
+  },
+  {
     name: "web home service role smoke action",
     file: "web",
     text: "data-home-run-service-role-smoke",
