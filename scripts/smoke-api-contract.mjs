@@ -5077,6 +5077,16 @@ const requiredSnippets = [
     text: "home-metrics-post",
   },
   {
+    name: "web home metrics shortcut action",
+    file: "web",
+    text: "data-home-prepare-metrics",
+  },
+  {
+    name: "web home metrics shortcut safety copy",
+    file: "web",
+    text: "保存数据并学习",
+  },
+  {
     name: "web home metrics quick save action",
     file: "webIndex",
     text: "home-save-rollup-metrics",

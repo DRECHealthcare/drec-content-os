@@ -5627,12 +5627,7 @@ function renderHomePublishingCloseout(data) {
       ? [
           '<option value="">选择要回填数据的帖子</option>',
           ...waitingMetrics.map((item) => {
-            const payload = encodeURIComponent(JSON.stringify({
-              external_post_id: item.external_post_id || "",
-              source: item.channel === "instagram" ? "instagram" : "facebook",
-              channel: item.channel || "manual",
-              format: item.format || "carousel",
-            }));
+            const payload = homeMetricsPayload(item);
             const label = `${item.channel || "post"} / ${item.format || "content"} · ${item.external_post_id || item.id || ""} · ${(item.caption || "").slice(0, 42)}`;
             return `<option value="${payload}">${escapeHtml(label)}</option>`;
           }),
@@ -5682,8 +5677,33 @@ function renderHomePublishingCloseout(data) {
         }).join("")}
       </div>
     ` : ""}
+    ${waitingMetrics.length ? `
+      <div class="home-handoff-list">
+        ${waitingMetrics.slice(0, 4).map((item, index) => `
+          <article class="home-handoff-item">
+            <div>
+              <strong>${escapeHtml(index + 1)}. 等待数据 · ${escapeHtml(item.channel || "manual")} / ${escapeHtml(item.format || "content")}</strong>
+              <small>${escapeHtml(item.external_post_id || item.id || "")}</small>
+            </div>
+            <p>${escapeHtml((item.caption || "").slice(0, 150))}${(item.caption || "").length > 150 ? "..." : ""}</p>
+            <div class="home-handoff-actions">
+              <button type="button" data-home-prepare-metrics="${homeMetricsPayload(item)}">填数据</button>
+            </div>
+          </article>
+        `).join("")}
+      </div>
+    ` : ""}
   `;
   container.dataset.readyItems = JSON.stringify(readyItems);
+}
+
+function homeMetricsPayload(item) {
+  return encodeURIComponent(JSON.stringify({
+    external_post_id: item.external_post_id || "",
+    source: item.channel === "instagram" ? "instagram" : "facebook",
+    channel: item.channel || "manual",
+    format: item.format || "carousel",
+  }));
 }
 
 function homeHandoffText(item) {
@@ -6500,18 +6520,35 @@ document.getElementById("home-record-published-save")?.addEventListener("click",
 });
 
 document.getElementById("home-publish-closeout-status")?.addEventListener("click", async (event) => {
+  const metricsButton = event.target.closest("[data-home-prepare-metrics]");
   const recordButton = event.target.closest("[data-home-prepare-record-published]");
   const fullButton = event.target.closest("[data-home-copy-handoff-full]");
   const captionButton = event.target.closest("[data-home-copy-handoff-caption]");
   const mediaButton = event.target.closest("[data-home-copy-handoff-media]");
-  if (!recordButton && !fullButton && !captionButton && !mediaButton) return;
+  if (!metricsButton && !recordButton && !fullButton && !captionButton && !mediaButton) return;
+  const message = document.getElementById("home-publish-closeout-message");
+  if (metricsButton) {
+    const learningCard = document.getElementById("home-learning-handback-card");
+    const select = document.getElementById("home-metrics-post");
+    const reach = document.getElementById("home-metrics-reach");
+    if (learningCard) {
+      learningCard.hidden = false;
+      learningCard.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    if (select) select.value = metricsButton.dataset.homePrepareMetrics || "";
+    if (reach) {
+      reach.value = "";
+      reach.focus();
+    }
+    if (message) message.textContent = "已选中这条帖子。填 Reach / Likes / Comments 等数据后，按“保存数据并学习”。";
+    return;
+  }
   const itemId = recordButton?.dataset.homePrepareRecordPublished
     || fullButton?.dataset.homeCopyHandoffFull
     || captionButton?.dataset.homeCopyHandoffCaption
     || mediaButton?.dataset.homeCopyHandoffMedia
     || "";
   const container = document.getElementById("home-publish-closeout-status");
-  const message = document.getElementById("home-publish-closeout-message");
   const readyItems = JSON.parse(container?.dataset.readyItems || "[]");
   const item = readyItems.find((row) => row.id === itemId);
   if (!item) {
