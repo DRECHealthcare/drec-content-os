@@ -74,6 +74,7 @@ DEFAULT_PLAN_TOPICS = [
 
 SCHEDULER_HEARTBEAT_RECENT_MINUTES = 6 * 60
 SERVICE_ROLE_SMOKE_RECENT_MINUTES = 7 * 24 * 60
+PROJECT_COMPLETION_WATCH_RECENT_MINUTES = 36 * 60
 
 LEARNING_TOPIC_LIBRARY = {
     "reel": "用60秒解释一个常被误会的血糖指标",
@@ -619,6 +620,59 @@ async def latest_scheduler_heartbeat():
             f"GitHub scheduler heartbeat recorded {age_minutes} minute(s) ago."
             if age_minutes is not None
             else "GitHub scheduler heartbeat exists but its timestamp could not be parsed."
+        ),
+        "item": row,
+    }
+
+
+async def latest_project_completion_watch_heartbeat():
+    row = await fetch_row(
+        """
+        select id, module, ref_type, ref_id, action, reason, tags, created_at
+        from feedback
+        where module = 'ops'
+          and ref_type = 'project_completion_watch'
+          and action = 'heartbeat'
+        order by created_at desc
+        limit 1
+        """
+    )
+    if row is None and supabase_rest.configured():
+        try:
+            rows = await supabase_rest.select(
+                "feedback",
+                {
+                    "select": "id,module,ref_type,ref_id,action,reason,tags,created_at",
+                    "module": "eq.ops",
+                    "ref_type": "eq.project_completion_watch",
+                    "action": "eq.heartbeat",
+                    "order": "created_at.desc",
+                    "limit": "1",
+                },
+            )
+        except Exception:
+            rows = []
+        row = rows[0] if rows else None
+    if not row:
+        return {
+            "status": "missing",
+            "last_seen_at": None,
+            "age_minutes": None,
+            "detail": "No project completion watch heartbeat has been recorded yet.",
+        }
+    created_at = parse_datetime(row.get("created_at"))
+    age_minutes = None
+    if created_at:
+        age_minutes = round((datetime.now(timezone.utc) - created_at).total_seconds() / 60, 1)
+    status = "recent" if age_minutes is not None and age_minutes <= PROJECT_COMPLETION_WATCH_RECENT_MINUTES else "stale"
+    return {
+        "status": status,
+        "last_seen_at": row.get("created_at"),
+        "age_minutes": age_minutes,
+        "detail": (
+            f"Project completion watch heartbeat recorded {age_minutes} minute(s) ago."
+            if age_minutes is not None
+            else "Project completion watch heartbeat exists but its timestamp could not be parsed."
         ),
         "item": row,
     }
@@ -5102,6 +5156,40 @@ async def operations_scheduler_heartbeat(
     session: dict = Depends(require_admin_access),
 ):
     return await record_scheduler_heartbeat(workflow=workflow, mode=mode, session=session, source="github-actions")
+
+
+@app.post("/operations/project-completion-watch-heartbeat")
+async def operations_project_completion_watch_heartbeat(
+    workflow: str = "drec-project-completion-watch",
+    mode: str = "read_only_completion_watch",
+    session: dict = Depends(require_admin_access),
+):
+    safe_workflow = re.sub(r"[^a-zA-Z0-9_. -]", "", workflow)[:80] or "drec-project-completion-watch"
+    safe_mode = re.sub(r"[^a-zA-Z0-9_-]", "", mode)[:40] or "read_only_completion_watch"
+    payload = {
+        "recorded_at": datetime.now(timezone.utc).isoformat(),
+        "source": "github-actions",
+        "workflow": safe_workflow,
+        "mode": safe_mode,
+        "checks": [
+            "/operations/project-completion-audit",
+            "/operations/project-unblock-board",
+            "/workflow/status",
+            "/launch-readiness",
+        ],
+    }
+    await save_feedback(
+        FeedbackIn(
+            module="ops",
+            ref_type="project_completion_watch",
+            ref_id=safe_workflow,
+            action="heartbeat",
+            before_text=json.dumps(payload, ensure_ascii=False),
+            reason="Project completion watch checks completed.",
+            tags=["github-actions", "project-completion-watch", safe_mode, *audit_tags(session)],
+        )
+    )
+    return {"heartbeat": await latest_project_completion_watch_heartbeat()}
 
 
 @app.post("/operations/scheduler-dry-run-self-check")
@@ -27235,6 +27323,7 @@ async def project_completion_audit_payload():
     launch = await launch_readiness_payload()
     meta = await meta_readiness_payload(check_graph=False)
     monthly = await monthly_carousel_acceptance_audit_payload()
+    completion_watch = await latest_project_completion_watch_heartbeat()
     next_actions = []
     if completion.get("blockers"):
         next_actions.extend(completion.get("blockers") or [])
@@ -27279,6 +27368,7 @@ async def project_completion_audit_payload():
             "blocked_count": monthly.get("blocked_count"),
             "next_step": monthly.get("next_step"),
         },
+        "project_completion_watch": completion_watch,
         "next_actions": next_actions[:8],
         "links": {
             "workflow_status": "/workflow/status",

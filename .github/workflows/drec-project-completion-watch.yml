@@ -75,6 +75,15 @@ jobs:
             echo ""
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Record project completion watch heartbeat
+        if: ${{ env.DREC_ACCESS_TOKEN != '' }}
+        run: |
+          curl --fail --silent --show-error --retry 3 --retry-delay 10 --max-time 90 \
+            --request POST \
+            --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
+            "${DREC_API_BASE_URL}/operations/project-completion-watch-heartbeat?workflow=drec-project-completion-watch&mode=read_only_completion_watch" \
+            | tee project-completion-watch-heartbeat.json
+
       - name: Write completion watch summary
         if: ${{ always() }}
         run: |
@@ -86,10 +95,12 @@ jobs:
             echo "- Schedule: ${GITHUB_EVENT_SCHEDULE:-manual}"
             echo "- Token configured: $([ -n "${DREC_ACCESS_TOKEN}" ] && echo yes || echo no)"
             echo "- Safety: read-only completion checks only; this workflow does not approve, import, queue, schedule, publish, update Notion, store secrets, or call Meta."
+            echo "- Evidence: records a project-completion-watch heartbeat only after completion, unblock, workflow, and launch checks pass."
             echo ""
             echo "Checks:"
             echo "- /operations/project-completion-audit"
             echo "- /operations/project-unblock-board"
             echo "- /workflow/status"
             echo "- /launch-readiness"
+            echo "- /operations/project-completion-watch-heartbeat"
           } >> "$GITHUB_STEP_SUMMARY"

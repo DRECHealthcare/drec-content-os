@@ -54,6 +54,7 @@ const requiredRoutes = [
   "POST /operations/first-publish-approve-current-asset",
   "POST /operations/first-publish-approve-current-queue",
   "POST /operations/scheduler-heartbeat",
+  "POST /operations/project-completion-watch-heartbeat",
   "GET /operations/scheduler-activation-pack.md",
   "GET /operations/scheduler-health",
   "GET /operations/scheduler-health.md",
@@ -751,6 +752,21 @@ const requiredSnippets = [
     name: "workflow completion weighted method",
     file: "main",
     text: "weighted_operational_readiness",
+  },
+  {
+    name: "project completion watch heartbeat payload",
+    file: "main",
+    text: "project_completion_watch",
+  },
+  {
+    name: "project completion audit includes watch heartbeat",
+    file: "main",
+    text: "\"project_completion_watch\": completion_watch",
+  },
+  {
+    name: "project completion watch heartbeat route",
+    file: "main",
+    text: "operations_project_completion_watch_heartbeat",
   },
   {
     name: "workflow scheduled queue summary",
@@ -5656,6 +5672,16 @@ const requiredSnippets = [
     name: "github project completion launch readiness check",
     file: "projectCompletionWorkflow",
     text: "/launch-readiness",
+  },
+  {
+    name: "github project completion heartbeat action",
+    file: "projectCompletionWorkflow",
+    text: "/operations/project-completion-watch-heartbeat",
+  },
+  {
+    name: "github project completion heartbeat safety",
+    file: "projectCompletionWorkflow",
+    text: "records a project-completion-watch heartbeat only after completion, unblock, workflow, and launch checks pass",
   },
   {
     name: "github project completion watch safety",

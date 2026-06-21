@@ -342,11 +342,15 @@ The workflow is read-only. It calls:
 - `/operations/project-unblock-board`
 - `/workflow/status`
 - `/launch-readiness`
+- `/operations/project-completion-watch-heartbeat`
 
 It does not approve, import, queue, schedule, publish, update Notion, store
-secrets, or call Meta. Use the Action summary to see whether the next blocker is
-doctor/human approval, production media, queue review, scheduling evidence,
-metrics closeout, Supabase service-role/RLS, or Meta activation.
+secrets, or call Meta. It records one dedicated project-completion-watch
+heartbeat only after the completion, unblock, workflow, and launch checks pass;
+this heartbeat is separate from the dry-run scheduler heartbeat. Use the Action
+summary to see whether the next blocker is doctor/human approval, production
+media, queue review, scheduling evidence, metrics closeout, Supabase
+service-role/RLS, or Meta activation.
 
 ## GitHub Nightly Meta Metrics Scheduler
 
