@@ -3161,6 +3161,21 @@ const requiredSnippets = [
     text: "data-simple-download-monthly-doctor-message",
   },
   {
+    name: "web simple copy doctor message action",
+    file: "web",
+    text: "data-simple-copy-monthly-doctor-message",
+  },
+  {
+    name: "web simple copy doctor message helper",
+    file: "web",
+    text: "copyMonthlyDoctorSendMessage",
+  },
+  {
+    name: "web simple extract doctor send message",
+    file: "web",
+    text: "extractDoctorSendMessage",
+  },
+  {
     name: "web simple monthly doctor evidence action",
     file: "web",
     text: "data-simple-download-monthly-doctor-evidence",

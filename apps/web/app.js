@@ -2621,6 +2621,19 @@ function homeProgressNextScreen(text, data = {}) {
   return "dashboard";
 }
 
+function extractDoctorSendMessage(markdown) {
+  const match = String(markdown || "").match(/```text\s*([\s\S]*?)```/);
+  return (match ? match[1] : markdown || "").trim();
+}
+
+async function copyMonthlyDoctorSendMessage() {
+  const markdown = await fetchText("/operations/monthly-carousel-doctor-send-message.zh.md");
+  const message = extractDoctorSendMessage(markdown);
+  if (!message) throw new Error("Doctor message is empty");
+  await navigator.clipboard.writeText(message);
+  return message;
+}
+
 async function loadProjectCompletionAudit() {
   const card = document.getElementById("home-progress-card");
   const container = document.getElementById("home-progress-content");
@@ -2692,6 +2705,7 @@ function renderSimpleOperator(data, monthly = null, cycle = null) {
       <button class="primary" type="button" data-simple-download-monthly-doctor-handoff>下载医生包</button>
       <details class="simple-extra-actions">
         <summary>我已收到医生回复 / 更多资料</summary>
+        <button type="button" data-simple-copy-monthly-doctor-message>复制医生消息</button>
         <button type="button" data-simple-upload-doctor-worksheet>上传医生表 CSV</button>
         <button type="button" data-simple-paste-doctor-reply>粘贴文字回复</button>
         <button type="button" data-simple-download-monthly-doctor-message>只下载医生消息</button>
@@ -6398,6 +6412,7 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   const downloadMonthlyDoctorHandoff = event.target.closest("[data-simple-download-monthly-doctor-handoff]");
   const downloadMonthlyDoctorEvidence = event.target.closest("[data-simple-download-monthly-doctor-evidence]");
   const downloadMonthlyDoctorMessage = event.target.closest("[data-simple-download-monthly-doctor-message]");
+  const copyMonthlyDoctorMessage = event.target.closest("[data-simple-copy-monthly-doctor-message]");
   const downloadMonthlyActionQueue = event.target.closest("[data-simple-download-monthly-action-queue]");
   const downloadMonthlyProductionRules = event.target.closest("[data-simple-download-monthly-production-rules]");
   const downloadMonthlyProductionQa = event.target.closest("[data-simple-download-monthly-production-qa]");
@@ -6415,7 +6430,7 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   const openCycleScreen = event.target.closest("[data-simple-open-cycle-screen]");
   const downloadCycleCommandCenter = event.target.closest("[data-simple-download-cycle-command-center]");
   const refresh = event.target.closest("[data-simple-refresh]");
-  if (!openAccess && !runReadyAssets && !openAssets && !openReview && !openScheduler && !pasteDoctorReply && !uploadDoctorWorksheet && !pasteProductionReply && !previewMonthlyQueue && !runMonthlyQueue && !downloadMonthlyReviewQueue && !pasteReviewDecisions && !scheduleApprovedFromHome && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorEvidence && !downloadMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadManualPublishEvidence && !downloadTodayPack && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !openLearning && !useLearningTopics && !downloadWeeklyReportZh && !downloadNextPlanHandback && !openCycleScreen && !downloadCycleCommandCenter && !refresh) return;
+  if (!openAccess && !runReadyAssets && !openAssets && !openReview && !openScheduler && !pasteDoctorReply && !uploadDoctorWorksheet && !pasteProductionReply && !previewMonthlyQueue && !runMonthlyQueue && !downloadMonthlyReviewQueue && !pasteReviewDecisions && !scheduleApprovedFromHome && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorEvidence && !downloadMonthlyDoctorMessage && !copyMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadManualPublishEvidence && !downloadTodayPack && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !openLearning && !useLearningTopics && !downloadWeeklyReportZh && !downloadNextPlanHandback && !openCycleScreen && !downloadCycleCommandCenter && !refresh) return;
   if (openAccess) {
     const panel = document.getElementById("token-panel");
     if (panel?.hidden) showTokenPanel();
@@ -6537,6 +6552,24 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   }
   if (downloadMonthlyDoctorMessage) {
     await downloadProtectedFile("/operations/monthly-carousel-doctor-send-message.zh.md", "drec-monthly-carousel-doctor-send-message-zh.md", "text/markdown");
+    return;
+  }
+  if (copyMonthlyDoctorMessage) {
+    const original = copyMonthlyDoctorMessage.textContent;
+    copyMonthlyDoctorMessage.disabled = true;
+    copyMonthlyDoctorMessage.textContent = "复制中";
+    try {
+      await copyMonthlyDoctorSendMessage();
+      copyMonthlyDoctorMessage.textContent = "已复制";
+      setTimeout(() => {
+        copyMonthlyDoctorMessage.textContent = original || "复制医生消息";
+        copyMonthlyDoctorMessage.disabled = false;
+      }, 1400);
+    } catch {
+      copyMonthlyDoctorMessage.textContent = original || "复制医生消息";
+      copyMonthlyDoctorMessage.disabled = false;
+      await downloadProtectedFile("/operations/monthly-carousel-doctor-send-message.zh.md", "drec-monthly-carousel-doctor-send-message-zh.md", "text/markdown");
+    }
     return;
   }
   if (downloadMonthlyActionQueue) {
