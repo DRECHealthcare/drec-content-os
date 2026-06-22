@@ -3344,12 +3344,12 @@ const requiredSnippets = [
   {
     name: "web home step locks stylesheet cache bust",
     file: "webIndex",
-    text: "styles.css?v=20260622-manual-evidence-lock",
+    text: "styles.css?v=20260622-schedule-csv-lock",
   },
   {
     name: "web home step locks script cache bust",
     file: "webIndex",
-    text: "app.js?v=20260622-manual-evidence-lock",
+    text: "app.js?v=20260622-schedule-csv-lock",
   },
   {
     name: "web dashboard details are folded",
@@ -6203,8 +6203,23 @@ const requiredSnippets = [
   },
   {
     name: "web schedule worksheet import action",
+    file: "webIndex",
+    text: 'id="import-schedule-worksheet" type="button" disabled',
+  },
+  {
+    name: "web schedule worksheet import lock helper",
     file: "web",
-    text: "import-schedule-worksheet",
+    text: "setScheduleWorksheetImportButton",
+  },
+  {
+    name: "web schedule worksheet import ready unlock",
+    file: "web",
+    text: "updateScheduleWorksheetImportButton",
+  },
+  {
+    name: "web schedule worksheet import safety hint",
+    file: "webIndex",
+    text: "Preview Schedule first; import unlocks only when rows are ready",
   },
   {
     name: "web monthly schedule import disabled by default",

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DREC 内容系统</title>
-  <link rel="stylesheet" href="./styles.css?v=20260622-manual-evidence-lock">
+  <link rel="stylesheet" href="./styles.css?v=20260622-schedule-csv-lock">
 </head>
 <body>
   <aside>
@@ -911,7 +911,8 @@
                   <input id="schedule-worksheet-file" type="file" accept=".csv,text/csv">
                 </label>
                 <button id="preview-schedule-worksheet" type="button">Preview Schedule</button>
-                <button id="import-schedule-worksheet" type="button">Import Schedule</button>
+                <button id="import-schedule-worksheet" type="button" disabled>Import Schedule</button>
+                <small class="home-doctor-import-hint">Preview Schedule first; import unlocks only when rows are ready. This does not publish.</small>
                 <button id="download-schedule-audit" type="button">Download Schedule Audit</button>
                 <button id="download-calendar" type="button">Download Calendar</button>
                 <button id="dry-run-facebook" type="button">Dry Run Facebook</button>
@@ -1227,6 +1228,6 @@
     </section>
   </main>
 
-  <script src="./app.js?v=20260622-manual-evidence-lock"></script>
+  <script src="./app.js?v=20260622-schedule-csv-lock"></script>
 </body>
 </html>

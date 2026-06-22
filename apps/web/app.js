@@ -10957,16 +10957,40 @@ async function uploadScheduleWorksheet({
 }
 
 document.getElementById("preview-schedule-worksheet")?.addEventListener("click", async () => {
-  await uploadScheduleWorksheet({ dryRun: true });
+  setScheduleWorksheetImportButton(false);
+  const data = await uploadScheduleWorksheet({ dryRun: true });
+  updateScheduleWorksheetImportButton(data);
 });
 
 document.getElementById("import-schedule-worksheet")?.addEventListener("click", async () => {
   await uploadScheduleWorksheet({ dryRun: false });
+  setScheduleWorksheetImportButton(false);
 });
 
 function scheduleWorksheetReadyCount(data) {
   return Number(data?.planned_count ?? data?.imported_count ?? 0);
 }
+
+function setScheduleWorksheetImportButton(enabled) {
+  setHomeActionButton(
+    "import-schedule-worksheet",
+    enabled,
+    "Preview passed. Schedule CSV can be imported.",
+    "Preview the schedule CSV first; import unlocks only when rows are ready.",
+  );
+}
+
+function updateScheduleWorksheetImportButton(data) {
+  const readyCount = scheduleWorksheetReadyCount(data);
+  setScheduleWorksheetImportButton(readyCount > 0);
+  if (readyCount > 0) {
+    const message = document.getElementById("queue-message");
+    if (message) message.textContent = `${message.textContent || "Preview complete."} ${readyCount} row(s) can be imported; this does not publish.`;
+  }
+}
+
+document.getElementById("schedule-worksheet-file")?.addEventListener("change", () => setScheduleWorksheetImportButton(false));
+setScheduleWorksheetImportButton(false);
 
 function setMonthlyScheduleImportButton(enabled) {
   setHomeActionButton(
