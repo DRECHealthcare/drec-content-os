@@ -3,6 +3,7 @@ const webBase = process.env.DREC_WEB_URL || "https://drec-content-os.vercel.app"
 const flyUiBase = process.env.DREC_FLY_UI_URL || `${apiBase}/ui`;
 const accessToken = process.env.DREC_ACCESS_TOKEN || "";
 const actor = process.env.DREC_ACTOR || "codex-smoke";
+const showSkippedChecks = process.env.DREC_SMOKE_SHOW_SKIPS === "1";
 
 const checks = [
   {
@@ -1779,7 +1780,7 @@ const skippedChecks = accessToken ? [] : checks.filter((check) => check.auth);
 
 if (!accessToken) {
   console.log("DREC_ACCESS_TOKEN is not set; running public live checks only.");
-  console.log(`Skipping ${skippedChecks.length} protected check(s).`);
+  console.log(`Skipping ${skippedChecks.length} protected check(s). Set DREC_SMOKE_SHOW_SKIPS=1 to list them.`);
 }
 
 for (const check of runnableChecks) {
@@ -1795,11 +1796,15 @@ for (const result of results) {
   console.log(`${mark} ${result.name}: ${result.detail}`);
 }
 
-for (const check of skippedChecks) {
-  console.log(`SKIP ${check.name}: DREC_ACCESS_TOKEN is not set`);
+if (showSkippedChecks) {
+  for (const check of skippedChecks) {
+    console.log(`SKIP ${check.name}: DREC_ACCESS_TOKEN is not set`);
+  }
 }
 
 const failed = results.filter((result) => !result.ok);
 if (failed.length) {
   process.exit(1);
 }
+
+console.log(`Live smoke completed: ${results.length} passed, ${skippedChecks.length} skipped.`);
