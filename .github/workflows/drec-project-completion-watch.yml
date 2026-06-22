@@ -18,12 +18,24 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DREC_API_BASE_URL: ${{ vars.DREC_API_BASE_URL || 'https://drec-content-os-api.fly.dev' }}
+      DREC_WEB_URL: ${{ vars.DREC_WEB_URL || 'https://drec-content-os.vercel.app' }}
       DREC_ACCESS_TOKEN: ${{ secrets.DREC_ACCESS_TOKEN }}
+      DREC_ACTOR: github-project-completion-watch
     steps:
       - name: Skip when access token is missing
         if: ${{ env.DREC_ACCESS_TOKEN == '' }}
         run: |
           echo "DREC_ACCESS_TOKEN is not configured. Skipping project completion watch."
+
+      - name: Check out repository
+        if: ${{ env.DREC_ACCESS_TOKEN != '' }}
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        if: ${{ env.DREC_ACCESS_TOKEN != '' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
 
       - name: Check project completion audit
         if: ${{ env.DREC_ACCESS_TOKEN != '' }}
@@ -75,6 +87,11 @@ jobs:
             echo ""
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Run full live smoke
+        if: ${{ env.DREC_ACCESS_TOKEN != '' }}
+        run: |
+          node scripts/smoke-live.mjs | tee live-smoke.log
+
       - name: Record project completion watch heartbeat
         if: ${{ env.DREC_ACCESS_TOKEN != '' }}
         run: |
@@ -91,16 +108,18 @@ jobs:
             echo "## DREC Project Completion Watch"
             echo ""
             echo "- API: ${DREC_API_BASE_URL}"
+            echo "- Web: ${DREC_WEB_URL}"
             echo "- Event: ${GITHUB_EVENT_NAME}"
             echo "- Schedule: ${GITHUB_EVENT_SCHEDULE:-manual}"
             echo "- Token configured: $([ -n "${DREC_ACCESS_TOKEN}" ] && echo yes || echo no)"
             echo "- Safety: read-only completion checks only; this workflow does not approve, import, queue, schedule, publish, update Notion, store secrets, or call Meta."
-            echo "- Evidence: records a project-completion-watch heartbeat only after completion, unblock, workflow, and launch checks pass."
+            echo "- Evidence: records a project-completion-watch heartbeat only after completion, unblock, workflow, launch, and full live smoke checks pass."
             echo ""
             echo "Checks:"
             echo "- /operations/project-completion-audit"
             echo "- /operations/project-unblock-board"
             echo "- /workflow/status"
             echo "- /operations/launch-readiness"
+            echo "- node scripts/smoke-live.mjs"
             echo "- /operations/project-completion-watch-heartbeat"
           } >> "$GITHUB_STEP_SUMMARY"

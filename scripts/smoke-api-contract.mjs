@@ -6783,6 +6783,21 @@ const requiredSnippets = [
     text: "/operations/launch-readiness",
   },
   {
+    name: "github project completion checkout",
+    file: "projectCompletionWorkflow",
+    text: "actions/checkout@v4",
+  },
+  {
+    name: "github project completion node setup",
+    file: "projectCompletionWorkflow",
+    text: "actions/setup-node@v4",
+  },
+  {
+    name: "github project completion live smoke",
+    file: "projectCompletionWorkflow",
+    text: "node scripts/smoke-live.mjs",
+  },
+  {
     name: "github project completion heartbeat action",
     file: "projectCompletionWorkflow",
     text: "/operations/project-completion-watch-heartbeat",
@@ -6790,7 +6805,7 @@ const requiredSnippets = [
   {
     name: "github project completion heartbeat safety",
     file: "projectCompletionWorkflow",
-    text: "records a project-completion-watch heartbeat only after completion, unblock, workflow, and launch checks pass",
+    text: "records a project-completion-watch heartbeat only after completion, unblock, workflow, launch, and full live smoke checks pass",
   },
   {
     name: "github project completion watch safety",
