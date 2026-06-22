@@ -2605,7 +2605,7 @@ function renderHomeProjectCompletion(data) {
       </div>
     ` : ""}
     <details class="simple-extra-actions home-progress-more">
-      <summary>更多：刷新 / 进度资料</summary>
+      <summary>需要时打开进度资料</summary>
       <button type="button" data-home-refresh-progress>刷新</button>
       <button type="button" data-home-download-operator-guide>首页说明</button>
       <button type="button" data-home-download-completion>完成度审计</button>
@@ -2667,48 +2667,50 @@ function todayActionExtraAttributes(action = {}) {
   return parts.join(" ");
 }
 
+function renderSimpleSteps(steps = []) {
+  return `
+    <ol class="simple-operator-steps" aria-label="完成顺序">
+      ${steps.slice(0, 3).map((step, index) => `<li><span>${escapeHtml(String(index + 1))}</span>${escapeHtml(step)}</li>`).join("")}
+    </ol>
+  `;
+}
+
 function renderAccessPromptSimpleOperator() {
   return `
     <div class="simple-operator-copy">
-      <span>第一步</span>
+      <span class="simple-operator-status">第一步 · 安全模式</span>
       <h2>先输入访问码</h2>
       <p>输入访问码后，首页会自动显示现在该按哪个按钮。这里不会发布到 Facebook / Instagram。</p>
-      <ol class="simple-operator-steps">
-        <li><span>1</span>按“输入访问码”</li>
-        <li><span>2</span>贴上访问码并保存</li>
-        <li><span>3</span>回到首页看主按钮</li>
-      </ol>
+      ${renderSimpleSteps(["按“输入访问码”", "贴上访问码并保存", "回到首页看主按钮"])}
     </div>
     <div class="simple-operator-actions">
       <button class="primary" type="button" data-simple-open-access>输入访问码</button>
       <details class="simple-extra-actions">
-        <summary>更多</summary>
+        <summary>需要时打开</summary>
         <button type="button" data-simple-refresh>重新检查</button>
       </details>
+      <div class="simple-action-note">保存后系统会刷新下一步。</div>
     </div>
-    <small>如果看不到访问码输入框，按这里就会展开。保存后系统会刷新下一步。</small>
+    <small>如果看不到访问码输入框，按主按钮就会展开。</small>
   `;
 }
 
 function renderConnectionWaitingSimpleOperator() {
   return `
     <div class="simple-operator-copy">
-      <span>正在连接</span>
+      <span class="simple-operator-status">正在连接 · 安全模式</span>
       <h2>还在读取下一步</h2>
       <p>如果这里停太久，通常是访问码未保存、线上 API 正在醒来，或最新版本还没部署。这里不会发布到 Facebook / Instagram。</p>
-      <ol class="simple-operator-steps">
-        <li><span>1</span>先等几秒</li>
-        <li><span>2</span>不动就重新检查</li>
-        <li><span>3</span>仍失败再看部署说明</li>
-      </ol>
+      ${renderSimpleSteps(["先等几秒", "不动就重新检查", "仍失败再看部署说明"])}
     </div>
     <div class="simple-operator-actions">
       <button class="primary" type="button" data-simple-refresh>重新检查</button>
       <details class="simple-extra-actions">
-        <summary>更多</summary>
+        <summary>需要时打开</summary>
         <button type="button" data-simple-open-access>输入访问码</button>
         <button type="button" data-simple-today-kind="download" data-simple-today-path="/operations/deployment-activation-pack.zh.md" data-simple-today-filename="drec-deployment-activation-zh.md">下载部署说明</button>
       </details>
+      <div class="simple-action-note">这个按钮只重新读取状态。</div>
     </div>
     <small>这个提示只是在带路，不会批准、排程、发布或调用 Meta。</small>
   `;
@@ -2718,22 +2720,19 @@ function renderApiFailedSimpleOperator(hasToken) {
   if (!hasToken) return renderAccessPromptSimpleOperator();
   return `
     <div class="simple-operator-copy">
-      <span>连接未完成</span>
+      <span class="simple-operator-status">连接未完成 · 安全模式</span>
       <h2>现在先检查连接</h2>
       <p>系统暂时没有读到线上下一步。常见原因是 Fly 最新版本还没部署，或访问码不对。这里不会发布到 Facebook / Instagram。</p>
-      <ol class="simple-operator-steps">
-        <li><span>1</span>重新检查一次</li>
-        <li><span>2</span>确认访问码</li>
-        <li><span>3</span>需要时启用 Fly 部署</li>
-      </ol>
+      ${renderSimpleSteps(["重新检查一次", "确认访问码", "需要时启用 Fly 部署"])}
     </div>
     <div class="simple-operator-actions">
       <button class="primary" type="button" data-simple-refresh>重新检查</button>
       <details class="simple-extra-actions">
-        <summary>更多</summary>
+        <summary>需要时打开</summary>
         <button type="button" data-simple-open-access>输入访问码</button>
         <button type="button" data-simple-today-kind="download" data-simple-today-path="/operations/deployment-activation-pack.zh.md" data-simple-today-filename="drec-deployment-activation-zh.md">下载部署说明</button>
       </details>
+      <div class="simple-action-note">不会修改内容，也不会发布。</div>
     </div>
     <small>如果线上还是旧版本，先完成 Fly 自动部署 token，再回来刷新首页。</small>
   `;
@@ -2745,23 +2744,24 @@ function renderTodaySimpleOperator(today) {
   const secondary = action.secondary || [];
   const nextSteps = action.next_steps || ["看这里的主按钮", "执行后重新检查", "只有绿灯才进入下一步"];
   const primaryLabel = primary.label || "继续";
+  const availability = today?.availability || {};
   return `
     <div class="simple-operator-copy">
-      <span>${escapeHtml(action.eyebrow || "今日下一步")} · ${escapeHtml(action.status || "只读状态")}</span>
+      <span class="simple-operator-status">${escapeHtml(action.eyebrow || "今日下一步")} · ${escapeHtml(action.status || "只读状态")}</span>
       <h2>${escapeHtml(action.title || "现在只看这里")}</h2>
       <p>${escapeHtml(action.body || "系统正在判断下一步。")}</p>
-      <ol class="simple-operator-steps">
-        ${nextSteps.slice(0, 3).map((step, index) => `<li><span>${escapeHtml(String(index + 1))}</span>${escapeHtml(step)}</li>`).join("")}
-      </ol>
+      ${availability.partial ? `<div class="simple-operator-warning">部分后台检查比较慢，系统已先显示安全可做的下一步。</div>` : ""}
+      ${renderSimpleSteps(nextSteps)}
     </div>
     <div class="simple-operator-actions">
       <button class="primary" type="button" ${todayActionExtraAttributes(primary)}>${escapeHtml(primaryLabel)}</button>
       <details class="simple-extra-actions">
-        <summary>更多</summary>
+        <summary>需要时打开资料</summary>
         ${secondary.slice(0, 4).map((item) => `<button type="button" ${todayActionExtraAttributes(item)}>${escapeHtml(item.label || "打开")}</button>`).join("")}
         <button type="button" data-simple-today-kind="download" data-simple-today-path="/operations/today-next-action.zh.md" data-simple-today-filename="drec-today-next-action-zh.md">下载今日下一步</button>
         <button type="button" data-simple-refresh>重新检查</button>
       </details>
+      <div class="simple-action-note">先按上面这个按钮；找不到东西才打开资料。</div>
     </div>
     <small>${escapeHtml(action.safety_note || "这里不会发布到 Facebook / Instagram。")} 找不到东西时，优先看这个卡片，不用进高级工具。</small>
   `;
@@ -2813,7 +2813,7 @@ function renderSimpleOperator(data, monthly = null, cycle = null, today = null) 
     actions = `
       <button class="primary" type="button" data-simple-open-cycle-screen="${escapeHtml(cycleScreen)}">继续这一步</button>
       <details class="simple-extra-actions">
-        <summary>更多</summary>
+        <summary>需要时打开资料</summary>
         <button type="button" data-simple-download-cycle-command-center>下载指挥中心</button>
         <button type="button" data-simple-refresh>重新检查</button>
       </details>
@@ -2830,7 +2830,7 @@ function renderSimpleOperator(data, monthly = null, cycle = null, today = null) 
     actions = `
       <button class="primary" type="button" data-simple-copy-monthly-doctor-message>复制医生消息</button>
       <details class="simple-extra-actions">
-        <summary>医生回复回来后 / 更多</summary>
+        <summary>收到医生回复后打开</summary>
         <button type="button" data-simple-upload-doctor-worksheet>上传医生表 CSV</button>
         <button type="button" data-simple-paste-doctor-reply>粘贴文字回复</button>
         <button type="button" data-simple-download-monthly-doctor-handoff>下载完整医生包</button>
@@ -2850,7 +2850,7 @@ function renderSimpleOperator(data, monthly = null, cycle = null, today = null) 
     actions = `
       <button class="primary" type="button" data-simple-download-monthly-production-rules>下载制作规则</button>
       <details class="simple-extra-actions">
-        <summary>我已收到图片 / 更多资料</summary>
+        <summary>收到图片后打开</summary>
         <button type="button" data-simple-paste-production-reply>粘贴图片回复</button>
         <button type="button" data-simple-download-monthly-production-qa>制作 QA 包</button>
         <button type="button" data-simple-refresh>重新检查</button>
@@ -2866,7 +2866,7 @@ function renderSimpleOperator(data, monthly = null, cycle = null, today = null) 
     actions = `
       <button class="primary" type="button" data-simple-preview-monthly-queue>先检查</button>
       <details class="simple-extra-actions">
-        <summary>检查通过后 / 更多资料</summary>
+        <summary>检查通过后打开</summary>
         <button type="button" data-simple-run-monthly-queue>确认加入队列</button>
         <button type="button" data-simple-download-monthly-queue-readiness>入队检查表</button>
         <button type="button" data-simple-refresh>重新检查</button>
@@ -2882,7 +2882,7 @@ function renderSimpleOperator(data, monthly = null, cycle = null, today = null) 
     actions = `
       <button class="primary" type="button" data-simple-run-ready-assets>加入队列</button>
       <details class="simple-extra-actions">
-        <summary>更多</summary>
+        <summary>需要时打开资料</summary>
         <button type="button" data-simple-open-assets>看素材</button>
         <button type="button" data-simple-refresh>重新检查</button>
       </details>
@@ -2896,7 +2896,7 @@ function renderSimpleOperator(data, monthly = null, cycle = null, today = null) 
     actions = `
       <button class="primary" type="button" data-simple-paste-review-decisions>粘贴审核决定</button>
       <details class="simple-extra-actions">
-        <summary>审核通过后 / 更多资料</summary>
+        <summary>审核通过后打开</summary>
         <button type="button" data-simple-schedule-approved>排程已通过内容</button>
         <button type="button" data-simple-download-monthly-review-queue>下载审核队列</button>
         <button type="button" data-simple-refresh>重新检查</button>
@@ -2912,7 +2912,7 @@ function renderSimpleOperator(data, monthly = null, cycle = null, today = null) 
     actions = `
       <button class="primary" type="button" data-simple-download-today-pack>下载给发布人的安全包</button>
       <details class="simple-extra-actions">
-        <summary>更多工具</summary>
+        <summary>需要时打开交接资料</summary>
         <button type="button" data-simple-open-scheduler>看排程</button>
         <button type="button" data-simple-download-handoff>交接包</button>
         <button type="button" data-simple-download-manual-publish-evidence>发布证据表</button>
@@ -2931,7 +2931,7 @@ function renderSimpleOperator(data, monthly = null, cycle = null, today = null) 
     actions = `
       <button class="primary" type="button" data-simple-use-learning-topics>带入下月计划</button>
       <details class="simple-extra-actions">
-        <summary>更多</summary>
+        <summary>需要时打开资料</summary>
         <button type="button" data-simple-open-learning>看学习页</button>
         <button type="button" data-simple-download-weekly-report-zh>中文周报</button>
         <button type="button" data-simple-download-next-plan-handback>下月回流包</button>

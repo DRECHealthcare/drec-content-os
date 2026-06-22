@@ -3117,6 +3117,21 @@ const requiredSnippets = [
     text: "simple-operator-steps",
   },
   {
+    name: "web simple operator clear secondary label",
+    file: "web",
+    text: "需要时打开资料",
+  },
+  {
+    name: "web simple operator status pill",
+    file: "styles",
+    text: ".simple-operator-status",
+  },
+  {
+    name: "web simple operator action note",
+    file: "styles",
+    text: ".simple-action-note",
+  },
+  {
     name: "web simple operator hides action cards by default",
     file: "web",
     text: "hideHomeActionCards();",
@@ -4129,7 +4144,7 @@ const requiredSnippets = [
   {
     name: "web metrics collapsed secondary tools",
     file: "webIndex",
-    text: "更多：下载 / CSV 导入",
+    text: "需要时打开下载 / CSV 导入",
   },
   {
     name: "web metrics closeout action",
