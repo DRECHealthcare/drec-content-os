@@ -2528,6 +2528,7 @@ function renderHomeProjectCompletion(data) {
   const serviceRoleSmoke = security.service_role_smoke || {};
   const serviceRoleMissing = security.service_role_key !== "configured";
   const needsServiceRoleSmoke = !serviceRoleMissing && serviceRoleSmoke.status !== "recent";
+  const supabaseApiSettingsUrl = security.supabase_api_settings_url || "";
   const serviceRoleSteps = [
     {
       label: "复制安装命令",
@@ -2590,6 +2591,7 @@ function renderHomeProjectCompletion(data) {
           </ol>
         </div>
         <div class="home-security-actions">
+          ${supabaseApiSettingsUrl ? `<button class="primary" type="button" data-home-open-supabase-api="${escapeHtml(supabaseApiSettingsUrl)}">打开 Supabase API 设置</button>` : ""}
           <button class="${serviceRoleMissing ? "primary" : ""}" type="button" data-home-copy-service-role-command>复制安装命令</button>
           <button type="button" data-home-download-service-role-pack>下载安全说明</button>
           ${needsServiceRoleSmoke ? `<button type="button" data-home-run-service-role-smoke>运行 smoke</button>` : ""}
@@ -6634,13 +6636,18 @@ document.getElementById("home-progress-card")?.addEventListener("click", async (
   const copyServiceRoleCommand = event.target.closest("[data-home-copy-service-role-command]");
   const downloadServiceRolePack = event.target.closest("[data-home-download-service-role-pack]");
   const runServiceRoleSmoke = event.target.closest("[data-home-run-service-role-smoke]");
-  if (!openNext && !refresh && !downloadOperatorGuide && !downloadCompletion && !downloadUnblock && !downloadDeployment && !copyServiceRoleCommand && !downloadServiceRolePack && !runServiceRoleSmoke) return;
+  const openSupabaseApi = event.target.closest("[data-home-open-supabase-api]");
+  if (!openNext && !refresh && !downloadOperatorGuide && !downloadCompletion && !downloadUnblock && !downloadDeployment && !copyServiceRoleCommand && !downloadServiceRolePack && !runServiceRoleSmoke && !openSupabaseApi) return;
   if (openNext) {
     showScreen(openNext.dataset.homeOpenNext || "dashboard");
     return;
   }
   if (refresh) {
     await Promise.all([loadLoopStatus(), loadProjectCompletionAudit()]);
+    return;
+  }
+  if (openSupabaseApi) {
+    window.open(openSupabaseApi.dataset.homeOpenSupabaseApi, "_blank", "noopener,noreferrer");
     return;
   }
   if (copyServiceRoleCommand) {

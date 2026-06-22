@@ -1661,6 +1661,18 @@ def rls_advisor_summary(has_service_role: bool, smoke_recent: bool = False):
     }
 
 
+def supabase_project_ref():
+    if not settings.supabase_url:
+        return None
+    match = re.search(r"https://([a-z0-9-]+)\.supabase\.co", settings.supabase_url.strip(), re.IGNORECASE)
+    return match.group(1) if match else None
+
+
+def supabase_dashboard_api_settings_url():
+    project_ref = supabase_project_ref()
+    return f"https://supabase.com/dashboard/project/{project_ref}/settings/api" if project_ref else None
+
+
 def security_status_payload():
     has_service_role = bool(settings.supabase_service_role_key)
     has_supabase_rest = bool(settings.supabase_url and supabase_rest.api_key())
@@ -1673,6 +1685,8 @@ def security_status_payload():
         "service_role_key": "configured" if has_service_role else "missing",
         "fallback_key_mode": fallback_key_mode,
         "direct_browser_supabase": "disabled_by_design",
+        "supabase_project_ref": supabase_project_ref(),
+        "supabase_api_settings_url": supabase_dashboard_api_settings_url(),
         "rls_hardening_ready": rls_ready,
         "rls_advisor": rls_advisor,
         "checks": [
@@ -1972,6 +1986,7 @@ def service_role_install_pack_markdown(security: dict):
         "## Where To Get The Key",
         "",
         "- Open Supabase Dashboard for the Content OS project.",
+        f"- Direct API settings link: {security.get('supabase_api_settings_url') or 'Open Supabase Dashboard -> Project Settings -> API.'}",
         "- Go to Project Settings -> API.",
         "- Copy the `service_role` key only when you are ready to paste it into Fly secrets.",
         "- Treat the service-role key like a server password. It can bypass table-level browser restrictions.",

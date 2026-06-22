@@ -565,6 +565,16 @@ const requiredSnippets = [
     text: "\"data_backend\": data_connection.get(\"data_backend\")",
   },
   {
+    name: "security status includes Supabase project ref",
+    file: "main",
+    text: "\"supabase_project_ref\": supabase_project_ref()",
+  },
+  {
+    name: "security status includes Supabase API settings URL",
+    file: "main",
+    text: "\"supabase_api_settings_url\": supabase_dashboard_api_settings_url()",
+  },
+  {
     name: "home progress data backend pill",
     file: "web",
     text: "security.data_backend",
@@ -3323,6 +3333,16 @@ const requiredSnippets = [
     name: "web home copy service role command action",
     file: "web",
     text: "data-home-copy-service-role-command",
+  },
+  {
+    name: "web home opens Supabase API settings",
+    file: "web",
+    text: "data-home-open-supabase-api",
+  },
+  {
+    name: "web home Supabase API settings label",
+    file: "web",
+    text: "打开 Supabase API 设置",
   },
   {
     name: "web home service role stepper copy",
