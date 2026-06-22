@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DREC 内容系统</title>
-  <link rel="stylesheet" href="./styles.css?v=20260622-schedule-csv-lock">
+  <link rel="stylesheet" href="./styles.css?v=20260622-monthly-advance-lock">
 </head>
 <body>
   <aside>
@@ -656,10 +656,11 @@
               <button id="download-monthly-carousel-queue-readiness" type="button">下载入队检查表</button>
               <button id="download-monthly-carousel-queue-execution-pack" type="button">下载入队执行包</button>
               <button id="preview-monthly-carousel-queue-ready" type="button">先检查入队</button>
-              <button id="queue-monthly-carousel-ready" type="button">确认加入队列</button>
+              <button id="queue-monthly-carousel-ready" type="button" disabled>确认加入队列</button>
               <button id="preview-monthly-carousel-safe-advance" type="button">先检查推进</button>
-              <button id="run-monthly-carousel-safe-advance" type="button">确认安全推进</button>
+              <button id="run-monthly-carousel-safe-advance" type="button" disabled>确认安全推进</button>
               <button id="run-monthly-carousel-production-smoke" type="button">运行图片 Smoke Test</button>
+              <span class="inline-hint">先检查入队/推进；有可执行项后才可以确认。这里不会发布 Facebook/IG。</span>
               <label class="file-action">
                 医生审核 CSV
                 <input id="monthly-carousel-doctor-worksheet-file" type="file" accept=".csv,text/csv">
@@ -1228,6 +1229,6 @@
     </section>
   </main>
 
-  <script src="./app.js?v=20260622-schedule-csv-lock"></script>
+  <script src="./app.js?v=20260622-monthly-advance-lock"></script>
 </body>
 </html>

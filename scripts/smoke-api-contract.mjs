@@ -3344,12 +3344,42 @@ const requiredSnippets = [
   {
     name: "web home step locks stylesheet cache bust",
     file: "webIndex",
-    text: "styles.css?v=20260622-schedule-csv-lock",
+    text: "styles.css?v=20260622-monthly-advance-lock",
   },
   {
     name: "web home step locks script cache bust",
     file: "webIndex",
-    text: "app.js?v=20260622-schedule-csv-lock",
+    text: "app.js?v=20260622-monthly-advance-lock",
+  },
+  {
+    name: "web monthly queue confirm locked",
+    file: "webIndex",
+    text: 'id="queue-monthly-carousel-ready" type="button" disabled',
+  },
+  {
+    name: "web monthly safe advance confirm locked",
+    file: "webIndex",
+    text: 'id="run-monthly-carousel-safe-advance" type="button" disabled',
+  },
+  {
+    name: "web monthly advance lock hint",
+    file: "webIndex",
+    text: "先检查入队/推进；有可执行项后才可以确认",
+  },
+  {
+    name: "web monthly advance lock helper",
+    file: "web",
+    text: "lockMonthlyAdvanceButtons",
+  },
+  {
+    name: "web monthly queue confirm update helper",
+    file: "web",
+    text: "updateMonthlyQueueRunButton",
+  },
+  {
+    name: "web monthly safe advance confirm update helper",
+    file: "web",
+    text: "updateMonthlySafeAdvanceRunButton",
   },
   {
     name: "web dashboard details are folded",

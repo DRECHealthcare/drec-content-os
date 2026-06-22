@@ -9248,12 +9248,14 @@ async function runMonthlyCarouselSafeAdvance({ dryRun }) {
       : translateText("Monthly carousel safe advance completed."));
     renderMonthlySafeAdvanceResult(data);
     if (!dryRun) await Promise.all([loadAssets(), loadMonthlyCarouselStatusBoard(), loadPreScheduleGate(), loadPublishQueue(), loadLoopStatus(), loadProjectCompletionAudit()]);
+    return data;
   } catch (error) {
     message.textContent = error.message === "Access token required"
       ? translateText("Set the access token first.")
       : dryRun
         ? translateText("Could not preview monthly carousel safe advance.")
         : translateText("Could not run monthly carousel safe advance.");
+    return null;
   }
 }
 
@@ -9292,6 +9294,59 @@ function lockMonthlyAdvancedImportButtons() {
   setMonthlyAdvancedImportButton("import-monthly-carousel-production-worksheet", false);
   setMonthlyAdvancedImportButton("import-monthly-carousel-evidence-bridge", false);
 }
+
+function monthlySafeAdvanceReadyCount(data) {
+  return Number(data?.action_count ?? data?.would_queue ?? data?.would_schedule ?? 0);
+}
+
+function setMonthlyAdvanceButton(buttonId, enabled, enabledTitle, disabledTitle) {
+  setHomeActionButton(buttonId, enabled, enabledTitle, disabledTitle);
+}
+
+function lockMonthlyAdvanceButtons() {
+  setMonthlyAdvanceButton(
+    "queue-monthly-carousel-ready",
+    false,
+    "检查通过，可以加入队列。",
+    "请先检查入队；有可执行项后才可以确认。",
+  );
+  setMonthlyAdvanceButton(
+    "run-monthly-carousel-safe-advance",
+    false,
+    "检查通过，可以安全推进。",
+    "请先检查推进；有可执行项后才可以确认。",
+  );
+}
+
+function updateMonthlyQueueRunButton(data) {
+  const readyCount = monthlyQueueReadyCount(data);
+  setMonthlyAdvanceButton(
+    "queue-monthly-carousel-ready",
+    readyCount > 0,
+    "检查通过，可以加入队列。",
+    "请先检查入队；有可执行项后才可以确认。",
+  );
+  const message = document.getElementById("media-message");
+  if (message && data && readyCount > 0) {
+    message.textContent = `${message.textContent || "检查完成。"} 可加入队列 ${readyCount} 条；不会发布 Facebook/IG。`;
+  }
+}
+
+function updateMonthlySafeAdvanceRunButton(data) {
+  const readyCount = monthlySafeAdvanceReadyCount(data);
+  setMonthlyAdvanceButton(
+    "run-monthly-carousel-safe-advance",
+    readyCount > 0,
+    "检查通过，可以安全推进。",
+    "请先检查推进；有可执行项后才可以确认。",
+  );
+  const message = document.getElementById("media-message");
+  if (message && data && readyCount > 0) {
+    message.textContent = `${message.textContent || "检查完成。"} 可安全推进 ${readyCount} 项；不会发布 Facebook/IG。`;
+  }
+}
+
+lockMonthlyAdvanceButtons();
 
 document.getElementById("monthly-carousel-doctor-worksheet-file")?.addEventListener("change", () => setMonthlyAdvancedImportButton("import-monthly-carousel-doctor-worksheet", false));
 document.getElementById("monthly-carousel-production-worksheet-file")?.addEventListener("change", () => setMonthlyAdvancedImportButton("import-monthly-carousel-production-worksheet", false));
@@ -9360,19 +9415,45 @@ document.getElementById("import-production-replies")?.addEventListener("click", 
 });
 
 document.getElementById("preview-monthly-carousel-queue-ready")?.addEventListener("click", async () => {
-  await runMonthlyCarouselQueueReady({ dryRun: true });
+  setMonthlyAdvanceButton(
+    "queue-monthly-carousel-ready",
+    false,
+    "检查通过，可以加入队列。",
+    "请先检查入队；有可执行项后才可以确认。",
+  );
+  const data = await runMonthlyCarouselQueueReady({ dryRun: true });
+  updateMonthlyQueueRunButton(data);
 });
 
 document.getElementById("queue-monthly-carousel-ready")?.addEventListener("click", async () => {
   await runMonthlyCarouselQueueReady({ dryRun: false });
+  setMonthlyAdvanceButton(
+    "queue-monthly-carousel-ready",
+    false,
+    "检查通过，可以加入队列。",
+    "请先重新检查入队；有可执行项后才可以再次确认。",
+  );
 });
 
 document.getElementById("preview-monthly-carousel-safe-advance")?.addEventListener("click", async () => {
-  await runMonthlyCarouselSafeAdvance({ dryRun: true });
+  setMonthlyAdvanceButton(
+    "run-monthly-carousel-safe-advance",
+    false,
+    "检查通过，可以安全推进。",
+    "请先检查推进；有可执行项后才可以确认。",
+  );
+  const data = await runMonthlyCarouselSafeAdvance({ dryRun: true });
+  updateMonthlySafeAdvanceRunButton(data);
 });
 
 document.getElementById("run-monthly-carousel-safe-advance")?.addEventListener("click", async () => {
   await runMonthlyCarouselSafeAdvance({ dryRun: false });
+  setMonthlyAdvanceButton(
+    "run-monthly-carousel-safe-advance",
+    false,
+    "检查通过，可以安全推进。",
+    "请先重新检查推进；有可执行项后才可以再次确认。",
+  );
 });
 
 document.getElementById("preview-monthly-carousel-production-worksheet")?.addEventListener("click", async () => {
