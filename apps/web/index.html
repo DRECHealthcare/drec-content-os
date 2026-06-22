@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DREC 内容系统</title>
-  <link rel="stylesheet" href="./styles.css?v=20260622-home-step-locks">
+  <link rel="stylesheet" href="./styles.css?v=20260622-publish-evidence-lock">
 </head>
 <body>
   <aside>
@@ -186,8 +186,8 @@
               发布证据 CSV
               <input id="home-manual-publish-evidence-file" type="file" accept=".csv,text/csv">
             </label>
-            <button id="home-preview-manual-publish-evidence" type="button">先检查证据</button>
-            <button id="home-import-manual-publish-evidence" class="danger-safe-action" type="button">导入发布记录</button>
+            <button id="home-preview-manual-publish-evidence" type="button">1. 先检查证据</button>
+            <button id="home-import-manual-publish-evidence" class="danger-safe-action" type="button" disabled>2. 导入发布记录</button>
           </div>
           <div id="home-manual-publish-evidence-preview" class="learning-grid"></div>
           <div class="home-record-published">
@@ -203,7 +203,7 @@
             </label>
             <small id="home-record-published-hint" class="home-record-published-hint">选择项目后会显示建议标签和数据回填日期。</small>
             <small class="safety-inline-note">只保存人工发布证据，不会发到 Meta。</small>
-            <button id="home-record-published-save" class="danger-safe-action" type="button">保存记录（不会发布）</button>
+            <button id="home-record-published-save" class="danger-safe-action" type="button" disabled>保存记录（不会发布）</button>
           </div>
         </details>
         <div id="home-publish-closeout-message" class="status-note"></div>
@@ -1222,6 +1222,6 @@
     </section>
   </main>
 
-  <script src="./app.js?v=20260622-home-step-locks"></script>
+  <script src="./app.js?v=20260622-publish-evidence-lock"></script>
 </body>
 </html>

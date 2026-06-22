@@ -3344,12 +3344,12 @@ const requiredSnippets = [
   {
     name: "web home step locks stylesheet cache bust",
     file: "webIndex",
-    text: "styles.css?v=20260622-home-step-locks",
+    text: "styles.css?v=20260622-publish-evidence-lock",
   },
   {
     name: "web home step locks script cache bust",
     file: "webIndex",
-    text: "app.js?v=20260622-home-step-locks",
+    text: "app.js?v=20260622-publish-evidence-lock",
   },
   {
     name: "web dashboard details are folded",
@@ -4339,7 +4339,17 @@ const requiredSnippets = [
   {
     name: "web home manual publish evidence import action",
     file: "webIndex",
-    text: "home-import-manual-publish-evidence",
+    text: 'id="home-import-manual-publish-evidence" class="danger-safe-action" type="button" disabled',
+  },
+  {
+    name: "web home manual publish evidence lock helper",
+    file: "web",
+    text: "lockHomeManualPublishEvidenceButton",
+  },
+  {
+    name: "web home manual publish evidence ready unlock",
+    file: "web",
+    text: "updateHomeManualPublishEvidenceButton",
   },
   {
     name: "api manual publish evidence safety",
@@ -5829,7 +5839,12 @@ const requiredSnippets = [
   {
     name: "web home record published save action",
     file: "webIndex",
-    text: "home-record-published-save",
+    text: 'id="home-record-published-save" class="danger-safe-action" type="button" disabled',
+  },
+  {
+    name: "web home record published save lock",
+    file: "web",
+    text: "updateHomeRecordPublishedButton",
   },
   {
     name: "web home record published handler",

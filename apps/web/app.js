@@ -6040,6 +6040,7 @@ function renderHomePublishingCloseout(data) {
     ` : ""}
   `;
   container.dataset.readyItems = JSON.stringify(readyItems);
+  updateHomeRecordPublishedButton();
 }
 
 function homeMetricsPayload(item) {
@@ -7266,6 +7267,7 @@ async function uploadManualPublishEvidence({
     if (!dryRun) {
       await Promise.all([loadPublishQueue(), loadHomePublishingCloseout(), loadProjectCompletionAudit(), loadLoopStatus()]);
     }
+    return data;
   } catch (error) {
     if (message) {
       message.textContent = error.message === "Access token required"
@@ -7274,16 +7276,66 @@ async function uploadManualPublishEvidence({
         ? "无法检查发布证据。"
         : "无法导入发布证据。";
     }
+    return null;
   }
 }
 
+function manualPublishEvidenceReadyCount(data) {
+  return Number(data?.planned_count ?? data?.imported_count ?? 0);
+}
+
+function setHomeManualPublishEvidenceButton(enabled) {
+  setHomeActionButton(
+    "home-import-manual-publish-evidence",
+    enabled,
+    "检查通过，可以导入发布记录。",
+    "请先检查发布证据；有可导入行后才可以导入。",
+  );
+}
+
+function lockHomeManualPublishEvidenceButton() {
+  setHomeManualPublishEvidenceButton(false);
+}
+
+function updateHomeManualPublishEvidenceButton(data) {
+  const readyCount = manualPublishEvidenceReadyCount(data);
+  setHomeManualPublishEvidenceButton(readyCount > 0);
+  const message = document.getElementById("home-publish-closeout-message");
+  if (message && data && readyCount > 0) {
+    message.textContent = `${message.textContent || "检查完成。"} 可导入 ${readyCount} 条发布记录；这里不会发布 Facebook/IG。`;
+  }
+}
+
+function updateHomeRecordPublishedButton() {
+  const itemId = document.getElementById("home-record-published-item")?.value || "";
+  const postId = document.getElementById("home-record-published-id")?.value?.trim() || "";
+  const statusContainer = document.getElementById("home-publish-closeout-status");
+  const readyItems = JSON.parse(statusContainer?.dataset.readyItems || "[]");
+  const item = readyItems.find((row) => row.id === itemId);
+  const enabled = Boolean(item && postId && homeCanRecordPublished(item));
+  setHomeActionButton(
+    "home-record-published-save",
+    enabled,
+    "可以保存人工发布证据；不会发布。",
+    "请选择已人工发布项目，并填写真实 Meta Post ID 或人工标签。",
+  );
+}
+
+document.getElementById("home-manual-publish-evidence-file")?.addEventListener("change", lockHomeManualPublishEvidenceButton);
+document.getElementById("home-record-published-item")?.addEventListener("change", updateHomeRecordPublishedButton);
+document.getElementById("home-record-published-id")?.addEventListener("input", updateHomeRecordPublishedButton);
+lockHomeManualPublishEvidenceButton();
+updateHomeRecordPublishedButton();
+
 document.getElementById("home-preview-manual-publish-evidence")?.addEventListener("click", async () => {
-  await uploadManualPublishEvidence({
+  lockHomeManualPublishEvidenceButton();
+  const data = await uploadManualPublishEvidence({
     dryRun: true,
     fileInputId: "home-manual-publish-evidence-file",
     messageId: "home-publish-closeout-message",
     previewTargetId: "home-manual-publish-evidence-preview",
   });
+  updateHomeManualPublishEvidenceButton(data);
 });
 
 document.getElementById("home-import-manual-publish-evidence")?.addEventListener("click", async () => {
@@ -7293,6 +7345,7 @@ document.getElementById("home-import-manual-publish-evidence")?.addEventListener
     messageId: "home-publish-closeout-message",
     previewTargetId: "home-manual-publish-evidence-preview",
   });
+  lockHomeManualPublishEvidenceButton();
 });
 
 document.getElementById("home-open-scheduler")?.addEventListener("click", () => {
@@ -7323,6 +7376,7 @@ document.getElementById("home-record-published-save")?.addEventListener("click",
     messageId: "home-publish-closeout-message",
   });
   document.getElementById("home-record-published-id").value = "";
+  updateHomeRecordPublishedButton();
 });
 
 document.getElementById("home-publish-closeout-status")?.addEventListener("click", async (event) => {
