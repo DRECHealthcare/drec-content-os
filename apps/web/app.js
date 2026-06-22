@@ -1416,6 +1416,15 @@ async function downloadProtectedFile(path, filename, type) {
   URL.revokeObjectURL(url);
 }
 
+function guessMimeType(name) {
+  const value = String(name || "").toLowerCase();
+  if (value.endsWith(".zip")) return "application/zip";
+  if (value.endsWith(".csv")) return "text/csv";
+  if (value.endsWith(".json")) return "application/json";
+  if (value.endsWith(".ics")) return "text/calendar";
+  return "text/markdown";
+}
+
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (char) => ({
     "&": "&amp;",
@@ -2649,10 +2658,51 @@ async function loadProjectCompletionAudit() {
   }
 }
 
-function renderSimpleOperator(data, monthly = null, cycle = null) {
+function todayActionExtraAttributes(action = {}) {
+  const parts = [`data-simple-today-kind="${escapeHtml(action.kind || "")}"`];
+  if (action.path) parts.push(`data-simple-today-path="${escapeHtml(action.path)}"`);
+  if (action.filename) parts.push(`data-simple-today-filename="${escapeHtml(action.filename)}"`);
+  if (action.screen) parts.push(`data-simple-today-screen="${escapeHtml(action.screen)}"`);
+  if (action.target) parts.push(`data-simple-today-target="${escapeHtml(action.target)}"`);
+  return parts.join(" ");
+}
+
+function renderTodaySimpleOperator(today) {
+  const action = today?.action || {};
+  const primary = action.primary || {};
+  const secondary = action.secondary || [];
+  const nextSteps = action.next_steps || ["看这里的主按钮", "执行后重新检查", "只有绿灯才进入下一步"];
+  const primaryLabel = primary.label || "继续";
+  return `
+    <div class="simple-operator-copy">
+      <span>${escapeHtml(action.eyebrow || "今日下一步")} · ${escapeHtml(action.status || "只读状态")}</span>
+      <h2>${escapeHtml(action.title || "现在只看这里")}</h2>
+      <p>${escapeHtml(action.body || "系统正在判断下一步。")}</p>
+      <ol class="simple-operator-steps">
+        ${nextSteps.slice(0, 3).map((step, index) => `<li><span>${escapeHtml(String(index + 1))}</span>${escapeHtml(step)}</li>`).join("")}
+      </ol>
+    </div>
+    <div class="simple-operator-actions">
+      <button class="primary" type="button" ${todayActionExtraAttributes(primary)}>${escapeHtml(primaryLabel)}</button>
+      <details class="simple-extra-actions">
+        <summary>更多</summary>
+        ${secondary.slice(0, 4).map((item) => `<button type="button" ${todayActionExtraAttributes(item)}>${escapeHtml(item.label || "打开")}</button>`).join("")}
+        <button type="button" data-simple-today-kind="download" data-simple-today-path="/operations/today-next-action.zh.md" data-simple-today-filename="drec-today-next-action-zh.md">下载今日下一步</button>
+        <button type="button" data-simple-refresh>重新检查</button>
+      </details>
+    </div>
+    <small>${escapeHtml(action.safety_note || "这里不会发布到 Facebook / Instagram。")} 找不到东西时，优先看这个卡片，不用进高级工具。</small>
+  `;
+}
+
+function renderSimpleOperator(data, monthly = null, cycle = null, today = null) {
   const container = document.getElementById("simple-operator");
   if (!container) return;
   hideHomeActionCards();
+  if (today?.action) {
+    container.innerHTML = renderTodaySimpleOperator(today);
+    return;
+  }
   const summary = data.workflow?.summary || data.summary || {};
   const monthlyPrimary = monthly?.primary_action || {};
   const monthlyGateCounts = monthly?.gate_counts || {};
@@ -2876,6 +2926,7 @@ async function loadLoopStatus() {
     const data = await fetchJson("/workflow/status");
     let monthly = null;
     let cycle = null;
+    let today = null;
     try {
       monthly = await fetchJson("/operations/monthly-carousel-next-action-queue");
     } catch {
@@ -2885,6 +2936,11 @@ async function loadLoopStatus() {
       cycle = await fetchJson("/operations/cycle-command-center");
     } catch {
       cycle = null;
+    }
+    try {
+      today = await fetchJson("/operations/today-next-action");
+    } catch {
+      today = null;
     }
     const loop = data.loop || data;
     const totalQueue = queueTotal(loop.queue);
@@ -2903,7 +2959,7 @@ async function loadLoopStatus() {
     document.getElementById("outcome-count").textContent = `${loop.outcome_count || 0} outcome(s) · ${loop.weight_count || 0} active weight(s)`;
     document.getElementById("security-count").textContent = securityGateSummary(security);
     document.getElementById("automation-count").textContent = `${automation.ready_count || 0} ready · ${automation.blocked_count || 0} blocked`;
-    renderSimpleOperator(data, monthly, cycle);
+    renderSimpleOperator(data, monthly, cycle, today);
     renderWorkflowNext(data.workflow || loop);
     loadLaunchReadiness();
     loadTestRunChecklist();
@@ -6466,8 +6522,9 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   const downloadNextPlanHandback = event.target.closest("[data-simple-download-next-plan-handback]");
   const openCycleScreen = event.target.closest("[data-simple-open-cycle-screen]");
   const downloadCycleCommandCenter = event.target.closest("[data-simple-download-cycle-command-center]");
+  const todayAction = event.target.closest("[data-simple-today-kind]");
   const refresh = event.target.closest("[data-simple-refresh]");
-  if (!openAccess && !runReadyAssets && !openAssets && !openReview && !openScheduler && !pasteDoctorReply && !uploadDoctorWorksheet && !pasteProductionReply && !previewMonthlyQueue && !runMonthlyQueue && !downloadMonthlyReviewQueue && !pasteReviewDecisions && !scheduleApprovedFromHome && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorEvidence && !downloadMonthlyDoctorMessage && !copyMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadManualPublishEvidence && !downloadTodayPack && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !openLearning && !useLearningTopics && !downloadWeeklyReportZh && !downloadNextPlanHandback && !openCycleScreen && !downloadCycleCommandCenter && !refresh) return;
+  if (!openAccess && !runReadyAssets && !openAssets && !openReview && !openScheduler && !pasteDoctorReply && !uploadDoctorWorksheet && !pasteProductionReply && !previewMonthlyQueue && !runMonthlyQueue && !downloadMonthlyReviewQueue && !pasteReviewDecisions && !scheduleApprovedFromHome && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorEvidence && !downloadMonthlyDoctorMessage && !copyMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadManualPublishEvidence && !downloadTodayPack && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !openLearning && !useLearningTopics && !downloadWeeklyReportZh && !downloadNextPlanHandback && !openCycleScreen && !downloadCycleCommandCenter && !todayAction && !refresh) return;
   if (openAccess) {
     const panel = document.getElementById("token-panel");
     if (panel?.hidden) showTokenPanel();
@@ -6478,6 +6535,60 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
     await loadLoopStatus();
     await loadDashboardMonthlyActionQueue();
     await loadHomePublishingCloseout();
+    return;
+  }
+  if (todayAction) {
+    const kind = todayAction.dataset.simpleTodayKind || "";
+    if (kind === "download") {
+      await downloadProtectedFile(todayAction.dataset.simpleTodayPath, todayAction.dataset.simpleTodayFilename || "drec-pack.md", guessMimeType(todayAction.dataset.simpleTodayFilename || todayAction.dataset.simpleTodayPath || ""));
+      return;
+    }
+    if (kind === "show_screen") {
+      showScreen(todayAction.dataset.simpleTodayScreen || "dashboard");
+      return;
+    }
+    if (kind === "copy_monthly_doctor_message") {
+      const original = todayAction.textContent;
+      todayAction.disabled = true;
+      todayAction.textContent = "复制中";
+      try {
+        await copyMonthlyDoctorSendMessage();
+        todayAction.textContent = "已复制";
+        setTimeout(() => {
+          todayAction.textContent = original || "复制医生消息";
+          todayAction.disabled = false;
+        }, 1400);
+      } catch {
+        todayAction.textContent = original || "复制医生消息";
+        todayAction.disabled = false;
+        await downloadProtectedFile("/operations/monthly-carousel-doctor-send-message.zh.md", "drec-monthly-carousel-doctor-send-message-zh.md", "text/markdown");
+      }
+      return;
+    }
+    if (kind === "show_card") {
+      const target = todayAction.dataset.simpleTodayTarget;
+      if (target === "doctor_reply") {
+        const card = showHomeActionCard("home-doctor-reply-card");
+        if (card) document.getElementById("home-doctor-reply-text")?.focus();
+      } else if (target === "production_reply") {
+        const card = showHomeActionCard("home-production-reply-card");
+        if (card) document.getElementById("home-production-reply-text")?.focus();
+      } else {
+        showHomeActionCard("home-queue-action-card");
+      }
+      return;
+    }
+    if (kind === "preview_monthly_queue" || kind === "run_monthly_queue") {
+      showHomeActionCard("home-queue-action-card");
+      await runMonthlyCarouselQueueReady({
+        dryRun: kind === "preview_monthly_queue",
+        messageId: "home-queue-action-message",
+        targetId: "home-queue-action-preview",
+      });
+      await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit()]);
+      return;
+    }
+    await loadLoopStatus();
     return;
   }
   if (openCycleScreen) {

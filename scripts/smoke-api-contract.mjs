@@ -69,6 +69,8 @@ const requiredRoutes = [
   "GET /operations/test-run-tracker.md",
   "GET /operations/cycle-command-center",
   "GET /operations/cycle-command-center.md",
+  "GET /operations/today-next-action",
+  "GET /operations/today-next-action.zh.md",
   "GET /operations/cycle-evidence-ledger.csv",
   "GET /operations/external-setup-board",
   "GET /operations/external-setup-board.csv",
@@ -1082,6 +1084,36 @@ const requiredSnippets = [
     name: "cycle command center UI endpoint",
     file: "web",
     text: "/operations/cycle-command-center.md",
+  },
+  {
+    name: "today next action route",
+    file: "main",
+    text: "today_next_action_payload",
+  },
+  {
+    name: "today next action chinese route",
+    file: "main",
+    text: "/operations/today-next-action.zh.md",
+  },
+  {
+    name: "today next action read-only safety",
+    file: "main",
+    text: "It does not approve, import, queue, schedule, publish, record post IDs, store secrets, update Notion, or call Meta.",
+  },
+  {
+    name: "web today next action fetch",
+    file: "web",
+    text: "/operations/today-next-action",
+  },
+  {
+    name: "web today next action renderer",
+    file: "web",
+    text: "renderTodaySimpleOperator",
+  },
+  {
+    name: "web today next action handler",
+    file: "web",
+    text: "data-simple-today-kind",
   },
   {
     name: "cycle evidence ledger route",

@@ -28347,6 +28347,267 @@ async def project_completion_audit_payload():
     }
 
 
+def today_action_download_filename(path: str):
+    return {
+        "/operations/monthly-carousel-doctor-handoff-pack.zip": "drec-monthly-carousel-doctor-handoff-pack.zip",
+        "/operations/monthly-carousel-doctor-send-message.zh.md": "drec-monthly-carousel-doctor-send-message-zh.md",
+        "/operations/monthly-carousel-production-import-rules.zh.md": "drec-monthly-carousel-production-import-rules-zh.md",
+        "/operations/monthly-carousel-production-qa-pack.zh.md": "drec-monthly-carousel-production-qa-pack-zh.md",
+        "/operations/monthly-carousel-queue-readiness.zh.md": "drec-monthly-carousel-queue-readiness-zh.md",
+        "/operations/monthly-carousel-review-queue.csv": "drec-monthly-carousel-review-queue.csv",
+        "/operations/monthly-carousel-schedule-execution-pack.zh.md": "drec-monthly-carousel-schedule-execution-pack-zh.md",
+        "/operations/monthly-carousel-publishing-handoff.zh.md": "drec-monthly-carousel-publishing-handoff-zh.md",
+        "/operations/monthly-carousel-metrics-template.csv": "drec-monthly-carousel-metrics-template.csv",
+        "/operations/cycle-command-center.md": "drec-cycle-command-center.md",
+        "/operations/today-safe-operator-pack.zip": "drec-today-safe-operator-pack.zip",
+        "/operations/project-unblock-board.zh.md": "drec-project-unblock-board-zh.md",
+        "/operations/deployment-activation-pack.zh.md": "drec-deployment-activation-pack-zh.md",
+        "/security/service-role-install-pack.md": "drec-service-role-install-pack.md",
+    }.get(path or "", (path or "drec-pack.md").rsplit("/", 1)[-1] or "drec-pack.md")
+
+
+def today_action_from_monthly(monthly: dict):
+    gate_counts = monthly.get("gate_counts") or {}
+    stage_counts = monthly.get("stage_counts") or {}
+    primary = monthly.get("primary_action") or {}
+    top_three = monthly.get("top_three") or []
+    if int(gate_counts.get("waiting_doctor_safety_clear") or 0) > 0:
+        return {
+            "source": "monthly_carousel",
+            "priority": 10,
+            "eyebrow": "月度内容下一步",
+            "title": f"{int(gate_counts.get('waiting_doctor_safety_clear') or 0)} 条内容等待医生 Safety clear",
+            "body": primary.get("detail") or "先复制医生消息发给医生。收到回复后，先预览，再导入。",
+            "status": "等待医生审核 · 不会发布",
+            "primary": {"kind": "copy_monthly_doctor_message", "label": "复制医生消息"},
+            "secondary": [
+                {"kind": "download", "label": "下载完整医生包", "path": "/operations/monthly-carousel-doctor-handoff-pack.zip"},
+                {"kind": "show_card", "label": "粘贴医生回复", "target": "doctor_reply"},
+            ],
+            "next_steps": ["复制医生消息", "发给医生审核", "收到回复后先预览再导入"],
+            "safety_note": "医生未 approve + Safety clear 前，不会制作、入队、排程或发布。",
+            "evidence_required": ["Reviewer Name", "Decision: approve", "Safety: clear", "doctor_check_* 全部 yes/pass", "Notes"],
+        }
+    if int(gate_counts.get("waiting_final_media") or 0) > 0 or int(gate_counts.get("waiting_visual_qa") or 0) > 0 or int(stage_counts.get("needs_production") or 0) > 0 or int(stage_counts.get("needs_visual_qa") or 0) > 0:
+        return {
+            "source": "monthly_carousel",
+            "priority": 20,
+            "eyebrow": "月度制作下一步",
+            "title": "等待最终图片和视觉 QA",
+            "body": primary.get("detail") or "把制作规则交给制作端；收到图片链接后，粘贴制作回复并先预览。",
+            "status": "制作阶段 · 不会发布",
+            "primary": {"kind": "download", "label": "下载制作规则", "path": "/operations/monthly-carousel-production-import-rules.zh.md"},
+            "secondary": [
+                {"kind": "show_card", "label": "粘贴图片回复", "target": "production_reply"},
+                {"kind": "download", "label": "制作 QA 包", "path": "/operations/monthly-carousel-production-qa-pack.zh.md"},
+            ],
+            "next_steps": ["下载制作规则", "交给制作人员", "收到图片后导入检查"],
+            "safety_note": "制作导入不能替代医生审核，也不会入队、排程或发布。",
+            "evidence_required": ["final_media_url", "rights_note", "visual_qa_status=passed"],
+        }
+    if int(gate_counts.get("ready_to_queue") or 0) > 0 or int(stage_counts.get("ready_for_queue") or 0) > 0:
+        return {
+            "source": "monthly_carousel",
+            "priority": 30,
+            "eyebrow": "月度入队下一步",
+            "title": f"{int(gate_counts.get('ready_to_queue') or stage_counts.get('ready_for_queue') or 0)} 条内容可以入队",
+            "body": "先预览可入队内容，再加入发布队列。入队不是发布。",
+            "status": "可预览入队 · 不会发布",
+            "primary": {"kind": "preview_monthly_queue", "label": "先检查"},
+            "secondary": [
+                {"kind": "run_monthly_queue", "label": "确认加入队列"},
+                {"kind": "download", "label": "入队检查表", "path": "/operations/monthly-carousel-queue-readiness.zh.md"},
+            ],
+            "next_steps": ["先检查", "确认加入队列", "再做队列审核"],
+            "safety_note": "入队后仍需队列审核、排程检查和发布交接。",
+            "evidence_required": ["ready_to_queue rows only", "doctor approved", "Safety clear", "final media", "visual QA passed"],
+        }
+    if top_three:
+        first = top_three[0]
+        return {
+            "source": "monthly_carousel",
+            "priority": int(first.get("priority") or 80),
+            "eyebrow": "月度行动队列",
+            "title": first.get("action_zh") or primary.get("title") or "查看月度行动队列",
+            "body": first.get("operator_action") or primary.get("detail") or "按 Topic ID 处理下一条月度内容。",
+            "status": f"{first.get('topic_id') or 'Topic'} · {first.get('stage_zh') or '等待处理'}",
+            "primary": {"kind": "download", "label": "下载行动队列", "path": "/operations/monthly-carousel-next-action-queue.zh.md"},
+            "secondary": [
+                {"kind": "download", "label": "状态板", "path": "/operations/monthly-carousel-status-board.zh.md"},
+            ],
+            "next_steps": ["下载行动队列", "处理第一条 Topic ID", "回首页重新检查"],
+            "safety_note": first.get("safety_note") or "行动队列只读，不会发布。",
+            "evidence_required": ["Topic ID", "Asset ID", "current gate evidence"],
+        }
+    return None
+
+
+def today_action_from_cycle(cycle: dict):
+    action = cycle.get("immediate_action") or {}
+    if not (action.get("label") or action.get("action")):
+        return None
+    screen = action.get("screen") if action.get("screen") in {"dashboard", "assets", "review", "scheduler", "learning", "plan", "compose", "creative", "templates", "video", "meta", "outcomes", "kb", "insights"} else "dashboard"
+    return {
+        "source": "manual_cycle",
+        "priority": 50,
+        "eyebrow": "今日指挥中心",
+        "title": action.get("label") or "继续人工安全流程",
+        "body": action.get("action") or "打开指挥中心，执行第一个未完成步骤。",
+        "status": f"{cycle.get('overall_status') or 'manual_cycle'} · {int((cycle.get('summary') or {}).get('manual_cycle_done') or 0)}/{int((cycle.get('summary') or {}).get('manual_cycle_required') or 0)} 证据",
+        "primary": {"kind": "show_screen", "label": "继续这一步", "screen": screen},
+        "secondary": [
+            {"kind": "download", "label": "下载指挥中心", "path": "/operations/cycle-command-center.md"},
+        ],
+        "next_steps": ["按继续这一步", "完成指定证据", "回首页重新检查"],
+        "safety_note": "指挥中心只负责带路和收集证据；不会批准、排程、发布或调用 Meta。",
+        "evidence_required": cycle.get("evidence_fields") or [],
+    }
+
+
+def today_action_from_completion(audit: dict, unblock: dict):
+    completion = audit.get("completion") or {}
+    workflow_summary = audit.get("workflow_summary") or {}
+    blockers = completion.get("blockers") or audit.get("next_actions") or []
+    rows = unblock.get("rows") or []
+    first_blocked = next((row for row in rows if row.get("status") != "ready"), {})
+    text = first_blocked.get("required_action") or (blockers[0] if blockers else "继续检查项目状态。")
+    link = first_blocked.get("link") or "/operations/project-unblock-board.zh.md"
+    if "service-role" in text.lower() or "supabase" in text.lower():
+        primary = {"kind": "download", "label": "下载安全说明", "path": "/security/service-role-install-pack.md"}
+    elif "FLY_API_TOKEN" in text or "Fly Deploy" in text:
+        primary = {"kind": "download", "label": "下载部署启用包", "path": "/operations/deployment-activation-pack.zh.md"}
+    elif "queue" in text.lower() or "asset" in text.lower():
+        primary = {"kind": "show_screen", "label": "打开素材", "screen": "assets"}
+    elif "schedule" in text.lower() or "planned" in text.lower():
+        primary = {"kind": "show_screen", "label": "打开排程", "screen": "scheduler"}
+    else:
+        primary = {"kind": "download", "label": "下载解锁清单", "path": link}
+    return {
+        "source": "project_completion",
+        "priority": 90,
+        "eyebrow": "项目主卡点",
+        "title": first_blocked.get("gate") or "下一步",
+        "body": text,
+        "status": f"{completion.get('percent', '?')}% 总体 · 首轮 {completion.get('first_cycle_percent', '?')}%",
+        "primary": primary,
+        "secondary": [
+            {"kind": "download", "label": "解锁清单", "path": "/operations/project-unblock-board.zh.md"},
+            {"kind": "download", "label": "完成度审计", "path": "/operations/project-completion-audit.zh.md"},
+        ],
+        "next_steps": ["打开主动作", "补齐要求证据", "回首页重新检查"],
+        "safety_note": "项目卡点清单只读；不会发布、记录 post ID、保存 secret 或调用 Meta。",
+        "evidence_required": [first_blocked.get("required_evidence") or "Current workflow evidence"],
+        "context": {"workflow_summary": workflow_summary},
+    }
+
+
+async def today_next_action_payload():
+    audit = await project_completion_audit_payload()
+    unblock = await project_unblock_board_payload()
+    monthly = await monthly_carousel_next_action_queue_payload()
+    cycle = await cycle_command_center_payload()
+    candidates = [
+        today_action_from_monthly(monthly),
+        today_action_from_cycle(cycle),
+        today_action_from_completion(audit, unblock),
+    ]
+    candidates = [item for item in candidates if item]
+    candidates.sort(key=lambda item: int(item.get("priority") or 999))
+    action = candidates[0] if candidates else today_action_from_completion(audit, unblock)
+    for group in (action.get("secondary") or []):
+        if group.get("path"):
+            group["filename"] = today_action_download_filename(group.get("path"))
+    primary = action.get("primary") or {}
+    if primary.get("path"):
+        primary["filename"] = today_action_download_filename(primary.get("path"))
+    return {
+        "mode": "read_only_today_next_action",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "action": action,
+        "candidates": candidates[:5],
+        "project_completion": {
+            "percent": (audit.get("completion") or {}).get("percent"),
+            "first_cycle_percent": (audit.get("completion") or {}).get("first_cycle_percent"),
+            "readiness": audit.get("readiness"),
+        },
+        "monthly": {
+            "asset_count": monthly.get("asset_count"),
+            "gate_counts": monthly.get("gate_counts") or {},
+            "stage_counts": monthly.get("stage_counts") or {},
+            "top_three": monthly.get("top_three") or [],
+        },
+        "unblock": {
+            "ready_count": unblock.get("ready_count"),
+            "blocked_count": unblock.get("blocked_count"),
+            "next_action": unblock.get("next_action"),
+        },
+        "links": {
+            "today_next_action": "/operations/today-next-action",
+            "today_next_action_zh": "/operations/today-next-action.zh.md",
+            "project_unblock": "/operations/project-unblock-board.zh.md",
+            "monthly_next_action_queue": "/operations/monthly-carousel-next-action-queue.zh.md",
+            "cycle_command_center": "/operations/cycle-command-center.md",
+        },
+        "safety": [
+            "This endpoint is read-only.",
+            "It does not approve, import, queue, schedule, publish, record post IDs, store secrets, update Notion, or call Meta.",
+            "The UI should show one main action first and keep advanced tools behind More.",
+        ],
+    }
+
+
+@app.get("/operations/today-next-action")
+async def operations_today_next_action(_: None = Depends(require_access_token)):
+    return await today_next_action_payload()
+
+
+@app.get("/operations/today-next-action.zh.md")
+async def operations_today_next_action_zh(_: None = Depends(require_access_token)):
+    payload = await today_next_action_payload()
+    action = payload.get("action") or {}
+    primary = action.get("primary") or {}
+    secondary = action.get("secondary") or []
+    lines = [
+        "# DREC 今日下一步",
+        "",
+        f"生成时间：{payload.get('generated_at')}",
+        "",
+        "这是一张只读指路卡：只告诉你现在最该做什么，不会批准、导入、入队、排程、发布、记录 post ID、保存 secret、更新 Notion 或调用 Meta。",
+        "",
+        "## 现在只做这一件",
+        "",
+        f"- 类别：{action.get('eyebrow')}",
+        f"- 动作：{action.get('title')}",
+        f"- 状态：{action.get('status')}",
+        f"- 说明：{action.get('body')}",
+        f"- 主按钮：{primary.get('label')} / `{primary.get('kind')}`",
+        f"- 主下载：`{primary.get('path') or 'n/a'}`",
+        "",
+        "## 三步走",
+        "",
+        *markdown_list(action.get("next_steps") or []),
+        "",
+        "## 需要证据",
+        "",
+        *markdown_list(action.get("evidence_required") or []),
+        "",
+        "## 其他可用资料",
+        "",
+        *markdown_list([f"{item.get('label')}: `{item.get('path') or item.get('target') or item.get('screen') or item.get('kind')}`" for item in secondary], "- 暂无。"),
+        "",
+        "## 安全线",
+        "",
+        f"- {action.get('safety_note')}",
+        *[f"- {item}" for item in payload.get("safety") or []],
+        "",
+    ]
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-today-next-action-zh.md"'},
+    )
+
+
 async def project_unblock_board_payload():
     audit = await project_completion_audit_payload()
     completion = audit.get("completion") or {}
