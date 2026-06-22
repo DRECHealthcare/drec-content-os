@@ -3344,12 +3344,12 @@ const requiredSnippets = [
   {
     name: "web home step locks stylesheet cache bust",
     file: "webIndex",
-    text: "styles.css?v=20260622-monthly-tools-lock",
+    text: "styles.css?v=20260622-schedule-import-lock",
   },
   {
     name: "web home step locks script cache bust",
     file: "webIndex",
-    text: "app.js?v=20260622-monthly-tools-lock",
+    text: "app.js?v=20260622-schedule-import-lock",
   },
   {
     name: "web dashboard details are folded",
@@ -6185,6 +6185,26 @@ const requiredSnippets = [
     name: "web schedule worksheet import action",
     file: "web",
     text: "import-schedule-worksheet",
+  },
+  {
+    name: "web monthly schedule import disabled by default",
+    file: "webIndex",
+    text: 'id="import-monthly-carousel-schedule-worksheet" type="button" disabled',
+  },
+  {
+    name: "web monthly schedule import lock helper",
+    file: "web",
+    text: "setMonthlyScheduleImportButton",
+  },
+  {
+    name: "web monthly schedule import ready unlock",
+    file: "web",
+    text: "updateMonthlyScheduleImportButton",
+  },
+  {
+    name: "web monthly schedule import safety hint",
+    file: "webIndex",
+    text: "先预览月度排程；有可导入行后才可以导入",
   },
   {
     name: "web schedule audit action",

@@ -10924,12 +10924,14 @@ async function uploadScheduleWorksheet({
       : (isMonthly ? translateText("Monthly carousel schedule worksheet imported.") : "Schedule worksheet imported."));
     renderScheduleWorksheetPreview(data);
     if (!dryRun) await Promise.all([loadPublishQueue(), loadPreScheduleGate(), loadLoopStatus()]);
+    return data;
   } catch (error) {
     message.textContent = error.message === "Access token required"
       ? translateText("Set the access token first.")
       : dryRun
         ? (isMonthly ? translateText("Could not preview monthly carousel schedule worksheet.") : "Could not preview schedule worksheet.")
         : (isMonthly ? translateText("Could not import monthly carousel schedule worksheet.") : "Could not import schedule worksheet.");
+    return null;
   }
 }
 
@@ -10941,12 +10943,39 @@ document.getElementById("import-schedule-worksheet")?.addEventListener("click", 
   await uploadScheduleWorksheet({ dryRun: false });
 });
 
+function scheduleWorksheetReadyCount(data) {
+  return Number(data?.planned_count ?? data?.imported_count ?? 0);
+}
+
+function setMonthlyScheduleImportButton(enabled) {
+  setHomeActionButton(
+    "import-monthly-carousel-schedule-worksheet",
+    enabled,
+    "预览通过，可以导入月度排程。",
+    "请先预览月度排程；有可导入行后才可以导入。",
+  );
+}
+
+function updateMonthlyScheduleImportButton(data) {
+  const readyCount = scheduleWorksheetReadyCount(data);
+  setMonthlyScheduleImportButton(readyCount > 0);
+  if (readyCount > 0) {
+    const message = document.getElementById("queue-message");
+    if (message) message.textContent = `${message.textContent || "预览完成。"} 可导入 ${readyCount} 行；不会发布 Facebook/IG。`;
+  }
+}
+
+document.getElementById("monthly-carousel-schedule-worksheet-file")?.addEventListener("change", () => setMonthlyScheduleImportButton(false));
+setMonthlyScheduleImportButton(false);
+
 document.getElementById("preview-monthly-carousel-schedule-worksheet")?.addEventListener("click", async () => {
-  await uploadScheduleWorksheet({
+  setMonthlyScheduleImportButton(false);
+  const data = await uploadScheduleWorksheet({
     dryRun: true,
     source: "monthly_carousel",
     fileInputId: "monthly-carousel-schedule-worksheet-file",
   });
+  updateMonthlyScheduleImportButton(data);
 });
 
 document.getElementById("import-monthly-carousel-schedule-worksheet")?.addEventListener("click", async () => {
@@ -10955,6 +10984,7 @@ document.getElementById("import-monthly-carousel-schedule-worksheet")?.addEventL
     source: "monthly_carousel",
     fileInputId: "monthly-carousel-schedule-worksheet-file",
   });
+  setMonthlyScheduleImportButton(false);
 });
 
 document.getElementById("download-schedule-audit")?.addEventListener("click", async () => {

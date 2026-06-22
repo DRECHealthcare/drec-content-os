@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DREC 内容系统</title>
-  <link rel="stylesheet" href="./styles.css?v=20260622-monthly-tools-lock">
+  <link rel="stylesheet" href="./styles.css?v=20260622-schedule-import-lock">
 </head>
 <body>
   <aside>
@@ -894,7 +894,8 @@
               <input id="monthly-carousel-schedule-worksheet-file" type="file" accept=".csv,text/csv">
             </label>
             <button id="preview-monthly-carousel-schedule-worksheet" type="button">预览月度排程</button>
-            <button id="import-monthly-carousel-schedule-worksheet" type="button">导入月度排程</button>
+            <button id="import-monthly-carousel-schedule-worksheet" type="button" disabled>导入月度排程</button>
+            <small class="home-doctor-import-hint">先预览月度排程；有可导入行后才可以导入。这里不会发布 Facebook/IG。</small>
             <details class="advanced-actions compact-tool-group">
               <summary>需要时打开下载 / 测试工具</summary>
               <div class="learning-actions">
@@ -1224,6 +1225,6 @@
     </section>
   </main>
 
-  <script src="./app.js?v=20260622-monthly-tools-lock"></script>
+  <script src="./app.js?v=20260622-schedule-import-lock"></script>
 </body>
 </html>
