@@ -72,6 +72,8 @@ const requiredRoutes = [
   "GET /operations/cycle-evidence-ledger.csv",
   "GET /operations/external-setup-board",
   "GET /operations/external-setup-board.csv",
+  "GET /operations/deployment-activation-pack",
+  "GET /operations/deployment-activation-pack.zh.md",
   "GET /operations/manual-cycle-qa.md",
   "GET /operations/daily-ops-checklist.md",
   "GET /operations/risk-audit",
@@ -3020,6 +3022,16 @@ const requiredSnippets = [
     name: "web home progress download completion",
     file: "web",
     text: "data-home-download-completion",
+  },
+  {
+    name: "web home progress download deployment",
+    file: "web",
+    text: "data-home-download-deployment",
+  },
+  {
+    name: "web deployment activation endpoint",
+    file: "web",
+    text: "/operations/deployment-activation-pack.zh.md",
   },
   {
     name: "web home progress open next action",
@@ -6190,6 +6202,26 @@ const requiredSnippets = [
     name: "github fly deploy safety copy",
     file: "flyDeployWorkflow",
     text: "It does not enable Meta publishing, publish posts, import metrics, update Notion, or change secrets.",
+  },
+  {
+    name: "deployment activation payload",
+    file: "main",
+    text: "github_fly_deploy_activation_payload",
+  },
+  {
+    name: "deployment activation endpoint",
+    file: "main",
+    text: "/operations/deployment-activation-pack.zh.md",
+  },
+  {
+    name: "deployment activation token command",
+    file: "main",
+    text: "fly tokens create deploy -a drec-content-os-api --name drec-content-os-github-deploy --expiry 8760h",
+  },
+  {
+    name: "deployment activation safety copy",
+    file: "main",
+    text: "does not create tokens, store secrets, deploy code, approve content, publish to Meta, update Notion, import metrics, or change Fly/GitHub/Supabase settings",
   },
   {
     name: "real metrics workflow job",

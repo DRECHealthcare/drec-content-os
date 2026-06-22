@@ -2601,6 +2601,7 @@ function renderHomeProjectCompletion(data) {
       <button type="button" data-home-download-operator-guide>首页说明</button>
       <button type="button" data-home-download-completion>完成度审计</button>
       <button type="button" data-home-download-unblock>解锁清单</button>
+      <button type="button" data-home-download-deployment>部署启用包</button>
     </details>
     <small>这个卡片只读，不会批准、排程、发布或调用 Meta。</small>
   `;
@@ -6356,10 +6357,11 @@ document.getElementById("home-progress-card")?.addEventListener("click", async (
   const downloadOperatorGuide = event.target.closest("[data-home-download-operator-guide]");
   const downloadCompletion = event.target.closest("[data-home-download-completion]");
   const downloadUnblock = event.target.closest("[data-home-download-unblock]");
+  const downloadDeployment = event.target.closest("[data-home-download-deployment]");
   const copyServiceRoleCommand = event.target.closest("[data-home-copy-service-role-command]");
   const downloadServiceRolePack = event.target.closest("[data-home-download-service-role-pack]");
   const runServiceRoleSmoke = event.target.closest("[data-home-run-service-role-smoke]");
-  if (!openNext && !refresh && !downloadOperatorGuide && !downloadCompletion && !downloadUnblock && !copyServiceRoleCommand && !downloadServiceRolePack && !runServiceRoleSmoke) return;
+  if (!openNext && !refresh && !downloadOperatorGuide && !downloadCompletion && !downloadUnblock && !downloadDeployment && !copyServiceRoleCommand && !downloadServiceRolePack && !runServiceRoleSmoke) return;
   if (openNext) {
     showScreen(openNext.dataset.homeOpenNext || "dashboard");
     return;
@@ -6405,6 +6407,10 @@ document.getElementById("home-progress-card")?.addEventListener("click", async (
     }
     if (downloadServiceRolePack) {
       await downloadProtectedFile("/security/service-role-install-pack.md", "drec-service-role-install-pack.md", "text/markdown");
+      return;
+    }
+    if (downloadDeployment) {
+      await downloadProtectedFile("/operations/deployment-activation-pack.zh.md", "drec-deployment-activation-pack-zh.md", "text/markdown");
       return;
     }
     await downloadProtectedFile("/operations/project-unblock-board.zh.md", "drec-project-unblock-board-zh.md", "text/markdown");
@@ -8241,7 +8247,7 @@ function renderAssetReviewDecisionPreview(data, targetId = "asset-review-decisio
     .slice(0, 8);
   container.innerHTML = `
     <article class="insight-card">
-      <strong>${isMonthlyDoctor ? "月度医生证据检查" : data.dry_run ? "Review Decision Preview" : "Review Decision Import"}</strong>
+      <strong>${isMonthlyDoctor ? "月度医生表检查" : data.dry_run ? "Review Decision Preview" : "Review Decision Import"}</strong>
       <small>${rows.length} row(s) ready · ${skipped.length} skipped</small>
       ${isMonthlyDoctor ? `
         <p class="status-note">${rows.length ? "这些行可以导入；导入只会记录医生审核和 Safety，不会制作、入队、排程或发布。" : "目前没有可导入行。先补齐 Reviewer Name / Notes / doctor_check_*，再重新检查。"}</p>

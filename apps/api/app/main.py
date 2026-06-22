@@ -963,6 +963,108 @@ async def meta_setup_checklist(_: None = Depends(require_access_token)):
     }
 
 
+def github_fly_deploy_activation_payload():
+    repo_url = "https://github.com/DRECHealthcare/drec-content-os"
+    workflow_file = ".github/workflows/drec-fly-deploy.yml"
+    api_url = "https://drec-content-os-api.fly.dev"
+    return {
+        "phase": "github_fly_deploy_activation",
+        "mode": "read_only_deploy_setup",
+        "overall_status": "needs_github_secret",
+        "app": "drec-content-os-api",
+        "api_url": api_url,
+        "workflow_name": "DREC Fly Deploy",
+        "workflow_file": workflow_file,
+        "workflow_url": f"{repo_url}/actions/workflows/drec-fly-deploy.yml",
+        "required_github_secrets": ["FLY_API_TOKEN"],
+        "optional_github_variables": ["DREC_API_BASE_URL"],
+        "default_api_base_url": api_url,
+        "token_command": "fly tokens create deploy -a drec-content-os-api --name drec-content-os-github-deploy --expiry 8760h",
+        "secret_name": "FLY_API_TOKEN",
+        "enable_steps": [
+            "Create one app-scoped Fly deploy token in Terminal.",
+            "Open GitHub repository Settings > Secrets and variables > Actions.",
+            "Add a repository secret named FLY_API_TOKEN with the token value.",
+            "Run the DREC Fly Deploy workflow manually, or push main again.",
+            "Confirm the Action summary reaches checkout, deploy, and /health instead of skipping.",
+        ],
+        "success_evidence": [
+            "Latest DREC Fly Deploy Action run is green and not skipped.",
+            "Action summary says Post-deploy check: /health.",
+            f"{api_url}/health returns ok after the run.",
+            "The deployed page still shows Meta publishing switches off.",
+        ],
+        "skip_signal": "If the latest run only shows 'FLY_API_TOKEN is not configured. Skipping Fly deploy.', the GitHub secret is still missing.",
+        "safe_use_note": "This pack is setup guidance only. It does not create tokens, store secrets, deploy code, approve content, publish to Meta, update Notion, import metrics, or change Fly/GitHub/Supabase settings.",
+        "hard_stop_rules": [
+            "Do not paste the Fly token into chat, repository files, screenshots, Markdown files, browser fields, or Action logs.",
+            "Do not enable META_ENABLE_PUBLISHING, META_ENABLE_PUBLISHING_JOB, or META_ENABLE_METRICS_JOB as part of this deploy setup.",
+            "Do not continue if the token is for the whole account when an app-scoped deploy token can be used.",
+        ],
+    }
+
+
+@app.get("/operations/deployment-activation-pack")
+async def operations_deployment_activation_pack(_: None = Depends(require_access_token)):
+    return github_fly_deploy_activation_payload()
+
+
+@app.get("/operations/deployment-activation-pack.zh.md")
+async def operations_deployment_activation_pack_zh(_: None = Depends(require_access_token)):
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    payload = github_fly_deploy_activation_payload()
+    lines = [
+        "# DREC Fly / GitHub 部署启用包",
+        "",
+        f"Generated: {generated_at}",
+        "",
+        "用途：让 GitHub Actions 可以自动把已推送到 main 的代码部署到 Fly。这个包只读，不会创建 token、不会保存 secret、不会部署、不会发布 Facebook/Instagram。",
+        "",
+        "## 当前判断",
+        "",
+        f"- 状态：{payload.get('overall_status')}",
+        f"- Fly app：{payload.get('app')}",
+        f"- API：{payload.get('api_url')}",
+        f"- GitHub workflow：{payload.get('workflow_file')}",
+        f"- Actions 页面：{payload.get('workflow_url')}",
+        f"- 必须补的 GitHub Secret：{', '.join(payload.get('required_github_secrets') or [])}",
+        f"- 可选变量：{', '.join(payload.get('optional_github_variables') or [])}",
+        "",
+        "## 你只需要做的事",
+        "",
+        "1. 在 Terminal 生成只针对这个 Fly app 的部署 token：",
+        "",
+        f"```bash\n{payload.get('token_command')}\n```",
+        "",
+        "2. 打开 GitHub repo 的 Settings > Secrets and variables > Actions。",
+        f"3. 新增 Repository secret，名字填 `{payload.get('secret_name')}`，值粘贴刚生成的 token。",
+        "4. 回到 Actions，手动运行 `DREC Fly Deploy`，或让我再推一次 main。",
+        "5. 看到 checkout、deploy、/health 都执行并通过，就代表部署通道启用了。",
+        "",
+        "## 成功证据",
+        "",
+        *[f"- {item}" for item in payload.get("success_evidence") or []],
+        "",
+        "## 如果还是跳过",
+        "",
+        f"- {payload.get('skip_signal')}",
+        "",
+        "## 安全规则",
+        "",
+        *[f"- {item}" for item in payload.get("hard_stop_rules") or []],
+        "",
+        "## 重要说明",
+        "",
+        f"- {payload.get('safe_use_note')}",
+        "",
+    ]
+    return Response(
+        "\n".join(lines),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="drec-deployment-activation-pack-zh.md"'},
+    )
+
+
 @app.get("/meta/activation-checklist.md")
 async def meta_activation_checklist(_: None = Depends(require_access_token)):
     generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
@@ -6535,6 +6637,7 @@ async def external_setup_board_payload():
     meta = await meta_readiness(None)
     scheduler = await scheduler_health_payload()
     workflow = await workflow_status(None)
+    deploy_activation = github_fly_deploy_activation_payload()
     workflow_next = ((workflow.get("workflow") or {}).get("next_action") or {})
     meta_missing = meta.get("missing_credentials") or [
         item.get("key")
@@ -6569,6 +6672,15 @@ async def external_setup_board_payload():
             "source_link": "/operations/scheduler-recovery-pack.md",
             "next_action": "Confirm GitHub Actions secret DREC_ACCESS_TOKEN, run DREC Scheduler Dry Run once, then verify heartbeat is recent.",
             "evidence_required": "Green GitHub Actions run; Record scheduler heartbeat step passed; /operations/scheduler-health reports recent.",
+        },
+        {
+            "setup_item": "GitHub Fly deploy secret",
+            "gate": "deployment",
+            "current_status": deploy_activation.get("overall_status") or "needs_github_secret",
+            "blocking": "yes",
+            "source_link": "/operations/deployment-activation-pack.zh.md",
+            "next_action": "Add GitHub Actions secret FLY_API_TOKEN, then run DREC Fly Deploy once and confirm /health passes.",
+            "evidence_required": "Green DREC Fly Deploy run that performs checkout, deploy, and /health instead of skipping because FLY_API_TOKEN is missing.",
         },
         {
             "setup_item": "Meta app and Page credentials",
@@ -6614,6 +6726,7 @@ async def external_setup_board_payload():
             "doctor_send_queue": "/operations/doctor-send-queue.csv",
             "service_role_pack": "/security/service-role-install-pack.md",
             "scheduler_recovery": "/operations/scheduler-recovery-pack.md",
+            "deployment_activation": "/operations/deployment-activation-pack.zh.md",
             "meta_credential_intake": "/meta/credential-intake-pack.md",
             "meta_preflight": "/meta/preflight-audit.md",
             "meta_activation": "/meta/activation-checklist.md",
@@ -28244,6 +28357,7 @@ async def project_unblock_board_payload():
     meta = audit.get("meta") or {}
     monthly = audit.get("monthly_acceptance") or {}
     data_connection = security.get("data_connection") or {}
+    deploy_activation = github_fly_deploy_activation_payload()
     data_backend_ready = (security.get("data_backend") or data_connection.get("data_backend")) in {"postgres", "supabase_rest"}
 
     ready_assets = int(workflow_summary.get("queue_ready_asset_count") or automation_summary.get("ready_assets") or 0)
@@ -28280,6 +28394,16 @@ async def project_unblock_board_payload():
             "required_evidence": "/health reports data_backend=postgres or data_backend=supabase_rest, and /security/data-connection can read Content OS tables.",
             "link": "/security/data-connection",
             "safe_auto_action": "/security/data-connection is read-only and never returns secrets.",
+        },
+        {
+            "gate": "github_fly_deploy",
+            "status": "blocked",
+            "blocker": "GitHub Actions can see the deploy workflow, but FLY_API_TOKEN is not installed as a repository secret yet.",
+            "current_status": deploy_activation.get("overall_status") or "needs_github_secret",
+            "required_action": "Add GitHub secret FLY_API_TOKEN, run DREC Fly Deploy once, and confirm the deployed /health check passes.",
+            "required_evidence": "Latest DREC Fly Deploy run is green and includes checkout, deploy, and /health steps instead of the missing-token skip.",
+            "link": "/operations/deployment-activation-pack.zh.md",
+            "safe_auto_action": "The workflow deploys code only; it does not enable Meta publishing, publish posts, import metrics, update Notion, or change secrets.",
         },
         {
             "gate": "supabase_service_role",
@@ -28330,6 +28454,7 @@ async def project_unblock_board_payload():
             "review_to_schedule": "/operations/review-to-schedule-pack.zh.md",
             "pre_schedule_gate": "/operations/pre-schedule-gate.md",
             "service_role_pack": "/security/service-role-install-pack.md",
+            "deployment_activation": "/operations/deployment-activation-pack.zh.md",
         },
         "safety": [
             "This board is read-only and does not approve, import, queue, schedule, publish, update Notion, store secrets, or call Meta.",
