@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DREC 内容系统</title>
-  <link rel="stylesheet" href="./styles.css?v=20260622-access-code-clear">
+  <link rel="stylesheet" href="./styles.css?v=20260622-notion-import-lock">
 </head>
 <body>
   <aside>
@@ -436,7 +436,8 @@
                 <input id="notion-carousel-csv-file" type="file" accept=".csv,text/csv">
               </label>
               <button id="preview-notion-carousel-csv" type="button">预览 Notion CSV</button>
-              <button id="import-notion-carousel-csv" type="button">导入 Notion CSV</button>
+              <button id="import-notion-carousel-csv" type="button" disabled>导入 Notion CSV</button>
+              <small class="home-doctor-import-hint">先预览 Notion CSV；有可导入行且没有 CSV 内重复 Topic ID 后才可以导入。这里不会创建 Notion 新行，也不会发布。</small>
               <button id="save-all-assets" type="button">保存全部素材</button>
               <button id="archive-drafted-briefs" type="button">归档已生成草稿</button>
             </details>
@@ -1229,6 +1230,6 @@
     </section>
   </main>
 
-  <script src="./app.js?v=20260622-access-code-clear"></script>
+  <script src="./app.js?v=20260622-notion-import-lock"></script>
 </body>
 </html>

@@ -3227,6 +3227,31 @@ const requiredSnippets = [
     text: "data-notion-carousel-source",
   },
   {
+    name: "web notion csv import locked by default",
+    file: "webIndex",
+    text: 'id="import-notion-carousel-csv" type="button" disabled',
+  },
+  {
+    name: "web notion csv import preview lock helper",
+    file: "web",
+    text: "setNotionCarouselImportButton",
+  },
+  {
+    name: "web notion csv import preview update helper",
+    file: "web",
+    text: "updateNotionCarouselImportButton",
+  },
+  {
+    name: "web notion csv duplicate blocker helper",
+    file: "web",
+    text: "notionCsvHasBlockingSkips",
+  },
+  {
+    name: "web notion csv import safe hint",
+    file: "webIndex",
+    text: "先预览 Notion CSV；有可导入行且没有 CSV 内重复 Topic ID 后才可以导入",
+  },
+  {
     name: "web dashboard notion refresh card",
     file: "web",
     text: "data-dashboard-notion-refresh-status",
@@ -3344,12 +3369,12 @@ const requiredSnippets = [
   {
     name: "web home step locks stylesheet cache bust",
     file: "webIndex",
-    text: "styles.css?v=20260622-access-code-clear",
+    text: "styles.css?v=20260622-notion-import-lock",
   },
   {
     name: "web home step locks script cache bust",
     file: "webIndex",
-    text: "app.js?v=20260622-access-code-clear",
+    text: "app.js?v=20260622-notion-import-lock",
   },
   {
     name: "web monthly queue confirm locked",

@@ -3504,6 +3504,32 @@ function renderNotionCarouselCsvImport(data) {
   `);
 }
 
+function notionCsvHasBlockingSkips(data) {
+  return (data?.skipped || []).some((row) => /Duplicate Topic ID inside this CSV|Missing Topic ID|Missing Mandarin Topic Title|Missing Carousel Slide Plan|Invalid row/i.test(row.reason || ""));
+}
+
+function setNotionCarouselImportButton(enabled) {
+  setHomeActionButton(
+    "import-notion-carousel-csv",
+    enabled,
+    "预览通过，可以导入 Notion CSV。",
+    "请先预览 Notion CSV；有可导入行且没有 CSV 内重复 Topic ID 后才可以导入。",
+  );
+}
+
+function updateNotionCarouselImportButton(data) {
+  const readyCount = Number(data?.planned_count ?? 0);
+  const hasBlockingSkips = notionCsvHasBlockingSkips(data);
+  setNotionCarouselImportButton(readyCount > 0 && !hasBlockingSkips);
+  const message = document.getElementById("plan-message");
+  if (message && data && readyCount > 0 && !hasBlockingSkips) {
+    message.textContent = `${message.textContent || "预览完成。"} 可导入 ${readyCount} 行；不会创建 Notion 新行，也不会发布。`;
+  }
+  if (message && data && hasBlockingSkips) {
+    message.textContent = `${message.textContent || "预览完成。"} 发现 CSV 内 Topic ID/必要栏位问题，请先修正后再导入。`;
+  }
+}
+
 async function loadNotionCarouselSource() {
   const container = document.getElementById("notion-carousel-source");
   if (!container) return;
@@ -10046,7 +10072,7 @@ async function uploadNotionCarouselCsv({ dryRun }) {
   const file = fileInput?.files?.[0];
   if (!file) {
     message.textContent = translateText("Choose the Notion carousel CSV first.");
-    return;
+    return null;
   }
   const body = new FormData();
   body.append("file", file);
@@ -10064,21 +10090,32 @@ async function uploadNotionCarouselCsv({ dryRun }) {
     await loadNotionCarouselSource();
     renderNotionCarouselCsvImport(data);
     if (!dryRun) await Promise.all([loadBriefs(), loadAssets(), loadMonthlyCarouselStatusBoard(), loadProjectCompletionAudit()]);
+    return data;
   } catch (error) {
     message.textContent = error.message === "Access token required"
       ? translateText("Set the access token first.")
       : dryRun
         ? translateText("Could not preview Notion carousel CSV.")
         : translateText("Could not import Notion carousel CSV.");
+    return null;
   }
 }
 
+setNotionCarouselImportButton(false);
+
+document.getElementById("notion-carousel-csv-file")?.addEventListener("change", () => {
+  setNotionCarouselImportButton(false);
+});
+
 document.getElementById("preview-notion-carousel-csv")?.addEventListener("click", async () => {
-  await uploadNotionCarouselCsv({ dryRun: true });
+  setNotionCarouselImportButton(false);
+  const data = await uploadNotionCarouselCsv({ dryRun: true });
+  updateNotionCarouselImportButton(data);
 });
 
 document.getElementById("import-notion-carousel-csv")?.addEventListener("click", async () => {
   await uploadNotionCarouselCsv({ dryRun: false });
+  setNotionCarouselImportButton(false);
 });
 
 document.getElementById("save-all-assets").addEventListener("click", async () => {
