@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DREC 内容系统</title>
-  <link rel="stylesheet" href="./styles.css?v=20260622-doctor-import-lock">
+  <link rel="stylesheet" href="./styles.css?v=20260622-production-import-lock">
 </head>
 <body>
   <aside>
@@ -98,7 +98,7 @@
         <div class="workflow-head">
           <div>
             <h2>图片制作回复区</h2>
-            <p class="section-note">把图片 URL / Visual QA / Rights 贴进来，先检查，再挂到对应内容。不会发布。</p>
+            <p class="section-note">只做两步：先检查，检查出现 ready 后才可以挂载图片/设计。不会发布。</p>
           </div>
           <button id="home-fill-production-reply-template" type="button">填模板</button>
         </div>
@@ -111,9 +111,10 @@
           <input id="home-production-reply-producer" placeholder="Designer or producer">
         </label>
         <div class="form-actions">
-          <button id="home-preview-production-replies" type="button">1. 先检查</button>
-          <button id="home-import-production-replies" class="danger-safe-action" type="button">2. 确认导入</button>
+          <button id="home-preview-production-replies" class="primary" type="button">1. 检查制作回复</button>
+          <button id="home-import-production-replies" class="danger-safe-action" type="button" disabled>2. 挂载 ready 图片</button>
         </div>
+        <small class="home-doctor-import-hint">挂载按钮会在检查通过后自动亮起；挂载不会发布 Facebook/IG。</small>
         <div id="home-production-reply-message" class="status-note"></div>
         <div id="home-production-reply-preview" class="learning-grid"></div>
       </div>
@@ -1219,6 +1220,6 @@
     </section>
   </main>
 
-  <script src="./app.js?v=20260622-doctor-import-lock"></script>
+  <script src="./app.js?v=20260622-production-import-lock"></script>
 </body>
 </html>

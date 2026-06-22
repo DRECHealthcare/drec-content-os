@@ -3342,14 +3342,14 @@ const requiredSnippets = [
     text: "nav-more",
   },
   {
-    name: "web doctor import lock stylesheet cache bust",
+    name: "web production import lock stylesheet cache bust",
     file: "webIndex",
-    text: "styles.css?v=20260622-doctor-import-lock",
+    text: "styles.css?v=20260622-production-import-lock",
   },
   {
-    name: "web doctor import lock script cache bust",
+    name: "web production import lock script cache bust",
     file: "webIndex",
-    text: "app.js?v=20260622-doctor-import-lock",
+    text: "app.js?v=20260622-production-import-lock",
   },
   {
     name: "web dashboard details are folded",
@@ -3465,6 +3465,26 @@ const requiredSnippets = [
     name: "web home production reply preview",
     file: "web",
     text: "home-preview-production-replies",
+  },
+  {
+    name: "web home production import disabled by default",
+    file: "webIndex",
+    text: 'id="home-import-production-replies" class="danger-safe-action" type="button" disabled',
+  },
+  {
+    name: "web home production import lock helper",
+    file: "web",
+    text: "lockHomeProductionImportButton",
+  },
+  {
+    name: "web home production import ready unlock",
+    file: "web",
+    text: "updateHomeProductionImportButton",
+  },
+  {
+    name: "web home production import safety hint",
+    file: "webIndex",
+    text: "挂载按钮会在检查通过后自动亮起",
   },
   {
     name: "web simple paste production reply action",

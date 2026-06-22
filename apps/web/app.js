@@ -6926,16 +6926,47 @@ document.getElementById("home-fill-production-reply-template")?.addEventListener
     textInputId: "home-production-reply-text",
     messageId: "home-production-reply-message",
   });
+  lockHomeProductionImportButton();
 });
 
+function productionReadyCount(data) {
+  return Number(data?.summary?.ready_count ?? data?.planned_count ?? data?.imported_count ?? 0);
+}
+
+function setHomeProductionImportButton(enabled) {
+  const button = document.getElementById("home-import-production-replies");
+  if (!button) return;
+  button.disabled = !enabled;
+  button.title = enabled ? "检查通过，可以挂载 ready 图片/设计。" : "请先完成检查；有 ready 行后才可以挂载。";
+}
+
+function lockHomeProductionImportButton() {
+  setHomeProductionImportButton(false);
+}
+
+function updateHomeProductionImportButton(data) {
+  const readyCount = productionReadyCount(data);
+  setHomeProductionImportButton(readyCount > 0);
+  const message = document.getElementById("home-production-reply-message");
+  if (message && data && readyCount > 0) {
+    message.textContent = `${message.textContent || "检查完成。"} 可挂载 ${readyCount} 行；挂载不会发布 Facebook/IG。`;
+  }
+}
+
+document.getElementById("home-production-reply-text")?.addEventListener("input", lockHomeProductionImportButton);
+document.getElementById("home-production-reply-producer")?.addEventListener("input", lockHomeProductionImportButton);
+lockHomeProductionImportButton();
+
 document.getElementById("home-preview-production-replies")?.addEventListener("click", async () => {
-  await importProductionReplies({
+  setHomeProductionImportButton(false);
+  const data = await importProductionReplies({
     dryRun: true,
     textInputId: "home-production-reply-text",
     producerInputId: "home-production-reply-producer",
     messageId: "home-production-reply-message",
     previewTargetId: "home-production-reply-preview",
   });
+  updateHomeProductionImportButton(data);
 });
 
 document.getElementById("home-import-production-replies")?.addEventListener("click", async () => {
@@ -6946,6 +6977,7 @@ document.getElementById("home-import-production-replies")?.addEventListener("cli
     messageId: "home-production-reply-message",
     previewTargetId: "home-production-reply-preview",
   });
+  setHomeProductionImportButton(false);
   await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit()]);
 });
 
@@ -8880,8 +8912,10 @@ async function importProductionReplies({
     if (message) message.textContent = data.message || (dryRun ? "Production reply previewed." : "Production reply imported.");
     renderAssetMediaAttachmentPreview(data, previewTargetId);
     if (!dryRun) await Promise.all([loadAssets(), loadFirstCycleEvidenceWorkbench(), loadDoctorSendQueue(), loadDoctorReplyInboxPack(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadPreScheduleGate(), loadLoopStatus()]);
+    return data;
   } catch (error) {
     if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : dryRun ? "Could not preview production reply." : "Could not import production reply.";
+    return null;
   }
 }
 
