@@ -268,6 +268,21 @@ const requiredSnippets = [
     text: "Web post-learning styles",
   },
   {
+    name: "live smoke checks completion audit json",
+    file: "smokeLive",
+    text: "Project completion audit",
+  },
+  {
+    name: "live smoke checks completion audit markdown",
+    file: "smokeLive",
+    text: "Project completion audit markdown",
+  },
+  {
+    name: "live smoke completion audit unblock summary",
+    file: "smokeLive",
+    text: "data.unblock_summary?.safety",
+  },
+  {
     name: "asset queue approval gate",
     file: "main",
     text: 'asset.get("review_status") != "approved"',

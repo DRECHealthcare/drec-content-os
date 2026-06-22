@@ -354,6 +354,33 @@ const checks = [
     },
   },
   {
+    name: "Project completion audit",
+    url: `${apiBase}/operations/project-completion-audit`,
+    auth: true,
+    validate: async (res) => {
+      const data = await res.json();
+      return data.mode === "read_only_project_completion_audit"
+        && Number.isFinite(Number(data.completion?.percent))
+        && Array.isArray(data.completion?.items)
+        && Array.isArray(data.next_actions)
+        && data.unblock_summary?.safety?.includes("does not approve")
+        && Array.isArray(data.unblock_summary?.rows)
+        && data.unblock_summary.rows.some((row) => row.gate && row.required_evidence && row.link);
+    },
+  },
+  {
+    name: "Project completion audit markdown",
+    url: `${apiBase}/operations/project-completion-audit.zh.md`,
+    auth: true,
+    validate: async (res) => {
+      const text = await res.text();
+      return text.includes("# DREC Content OS 项目完成度审计")
+        && text.includes("## 解锁验收清单")
+        && text.includes("完成证据")
+        && text.includes("不会批准、导入、入队、排程、发布、写 Notion 或调用 Meta");
+    },
+  },
+  {
     name: "Manual cycle QA",
     url: `${apiBase}/operations/manual-cycle-qa.md`,
     auth: true,
