@@ -843,6 +843,21 @@ const requiredSnippets = [
     text: "\"project_completion_watch\": completion_watch",
   },
   {
+    name: "project completion audit includes unblock summary",
+    file: "main",
+    text: "\"unblock_summary\"",
+  },
+  {
+    name: "project completion audit unblock summary is read only",
+    file: "main",
+    text: "Read-only evidence summary; it does not approve, import, queue, schedule, publish, store secrets, or call Meta.",
+  },
+  {
+    name: "project completion audit chinese unblock checklist",
+    file: "main",
+    text: "## 解锁验收清单",
+  },
+  {
     name: "project completion watch heartbeat route",
     file: "main",
     text: "operations_project_completion_watch_heartbeat",

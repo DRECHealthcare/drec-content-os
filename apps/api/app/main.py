@@ -28356,7 +28356,7 @@ async def project_completion_audit_payload():
         readiness = "ready_for_live_acceptance_test"
     elif completion.get("percent", 0) < 80:
         readiness = "build_in_progress"
-    return {
+    payload = {
         "mode": "read_only_project_completion_audit",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "readiness": readiness,
@@ -28402,6 +28402,24 @@ async def project_completion_audit_payload():
             "Meta live automation remains locked until all readiness and live-switch gates are green.",
         ],
     }
+    unblock = project_unblock_board_from_audit(payload)
+    payload["unblock_summary"] = {
+        "ready_count": unblock.get("ready_count"),
+        "blocked_count": unblock.get("blocked_count"),
+        "next_action": unblock.get("next_action"),
+        "rows": [
+            {
+                "gate": row.get("gate"),
+                "status": row.get("status"),
+                "required_action": row.get("required_action"),
+                "required_evidence": row.get("required_evidence"),
+                "link": row.get("link"),
+            }
+            for row in (unblock.get("rows") or [])[:6]
+        ],
+        "safety": "Read-only evidence summary; it does not approve, import, queue, schedule, publish, store secrets, or call Meta.",
+    }
+    return payload
 
 
 def today_action_download_filename(path: str):
@@ -29049,6 +29067,7 @@ async def operations_project_completion_audit_zh(_: None = Depends(require_acces
     launch = payload.get("launch") or {}
     meta = payload.get("meta") or {}
     monthly = payload.get("monthly_acceptance") or {}
+    unblock_summary = payload.get("unblock_summary") or {}
     workflow_summary = payload.get("workflow_summary") or {}
     automation_summary = payload.get("automation_summary") or {}
     lines = [
@@ -29103,6 +29122,24 @@ async def operations_project_completion_audit_zh(_: None = Depends(require_acces
         "",
         *markdown_list(payload.get("next_actions")),
         "",
+        "## 解锁验收清单",
+        "",
+        f"- 已解锁：{unblock_summary.get('ready_count')}",
+        f"- 仍阻塞：{unblock_summary.get('blocked_count')}",
+        f"- 下一步：{unblock_summary.get('next_action')}",
+        "",
+    ])
+    for row in unblock_summary.get("rows") or []:
+        lines.extend([
+            f"### `{row.get('gate')}`",
+            "",
+            f"- 状态：`{row.get('status')}`",
+            f"- 需要做什么：{row.get('required_action')}",
+            f"- 完成证据：{row.get('required_evidence')}",
+            f"- 入口：`{row.get('link')}`",
+            "",
+        ])
+    lines.extend([
         "## 关键证据链接",
         "",
         *markdown_list([f"{key}: `{value}`" for key, value in (payload.get("links") or {}).items()]),
