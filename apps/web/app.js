@@ -6010,6 +6010,8 @@ function renderPublishingCloseout(data) {
   const counts = data.counts || {};
   const next = data.next_action || {};
   const waiting = data.waiting_for_metrics || [];
+  const recordableCount = Number(counts.scheduled_recordable || 0);
+  const upcomingCount = Number(counts.scheduled_upcoming || 0);
   container.innerHTML = `
     <article class="learning-card wide-learning">
       <h3>${escapeHtml(translateText("Next Closeout Step"))}</h3>
@@ -6018,6 +6020,14 @@ function renderPublishingCloseout(data) {
       <div class="learning-actions">
         <button type="button" data-workflow-screen="${escapeHtml(next.screen || "scheduler")}">${escapeHtml(translateText(next.screen === "learning" ? "Open Learning" : next.screen === "outcomes" ? "Open Performance" : "Open Scheduler"))}</button>
       </div>
+    </article>
+    <article class="learning-card">
+      <h3>现在可回填</h3>
+      <p>${recordableCount}</p>
+    </article>
+    <article class="learning-card">
+      <h3>未到时间</h3>
+      <p>${upcomingCount}</p>
     </article>
     <article class="learning-card">
       <h3>${escapeHtml(translateText("Scheduled Ready"))}</h3>
@@ -6061,12 +6071,15 @@ function renderHomePublishingCloseout(data) {
   const counts = data.counts || {};
   const next = data.next_action || {};
   const readyItems = data.scheduled_ready || [];
+  const recordableItems = data.scheduled_recordable || readyItems.filter(homeCanRecordPublished);
+  const upcomingItems = data.scheduled_upcoming || readyItems.filter((item) => !homeCanRecordPublished(item));
+  const orderedReadyItems = [...recordableItems, ...upcomingItems];
   const select = document.getElementById("home-record-published-item");
   if (select) {
-    select.innerHTML = readyItems.length
+    select.innerHTML = orderedReadyItems.length
       ? [
           '<option value="">选择已人工发布的项目</option>',
-          ...readyItems.map((item) => {
+          ...orderedReadyItems.map((item) => {
             const plannedLabel = item.planned_slot_myt || item.planned_slot || "未排程";
             const label = `${item.channel || "post"} / ${item.format || "content"} · ${plannedLabel} · ${(item.caption || "").slice(0, 48)}`;
             const disabled = homeCanRecordPublished(item) ? "" : " disabled";
@@ -6090,11 +6103,13 @@ function renderHomePublishingCloseout(data) {
       : '<option value="">暂无等待数据的帖子</option>';
   }
   const scheduledReady = Number(counts.scheduled_ready || 0);
+  const scheduledRecordable = Number(counts.scheduled_recordable ?? recordableItems.length ?? 0);
+  const scheduledUpcoming = Number(counts.scheduled_upcoming ?? upcomingItems.length ?? 0);
   const waitingPostId = Number(counts.waiting_for_post_id || 0);
   const waitingMetricsCount = Number(counts.waiting_for_metrics || 0);
   const waitingRollup = Number(counts.waiting_for_rollup || 0);
   const complete = Number(counts.complete || 0);
-  const nextReadyItem = readyItems[0] || null;
+  const nextReadyItem = recordableItems[0] || null;
   const learningCard = document.getElementById("home-learning-handback-card");
   if (learningCard && (waitingMetricsCount > 0 || waitingRollup > 0 || complete > 0)) {
     learningCard.hidden = false;
@@ -6112,7 +6127,9 @@ function renderHomePublishingCloseout(data) {
       </ol>
     </div>
     <div class="home-closeout-pills">
-      <span>可人工发布 ${escapeHtml(String(scheduledReady))}</span>
+      <span>现在可回填 ${escapeHtml(String(scheduledRecordable))}</span>
+      <span>未到时间 ${escapeHtml(String(scheduledUpcoming))}</span>
+      <span>总共可交接 ${escapeHtml(String(scheduledReady))}</span>
       <span>等回填 ID ${escapeHtml(String(waitingPostId))}</span>
       <span>等数据 ${escapeHtml(String(waitingMetricsCount))}</span>
       <span>等学习汇总 ${escapeHtml(String(waitingRollup))}</span>
@@ -6136,10 +6153,18 @@ function renderHomePublishingCloseout(data) {
           <button class="secondary-action" type="button" data-home-prepare-record-published="${escapeHtml(nextReadyItem.id || "")}" ${homeCanRecordPublished(nextReadyItem) ? "" : "disabled"}>${escapeHtml(homeRecordButtonLabel(nextReadyItem))}</button>
         </div>
       </article>
+    ` : scheduledReady > 0 ? `
+      <article class="home-handoff-feature muted">
+        <div>
+          <span>还没到发布时间</span>
+          <strong>${escapeHtml(String(scheduledUpcoming))} 条内容已准备，但先不要回填 ID</strong>
+          <small>可以先复制资料给发布人；到时间、真人发布完成后再回来填真实 Post ID。</small>
+        </div>
+      </article>
     ` : ""}
-    ${readyItems.length > 1 ? `
+    ${recordableItems.length > 1 ? `
       <div class="home-handoff-list">
-        ${readyItems.slice(1, 5).map((item, index) => {
+        ${recordableItems.slice(1, 5).map((item, index) => {
           const mediaUrls = Array.isArray(item.media_urls) ? item.media_urls.filter(Boolean) : [];
           return `
             <article class="home-handoff-item">
@@ -6156,6 +6181,37 @@ function renderHomePublishingCloseout(data) {
               <div class="home-handoff-actions">
                 <button type="button" data-home-copy-handoff-full="${escapeHtml(item.id || "")}">1. 复制发布资料</button>
                 <button class="secondary-action" type="button" data-home-prepare-record-published="${escapeHtml(item.id || "")}" ${homeCanRecordPublished(item) ? "" : "disabled"}>${escapeHtml(homeRecordButtonLabel(item))}</button>
+              </div>
+              ${mediaUrls.length ? `
+                <details class="home-handoff-more">
+                  <summary>分开复制</summary>
+                  <button type="button" data-home-copy-handoff-caption="${escapeHtml(item.id || "")}">复制文案</button>
+                  <button type="button" data-home-copy-handoff-media="${escapeHtml(item.id || "")}">复制媒体链接</button>
+                </details>
+              ` : ""}
+            </article>
+          `;
+        }).join("")}
+      </div>
+    ` : ""}
+    ${upcomingItems.length ? `
+      <div class="home-handoff-list">
+        <h4>未到发布时间，先不要回填</h4>
+        ${upcomingItems.slice(0, 4).map((item, index) => {
+          const mediaUrls = Array.isArray(item.media_urls) ? item.media_urls.filter(Boolean) : [];
+          return `
+            <article class="home-handoff-item muted">
+              <div>
+                <strong>${escapeHtml(index + 1)}. ${escapeHtml(item.channel || "post")} / ${escapeHtml(item.format || "content")}</strong>
+                <small>${escapeHtml(item.planned_slot_myt || item.planned_slot || "未排程")} · ${escapeHtml(item.id || "")}</small>
+                <small>${escapeHtml(homePublishTimingLabel(item))}</small>
+                <small>到时间并真人发布完成后，才可以填 Post ID。</small>
+                <code class="home-queue-id">Queue ID: ${escapeHtml(item.id || "")}</code>
+              </div>
+              <p>${escapeHtml((item.caption || "").slice(0, 150))}${(item.caption || "").length > 150 ? "..." : ""}</p>
+              <div class="home-handoff-actions">
+                <button type="button" data-home-copy-handoff-full="${escapeHtml(item.id || "")}">复制发布资料</button>
+                <button class="secondary-action" type="button" data-home-prepare-record-published="${escapeHtml(item.id || "")}" disabled>到点后填 ID</button>
               </div>
               ${mediaUrls.length ? `
                 <details class="home-handoff-more">
@@ -6186,7 +6242,7 @@ function renderHomePublishingCloseout(data) {
       </div>
     ` : ""}
   `;
-  container.dataset.readyItems = JSON.stringify(readyItems);
+  container.dataset.readyItems = JSON.stringify(orderedReadyItems);
   updateHomeRecordPublishedButton();
   updateHomeMetricsSaveButton();
 }

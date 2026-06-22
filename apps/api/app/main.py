@@ -26493,18 +26493,30 @@ async def publishing_closeout_payload(limit: int = 50):
             waiting_for_rollup.append(enriched)
         else:
             complete.append(enriched)
+    scheduled_recordable = [item for item in scheduled_ready if item.get("can_record_now")]
+    scheduled_upcoming = [item for item in scheduled_ready if not item.get("can_record_now")]
     next_action = {
         "key": "build_handoff",
         "label": "Build handoff and publish manually",
         "screen": "scheduler",
         "detail": "No scheduled published item is waiting; continue the review and schedule flow.",
     }
-    if scheduled_ready:
+    if scheduled_recordable:
         next_action = {
             "key": "manual_publish",
             "label": "Publish manually, then record the Meta post ID",
             "screen": "scheduler",
-            "detail": f"{len(scheduled_ready)} scheduled compliance-clear item(s) are ready for handoff.",
+            "detail": (
+                f"{len(scheduled_recordable)} scheduled item(s) are at or past publish time and can be recorded "
+                f"after real manual publishing. {len(scheduled_upcoming)} upcoming item(s) should not be recorded yet."
+            ),
+        }
+    elif scheduled_ready:
+        next_action = {
+            "key": "manual_publish_upcoming",
+            "label": "Upcoming manual publish items",
+            "screen": "scheduler",
+            "detail": f"{len(scheduled_upcoming)} scheduled compliance-clear item(s) are prepared, but not ready to record yet.",
         }
     elif waiting_for_post_id:
         next_action = {
@@ -26540,6 +26552,8 @@ async def publishing_closeout_payload(limit: int = 50):
         "next_action": next_action,
         "counts": {
             "scheduled_ready": len(scheduled_ready),
+            "scheduled_recordable": len(scheduled_recordable),
+            "scheduled_upcoming": len(scheduled_upcoming),
             "scheduled_blocked": len(scheduled_blocked),
             "waiting_for_post_id": len(waiting_for_post_id),
             "waiting_for_metrics": len(waiting_for_metrics),
@@ -26547,6 +26561,8 @@ async def publishing_closeout_payload(limit: int = 50):
             "complete": len(complete),
         },
         "scheduled_ready": scheduled_ready[:10],
+        "scheduled_recordable": scheduled_recordable[:10],
+        "scheduled_upcoming": scheduled_upcoming[:10],
         "scheduled_blocked": scheduled_blocked[:10],
         "waiting_for_post_id": waiting_for_post_id[:10],
         "waiting_for_metrics": waiting_for_metrics[:10],
@@ -26573,6 +26589,7 @@ async def operations_publishing_closeout_zh(_: None = Depends(require_access_tok
     action_labels_zh = {
         "build_handoff": "生成发布交接包并人工发布",
         "manual_publish": "人工发布后记录 Meta 帖子 ID",
+        "manual_publish_upcoming": "等待计划发布时间",
         "record_post_id": "补录 Meta 帖子 ID",
         "record_metrics": "记录表现数据",
         "rollup_metrics": "把表现数据汇总进学习系统",
@@ -26580,7 +26597,11 @@ async def operations_publishing_closeout_zh(_: None = Depends(require_access_tok
     }
     action_details_zh = {
         "build_handoff": "目前没有等待发布后收尾的已排程项目；请继续完成审核与排程流程。",
-        "manual_publish": f"{counts.get('scheduled_ready', 0)} 条已排程且安全通过的内容可进入人工发布交接。",
+        "manual_publish": (
+            f"{counts.get('scheduled_recordable', 0)} 条内容已到/过发布时间；真人发布完成后可以回填 Post ID。"
+            f"{counts.get('scheduled_upcoming', 0)} 条还未到时间，先不要回填。"
+        ),
+        "manual_publish_upcoming": f"{counts.get('scheduled_upcoming', 0)} 条内容已准备好，但还未到计划发布时间；先不要记录已发布。",
         "record_post_id": f"{counts.get('waiting_for_post_id', 0)} 条已发布内容还需要补外部帖子 ID。",
         "record_metrics": f"{counts.get('waiting_for_metrics', 0)} 条已发布帖子需要录入触达、收藏、分享、评论、线索和花费。",
         "rollup_metrics": f"{counts.get('waiting_for_rollup', 0)} 条表现数据需要汇总成学习结果。",
@@ -26603,6 +26624,8 @@ async def operations_publishing_closeout_zh(_: None = Depends(require_access_tok
         "## 当前数量",
         "",
         f"- 已排程、可人工发布：{counts.get('scheduled_ready', 0)}",
+        f"- 已到/过发布时间，可回填：{counts.get('scheduled_recordable', 0)}",
+        f"- 未到发布时间，先不要回填：{counts.get('scheduled_upcoming', 0)}",
         f"- 已排程但仍有阻碍：{counts.get('scheduled_blocked', 0)}",
         f"- 已标记发布但缺外部帖 ID：{counts.get('waiting_for_post_id', 0)}",
         f"- 已发布但缺表现数据：{counts.get('waiting_for_metrics', 0)}",
@@ -26617,10 +26640,10 @@ async def operations_publishing_closeout_zh(_: None = Depends(require_access_tok
         "4. 在表现数据页录入触达、点赞、评论、收藏、分享、线索和花费。",
         "5. 保存并汇总，让学习复盘能够生成下一轮建议。",
         "",
-        "## 可以人工发布/回填的项目",
+        "## 已到/过发布时间，可回填的项目",
         "",
     ]
-    ready = payload.get("scheduled_ready") or []
+    ready = payload.get("scheduled_recordable") or []
     if ready:
         for item in ready:
             lines.extend(
@@ -26639,7 +26662,21 @@ async def operations_publishing_closeout_zh(_: None = Depends(require_access_tok
                 ]
             )
     else:
-        lines.extend(["目前没有可以人工发布/回填的项目。", ""])
+        lines.extend(["目前没有已到/过发布时间、可以回填的项目。", ""])
+    upcoming = payload.get("scheduled_upcoming") or []
+    if upcoming:
+        lines.extend(["## 未到发布时间，先不要回填", ""])
+        for item in upcoming:
+            lines.extend(
+                [
+                    f"### {item.get('channel')} / {item.get('format')} · {item.get('id')}",
+                    f"- 计划时间：{item.get('planned_slot_myt') or item.get('planned_slot') or '尚未设置'}",
+                    f"- 发布时间状态：{manual_publish_timing_label_zh(item)}",
+                    f"- 人工标签建议：`{item.get('manual_label_suggestion') or manual_publish_label(item)}`",
+                    "- 处理方式：可以先复制发布资料给发布人；到时间、真人发布完成后再回填真实 Post ID。",
+                    "",
+                ]
+            )
     lines.extend([
         "## 等待录数据的帖子",
         "",
@@ -26710,41 +26747,50 @@ def metric_template_for_queue_item(item: dict):
     }
 
 
+def post_publish_ready_item(item: dict):
+    timing = manual_publish_timing(item)
+    record_state = manual_publish_record_state(item)
+    return {
+        "queue_id": item.get("id"),
+        "asset_id": item.get("asset_id"),
+        "channel": item.get("channel"),
+        "format": item.get("format"),
+        "planned_slot": item.get("planned_slot"),
+        "planned_slot_myt": item.get("planned_slot_myt") or myt_datetime_label(item.get("planned_slot")),
+        "publish_window_status": item.get("publish_window_status") or timing.get("publish_window_status"),
+        "publish_timing_label": item.get("publish_timing_label") or timing.get("publish_timing_label"),
+        **record_state,
+        "media_count": len([url for url in item.get("media_urls") or [] if url]),
+        "manual_label_suggestion": manual_publish_label(item),
+        "metrics_due_date": item.get("metrics_due_date") or manual_publish_metric_due_date(item),
+        "metric_window": item.get("metric_window") or "7d",
+        "caption": item.get("caption"),
+        "media_urls": item.get("media_urls") or [],
+        "after_publish_steps": [
+            "Publish manually from the approved caption and media.",
+            "Copy the real Meta post ID. If publishing outside Meta, use the suggested manual label.",
+            "Record Published in Scheduler with that ID or label.",
+            "After 7 days, fill the metrics row and import with rollup enabled.",
+        ],
+    }
+
+
 async def post_publish_next_steps_payload():
     closeout = await publishing_closeout_payload(100)
     ready_items = closeout.get("scheduled_ready") or []
+    recordable_items = closeout.get("scheduled_recordable") or [item for item in ready_items if item.get("can_record_now")]
+    upcoming_items = closeout.get("scheduled_upcoming") or [item for item in ready_items if not item.get("can_record_now")]
     blocked_items = closeout.get("scheduled_blocked") or []
     templates = [metric_template_for_queue_item(item) for item in ready_items]
     return {
         "mode": "read_only_post_publish_next_steps",
         "ready_to_publish_count": len(ready_items),
+        "recordable_count": len(recordable_items),
+        "upcoming_count": len(upcoming_items),
         "blocked_count": len(blocked_items),
-        "ready_items": [
-            {
-                "queue_id": item.get("id"),
-                "asset_id": item.get("asset_id"),
-                "channel": item.get("channel"),
-                "format": item.get("format"),
-                "planned_slot": item.get("planned_slot"),
-                "planned_slot_myt": item.get("planned_slot_myt") or myt_datetime_label(item.get("planned_slot")),
-                "publish_window_status": item.get("publish_window_status") or manual_publish_timing(item).get("publish_window_status"),
-                "publish_timing_label": item.get("publish_timing_label") or manual_publish_timing(item).get("publish_timing_label"),
-                **manual_publish_record_state(item),
-                "media_count": len([url for url in item.get("media_urls") or [] if url]),
-                "manual_label_suggestion": manual_publish_label(item),
-                "metrics_due_date": item.get("metrics_due_date") or manual_publish_metric_due_date(item),
-                "metric_window": item.get("metric_window") or "7d",
-                "caption": item.get("caption"),
-                "media_urls": item.get("media_urls") or [],
-                "after_publish_steps": [
-                    "Publish manually from the approved caption and media.",
-                    "Copy the real Meta post ID. If publishing outside Meta, use the suggested manual label.",
-                    "Record Published in Scheduler with that ID or label.",
-                    "After 7 days, fill the metrics row and import with rollup enabled.",
-                ],
-            }
-            for item in ready_items
-        ],
+        "recordable_items": [post_publish_ready_item(item) for item in recordable_items],
+        "upcoming_items": [post_publish_ready_item(item) for item in upcoming_items],
+        "ready_items": [post_publish_ready_item(item) for item in ready_items],
         "blocked_items": blocked_items,
         "metrics_csv_rows": templates,
         "safety": [
@@ -26753,7 +26799,7 @@ async def post_publish_next_steps_payload():
             "Do not mark a queue item published unless a human actually posted it.",
             "Reel/video items remain blocked until a public MP4 URL is attached.",
         ],
-        "next_step": "Use the ready item checklist after manual posting, then record the post ID and metrics.",
+        "next_step": "Use recordable items after real manual posting, then record the post ID and metrics. Upcoming items must wait until their planned time.",
     }
 
 
@@ -26785,18 +26831,20 @@ async def operations_post_publish_next_steps_zh(_: None = Depends(require_access
         "## 当前状态",
         "",
         f"- 可人工发布后回填：{payload.get('ready_to_publish_count')}",
+        f"- 已到/过发布时间，可回填：{payload.get('recordable_count')}",
+        f"- 未到发布时间，先不要回填：{payload.get('upcoming_count')}",
         f"- 仍被阻碍：{payload.get('blocked_count')}",
         "",
         "## 安全边界",
         "",
         *markdown_list(payload.get("safety")),
         "",
-        "## 可发布后回填项目",
+        "## 已到/过发布时间，可发布后回填项目",
         "",
     ]
-    ready_items = payload.get("ready_items") or []
+    ready_items = payload.get("recordable_items") or []
     if not ready_items:
-        lines.extend(["- 暂无可人工发布后回填项目。", ""])
+        lines.extend(["- 暂无已到/过发布时间、可发布后回填项目。", ""])
     for index, item in enumerate(ready_items, start=1):
         lines.extend(
             [
@@ -26827,6 +26875,21 @@ async def operations_post_publish_next_steps_zh(_: None = Depends(require_access
                 "",
             ]
         )
+    upcoming_items = payload.get("upcoming_items") or []
+    if upcoming_items:
+        lines.extend(["## 未到发布时间，先不要回填", ""])
+        for index, item in enumerate(upcoming_items, start=1):
+            lines.extend(
+                [
+                    f"### {index}. {item.get('channel')} / {item.get('format')}",
+                    "",
+                    f"- Queue ID：{item.get('queue_id')}",
+                    f"- 计划发布时间：{item.get('planned_slot_myt') or item.get('planned_slot')}",
+                    f"- 发布时间状态：{item.get('publish_timing_label')}",
+                    f"- 处理方式：可以先复制发布资料；到时间、真人发布完成后，再回填真实 Post ID。",
+                    "",
+                ]
+            )
     blocked_items = payload.get("blocked_items") or []
     if blocked_items:
         lines.extend(["## 仍被阻碍项目", ""])

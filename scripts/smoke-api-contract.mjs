@@ -4570,6 +4570,16 @@ const requiredSnippets = [
     text: "/operations/publishing-closeout",
   },
   {
+    name: "web publishing closeout recordable copy",
+    file: "web",
+    text: "现在可回填",
+  },
+  {
+    name: "web publishing closeout upcoming copy",
+    file: "web",
+    text: "未到发布时间，先不要回填",
+  },
+  {
     name: "web post-publish next steps action",
     file: "web",
     text: "download-post-publish-next-steps",
@@ -4583,6 +4593,26 @@ const requiredSnippets = [
     name: "web manual publish evidence endpoint",
     file: "web",
     text: "/operations/manual-publish-evidence.csv",
+  },
+  {
+    name: "api publishing closeout recordable count",
+    file: "main",
+    text: "\"scheduled_recordable\": len(scheduled_recordable)",
+  },
+  {
+    name: "api post-publish recordable count",
+    file: "main",
+    text: "\"recordable_count\": len(recordable_items)",
+  },
+  {
+    name: "api post-publish upcoming count",
+    file: "main",
+    text: "\"upcoming_count\": len(upcoming_items)",
+  },
+  {
+    name: "api publish closeout no early record copy",
+    file: "main",
+    text: "未到发布时间，先不要回填",
   },
   {
     name: "web manual publish evidence import endpoint",
