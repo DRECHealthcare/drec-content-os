@@ -1161,10 +1161,25 @@ header span { color: var(--muted); font-size: 12px; }
   margin-top: 0;
 }
 
+.home-doctor-import-hint {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
 .danger-safe-action {
   border-color: var(--green) !important;
   background: #ECFDF5 !important;
   color: #14523F !important;
+}
+
+.danger-safe-action:disabled {
+  border-color: var(--line) !important;
+  background: #F1F5F9 !important;
+  color: var(--muted) !important;
+  cursor: not-allowed;
+  opacity: 0.82;
 }
 
 .advanced-actions {

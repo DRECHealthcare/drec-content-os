@@ -6835,10 +6835,43 @@ document.getElementById("home-fill-doctor-reply-template")?.addEventListener("cl
     textInputId: "home-doctor-reply-text",
     messageId: "home-doctor-reply-message",
   });
+  lockHomeDoctorImportButtons();
 });
 
+function doctorReviewReadyCount(data) {
+  const result = data?.reply_import || data || {};
+  return Number(result.summary?.ready_count ?? result.planned_count ?? result.imported_count ?? 0);
+}
+
+function setHomeDoctorImportButton(buttonId, enabled) {
+  const button = document.getElementById(buttonId);
+  if (!button) return;
+  button.disabled = !enabled;
+  button.title = enabled ? "检查通过，可以导入 ready 行。" : "请先完成检查；有 ready 行后才可以导入。";
+}
+
+function lockHomeDoctorImportButtons() {
+  setHomeDoctorImportButton("home-import-doctor-replies-safe-advance", false);
+  setHomeDoctorImportButton("home-import-monthly-doctor-worksheet", false);
+}
+
+function updateHomeDoctorImportButton(buttonId, data, messageId = "home-doctor-reply-message") {
+  const readyCount = doctorReviewReadyCount(data);
+  setHomeDoctorImportButton(buttonId, readyCount > 0);
+  const message = document.getElementById(messageId);
+  if (message && data && readyCount > 0) {
+    message.textContent = `${message.textContent || "检查完成。"} 可导入 ${readyCount} 行；导入不会发布 Facebook/IG。`;
+  }
+}
+
+document.getElementById("home-doctor-reply-text")?.addEventListener("input", lockHomeDoctorImportButtons);
+document.getElementById("home-doctor-reply-reviewer")?.addEventListener("input", lockHomeDoctorImportButtons);
+document.getElementById("home-monthly-doctor-worksheet-file")?.addEventListener("change", lockHomeDoctorImportButtons);
+lockHomeDoctorImportButtons();
+
 document.getElementById("home-preview-doctor-replies-safe-advance")?.addEventListener("click", async () => {
-  await importDoctorRepliesAndSafeAdvance({
+  setHomeDoctorImportButton("home-import-doctor-replies-safe-advance", false);
+  const data = await importDoctorRepliesAndSafeAdvance({
     dryRun: true,
     textInputId: "home-doctor-reply-text",
     reviewerInputId: "home-doctor-reply-reviewer",
@@ -6846,6 +6879,7 @@ document.getElementById("home-preview-doctor-replies-safe-advance")?.addEventLis
     previewTargetId: "home-doctor-reply-preview",
     safeAdvanceTargetId: "home-doctor-safe-advance-preview",
   });
+  updateHomeDoctorImportButton("home-import-doctor-replies-safe-advance", data);
 });
 
 document.getElementById("home-import-doctor-replies-safe-advance")?.addEventListener("click", async () => {
@@ -6857,11 +6891,13 @@ document.getElementById("home-import-doctor-replies-safe-advance")?.addEventList
     previewTargetId: "home-doctor-reply-preview",
     safeAdvanceTargetId: "home-doctor-safe-advance-preview",
   });
+  setHomeDoctorImportButton("home-import-doctor-replies-safe-advance", false);
   await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit()]);
 });
 
 document.getElementById("home-preview-monthly-doctor-worksheet")?.addEventListener("click", async () => {
-  await uploadAssetReviewDecisions({
+  setHomeDoctorImportButton("home-import-monthly-doctor-worksheet", false);
+  const data = await uploadAssetReviewDecisions({
     dryRun: true,
     fileInputId: "home-monthly-doctor-worksheet-file",
     allowPastedCsv: false,
@@ -6869,6 +6905,7 @@ document.getElementById("home-preview-monthly-doctor-worksheet")?.addEventListen
     messageId: "home-doctor-reply-message",
     previewTargetId: "home-doctor-reply-preview",
   });
+  updateHomeDoctorImportButton("home-import-monthly-doctor-worksheet", data);
 });
 
 document.getElementById("home-import-monthly-doctor-worksheet")?.addEventListener("click", async () => {
@@ -6880,6 +6917,7 @@ document.getElementById("home-import-monthly-doctor-worksheet")?.addEventListene
     messageId: "home-doctor-reply-message",
     previewTargetId: "home-doctor-reply-preview",
   });
+  setHomeDoctorImportButton("home-import-monthly-doctor-worksheet", false);
   await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit()]);
 });
 
@@ -8610,6 +8648,7 @@ async function uploadAssetReviewDecisions({
     }
     renderAssetReviewDecisionPreview(data, previewTargetId);
     if (!dryRun) await Promise.all([loadAssets(), loadFirstCycleEvidenceWorkbench(), loadDoctorSendQueue(), loadDoctorReplyInboxPack(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadMonthlyCarouselStatusBoard(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
+    return data;
   } catch (error) {
     if (message) {
       message.textContent = error.message === "Access token required"
@@ -8618,6 +8657,7 @@ async function uploadAssetReviewDecisions({
           ? translateText(source === "monthly_doctor" ? "Could not preview monthly doctor worksheet." : "Could not preview review decisions.")
           : translateText(source === "monthly_doctor" ? "Could not import monthly doctor worksheet." : "Could not import review decisions.");
     }
+    return null;
   }
 }
 
@@ -8717,8 +8757,10 @@ async function importDoctorReplies({
     if (message) message.textContent = data.message || (dryRun ? "Doctor reply previewed." : "Doctor reply imported.");
     renderAssetReviewDecisionPreview(data, previewTargetId);
     if (!dryRun) await Promise.all([loadAssets(), loadFirstCycleEvidenceWorkbench(), loadDoctorSendQueue(), loadDoctorReplyInboxPack(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
+    return data;
   } catch (error) {
     if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : dryRun ? "Could not preview doctor reply." : "Could not import doctor reply.";
+    return null;
   }
 }
 
@@ -8775,12 +8817,14 @@ async function importDoctorRepliesAndSafeAdvance({
         loadProjectCompletionAudit(),
       ]);
     }
+    return data;
   } catch (error) {
     if (message) message.textContent = error.message === "Access token required"
       ? translateText("Set the access token first.")
       : dryRun
         ? translateText("Could not preview doctor reply safe intake.")
         : translateText("Could not run doctor reply safe intake.");
+    return null;
   }
 }
 

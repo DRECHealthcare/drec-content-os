@@ -3388,8 +3388,28 @@ const requiredSnippets = [
   },
   {
     name: "web home monthly doctor worksheet import",
+    file: "webIndex",
+    text: 'id="home-import-monthly-doctor-worksheet" class="danger-safe-action" type="button" disabled',
+  },
+  {
+    name: "web home doctor text import disabled by default",
+    file: "webIndex",
+    text: 'id="home-import-doctor-replies-safe-advance" class="danger-safe-action" type="button" disabled',
+  },
+  {
+    name: "web home doctor import lock helper",
     file: "web",
-    text: "home-import-monthly-doctor-worksheet",
+    text: "lockHomeDoctorImportButtons",
+  },
+  {
+    name: "web home doctor import ready unlock",
+    file: "web",
+    text: "updateHomeDoctorImportButton",
+  },
+  {
+    name: "web home doctor import safety hint",
+    file: "webIndex",
+    text: "导入按钮会在检查通过后自动亮起",
   },
   {
     name: "web monthly doctor worksheet can render on home card",
