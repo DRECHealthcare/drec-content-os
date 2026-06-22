@@ -262,7 +262,7 @@ const requiredSnippets = [
   {
     name: "live smoke checks latest web cache",
     file: "smokeLive",
-    text: "20260623-one-action",
+    text: "20260623-safety-strip",
   },
   {
     name: "live smoke checks locked imports",
@@ -3250,6 +3250,26 @@ const requiredSnippets = [
     text: "不会发布 FB/IG",
   },
   {
+    name: "web home static safety strip",
+    file: "webIndex",
+    text: "home-safety-strip",
+  },
+  {
+    name: "web home static safety strip copy",
+    file: "webIndex",
+    text: "这个系统不会自动发布到 Facebook / Instagram",
+  },
+  {
+    name: "web home static safety strip styles",
+    file: "styles",
+    text: ".home-safety-strip",
+  },
+  {
+    name: "web cache bust safety strip",
+    file: "webIndex",
+    text: "20260623-safety-strip",
+  },
+  {
     name: "web simple operator evidence block",
     file: "web",
     text: "renderSimpleEvidence",
@@ -3542,12 +3562,12 @@ const requiredSnippets = [
   {
     name: "web home step locks stylesheet cache bust",
     file: "webIndex",
-    text: "styles.css?v=20260623-one-action",
+    text: "styles.css?v=20260623-safety-strip",
   },
   {
     name: "web home step locks script cache bust",
     file: "webIndex",
-    text: "app.js?v=20260623-one-action",
+    text: "app.js?v=20260623-safety-strip",
   },
   {
     name: "web monthly queue confirm locked",

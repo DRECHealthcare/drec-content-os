@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DREC 内容系统</title>
-  <link rel="stylesheet" href="./styles.css?v=20260623-one-action">
+  <link rel="stylesheet" href="./styles.css?v=20260623-safety-strip">
 </head>
 <body>
   <aside>
@@ -55,6 +55,10 @@
     <section id="dashboard" class="screen active">
       <div id="simple-operator" class="simple-operator card wide">
         <p class="status-note">正在读取下一步</p>
+      </div>
+      <div class="home-safety-strip" aria-label="安全提示">
+        <strong>安全模式</strong>
+        <span>这个系统不会自动发布到 Facebook / Instagram。页面里的操作只会检查、准备、导入证据或生成交接资料。</span>
       </div>
       <div id="home-progress-card" class="card wide home-progress" hidden>
         <div id="home-progress-content">
@@ -1235,6 +1239,6 @@
     </section>
   </main>
 
-  <script src="./app.js?v=20260623-one-action"></script>
+  <script src="./app.js?v=20260623-safety-strip"></script>
 </body>
 </html>

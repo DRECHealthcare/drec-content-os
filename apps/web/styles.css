@@ -402,6 +402,32 @@ header span { color: var(--muted); font-size: 12px; }
   opacity: .92;
 }
 
+.home-safety-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: -2px 0 14px;
+  border: 1px solid #99F6E4;
+  border-left: 6px solid var(--teal);
+  border-radius: 8px;
+  padding: 10px 14px;
+  background: #F0FDFA;
+  color: #134E4A;
+}
+
+.home-safety-strip strong {
+  flex: 0 0 auto;
+  color: #0F766E;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.home-safety-strip span {
+  color: #134E4A;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .simple-operator-status {
   display: inline-flex;
   align-items: center;
@@ -2599,6 +2625,7 @@ button[type="submit"] {
   .simple-operator { grid-template-columns: 1fr; }
   .simple-operator-actions { justify-content: stretch; }
   .simple-operator-actions button { width: 100%; white-space: normal; }
+  .home-safety-strip { align-items: flex-start; flex-direction: column; gap: 4px; }
   .home-closeout-steps,
   .home-handoff-feature { grid-template-columns: 1fr; }
   .home-handoff-feature .home-handoff-actions button,
