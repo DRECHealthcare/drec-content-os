@@ -1733,6 +1733,8 @@ const checks = [
       const text = await res.text();
       return text.includes("DREC")
         && text.includes("内容系统")
+        && text.includes("styles.css?v=20260622-post-learning-bridge")
+        && text.includes("app.js?v=20260622-post-learning-bridge")
         && text.includes("simple-operator")
         && text.includes("token-input")
         && text.includes("访问码")
@@ -1742,12 +1744,54 @@ const checks = [
     },
   },
   {
+    name: "Web locked import buttons",
+    url: webBase,
+    auth: false,
+    validate: async (res) => {
+      const text = await res.text();
+      return text.includes('id="import-production-design-worksheet" type="button" disabled')
+        && text.includes('id="import-asset-review-decisions" type="button" disabled')
+        && text.includes('id="import-asset-media-attachments" type="button" disabled')
+        && text.includes('id="import-doctor-replies" type="button" disabled')
+        && text.includes('id="import-doctor-replies-safe-advance" type="button" disabled')
+        && text.includes('id="import-manual-publish-evidence" type="button" disabled')
+        && text.includes('id="import-metrics-csv" type="button" disabled')
+        && text.includes("旧导入工具也必须先预览")
+        && text.includes("先预览数据 CSV；有可导入行后才可以导入");
+    },
+  },
+  {
     name: "Web script",
     url: `${webBase}/app.js`,
     auth: false,
     validate: async (res) => {
       const text = await res.text();
       return text.includes("/workflow/status") && text.includes("/operations/launch-readiness") && text.includes("/operations/test-run-checklist") && text.includes("/operations/test-run-tracker.md") && text.includes("/operations/manual-cycle-qa.md") && text.includes("/operations/scheduler-activation-pack.md") && text.includes("/security/access-control-pack.md") && text.includes("/security/rls-hardening-plan.md") && text.includes("/security/access-policy") && text.includes("data-test-run-screen") && text.includes("/operations/risk-audit") && text.includes("/operations/snapshot.csv") && text.includes("/operations/backup-recovery-pack.md") && text.includes("/operations/pipeline-board.csv") && text.includes("/operations/audit-trail.csv") && text.includes("/operations/creative-pack.md") && text.includes("/operations/media-shot-list.csv") && text.includes("/operations/asset-review.csv") && text.includes("/operations/asset-review-decisions.csv") && text.includes("/operations/import-asset-review-decisions") && text.includes("asset-review-decisions-text") && text.includes("/operations/asset-review-worklist.md") && text.includes("/operations/asset-safety-review.md") && text.includes("/operations/asset-review-session") && text.includes("/operations/asset-review-session.md") && text.includes("/operations/approval-cockpit") && text.includes("loadApprovalCockpit") && text.includes("/operations/post-approval-production") && text.includes("loadPostApprovalProduction") && text.includes("productionBatchText") && text.includes("/operations/pre-schedule-gate") && text.includes("loadPreScheduleGate") && text.includes("/operations/asset-rewrite-pack") && text.includes("/operations/asset-rewrite-pack.md") && text.includes("/operations/first-cycle-handoff") && text.includes("loadFirstCycleHandoff") && text.includes("/caption") && text.includes("/assets/apply-safe-rewrites") && text.includes("data-apply-all-safe-rewrites") && text.includes("/operations/review-log.md") && text.includes("/operations/editorial-qa-pack.md") && text.includes("/operations/review-queue.csv") && text.includes("/operations/review-to-schedule-pack.md") && text.includes("/operations/learning-snapshot.csv") && text.includes("/learning/quarterly-memo") && text.includes("/learning/quarterly-memo.md") && text.includes("/operations/metrics-closeout-pack.md") && text.includes("/operations/weekly-cycle-pack.md") && text.includes("/operations/publishing-run-sheet.md") && text.includes("/operations/operator-pack.md") && text.includes("Existing queue item opened") && text.includes("function testPathText()") && text.includes("function testRunNextStepText()") && text.includes("latestTestRunChecklist") && text.includes("renderNextAssetReview") && text.includes("assetReviewDecisionCsvText") && text.includes("data-copy-next-asset-review") && text.includes("data-copy-next-asset-decision") && text.includes("data-fill-next-asset-decision") && text.includes("data-jump-next-asset-review") && text.includes("saveAccessTokenFromPanel") && text.includes("countByStatus") && text.includes("security-count") && text.includes("access-role-count") && text.includes("automation-count") && text.includes("Record Published: After manual posting") && text.includes("Save & Roll Up: Add metrics") && text.includes("Use Topics: Send learning recommendations") && text.includes("loadLearningTopicsIntoPlan") && text.includes("/insights/sense-brief") && text.includes("/insights/sense-brief.md") && text.includes("/insights/ads-planning") && text.includes("/insights/ads-planning.md") && text.includes("/briefs/plan.csv") && text.includes("/briefs/asset-pack.md") && text.includes("/creative/style-library") && text.includes("/creative/style-guide.md") && text.includes("/templates/library") && text.includes("/templates/static-render-pack.md") && text.includes("/video/studio-readiness") && text.includes("/video/sop-pack.md") && text.includes("/composer/draft-post") && text.includes("DREC Asset Safety Review Note") && text.includes("data-copy-asset-review") && text.includes("Outcome Insights") && text.includes("outcome_insights") && text.includes("Suggested Learning Weights") && text.includes("data-create-learning-suggestion") && text.includes("suggested_from_outcome_signal") && text.includes("needsReviewQueue") && text.includes("handoff_blockers") && text.includes("schedule-next") && text.includes("/publish-queue/calendar.ics") && text.includes("/publish-queue/schedule.csv") && text.includes("/publish-queue/schedule-audit.md") && text.includes("load-published-post") && text.includes("save-rollup-metric") && text.includes("renderMetricsImportPreview") && text.includes("/metrics/import-csv") && text.includes("/kb/context") && text.includes("Active Knowledge Context") && text.includes("/briefs/draft-assets") && text.includes("/briefs/archive-drafted") && text.includes("/assets/queue-ready") && text.includes("/publish-queue/schedule-approved") && text.includes("data-handoff-published") && text.includes("/meta/setup-checklist") && text.includes("/meta/credential-wizard.md") && text.includes("/meta/credential-intake-pack.md") && text.includes("/meta/activation-checklist.md") && text.includes("/meta/preflight-audit.md") && text.includes("/notifications/rail-readiness") && text.includes("/notifications/whatsapp-approval-pack.md") && text.includes("meta-setup-commands") && text.includes("GitHub Scheduler Setup") && text.includes("Nightly Metrics Scheduler") && text.includes("DREC_ENABLE_REAL_META_METRICS=true") && text.includes("schedulerHeartbeat.detail") && text.includes("scheduler_setup") && text.includes("nightly_metrics_scheduler") && text.includes("activation_switchboard") && text.includes("/jobs/meta-publishing?dry_run=true&channel=all");
+    },
+  },
+  {
+    name: "Web post-learning bridge",
+    url: `${webBase}/app.js`,
+    auth: false,
+    validate: async (res) => {
+      const text = await res.text();
+      return text.includes("data-open-post-metrics")
+        && text.includes("去录入数据")
+        && text.includes("data-open-learning-closeout")
+        && text.includes("去学习复盘")
+        && text.includes("homeProgressScreenFromPath")
+        && text.includes("/operations/project-unblock-board");
+    },
+  },
+  {
+    name: "Web post-learning styles",
+    url: `${webBase}/styles.css`,
+    auth: false,
+    validate: async (res) => {
+      const text = await res.text();
+      return text.includes(".home-unblock-focus")
+        && text.includes(".home-publish-next-metrics button")
+        && text.includes(".metrics-next-learning");
     },
   },
 ];

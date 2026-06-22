@@ -17,6 +17,7 @@ const files = {
   todayNextActionWorkflow: ".github/workflows/drec-today-next-action-watch.yml",
   flyDeployWorkflow: ".github/workflows/drec-fly-deploy.yml",
   strictRlsMigration: "supabase/migrations/20260617040906_strict_server_only_rls.sql",
+  smokeLive: "scripts/smoke-live.mjs",
 };
 
 const requiredRoutes = [
@@ -246,6 +247,26 @@ const requiredRoutes = [
 ];
 
 const requiredSnippets = [
+  {
+    name: "live smoke checks latest web cache",
+    file: "smokeLive",
+    text: "20260622-post-learning-bridge",
+  },
+  {
+    name: "live smoke checks locked imports",
+    file: "smokeLive",
+    text: "Web locked import buttons",
+  },
+  {
+    name: "live smoke checks post-learning bridge",
+    file: "smokeLive",
+    text: "Web post-learning bridge",
+  },
+  {
+    name: "live smoke checks post-learning styles",
+    file: "smokeLive",
+    text: "Web post-learning styles",
+  },
   {
     name: "asset queue approval gate",
     file: "main",
