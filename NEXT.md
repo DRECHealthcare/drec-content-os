@@ -315,6 +315,7 @@ Ship Stage 1 of DREC Content OS:
 - [x] Add First Cycle Sprint Tracker CSV for doctor and production coordination
 - [x] Add batch copy actions for current sprint doctor and production messages
 - [x] Add ready=true dry-run proof gate before live nightly Meta metrics ingestion
+- [x] Show Meta connected-but-live-locked status before controlled live testing
 - [ ] Connect Meta Graph API credentials
 - [x] Implement real Facebook publish scheduling behind Meta readiness and enable flags
 - [x] Implement Instagram two-step publish worker behind Meta readiness and enable flags

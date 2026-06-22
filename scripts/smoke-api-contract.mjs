@@ -6720,6 +6720,16 @@ const requiredSnippets = [
     text: "activation_switchboard",
   },
   {
+    name: "api meta connection status payload",
+    file: "main",
+    text: "connected_live_locked",
+  },
+  {
+    name: "api meta live blockers payload",
+    file: "main",
+    text: "live_blockers",
+  },
+  {
     name: "api meta activation checklist route",
     file: "main",
     text: "drec-meta-activation-checklist.md",
@@ -6748,6 +6758,21 @@ const requiredSnippets = [
     name: "web nightly metrics scheduler switch",
     file: "web",
     text: "DREC_ENABLE_REAL_META_METRICS=true",
+  },
+  {
+    name: "web meta connection status card",
+    file: "web",
+    text: "Meta Connection Status",
+  },
+  {
+    name: "web meta connection live lock copy",
+    file: "web",
+    text: "Connected, live locked",
+  },
+  {
+    name: "web meta connection status styles",
+    file: "styles",
+    text: ".meta-connection-summary.connected_live_locked",
   },
   {
     name: "operator pack scheduler setup",

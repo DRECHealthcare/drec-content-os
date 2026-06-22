@@ -3749,7 +3749,24 @@ function renderMetaSetupChecklist(data) {
   const closeoutChecks = closeoutWatch.checks || [];
   const switchboard = data.activation_switchboard || [];
   const liveSequence = data.live_sequence || [];
+  const connectionLabel = {
+    live_ready: "Ready for controlled live test",
+    connected_live_locked: "Connected, live locked",
+    credentials_missing: "Credentials missing",
+  }[data.connection_status] || data.connection_status || "not_checked";
   container.innerHTML = `
+    <article class="learning-card wide-learning meta-connection-summary ${escapeHtml(data.connection_status || "not_checked")}">
+      <h3>Meta Connection Status</h3>
+      <p>${escapeHtml(connectionLabel)}</p>
+      <small>${escapeHtml(data.safe_operator_summary || "Keep live Meta workers locked until all gates are green.")}</small>
+      <ul>
+        <li><strong>Page / IG secrets</strong> ${data.publishing_secrets_installed ? "installed" : "missing"}</li>
+        <li><strong>Page token</strong> ${data.token_functional ? "functional" : "not ready"}</li>
+        <li><strong>Permission proof</strong> ${data.permission_proof_ready ? "ready" : "needs review"}</li>
+        <li><strong>Live switches</strong> ${data.live_switches_on ? "on" : "off"}</li>
+      </ul>
+      ${(data.live_blockers || []).length ? `<ol>${data.live_blockers.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol>` : "<p>All live blockers are clear. Use the controlled live sequence only.</p>"}
+    </article>
     <article class="learning-card wide-learning">
       <h3>Credential Setup Checklist</h3>
       <p>${escapeHtml(data.overall_status || "needs_setup")}</p>

@@ -943,6 +943,30 @@ header span { color: var(--muted); font-size: 12px; }
   color: var(--navy);
 }
 
+.meta-connection-summary {
+  border-left: 6px solid var(--teal);
+}
+
+.meta-connection-summary.connected_live_locked {
+  border-left-color: #F59E0B;
+  background: #FFFBEB;
+}
+
+.meta-connection-summary.live_ready {
+  border-left-color: var(--green);
+  background: #F0FDF4;
+}
+
+.meta-connection-summary.credentials_missing {
+  border-left-color: #EF4444;
+  background: #FEF2F2;
+}
+
+.meta-connection-summary ul,
+.meta-connection-summary ol {
+  margin-top: 10px;
+}
+
 .home-closeout-next small {
   color: var(--muted);
   line-height: 1.45;

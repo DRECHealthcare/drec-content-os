@@ -842,6 +842,32 @@ async def meta_setup_checklist(_: None = Depends(require_access_token)):
     meta_ready = readiness.get("overall_status") == "ready_for_worker_testing"
     security_ready = bool(security.get("rls_hardening_ready"))
     heartbeat_recent = scheduler_heartbeat.get("status") == "recent"
+    publishing_secrets_installed = not missing_publish_env
+    token_functional = token_status in {"ready", "functional"}
+    permission_proof_ready = token_status == "ready"
+    live_switches_on = bool(
+        settings.meta_enable_publishing
+        or settings.meta_enable_publishing_job
+        or settings.meta_enable_metrics_job
+    )
+    connection_status = (
+        "live_ready"
+        if meta_ready and security_ready and heartbeat_recent and permission_proof_ready and not missing_app_env
+        else "connected_live_locked"
+        if publishing_secrets_installed and token_functional
+        else "credentials_missing"
+    )
+    live_blockers = []
+    if not publishing_secrets_installed:
+        live_blockers.append("Install META_PAGE_ID, META_IG_USER_ID, and META_PAGE_ACCESS_TOKEN on Fly.")
+    if missing_app_env:
+        live_blockers.append("Add META_APP_ID and META_APP_SECRET for app-level permission proof.")
+    if not permission_proof_ready:
+        live_blockers.append("Complete Meta permission proof for pages_manage_posts and instagram_content_publish.")
+    if not security_ready:
+        live_blockers.append(security.get("next_step") or "Install Supabase service-role key and pass the smoke test.")
+    if not heartbeat_recent:
+        live_blockers.append("Run the GitHub dry-run scheduler once so heartbeat evidence is recent.")
     activation_switchboard = [
         {
             "label": "Supabase service-role security",
@@ -892,6 +918,19 @@ async def meta_setup_checklist(_: None = Depends(require_access_token)):
     live_ready = meta_ready and security_ready and heartbeat_recent
     return {
         "overall_status": "ready_to_enable" if meta_ready and security_ready else "needs_setup",
+        "connection_status": connection_status,
+        "safe_operator_summary": (
+            "Meta Page/IG token is installed and functional, but live workers remain locked until app permission proof, service-role security, and scheduler heartbeat are green."
+            if connection_status == "connected_live_locked"
+            else "Meta is ready for a controlled live sequence."
+            if connection_status == "live_ready"
+            else "Meta publishing credentials are not fully installed yet."
+        ),
+        "publishing_secrets_installed": publishing_secrets_installed,
+        "token_functional": token_functional,
+        "permission_proof_ready": permission_proof_ready,
+        "live_switches_on": live_switches_on,
+        "live_blockers": live_blockers,
         "missing_credentials": [item["key"] for item in missing_env],
         "missing_publish_credentials": [item["key"] for item in missing_publish_env],
         "missing_app_credentials": [item["key"] for item in missing_app_env],
