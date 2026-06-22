@@ -760,7 +760,7 @@ async def meta_setup_checklist(_: None = Depends(require_access_token)):
     setup_commands.extend(
         [
             "fly deploy",
-            "DREC_ACCESS_TOKEN=\"<paste-drec-access-token>\" npm run smoke:live",
+            "DREC_ACCESS_TOKEN=\"<paste-drec-access-token>\" node scripts/smoke-live.mjs",
             "fly secrets set META_ENABLE_PUBLISHING=true META_ENABLE_PUBLISHING_JOB=true",
             "fly secrets set META_ENABLE_METRICS_JOB=true",
         ]
@@ -1191,7 +1191,7 @@ async def meta_credential_wizard_payload():
         f'fly secrets set {field["key"]}="<paste-{field["key"].lower().replace("_", "-")}>"'
         for field in fields
     ]
-    commands.extend(["fly deploy", 'DREC_ACCESS_TOKEN="<paste-drec-access-token>" npm run smoke:live'])
+    commands.extend(["fly deploy", 'DREC_ACCESS_TOKEN="<paste-drec-access-token>" node scripts/smoke-live.mjs'])
     permission_rows = [
         {
             "permission": permission,
@@ -1828,7 +1828,7 @@ async def security_access_control_pack(session: dict = Depends(require_admin_acc
         'DREC_ADMIN_TOKEN="$(openssl rand -base64 32)"',
         'fly secrets set DREC_VIEWER_TOKEN="$DREC_VIEWER_TOKEN" DREC_REVIEWER_TOKEN="$DREC_REVIEWER_TOKEN" DREC_OPERATOR_TOKEN="$DREC_OPERATOR_TOKEN" DREC_ADMIN_TOKEN="$DREC_ADMIN_TOKEN"',
         "fly deploy",
-        'DREC_ACCESS_TOKEN="$DREC_ADMIN_TOKEN" DREC_ACTOR="admin-name" npm run smoke:live',
+        'DREC_ACCESS_TOKEN="$DREC_ADMIN_TOKEN" DREC_ACTOR="admin-name" node scripts/smoke-live.mjs',
     ]
     lines = [
         "# DREC Content OS Access Control Pack",
@@ -1911,7 +1911,7 @@ def service_role_install_pack_markdown(security: dict):
         "# 4. Run the service-role smoke test from inside Fly. This uses the deployed app token, writes one audit heartbeat, and never displays the service-role key:",
         "fly ssh console -a drec-content-os-api --command 'python -c '\\''import os,urllib.request; req=urllib.request.Request(\"http://127.0.0.1:8080/security/service-role-smoke-test\", method=\"POST\", headers={\"X-DREC-Access-Token\":os.environ[\"DREC_ACCESS_TOKEN\"],\"X-DREC-Actor\":\"service-role-install\"}); print(urllib.request.urlopen(req, timeout=30).read().decode())'\\'''",
         "# 5. Run live smoke before applying strict RLS:",
-        "DREC_ACCESS_TOKEN=\"***\" DREC_WEB_URL=\"https://drec-content-os-api.fly.dev/ui/\" npm run smoke:live",
+        "DREC_ACCESS_TOKEN=\"***\" DREC_WEB_URL=\"https://drec-content-os-api.fly.dev/ui/\" node scripts/smoke-live.mjs",
     ]
     lines = [
         "# DREC Content OS Service Role Install Pack",
@@ -1948,7 +1948,7 @@ def service_role_install_pack_markdown(security: dict):
         "- The Fly-internal smoke command returns `passed: true` without printing the service-role key.",
         "- `/security/status` returns `ready_for_rls_hardening` and `service_role_smoke.status=recent`.",
         "- `/security/service-role-smoke-test` returns `passed` and records one feedback audit heartbeat.",
-        "- `npm run smoke:live` passes against the Fly URL.",
+        "- `node scripts/smoke-live.mjs` passes against the Fly URL.",
         "- Only after those checks, use `Download RLS Plan` and apply `supabase/migrations/20260617040906_strict_server_only_rls.sql`.",
         "",
         "## Hard Stop Rules",
@@ -2059,7 +2059,7 @@ async def security_rls_hardening_plan(_: None = Depends(require_admin_access)):
         "## Apply Gate",
         "",
         "- `GET /security/status` must return `ready_for_rls_hardening` with `service_role_smoke.status=recent`.",
-        "- `DREC_ACCESS_TOKEN=\"...\" npm run smoke:live` must pass immediately before applying.",
+        "- `DREC_ACCESS_TOKEN=\"...\" node scripts/smoke-live.mjs` must pass immediately before applying.",
         "- Keep the Supabase SQL editor open so the migration can be reverted manually if needed.",
         "",
         "## Apply Steps",
@@ -2067,7 +2067,7 @@ async def security_rls_hardening_plan(_: None = Depends(require_admin_access)):
         "1. Back up operations data with `Download Snapshot`, `Download Asset Review CSV`, `Download Review Queue CSV`, and `Download Learning Snapshot`.",
         "2. Confirm Fly secrets include `SUPABASE_SERVICE_ROLE_KEY` and the API was redeployed after setting it.",
         f"3. Apply `{migration}` in Supabase SQL Editor or with the Supabase CLI.",
-        "4. Run `DREC_ACCESS_TOKEN=\"...\" npm run smoke:live`.",
+        "4. Run `DREC_ACCESS_TOKEN=\"...\" node scripts/smoke-live.mjs`.",
         "5. If smoke fails with permission errors, restore the previous permissive policies temporarily and inspect grants/RLS before retrying.",
         "",
         "## Expected Result",
@@ -5364,7 +5364,7 @@ async def operations_project_completion_watch_heartbeat(
             "/operations/project-completion-audit",
             "/operations/project-unblock-board",
             "/workflow/status",
-            "/launch-readiness",
+            "/operations/launch-readiness",
         ],
     }
     await save_feedback(

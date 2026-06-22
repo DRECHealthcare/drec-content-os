@@ -6780,7 +6780,7 @@ const requiredSnippets = [
   {
     name: "github project completion launch readiness check",
     file: "projectCompletionWorkflow",
-    text: "/launch-readiness",
+    text: "/operations/launch-readiness",
   },
   {
     name: "github project completion heartbeat action",
