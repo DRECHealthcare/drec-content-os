@@ -3344,12 +3344,12 @@ const requiredSnippets = [
   {
     name: "web home step locks stylesheet cache bust",
     file: "webIndex",
-    text: "styles.css?v=20260622-monthly-advance-lock",
+    text: "styles.css?v=20260622-access-code-guidance",
   },
   {
     name: "web home step locks script cache bust",
     file: "webIndex",
-    text: "app.js?v=20260622-monthly-advance-lock",
+    text: "app.js?v=20260622-access-code-guidance",
   },
   {
     name: "web monthly queue confirm locked",
@@ -4525,6 +4525,26 @@ const requiredSnippets = [
     name: "web simple operator access code copy",
     file: "web",
     text: "先输入访问码",
+  },
+  {
+    name: "web simple operator invalid access card",
+    file: "web",
+    text: "renderInvalidAccessSimpleOperator",
+  },
+  {
+    name: "web invalid access code copy",
+    file: "web",
+    text: "访问码不正确或已过期，请重新输入。",
+  },
+  {
+    name: "web invalid access code handler",
+    file: "web",
+    text: "function handleUnauthorizedAccess",
+  },
+  {
+    name: "web invalid access code primary action",
+    file: "web",
+    text: "重新输入访问码",
   },
   {
     name: "web header access code button",

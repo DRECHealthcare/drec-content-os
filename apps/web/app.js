@@ -574,6 +574,7 @@ Object.assign(uiZh, {
   "Access token": "访问码",
   "Actor name": "操作者姓名",
   "Access token required": "请输入访问码",
+  "Access token invalid": "访问码不正确或已过期，请重新输入。",
   "Set the access token first.": "请先设置访问码。",
   "Could not load the live test checklist.": "无法读取实时测试清单。",
   "Set the access token to load knowledge entries.": "请先设置访问码，才能读取知识库。",
@@ -1273,8 +1274,14 @@ function showTokenPanel() {
   }
 }
 
-function promptForAccessToken() {
-  openTokenPanel(translateText("Access token required"));
+function promptForAccessToken(reason = "Access token required") {
+  openTokenPanel(translateText(reason));
+}
+
+function handleUnauthorizedAccess() {
+  const reason = accessToken() ? "Access token invalid" : "Access token required";
+  promptForAccessToken(reason);
+  throw new Error(reason);
 }
 
 function saveAccessTokenFromPanel() {
@@ -1363,8 +1370,7 @@ async function fetchJson(path, options) {
     ...options,
   });
   if (res.status === 401) {
-    promptForAccessToken();
-    throw new Error("Access token required");
+    handleUnauthorizedAccess();
   }
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
   return res.json();
@@ -1377,8 +1383,7 @@ async function fetchForm(path, formData) {
     body: formData,
   });
   if (res.status === 401) {
-    promptForAccessToken();
-    throw new Error("Access token required");
+    handleUnauthorizedAccess();
   }
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
   return res.json();
@@ -1389,8 +1394,7 @@ async function fetchText(path) {
     headers: authHeaders(false),
   });
   if (res.status === 401) {
-    promptForAccessToken();
-    throw new Error("Access token required");
+    handleUnauthorizedAccess();
   }
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
   return res.text();
@@ -1401,8 +1405,7 @@ async function downloadProtectedFile(path, filename, type) {
     headers: authHeaders(false),
   });
   if (res.status === 401) {
-    promptForAccessToken();
-    throw new Error("Access token required");
+    handleUnauthorizedAccess();
   }
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
   const blob = await res.blob();
@@ -2695,6 +2698,26 @@ function renderAccessPromptSimpleOperator() {
   `;
 }
 
+function renderInvalidAccessSimpleOperator() {
+  return `
+    <div class="simple-operator-copy">
+      <span class="simple-operator-status">访问码不正确 · 安全模式</span>
+      <h2>请重新输入访问码</h2>
+      <p>你刚才保存的访问码没有通过系统验证。重新输入后，首页会自动显示现在该按哪个按钮；这里不会发布到 Facebook / Instagram。</p>
+      ${renderSimpleSteps(["按“重新输入访问码”", "删除旧访问码并贴上新的", "保存后看首页主按钮"])}
+    </div>
+    <div class="simple-operator-actions">
+      <button class="primary" type="button" data-simple-open-access>重新输入访问码</button>
+      <details class="simple-extra-actions">
+        <summary>需要时打开</summary>
+        <button type="button" data-simple-refresh>重新检查</button>
+      </details>
+      <div class="simple-action-note">访问码正确后，这里会变成今日下一步。</div>
+    </div>
+    <small>这只是访问控制提示，不会修改内容、排程或调用 Meta。</small>
+  `;
+}
+
 function renderConnectionWaitingSimpleOperator() {
   return `
     <div class="simple-operator-copy">
@@ -2716,7 +2739,8 @@ function renderConnectionWaitingSimpleOperator() {
   `;
 }
 
-function renderApiFailedSimpleOperator(hasToken) {
+function renderApiFailedSimpleOperator(hasToken, error = null) {
+  if (error?.message === "Access token invalid") return renderInvalidAccessSimpleOperator();
   if (!hasToken) return renderAccessPromptSimpleOperator();
   return `
     <div class="simple-operator-copy">
@@ -3045,8 +3069,12 @@ async function loadLoopStatus() {
     loadTestRunChecklist();
     loadFirstPublishGateBoard();
     loadFirstPublishReadiness();
-  } catch {
-    const message = accessToken() ? "API access failed" : "Set access token";
+  } catch (error) {
+    const message = error?.message === "Access token invalid"
+      ? "Access token invalid"
+      : accessToken()
+        ? "API access failed"
+        : "Set access token";
     document.getElementById("queue-count").textContent = message;
     document.getElementById("brief-count").textContent = message;
     document.getElementById("asset-count").textContent = message;
@@ -3059,7 +3087,7 @@ async function loadLoopStatus() {
     if (workflow) workflow.innerHTML = `<p class="status-note">${escapeHtml(message)}</p>`;
     const simple = document.getElementById("simple-operator");
     if (simple) {
-      simple.innerHTML = renderApiFailedSimpleOperator(Boolean(accessToken()));
+      simple.innerHTML = renderApiFailedSimpleOperator(Boolean(accessToken()), error);
     }
   } finally {
     window.clearTimeout(waitingTimer);
