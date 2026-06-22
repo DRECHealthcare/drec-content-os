@@ -25304,9 +25304,13 @@ def today_safe_operator_pack_readme(payload: dict):
         "4. `04-manual-publish-evidence.csv`：真人发布时勾选和回填 post ID 的证据表。",
         "5. `05-post-publish-metrics-template.csv`：发布 7 天后再填写，不要提前导入。",
         "6. `06-schedule-audit.json`：排程阻碍和提醒。",
-        "7. `09-service-role-install-pack.md`：解除 93% 卡点的 Supabase service-role 安装步骤。",
-        "8. `10-project-completion-audit.json`：当前完成度、扣分项和证据。",
-        "9. `11-project-unblock-board.json`：从 93% 继续往完成走的真实证据清单。",
+        "7. `07-security-status.json`：Supabase / RLS / service-role 当前状态。",
+        "8. `08-workflow-status.json`：规划、审核、排程、发布、学习的工作流状态。",
+        "9. `09-service-role-install-pack.md`：解除 93% 卡点的 Supabase service-role 安装步骤。",
+        "10. `10-project-completion-audit.json`：当前完成度、扣分项和证据。",
+        "11. `11-project-unblock-board.json`：从 93% 继续往完成走的真实证据清单。",
+        "",
+        "旧编号兼容文件只放在 `legacy/`；正常操作只看根目录 `01` 到 `11`。",
         "",
         "## 下一步",
         "",
@@ -25344,9 +25348,9 @@ async def operations_today_safe_operator_pack_zip(_: None = Depends(require_acce
         archive.writestr("09-service-role-install-pack.md", service_role_install_pack_markdown(payload.get("security") or {}))
         archive.writestr("10-project-completion-audit.json", json.dumps(payload.get("project_completion") or {}, ensure_ascii=False, indent=2, default=str))
         archive.writestr("11-project-unblock-board.json", json.dumps(payload.get("project_unblock") or {}, ensure_ascii=False, indent=2, default=str))
-        archive.writestr("08-service-role-install-pack.md", service_role_install_pack_markdown(payload.get("security") or {}))
-        archive.writestr("09-project-completion-audit.json", json.dumps(payload.get("project_completion") or {}, ensure_ascii=False, indent=2, default=str))
-        archive.writestr("10-project-unblock-board.json", json.dumps(payload.get("project_unblock") or {}, ensure_ascii=False, indent=2, default=str))
+        archive.writestr("legacy/08-service-role-install-pack.md", service_role_install_pack_markdown(payload.get("security") or {}))
+        archive.writestr("legacy/09-project-completion-audit.json", json.dumps(payload.get("project_completion") or {}, ensure_ascii=False, indent=2, default=str))
+        archive.writestr("legacy/10-project-unblock-board.json", json.dumps(payload.get("project_unblock") or {}, ensure_ascii=False, indent=2, default=str))
     return Response(
         buffer.getvalue(),
         media_type="application/zip",

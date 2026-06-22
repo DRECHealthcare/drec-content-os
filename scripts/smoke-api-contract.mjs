@@ -4314,7 +4314,7 @@ const requiredSnippets = [
   {
     name: "today safe pack includes service role guide",
     file: "main",
-    text: "08-service-role-install-pack.md",
+    text: "09-service-role-install-pack.md",
   },
   {
     name: "today safe pack service role blocker copy",
@@ -4324,12 +4324,22 @@ const requiredSnippets = [
   {
     name: "today safe pack includes completion audit",
     file: "main",
-    text: "09-project-completion-audit.json",
+    text: "10-project-completion-audit.json",
   },
   {
     name: "today safe pack includes unblock board",
     file: "main",
-    text: "10-project-unblock-board.json",
+    text: "11-project-unblock-board.json",
+  },
+  {
+    name: "today safe pack legacy folder note",
+    file: "main",
+    text: "旧编号兼容文件只放在 `legacy/`",
+  },
+  {
+    name: "today safe pack legacy service role path",
+    file: "main",
+    text: "legacy/08-service-role-install-pack.md",
   },
   {
     name: "web simple operator today safe pack copy",
@@ -6413,6 +6423,21 @@ const forbiddenSnippets = [
     name: "project board stale review-to-schedule link",
     file: "main",
     text: "/operations/review-to-schedule-pack-zh.md",
+  },
+  {
+    name: "today safe pack stale root service role file",
+    file: "main",
+    text: 'archive.writestr("08-service-role-install-pack.md"',
+  },
+  {
+    name: "today safe pack stale root completion audit file",
+    file: "main",
+    text: 'archive.writestr("09-project-completion-audit.json"',
+  },
+  {
+    name: "today safe pack stale root unblock board file",
+    file: "main",
+    text: 'archive.writestr("10-project-unblock-board.json"',
   },
 ];
 
