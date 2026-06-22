@@ -3369,12 +3369,12 @@ const requiredSnippets = [
   {
     name: "web home step locks stylesheet cache bust",
     file: "webIndex",
-    text: "styles.css?v=20260622-notion-import-lock",
+    text: "styles.css?v=20260622-legacy-review-lock",
   },
   {
     name: "web home step locks script cache bust",
     file: "webIndex",
-    text: "app.js?v=20260622-notion-import-lock",
+    text: "app.js?v=20260622-legacy-review-lock",
   },
   {
     name: "web monthly queue confirm locked",
@@ -6218,8 +6218,28 @@ const requiredSnippets = [
   },
   {
     name: "web review queue decisions import action",
+    file: "webIndex",
+    text: 'id="import-review-queue-decisions" type="button" disabled',
+  },
+  {
+    name: "web monthly review queue legacy import locked",
+    file: "webIndex",
+    text: 'id="import-monthly-carousel-review-queue-decisions" type="button" disabled',
+  },
+  {
+    name: "web pasted review queue legacy import locked",
+    file: "webIndex",
+    text: 'id="import-review-queue-decisions-text" type="button" disabled',
+  },
+  {
+    name: "web legacy review queue import lock helper",
     file: "web",
-    text: "import-review-queue-decisions",
+    text: "lockLegacyReviewDecisionImportButtons",
+  },
+  {
+    name: "web legacy review queue import update helper",
+    file: "web",
+    text: "updateLegacyReviewDecisionImportButton",
   },
   {
     name: "web review queue decisions paste input",

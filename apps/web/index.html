@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DREC 内容系统</title>
-  <link rel="stylesheet" href="./styles.css?v=20260622-notion-import-lock">
+  <link rel="stylesheet" href="./styles.css?v=20260622-legacy-review-lock">
 </head>
 <body>
   <aside>
@@ -824,16 +824,16 @@
               <button id="download-monthly-carousel-review-queue-decisions" type="button">下载月度队列决定表</button>
               <button id="download-review-log" type="button">Download Review Log</button>
               <button id="preview-monthly-carousel-review-queue-decisions" type="button">预览月度队列决定</button>
-              <button id="import-monthly-carousel-review-queue-decisions" type="button">导入月度队列决定</button>
+              <button id="import-monthly-carousel-review-queue-decisions" type="button" disabled>导入月度队列决定</button>
               <label class="file-action">
                 Queue CSV
                 <input id="review-queue-decisions-file" type="file" accept=".csv,text/csv">
               </label>
               <button id="preview-review-queue-decisions" type="button">Preview Queue Decisions</button>
-              <button id="import-review-queue-decisions" type="button">Import Queue Decisions</button>
+              <button id="import-review-queue-decisions" type="button" disabled>Import Queue Decisions</button>
               <textarea id="review-queue-decisions-text" placeholder="Paste one-row queue decision CSV here, then fill reviewer_action before import."></textarea>
               <button id="preview-review-queue-decisions-text" type="button">Preview Pasted Queue Decisions</button>
-              <button id="import-review-queue-decisions-text" type="button">Import Pasted Queue Decisions</button>
+              <button id="import-review-queue-decisions-text" type="button" disabled>Import Pasted Queue Decisions</button>
             </div>
           </details>
         </div>
@@ -1230,6 +1230,6 @@
     </section>
   </main>
 
-  <script src="./app.js?v=20260622-notion-import-lock"></script>
+  <script src="./app.js?v=20260622-legacy-review-lock"></script>
 </body>
 </html>

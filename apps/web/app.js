@@ -11604,20 +11604,25 @@ async function uploadReviewQueueDecisions({
 }
 
 document.getElementById("preview-review-queue-decisions")?.addEventListener("click", async () => {
-  await uploadReviewQueueDecisions({ dryRun: true });
+  setLegacyReviewDecisionImportButton("import-review-queue-decisions", false);
+  const data = await uploadReviewQueueDecisions({ dryRun: true });
+  updateLegacyReviewDecisionImportButton("import-review-queue-decisions", data);
 });
 
 document.getElementById("import-review-queue-decisions")?.addEventListener("click", async () => {
   await uploadReviewQueueDecisions({ dryRun: false });
+  setLegacyReviewDecisionImportButton("import-review-queue-decisions", false);
 });
 
 document.getElementById("preview-monthly-carousel-review-queue-decisions")?.addEventListener("click", async () => {
-  await uploadReviewQueueDecisions({
+  setLegacyReviewDecisionImportButton("import-monthly-carousel-review-queue-decisions", false);
+  const data = await uploadReviewQueueDecisions({
     dryRun: true,
     source: "monthly_carousel",
     fileInputId: "monthly-carousel-review-queue-decisions-file",
     allowPastedCsv: false,
   });
+  updateLegacyReviewDecisionImportButton("import-monthly-carousel-review-queue-decisions", data);
 });
 
 document.getElementById("import-monthly-carousel-review-queue-decisions")?.addEventListener("click", async () => {
@@ -11627,7 +11632,32 @@ document.getElementById("import-monthly-carousel-review-queue-decisions")?.addEv
     fileInputId: "monthly-carousel-review-queue-decisions-file",
     allowPastedCsv: false,
   });
+  setLegacyReviewDecisionImportButton("import-monthly-carousel-review-queue-decisions", false);
 });
+
+function setLegacyReviewDecisionImportButton(buttonId, enabled) {
+  setHomeActionButton(
+    buttonId,
+    enabled,
+    "预览通过，可以导入审核决定。",
+    "请先预览审核决定；有通过项后才可以导入。",
+  );
+}
+
+function updateLegacyReviewDecisionImportButton(buttonId, data) {
+  const readyCount = reviewDecisionReadyCount(data);
+  setLegacyReviewDecisionImportButton(buttonId, readyCount > 0);
+  const message = document.getElementById("queue-message");
+  if (message && data && readyCount > 0) {
+    message.textContent = `${message.textContent || "预览完成。"} 可导入 ${readyCount} 条；不会发布 Facebook/IG。`;
+  }
+}
+
+function lockLegacyReviewDecisionImportButtons() {
+  setLegacyReviewDecisionImportButton("import-review-queue-decisions", false);
+  setLegacyReviewDecisionImportButton("import-monthly-carousel-review-queue-decisions", false);
+  setLegacyReviewDecisionImportButton("import-review-queue-decisions-text", false);
+}
 
 function setReviewQueueSafeAdvanceButton(buttonId, enabled, enabledTitle, disabledTitle) {
   setHomeActionButton(buttonId, enabled, enabledTitle, disabledTitle);
@@ -11677,7 +11707,11 @@ function updateReviewQueueScheduleButton(data) {
 }
 
 document.getElementById("monthly-carousel-review-queue-decisions-file")?.addEventListener("change", lockReviewQueueSafeAdvanceButtons);
+document.getElementById("monthly-carousel-review-queue-decisions-file")?.addEventListener("change", lockLegacyReviewDecisionImportButtons);
+document.getElementById("review-queue-decisions-file")?.addEventListener("change", lockLegacyReviewDecisionImportButtons);
+document.getElementById("review-queue-decisions-text")?.addEventListener("input", lockLegacyReviewDecisionImportButtons);
 lockReviewQueueSafeAdvanceButtons();
+lockLegacyReviewDecisionImportButtons();
 
 document.getElementById("preview-monthly-carousel-review-queue-safe-advance")?.addEventListener("click", async () => {
   lockReviewQueueSafeAdvanceButtons();
@@ -11709,11 +11743,14 @@ document.getElementById("import-monthly-carousel-review-queue-safe-advance")?.ad
 });
 
 document.getElementById("preview-review-queue-decisions-text")?.addEventListener("click", async () => {
-  await uploadReviewQueueDecisions({ dryRun: true });
+  setLegacyReviewDecisionImportButton("import-review-queue-decisions-text", false);
+  const data = await uploadReviewQueueDecisions({ dryRun: true });
+  updateLegacyReviewDecisionImportButton("import-review-queue-decisions-text", data);
 });
 
 document.getElementById("import-review-queue-decisions-text")?.addEventListener("click", async () => {
   await uploadReviewQueueDecisions({ dryRun: false });
+  setLegacyReviewDecisionImportButton("import-review-queue-decisions-text", false);
 });
 
 document.getElementById("review-items").addEventListener("click", async (event) => {
