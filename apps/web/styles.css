@@ -342,6 +342,14 @@ header span { color: var(--muted); font-size: 12px; }
   font-size: 15px;
 }
 
+.simple-operator-actions button.simple-secondary-action {
+  border-color: #99F6E4;
+  background: #ECFDF9;
+  color: #115E59;
+  min-height: 48px;
+  font-size: 14px;
+}
+
 .simple-extra-actions {
   text-align: left;
 }

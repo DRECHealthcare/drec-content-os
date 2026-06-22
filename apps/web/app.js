@@ -2803,9 +2803,18 @@ function renderTodaySimpleOperator(today) {
   const action = today?.action || {};
   const primary = action.primary || {};
   const secondary = action.secondary || [];
+  const quickCardAction = secondary.find((item) => item?.kind === "show_card")
+    || (primary.kind === "show_card" ? primary : null);
+  const secondaryActions = quickCardAction
+    ? secondary.filter((item) => item !== quickCardAction)
+    : secondary;
   const nextSteps = action.next_steps || ["看这里的主按钮", "执行后重新检查", "只有绿灯才进入下一步"];
   const primaryLabel = primary.label || "继续";
   const availability = today?.availability || {};
+  const quickCardLabel = {
+    doctor_reply: "我已有医生回复，粘贴这里",
+    production_reply: "我已有图片回复，粘贴这里",
+  }[quickCardAction?.target] || quickCardAction?.label || "打开当前输入区";
   return `
     <div class="simple-operator-copy">
       <span class="simple-operator-status">${escapeHtml(action.eyebrow || "今日下一步")} · ${escapeHtml(action.status || "只读状态")}</span>
@@ -2816,13 +2825,14 @@ function renderTodaySimpleOperator(today) {
     </div>
     <div class="simple-operator-actions">
       <button class="primary" type="button" ${todayActionExtraAttributes(primary)}>${escapeHtml(primaryLabel)}</button>
+      ${quickCardAction ? `<button class="simple-secondary-action" type="button" ${todayActionExtraAttributes(quickCardAction)}>${escapeHtml(quickCardLabel)}</button>` : ""}
       <details class="simple-extra-actions">
         <summary>需要时打开资料</summary>
-        ${secondary.slice(0, 4).map((item) => `<button type="button" ${todayActionExtraAttributes(item)}>${escapeHtml(item.label || "打开")}</button>`).join("")}
+        ${secondaryActions.slice(0, 4).map((item) => `<button type="button" ${todayActionExtraAttributes(item)}>${escapeHtml(item.label || "打开")}</button>`).join("")}
         <button type="button" data-simple-today-kind="download" data-simple-today-path="/operations/today-next-action.zh.md" data-simple-today-filename="drec-today-next-action-zh.md">下载今日下一步</button>
         <button type="button" data-simple-refresh>重新检查</button>
       </details>
-      <div class="simple-action-note">先按上面这个按钮；找不到东西才打开资料。</div>
+      <div class="simple-action-note">先按最大按钮；如果已有医生/制作回复，就按第二个按钮粘贴。</div>
     </div>
     <small>${escapeHtml(action.safety_note || "这里不会发布到 Facebook / Instagram。")} 找不到东西时，优先看这个卡片，不用进高级工具。</small>
   `;

@@ -261,7 +261,7 @@ const requiredSnippets = [
   {
     name: "live smoke checks latest web cache",
     file: "smokeLive",
-    text: "20260622-operator-simple",
+    text: "20260622-step-focus",
   },
   {
     name: "live smoke checks locked imports",
@@ -3234,6 +3234,26 @@ const requiredSnippets = [
     text: "data-simple-copy-monthly-doctor-message",
   },
   {
+    name: "web simple operator doctor reply direct action",
+    file: "web",
+    text: "我已有医生回复，粘贴这里",
+  },
+  {
+    name: "web simple operator production reply direct action",
+    file: "web",
+    text: "我已有图片回复，粘贴这里",
+  },
+  {
+    name: "web simple operator secondary action style",
+    file: "styles",
+    text: ".simple-operator-actions button.simple-secondary-action",
+  },
+  {
+    name: "web simple operator keeps direct card action outside advanced details",
+    file: "web",
+    text: "secondaryActions.slice(0, 4)",
+  },
+  {
     name: "web simple operator stepper styles",
     file: "styles",
     text: ".simple-operator-steps",
@@ -3461,12 +3481,12 @@ const requiredSnippets = [
   {
     name: "web home step locks stylesheet cache bust",
     file: "webIndex",
-    text: "styles.css?v=20260622-operator-simple",
+    text: "styles.css?v=20260622-step-focus",
   },
   {
     name: "web home step locks script cache bust",
     file: "webIndex",
-    text: "app.js?v=20260622-operator-simple",
+    text: "app.js?v=20260622-step-focus",
   },
   {
     name: "web monthly queue confirm locked",
