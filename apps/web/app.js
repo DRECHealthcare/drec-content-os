@@ -6041,6 +6041,7 @@ function renderHomePublishingCloseout(data) {
   `;
   container.dataset.readyItems = JSON.stringify(readyItems);
   updateHomeRecordPublishedButton();
+  updateHomeMetricsSaveButton();
 }
 
 function homeMetricsPayload(item) {
@@ -7495,19 +7496,39 @@ function homeMetricNumber(id) {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
 }
 
+const homeMetricInputIds = [
+  "home-metrics-reach",
+  "home-metrics-likes",
+  "home-metrics-comments",
+  "home-metrics-saves",
+  "home-metrics-shares",
+  "home-metrics-leads",
+  "home-metrics-spend",
+];
+
+function homeHasAnyMetricInput() {
+  return homeMetricInputIds.some((id) => {
+    const input = document.getElementById(id);
+    return input && input.value.trim() !== "";
+  });
+}
+
+function updateHomeMetricsSaveButton() {
+  const selected = document.getElementById("home-metrics-post")?.value || "";
+  setHomeActionButton(
+    "home-save-rollup-metrics",
+    Boolean(selected && homeHasAnyMetricInput()),
+    "可以保存数据并生成学习结果；不会发布。",
+    "请选择已发布帖子，并至少填写一个数据字段。",
+  );
+}
+
 function clearHomeMetricInputs() {
-  [
-    "home-metrics-reach",
-    "home-metrics-likes",
-    "home-metrics-comments",
-    "home-metrics-saves",
-    "home-metrics-shares",
-    "home-metrics-leads",
-    "home-metrics-spend",
-  ].forEach((id) => {
+  homeMetricInputIds.forEach((id) => {
     const input = document.getElementById(id);
     if (input) input.value = "";
   });
+  updateHomeMetricsSaveButton();
 }
 
 function renderHomeLearningNextAction(message) {
@@ -7537,6 +7558,11 @@ document.getElementById("home-save-rollup-metrics")?.addEventListener("click", a
   }
   if (!post.external_post_id) {
     if (message) message.textContent = "这个帖子缺少 Post ID，请先在发布交接卡记录。";
+    return;
+  }
+  if (!homeHasAnyMetricInput()) {
+    if (message) message.textContent = "请至少填写一个数据字段。";
+    updateHomeMetricsSaveButton();
     return;
   }
   const button = event.currentTarget;
@@ -7579,10 +7605,14 @@ document.getElementById("home-save-rollup-metrics")?.addEventListener("click", a
   } catch (error) {
     if (message) message.textContent = error.message === "Access token required" ? translateText("Set the access token first.") : "无法保存数据或生成学习结果。";
   } finally {
-    button.disabled = false;
     button.textContent = originalText;
+    updateHomeMetricsSaveButton();
   }
 });
+
+document.getElementById("home-metrics-post")?.addEventListener("change", updateHomeMetricsSaveButton);
+homeMetricInputIds.forEach((id) => document.getElementById(id)?.addEventListener("input", updateHomeMetricsSaveButton));
+updateHomeMetricsSaveButton();
 
 document.getElementById("home-learning-handback-card")?.addEventListener("click", async (event) => {
   const planButton = event.target.closest("[data-home-after-metrics-plan]");

@@ -3344,12 +3344,12 @@ const requiredSnippets = [
   {
     name: "web home step locks stylesheet cache bust",
     file: "webIndex",
-    text: "styles.css?v=20260622-publish-evidence-lock",
+    text: "styles.css?v=20260622-metrics-save-lock",
   },
   {
     name: "web home step locks script cache bust",
     file: "webIndex",
-    text: "app.js?v=20260622-publish-evidence-lock",
+    text: "app.js?v=20260622-metrics-save-lock",
   },
   {
     name: "web dashboard details are folded",
@@ -5914,7 +5914,17 @@ const requiredSnippets = [
   {
     name: "web home metrics quick save action",
     file: "webIndex",
-    text: "home-save-rollup-metrics",
+    text: 'id="home-save-rollup-metrics" class="danger-safe-action" type="button" disabled',
+  },
+  {
+    name: "web home metrics save lock helper",
+    file: "web",
+    text: "updateHomeMetricsSaveButton",
+  },
+  {
+    name: "web home metrics requires data",
+    file: "web",
+    text: "请至少填写一个数据字段。",
   },
   {
     name: "web home metrics quick handler",
