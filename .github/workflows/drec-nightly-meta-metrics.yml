@@ -54,12 +54,29 @@ jobs:
             --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
             "${DREC_API_BASE_URL}/meta/readiness"
 
+      - name: Prove metrics dry run before live ingestion
+        if: ${{ env.DREC_ACCESS_TOKEN != '' }}
+        run: |
+          curl --fail --silent --show-error --retry 3 --retry-delay 10 --max-time 90 \
+            --request POST \
+            --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
+            --output metrics-dry-run.json \
+            "${DREC_API_BASE_URL}/jobs/nightly-meta-metrics?dry_run=true&limit=25&rollup=true"
+          if [ "${DREC_METRICS_DRY_RUN}" = "false" ]; then
+            if ! jq -e '.ready == true' metrics-dry-run.json >/dev/null; then
+              echo "Live metrics ingestion blocked because the dry-run payload is not ready."
+              jq -r '.blockers[]? // empty' metrics-dry-run.json
+              exit 1
+            fi
+          fi
+
       - name: Run nightly Meta metrics job
         if: ${{ env.DREC_ACCESS_TOKEN != '' }}
         run: |
           curl --fail --silent --show-error --retry 3 --retry-delay 10 --max-time 90 \
             --request POST \
             --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
+            --output metrics-job-result.json \
             "${DREC_API_BASE_URL}/jobs/nightly-meta-metrics?dry_run=${DREC_METRICS_DRY_RUN}&limit=25&rollup=true"
 
       - name: Record metrics scheduler heartbeat
@@ -80,5 +97,15 @@ jobs:
             echo "- Mode: ${DREC_METRICS_MODE:-not_selected}"
             echo "- Dry run: ${DREC_METRICS_DRY_RUN:-not_selected}"
             echo "- Token configured: $([ -n "${DREC_ACCESS_TOKEN}" ] && echo yes || echo no)"
+            if [ -f metrics-dry-run.json ]; then
+              echo "- Dry-run ready: $(jq -r '.ready // false' metrics-dry-run.json)"
+              echo "- Planned requests: $(jq -r '(.planned_requests // []) | length' metrics-dry-run.json)"
+              echo "- Dry-run blockers: $(jq -r '(.blockers // []) | join("; ")' metrics-dry-run.json)"
+            fi
+            if [ -f metrics-job-result.json ]; then
+              echo "- Job mode: $(jq -r '.mode // "unknown"' metrics-job-result.json)"
+              echo "- Inserted rows: $(jq -r '(.inserted // []) | length' metrics-job-result.json)"
+            fi
             echo "- Safety: live metrics require both GitHub variable \`DREC_ENABLE_REAL_META_METRICS=true\` and Fly secret \`META_ENABLE_METRICS_JOB=true\`."
+            echo "- Live guard: real ingestion only runs after the dry-run payload reports \`ready=true\`."
           } >> "$GITHUB_STEP_SUMMARY"

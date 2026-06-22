@@ -408,8 +408,10 @@ Fly secret: META_ENABLE_METRICS_JOB=true
 ```
 
 Keep the GitHub variable unset or `false` until Meta readiness is green and a
-manual workflow dispatch has passed in dry-run mode. Even when the GitHub
-variable is true, the API still blocks live ingestion unless the Fly
+manual workflow dispatch has passed in dry-run mode with `ready=true` and at
+least one planned request. Even when the GitHub variable is true, the workflow
+first runs a same-run dry-run proof and blocks live ingestion unless that
+payload is ready; the API also blocks live ingestion unless the Fly
 `META_ENABLE_METRICS_JOB` secret is enabled and Meta credentials/permissions
 pass readiness checks.
 
@@ -452,7 +454,8 @@ fly secrets set META_ENABLE_PUBLISHING=true
 fly secrets set META_ENABLE_PUBLISHING_JOB=true
 ```
 
-Real nightly ingestion needs all Meta readiness checks to pass plus this Fly secret:
+Real nightly ingestion needs all Meta readiness checks to pass, a ready=true
+nightly metrics dry run with planned requests, plus this Fly secret:
 
 ```bash
 fly secrets set META_ENABLE_METRICS_JOB=true

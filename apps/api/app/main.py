@@ -792,10 +792,11 @@ async def meta_setup_checklist(_: None = Depends(require_access_token)):
         "steps": [
             "Keep DREC_ENABLE_REAL_META_METRICS unset or false while Meta credentials are pending.",
             "After Meta readiness is green, set Fly secret META_ENABLE_METRICS_JOB=true.",
-            "Set GitHub Actions variable DREC_ENABLE_REAL_META_METRICS=true only after a successful dry run.",
-            "Run DREC Nightly Meta Metrics manually once and confirm raw metrics plus rollup results.",
+            "Run DREC Nightly Meta Metrics manually in dry-run mode and confirm the dry-run payload reports ready=true.",
+            "Set GitHub Actions variable DREC_ENABLE_REAL_META_METRICS=true only after a ready=true dry-run with planned requests.",
+            "Run DREC Nightly Meta Metrics manually once in live mode and confirm raw metrics plus rollup results.",
         ],
-        "safety": "The workflow defaults to dry-run. Live ingestion requires both the GitHub variable and the Fly META_ENABLE_METRICS_JOB lock to be enabled, and the API still checks Meta readiness.",
+        "safety": "The workflow defaults to dry-run. Live ingestion requires both the GitHub variable and the Fly META_ENABLE_METRICS_JOB lock, Meta readiness, and a same-run dry-run payload with ready=true before real ingestion.",
     }
     monthly_notion_refresh_watch = {
         "status": "armed_read_only" if scheduler_heartbeat.get("status") in {"recent", "stale"} else "needs_first_run",
@@ -1362,7 +1363,7 @@ async def meta_credential_intake_pack(_: None = Depends(require_access_token)):
         "",
         "- Keep manual handoff as the publishing path until Meta readiness is green.",
         "- Run Meta Setup dry-run publishing before enabling META_ENABLE_PUBLISHING or META_ENABLE_PUBLISHING_JOB.",
-        "- Run nightly metrics in dry-run mode before enabling META_ENABLE_METRICS_JOB.",
+        "- Run nightly metrics in dry-run mode and confirm ready=true before enabling META_ENABLE_METRICS_JOB or DREC_ENABLE_REAL_META_METRICS.",
         "- Keep DREC_ENABLE_REAL_META_METRICS unset or false until the first dry-run metrics workflow succeeds.",
         "- Do one Facebook-only live test before Instagram publishing or metrics automation.",
         "- After every credential change, run the live smoke check and save the Launch Evidence export.",

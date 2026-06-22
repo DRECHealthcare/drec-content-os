@@ -8,6 +8,7 @@ const files = {
   models: "apps/api/app/models.py",
   dockerfile: "apps/api/Dockerfile",
   schema: "supabase/schema.sql",
+  docsDeployment: "docs/deployment.md",
   web: "apps/web/app.js",
   webIndex: "apps/web/index.html",
   styles: "apps/web/styles.css",
@@ -6987,6 +6988,31 @@ const requiredSnippets = [
     name: "real metrics workflow live readiness check",
     file: "realMetricsWorkflow",
     text: "/meta/readiness",
+  },
+  {
+    name: "real metrics workflow dry-run proof",
+    file: "realMetricsWorkflow",
+    text: "Prove metrics dry run before live ingestion",
+  },
+  {
+    name: "real metrics workflow dry-run ready gate",
+    file: "realMetricsWorkflow",
+    text: "jq -e '.ready == true' metrics-dry-run.json",
+  },
+  {
+    name: "real metrics workflow live guard summary",
+    file: "realMetricsWorkflow",
+    text: "real ingestion only runs after the dry-run payload reports \\`ready=true\\`",
+  },
+  {
+    name: "api metrics scheduler ready proof copy",
+    file: "main",
+    text: "ready=true dry-run with planned requests",
+  },
+  {
+    name: "deployment metrics scheduler ready proof",
+    file: "docsDeployment",
+    text: "least one planned request",
   },
   {
     name: "real metrics workflow live heartbeat",
