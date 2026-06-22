@@ -3399,12 +3399,12 @@ const requiredSnippets = [
   {
     name: "web home step locks stylesheet cache bust",
     file: "webIndex",
-    text: "styles.css?v=20260622-home-unblock-focus",
+    text: "styles.css?v=20260622-post-learning-bridge",
   },
   {
     name: "web home step locks script cache bust",
     file: "webIndex",
-    text: "app.js?v=20260622-home-unblock-focus",
+    text: "app.js?v=20260622-post-learning-bridge",
   },
   {
     name: "web monthly queue confirm locked",
@@ -4500,6 +4500,16 @@ const requiredSnippets = [
     name: "web manual publish metrics due cue",
     file: "web",
     text: "数据回填建议",
+  },
+  {
+    name: "web manual publish opens metrics next step",
+    file: "web",
+    text: "data-open-post-metrics",
+  },
+  {
+    name: "web manual publish metrics bridge copy",
+    file: "web",
+    text: "去录入数据",
   },
   {
     name: "web post-publish metrics template action",
@@ -6490,6 +6500,21 @@ const requiredSnippets = [
     name: "web metrics csv preview renderer",
     file: "web",
     text: "renderMetricsImportPreview",
+  },
+  {
+    name: "web metrics import opens learning next step",
+    file: "web",
+    text: "data-open-learning-closeout",
+  },
+  {
+    name: "web metrics import learning bridge copy",
+    file: "web",
+    text: "去学习复盘",
+  },
+  {
+    name: "web metrics import learning bridge styles",
+    file: "styles",
+    text: ".metrics-next-learning",
   },
   {
     name: "web metrics csv import endpoint",

@@ -7332,6 +7332,7 @@ function renderManualPublishEvidencePreview(data, targetId = "manual-publish-evi
         <div class="home-publish-next-metrics">
           <strong>发布记录已保存。</strong>
           <span>这些帖子现在会进入“等待数据”阶段；到回填日期后，在数据回流学习区录入表现数据。</span>
+          <button type="button" data-open-post-metrics>去录入数据</button>
         </div>
       ` : ""}
       ${skipped.length ? `
@@ -7471,6 +7472,12 @@ document.getElementById("home-import-manual-publish-evidence")?.addEventListener
 
 document.getElementById("home-open-scheduler")?.addEventListener("click", () => {
   showScreen("scheduler");
+});
+
+document.getElementById("home-manual-publish-evidence-preview")?.addEventListener("click", (event) => {
+  if (!event.target.closest("[data-open-post-metrics]")) return;
+  showScreen("outcomes");
+  document.getElementById("metrics-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
 document.getElementById("home-record-published-save")?.addEventListener("click", async (event) => {
@@ -12253,6 +12260,13 @@ function renderMetricsImportPreview(data) {
         <h4>${data.mode === "dry_run" ? "Importable Rows" : "Imported Rows"}</h4>
         <ul>${visibleRows.slice(0, 8).map((row) => `<li><strong>Row ${escapeHtml(row.row || "")}</strong> ${escapeHtml(row.source || "")} · ${escapeHtml(row.external_post_id || "")}</li>`).join("")}</ul>
       ` : ""}
+      ${data.mode !== "dry_run" && imported.length ? `
+        <div class="metrics-next-learning">
+          <strong>数据已保存。</strong>
+          <span>${data.outcome_count || 0} 条 outcome 已准备给学习系统使用。</span>
+          <button type="button" data-open-learning-closeout>去学习复盘</button>
+        </div>
+      ` : ""}
       ${skipped.length ? `
         <h4>Skipped Rows</h4>
         <ul>${skipped.slice(0, 8).map((row) => `<li><strong>Row ${escapeHtml(row.row || "")}</strong> ${escapeHtml(row.external_post_id || "")}${row.external_post_id ? " · " : ""}${escapeHtml(row.reason || "")}</li>`).join("")}</ul>
@@ -12322,6 +12336,12 @@ document.getElementById("preview-metrics-csv")?.addEventListener("click", async 
 document.getElementById("import-metrics-csv")?.addEventListener("click", async () => {
   await uploadMetricsCsv({ dryRun: false });
   setMetricsCsvImportButton(false);
+});
+
+document.getElementById("metrics-import-preview")?.addEventListener("click", (event) => {
+  if (!event.target.closest("[data-open-learning-closeout]")) return;
+  showScreen("learning");
+  document.getElementById("learning-summary")?.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
 document.getElementById("weight-form").addEventListener("submit", async (event) => {

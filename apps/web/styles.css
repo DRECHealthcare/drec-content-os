@@ -1007,6 +1007,36 @@ header span { color: var(--muted); font-size: 12px; }
   line-height: 1.45;
 }
 
+.home-publish-next-metrics button,
+.metrics-next-learning button {
+  justify-self: start;
+  margin-top: 4px;
+  border: 1px solid var(--teal);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: var(--teal);
+  color: #052E2A;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.metrics-next-learning {
+  display: grid;
+  gap: 4px;
+  margin-top: 12px;
+  border: 1px solid #BBF7D0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #F0FDF4;
+  color: var(--navy);
+}
+
+.metrics-next-learning span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .home-closeout-steps li.active {
   border-color: var(--teal);
   background: #F0FDFA;
