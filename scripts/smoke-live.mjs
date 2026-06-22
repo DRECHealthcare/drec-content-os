@@ -1760,8 +1760,8 @@ const checks = [
       const text = await res.text();
       return text.includes("DREC")
         && text.includes("内容系统")
-        && text.includes("styles.css?v=20260622-post-learning-bridge")
-        && text.includes("app.js?v=20260622-post-learning-bridge")
+        && text.includes("styles.css?v=20260622-operator-simple")
+        && text.includes("app.js?v=20260622-operator-simple")
         && text.includes("simple-operator")
         && text.includes("token-input")
         && text.includes("访问码")

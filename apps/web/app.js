@@ -2559,31 +2559,8 @@ function renderHomeProjectCompletion(data) {
       </div>
       <div class="home-progress-actions">
         <span class="home-progress-safe-label">只读状态</span>
-        <button type="button" data-home-open-next="${escapeHtml(nextScreen)}">打开下一步</button>
       </div>
     </div>
-    <div class="home-progress-bars">
-      <div>
-        <span>整体系统</span>
-        <div class="completion-track"><i style="width:${escapeHtml(String(percent))}%"></i></div>
-      </div>
-      <div>
-        <span>首轮闭环</span>
-        <div class="completion-track"><i style="width:${escapeHtml(String(firstCycle))}%"></i></div>
-      </div>
-    </div>
-    <div class="home-progress-pills">
-      <span>Launch: ${escapeHtml(translateText(launch.overall_status || "unknown"))}</span>
-      <span>数据: ${escapeHtml(translateText(dataBackend))}</span>
-      <span>月度 ready: ${escapeHtml(String(monthly.ready_count || 0))}</span>
-      <span>waiting: ${escapeHtml(String(monthly.waiting_count || 0))}</span>
-      <span>blocked: ${escapeHtml(String(monthly.blocked_count || 0))}</span>
-    </div>
-    ${nextActions.length ? `
-      <ul class="home-progress-next">
-        ${nextActions.slice(0, 3).map((item) => `<li>${escapeHtml(translateText(item))}</li>`).join("")}
-      </ul>
-    ` : ""}
     ${nextUnlock ? `
       <div class="home-unblock-focus ${escapeHtml(nextUnlock.status || "blocked")}">
         <div>
@@ -2593,15 +2570,8 @@ function renderHomeProjectCompletion(data) {
           <small><b>通过标准：</b>${escapeHtml(translateText(nextUnlock.required_evidence || "系统证据更新后，这个 gate 会变成 ready。"))}</small>
         </div>
         <div class="home-unblock-actions">
-          <button class="primary" type="button" data-home-open-next="${escapeHtml(nextScreen)}">打开相关页面</button>
-          <button type="button" data-home-download-unblock>下载完整解锁清单</button>
+          <button class="primary" type="button" data-home-open-next="${escapeHtml(nextScreen)}">开始这一步</button>
         </div>
-      </div>
-    ` : ""}
-    ${blockers.length ? `
-      <div class="home-progress-blockers">
-        <strong>目前还差</strong>
-        <ul>${blockers.slice(0, 3).map((item) => `<li>${escapeHtml(translateText(item))}</li>`).join("")}</ul>
       </div>
     ` : ""}
     ${serviceRoleMissing || needsServiceRoleSmoke ? `
@@ -2627,7 +2597,35 @@ function renderHomeProjectCompletion(data) {
       </div>
     ` : ""}
     <details class="simple-extra-actions home-progress-more">
-      <summary>需要时打开进度资料</summary>
+      <summary>查看详情 / 资料</summary>
+      <div class="home-progress-bars">
+        <div>
+          <span>整体系统</span>
+          <div class="completion-track"><i style="width:${escapeHtml(String(percent))}%"></i></div>
+        </div>
+        <div>
+          <span>首轮闭环</span>
+          <div class="completion-track"><i style="width:${escapeHtml(String(firstCycle))}%"></i></div>
+        </div>
+      </div>
+      <div class="home-progress-pills">
+        <span>Launch: ${escapeHtml(translateText(launch.overall_status || "unknown"))}</span>
+        <span>数据: ${escapeHtml(translateText(dataBackend))}</span>
+        <span>月度 ready: ${escapeHtml(String(monthly.ready_count || 0))}</span>
+        <span>waiting: ${escapeHtml(String(monthly.waiting_count || 0))}</span>
+        <span>blocked: ${escapeHtml(String(monthly.blocked_count || 0))}</span>
+      </div>
+      ${nextActions.length ? `
+        <ul class="home-progress-next">
+          ${nextActions.slice(0, 3).map((item) => `<li>${escapeHtml(translateText(item))}</li>`).join("")}
+        </ul>
+      ` : ""}
+      ${blockers.length ? `
+        <div class="home-progress-blockers">
+          <strong>目前还差</strong>
+          <ul>${blockers.slice(0, 3).map((item) => `<li>${escapeHtml(translateText(item))}</li>`).join("")}</ul>
+        </div>
+      ` : ""}
       <button type="button" data-home-refresh-progress>刷新</button>
       <button type="button" data-home-download-operator-guide>首页说明</button>
       <button type="button" data-home-download-completion>完成度审计</button>

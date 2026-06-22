@@ -250,7 +250,7 @@ const requiredSnippets = [
   {
     name: "live smoke checks latest web cache",
     file: "smokeLive",
-    text: "20260622-post-learning-bridge",
+    text: "20260622-operator-simple",
   },
   {
     name: "live smoke checks locked imports",
@@ -3160,7 +3160,7 @@ const requiredSnippets = [
   {
     name: "web home focused unblock action",
     file: "web",
-    text: "打开相关页面",
+    text: "开始这一步",
   },
   {
     name: "web home focused unblock class",
@@ -3450,12 +3450,12 @@ const requiredSnippets = [
   {
     name: "web home step locks stylesheet cache bust",
     file: "webIndex",
-    text: "styles.css?v=20260622-post-learning-bridge",
+    text: "styles.css?v=20260622-operator-simple",
   },
   {
     name: "web home step locks script cache bust",
     file: "webIndex",
-    text: "app.js?v=20260622-post-learning-bridge",
+    text: "app.js?v=20260622-operator-simple",
   },
   {
     name: "web monthly queue confirm locked",

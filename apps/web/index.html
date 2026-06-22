@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DREC 内容系统</title>
-  <link rel="stylesheet" href="./styles.css?v=20260622-post-learning-bridge">
+  <link rel="stylesheet" href="./styles.css?v=20260622-operator-simple">
 </head>
 <body>
   <aside>
@@ -65,7 +65,7 @@
         <div class="workflow-head">
           <div>
             <h2>医生回复区</h2>
-            <p class="section-note">只做两步：先检查，检查出现 ready 后才可以导入。没有明确 approve + Safety clear 时，系统不会往下走。</p>
+            <p class="section-note">默认只做这条路：粘贴医生回复 → 检查 → 导入 ready 行。没有 approve + Safety clear 时，系统不会往下走。</p>
           </div>
           <button id="home-fill-doctor-reply-template" type="button">填回复模板</button>
         </div>
@@ -77,19 +77,22 @@
           医生/审核人姓名
           <input id="home-doctor-reply-reviewer" placeholder="Dr. name">
         </label>
-        <div class="home-doctor-csv-import">
-          <label>
-            医生审核表 CSV
-            <input id="home-monthly-doctor-worksheet-file" type="file" accept=".csv,text/csv">
-          </label>
-          <button id="home-preview-monthly-doctor-worksheet" class="primary" type="button">1. 检查医生表</button>
-          <button id="home-import-monthly-doctor-worksheet" class="danger-safe-action" type="button" disabled>2. 导入 ready 行</button>
+        <div class="form-actions">
+          <button id="home-preview-doctor-replies-safe-advance" class="primary" type="button">1. 检查医生回复</button>
+          <button id="home-import-doctor-replies-safe-advance" class="danger-safe-action" type="button" disabled>2. 导入通过回复</button>
         </div>
         <small class="home-doctor-import-hint">导入按钮会在检查通过后自动亮起；导入不会发布 Facebook/IG。</small>
-        <div class="form-actions">
-          <button id="home-preview-doctor-replies-safe-advance" class="primary" type="button">1. 检查文字回复</button>
-          <button id="home-import-doctor-replies-safe-advance" class="danger-safe-action" type="button" disabled>2. 导入 ready 行</button>
-        </div>
+        <details class="simple-extra-actions home-stage-more">
+          <summary>其他方式：上传医生审核表 CSV</summary>
+          <div class="home-doctor-csv-import">
+            <label>
+              医生审核表 CSV
+              <input id="home-monthly-doctor-worksheet-file" type="file" accept=".csv,text/csv">
+            </label>
+            <button id="home-preview-monthly-doctor-worksheet" class="primary" type="button">1. 检查医生表</button>
+            <button id="home-import-monthly-doctor-worksheet" class="danger-safe-action" type="button" disabled>2. 导入 ready 行</button>
+          </div>
+        </details>
         <div id="home-doctor-reply-message" class="status-note"></div>
         <div id="home-doctor-reply-preview" class="learning-grid"></div>
         <div id="home-doctor-safe-advance-preview" class="learning-grid"></div>
@@ -144,6 +147,10 @@
             <p class="section-note">粘贴审核决定，先检查，再导入。只有 approve + clear 的内容才会排程；不会发布。</p>
           </div>
         </div>
+        <label>
+          队列审核决定 CSV
+          <textarea id="home-review-queue-decisions-text" placeholder="queue_id,reviewer_action,reviewer_name,review_notes&#10;...,approve,Dr. name,Approved for scheduling"></textarea>
+        </label>
         <div class="form-actions">
           <button id="home-preview-review-queue-decisions" type="button">1. 先检查</button>
           <button id="home-import-review-queue-decisions" class="danger-safe-action" type="button" disabled>2. 确认导入</button>
@@ -155,10 +162,6 @@
           </details>
         </div>
         <small class="home-doctor-import-hint">先检查审核决定；导入后才可以安排时间。这里不会发布 Facebook/IG。</small>
-        <label>
-          队列审核决定 CSV
-          <textarea id="home-review-queue-decisions-text" placeholder="queue_id,reviewer_action,reviewer_name,review_notes&#10;...,approve,Dr. name,Approved for scheduling"></textarea>
-        </label>
         <div id="home-review-schedule-message" class="status-note"></div>
         <div id="home-review-schedule-preview" class="learning-grid"></div>
         <div id="home-review-safe-advance-preview" class="learning-grid"></div>
@@ -1232,6 +1235,6 @@
     </section>
   </main>
 
-  <script src="./app.js?v=20260622-post-learning-bridge"></script>
+  <script src="./app.js?v=20260622-operator-simple"></script>
 </body>
 </html>
