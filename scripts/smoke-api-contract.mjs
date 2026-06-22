@@ -6392,6 +6392,16 @@ const requiredSnippets = [
     text: "FLY_API_TOKEN is not configured. Skipping Fly deploy.",
   },
   {
+    name: "github fly deploy missing-token summary",
+    file: "flyDeployWorkflow",
+    text: "Status: not enabled",
+  },
+  {
+    name: "github fly deploy enabled summary",
+    file: "flyDeployWorkflow",
+    text: "Deploy channel status:",
+  },
+  {
     name: "github fly deploy command",
     file: "flyDeployWorkflow",
     text: "flyctl deploy --remote-only --update-only --strategy rolling",
@@ -6425,6 +6435,16 @@ const requiredSnippets = [
     name: "deployment activation safety copy",
     file: "main",
     text: "does not create tokens, store secrets, deploy code, approve content, publish to Meta, update Notion, import metrics, or change Fly/GitHub/Supabase settings",
+  },
+  {
+    name: "deployment activation enabled evidence",
+    file: "main",
+    text: "Deploy channel status: enabled",
+  },
+  {
+    name: "deployment activation not-enabled evidence",
+    file: "main",
+    text: "Deploy channel status: not enabled",
   },
   {
     name: "real metrics workflow job",

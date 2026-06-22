@@ -991,10 +991,12 @@ def github_fly_deploy_activation_payload():
         "success_evidence": [
             "Latest DREC Fly Deploy Action run is green and not skipped.",
             "Action summary says Post-deploy check: /health.",
+            "Action summary says Deploy channel status: enabled.",
+            "The Check out repository, Set up Fly, Deploy DREC Content OS, and Verify deployed API health steps ran instead of being skipped.",
             f"{api_url}/health returns ok after the run.",
             "The deployed page still shows Meta publishing switches off.",
         ],
-        "skip_signal": "If the latest run only shows 'FLY_API_TOKEN is not configured. Skipping Fly deploy.', the GitHub secret is still missing.",
+        "skip_signal": "If the latest run says Status: not enabled or only shows 'FLY_API_TOKEN is not configured. Skipping Fly deploy.', the GitHub secret is still missing.",
         "safe_use_note": "This pack is setup guidance only. It does not create tokens, store secrets, deploy code, approve content, publish to Meta, update Notion, import metrics, or change Fly/GitHub/Supabase settings.",
         "hard_stop_rules": [
             "Do not paste the Fly token into chat, repository files, screenshots, Markdown files, browser fields, or Action logs.",
@@ -1048,6 +1050,8 @@ async def operations_deployment_activation_pack_zh(_: None = Depends(require_acc
         "## 如果还是跳过",
         "",
         f"- {payload.get('skip_signal')}",
+        "- 在 Actions summary 看到 `Deploy channel status: not enabled` 时，不要继续找代码问题；先补 GitHub secret。",
+        "- 补好后重新运行，同一个 summary 应该变成 `Deploy channel status: enabled`。",
         "",
         "## 安全规则",
         "",

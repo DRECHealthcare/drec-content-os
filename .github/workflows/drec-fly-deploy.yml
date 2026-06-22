@@ -30,6 +30,14 @@ jobs:
         if: ${{ env.FLY_API_TOKEN == '' }}
         run: |
           echo "FLY_API_TOKEN is not configured. Skipping Fly deploy."
+          {
+            echo "## DREC Fly Deploy"
+            echo ""
+            echo "- Status: not enabled"
+            echo "- Reason: GitHub repository secret \`FLY_API_TOKEN\` is missing."
+            echo "- Next: add \`FLY_API_TOKEN\`, then run this workflow again."
+            echo "- Safety: no deployment, Meta publishing, metrics import, Notion update, or secret change was performed."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Check out repository
         if: ${{ env.FLY_API_TOKEN != '' }}
@@ -61,6 +69,7 @@ jobs:
             echo "- API: ${DREC_API_BASE_URL}"
             echo "- Event: ${GITHUB_EVENT_NAME}"
             echo "- Fly token configured: $([ -n "${FLY_API_TOKEN}" ] && echo yes || echo no)"
+            echo "- Deploy channel status: $([ -n "${FLY_API_TOKEN}" ] && echo enabled || echo not enabled)"
             echo "- Safety: deploys code only. It does not enable Meta publishing, publish posts, import metrics, update Notion, or change secrets."
             echo "- Post-deploy check: /health"
           } >> "$GITHUB_STEP_SUMMARY"
