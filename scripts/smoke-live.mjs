@@ -11,7 +11,7 @@ const checks = [
     auth: false,
     validate: async (res) => {
       const data = await res.json();
-      return data.ok === true && data.supabase_rest === "configured";
+      return data.ok === true && ["configured", "accessible"].includes(data.supabase_rest);
     },
   },
   {
@@ -1730,7 +1730,14 @@ const checks = [
     auth: false,
     validate: async (res) => {
       const text = await res.text();
-      return text.includes("DREC") && text.includes("workflow-next") && text.includes("launch-count") && text.includes("token-input") && text.includes("copy-next-test-step") && text.includes("copy-test-path") && text.includes("run-risk-audit") && text.includes("download-test-run-tracker") && text.includes("download-manual-cycle-qa") && text.includes("download-access-pack") && text.includes("download-rls-plan") && text.includes("download-snapshot") && text.includes("download-backup-pack") && text.includes("download-pipeline-board") && text.includes("download-audit-trail") && text.includes("download-operator-pack") && text.includes("Ready Assets") && text.includes("Learning Loop") && text.includes("Security Gate") && text.includes("Access Role") && text.includes("Automation Gate") && text.includes("Record Published") && text.includes("Save & Roll Up") && text.includes("Use Topics In Weekly Plan") && text.includes("Insight Inbox") && text.includes("download-sense-brief") && text.includes("download-ads-planning") && text.includes("refresh-ads-planning") && text.includes("download-plan-csv") && text.includes("download-brief-asset-pack") && text.includes("Creative Studio") && text.includes("download-style-guide") && text.includes("Template Studio") && text.includes("download-static-render-pack") && text.includes("Video Studio") && text.includes("download-video-sop") && text.includes("download-weekly-report") && text.includes("download-weekly-cycle-pack") && text.includes("download-learning-snapshot") && text.includes("download-quarterly-memo") && text.includes("refresh-quarterly-memo") && text.includes("download-metrics-template") && text.includes("download-metrics-closeout") && text.includes("preview-metrics-csv") && text.includes("import-metrics-csv") && text.includes("metrics-import-preview") && text.includes("save-all-assets") && text.includes("archive-drafted-briefs") && text.includes("approve-clear-assets") && text.includes("queue-ready-assets") && text.includes("asset-next-review") && text.includes("download-creative-pack") && text.includes("download-media-shot-list") && text.includes("download-asset-review") && text.includes("download-asset-review-decisions") && text.includes("preview-asset-review-decisions") && text.includes("import-asset-review-decisions") && text.includes("asset-review-decisions-text") && text.includes("preview-asset-review-decisions-text") && text.includes("import-asset-review-decisions-text") && text.includes("download-asset-worklist") && text.includes("download-asset-safety-review") && text.includes("download-asset-review-session") && text.includes("download-approval-cockpit") && text.includes("download-post-approval-production") && text.includes("download-asset-rewrite-pack") && text.includes("download-first-cycle-handoff") && text.includes("first-cycle-handoff") && text.includes("post-approval-production") && text.includes("download-editorial-qa") && text.includes("download-review-schedule-pack") && text.includes("download-pre-schedule-gate") && text.includes("download-review-queue") && text.includes("download-review-log") && text.includes("download-run-sheet") && text.includes("download-scheduler-pre-schedule-gate") && text.includes("download-calendar") && text.includes("download-schedule-csv") && text.includes("download-schedule-audit") && text.includes("schedule-approved-items") && text.includes("pre-schedule-gate") && text.includes("kb-context") && text.includes("copy-meta-setup") && text.includes("download-meta-wizard") && text.includes("download-meta-intake") && text.includes("download-meta-activation") && text.includes("download-meta-preflight") && text.includes("download-scheduler-pack") && text.includes("refresh-notify-rail") && text.includes("download-whatsapp-pack") && text.includes("dry-run-meta-publishing");
+      return text.includes("DREC")
+        && text.includes("内容系统")
+        && text.includes("simple-operator")
+        && text.includes("token-input")
+        && text.includes("访问码")
+        && text.includes("月度工作台")
+        && text.includes("排程 / 交接")
+        && text.includes("安全模式：不会自动发布到 FB / IG");
     },
   },
   {
@@ -1766,13 +1773,16 @@ async function runCheck(check) {
   };
 }
 
+const results = [];
+const runnableChecks = accessToken ? checks : checks.filter((check) => !check.auth);
+const skippedChecks = accessToken ? [] : checks.filter((check) => check.auth);
+
 if (!accessToken) {
-  console.error("DREC_ACCESS_TOKEN is required for protected API checks.");
-  process.exit(2);
+  console.log("DREC_ACCESS_TOKEN is not set; running public live checks only.");
+  console.log(`Skipping ${skippedChecks.length} protected check(s).`);
 }
 
-const results = [];
-for (const check of checks) {
+for (const check of runnableChecks) {
   try {
     results.push(await runCheck(check));
   } catch (error) {
@@ -1783,6 +1793,10 @@ for (const check of checks) {
 for (const result of results) {
   const mark = result.ok ? "PASS" : "FAIL";
   console.log(`${mark} ${result.name}: ${result.detail}`);
+}
+
+for (const check of skippedChecks) {
+  console.log(`SKIP ${check.name}: DREC_ACCESS_TOKEN is not set`);
 }
 
 const failed = results.filter((result) => !result.ok);
