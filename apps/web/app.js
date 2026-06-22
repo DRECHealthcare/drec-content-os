@@ -11159,6 +11159,7 @@ async function scheduleApprovedItems({
 
 document.getElementById("schedule-approved-items").addEventListener("click", async (event) => {
   await scheduleApprovedItems({ button: event.currentTarget });
+  lockReviewQueueSafeAdvanceButtons();
 });
 
 document.getElementById("download-review-log")?.addEventListener("click", async () => {
@@ -11354,24 +11355,83 @@ document.getElementById("import-monthly-carousel-review-queue-decisions")?.addEv
   });
 });
 
+function setReviewQueueSafeAdvanceButton(buttonId, enabled, enabledTitle, disabledTitle) {
+  setHomeActionButton(buttonId, enabled, enabledTitle, disabledTitle);
+}
+
+function lockReviewQueueSafeAdvanceButtons() {
+  setReviewQueueSafeAdvanceButton(
+    "import-monthly-carousel-review-queue-safe-advance",
+    false,
+    "检查通过，可以导入通过项。",
+    "请先检查审核决定；有通过项后才可以导入。",
+  );
+  setReviewQueueSafeAdvanceButton(
+    "schedule-approved-items",
+    false,
+    "通过项已导入，可以排程。",
+    "请先导入通过项；之后才可以排程。",
+  );
+}
+
+function updateReviewQueueImportButton(data) {
+  const readyCount = reviewDecisionReadyCount(data);
+  setReviewQueueSafeAdvanceButton(
+    "import-monthly-carousel-review-queue-safe-advance",
+    readyCount > 0,
+    "检查通过，可以导入通过项。",
+    "请先检查审核决定；有通过项后才可以导入。",
+  );
+  const message = document.getElementById("queue-message");
+  if (message && data && readyCount > 0) {
+    message.textContent = `${message.textContent || "检查完成。"} 可导入 ${readyCount} 条通过项；不会发布 Facebook/IG。`;
+  }
+}
+
+function updateReviewQueueScheduleButton(data) {
+  const importedCount = reviewDecisionReadyCount(data);
+  setReviewQueueSafeAdvanceButton(
+    "schedule-approved-items",
+    importedCount > 0,
+    "通过项已导入，可以排程。",
+    "请先导入通过项；之后才可以排程。",
+  );
+  const message = document.getElementById("queue-message");
+  if (message && data && importedCount > 0) {
+    message.textContent = `${message.textContent || "导入完成。"} 可以继续排程；排程仍不会发布 Facebook/IG。`;
+  }
+}
+
+document.getElementById("monthly-carousel-review-queue-decisions-file")?.addEventListener("change", lockReviewQueueSafeAdvanceButtons);
+lockReviewQueueSafeAdvanceButtons();
+
 document.getElementById("preview-monthly-carousel-review-queue-safe-advance")?.addEventListener("click", async () => {
-  await uploadReviewQueueDecisions({
+  lockReviewQueueSafeAdvanceButtons();
+  const data = await uploadReviewQueueDecisions({
     dryRun: true,
     source: "monthly_carousel",
     fileInputId: "monthly-carousel-review-queue-decisions-file",
     allowPastedCsv: false,
     safeAdvance: true,
   });
+  updateReviewQueueImportButton(data);
 });
 
 document.getElementById("import-monthly-carousel-review-queue-safe-advance")?.addEventListener("click", async () => {
-  await uploadReviewQueueDecisions({
+  const data = await uploadReviewQueueDecisions({
     dryRun: false,
     source: "monthly_carousel",
     fileInputId: "monthly-carousel-review-queue-decisions-file",
     allowPastedCsv: false,
     safeAdvance: true,
   });
+  setReviewQueueSafeAdvanceButton(
+    "import-monthly-carousel-review-queue-safe-advance",
+    false,
+    "检查通过，可以导入通过项。",
+    "请先检查审核决定；有通过项后才可以导入。",
+  );
+  updateReviewQueueScheduleButton(data);
 });
 
 document.getElementById("preview-review-queue-decisions-text")?.addEventListener("click", async () => {

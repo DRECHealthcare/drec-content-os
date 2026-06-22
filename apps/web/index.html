@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DREC 内容系统</title>
-  <link rel="stylesheet" href="./styles.css?v=20260622-metrics-save-lock">
+  <link rel="stylesheet" href="./styles.css?v=20260622-review-step-lock">
 </head>
 <body>
   <aside>
@@ -807,8 +807,8 @@
             <input id="monthly-carousel-review-queue-decisions-file" type="file" accept=".csv,text/csv">
           </label>
           <button id="preview-monthly-carousel-review-queue-safe-advance" type="button">2. 检查决定</button>
-          <button id="import-monthly-carousel-review-queue-safe-advance" type="button">3. 导入通过项</button>
-          <button id="schedule-approved-items" type="button">4. 排程</button>
+          <button id="import-monthly-carousel-review-queue-safe-advance" type="button" disabled>3. 导入通过项</button>
+          <button id="schedule-approved-items" type="button" disabled>4. 排程</button>
           <details class="advanced-actions compact-tool-group">
             <summary>需要时打开下载 / 旧审核工具</summary>
             <div class="learning-actions">
@@ -834,6 +834,7 @@
             </div>
           </details>
         </div>
+        <small class="home-doctor-import-hint">检查通过后才可以导入；导入通过项后才可以排程。这里不会发布 Facebook/IG。</small>
         <div id="pre-schedule-gate" class="learning-grid"></div>
         <div id="review-queue-decision-preview" class="learning-grid"></div>
         <div id="review-items" class="queue-list"></div>
@@ -1222,6 +1223,6 @@
     </section>
   </main>
 
-  <script src="./app.js?v=20260622-metrics-save-lock"></script>
+  <script src="./app.js?v=20260622-review-step-lock"></script>
 </body>
 </html>

@@ -3344,12 +3344,12 @@ const requiredSnippets = [
   {
     name: "web home step locks stylesheet cache bust",
     file: "webIndex",
-    text: "styles.css?v=20260622-metrics-save-lock",
+    text: "styles.css?v=20260622-review-step-lock",
   },
   {
     name: "web home step locks script cache bust",
     file: "webIndex",
-    text: "app.js?v=20260622-metrics-save-lock",
+    text: "app.js?v=20260622-review-step-lock",
   },
   {
     name: "web dashboard details are folded",
@@ -5670,6 +5670,36 @@ const requiredSnippets = [
     name: "web bulk approved scheduling action",
     file: "web",
     text: "schedule-approved-items",
+  },
+  {
+    name: "web review safe advance import disabled by default",
+    file: "webIndex",
+    text: 'id="import-monthly-carousel-review-queue-safe-advance" type="button" disabled',
+  },
+  {
+    name: "web review schedule disabled by default",
+    file: "webIndex",
+    text: 'id="schedule-approved-items" type="button" disabled',
+  },
+  {
+    name: "web review safe advance lock helper",
+    file: "web",
+    text: "lockReviewQueueSafeAdvanceButtons",
+  },
+  {
+    name: "web review safe advance ready unlock",
+    file: "web",
+    text: "updateReviewQueueImportButton",
+  },
+  {
+    name: "web review schedule unlock after import",
+    file: "web",
+    text: "updateReviewQueueScheduleButton",
+  },
+  {
+    name: "web review safe sequence hint",
+    file: "webIndex",
+    text: "检查通过后才可以导入；导入通过项后才可以排程",
   },
   {
     name: "web home review schedule card",
