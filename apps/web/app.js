@@ -2518,6 +2518,10 @@ function renderHomeProjectCompletion(data) {
   const nextActions = data.next_actions || [];
   const blockers = completion.blockers || [];
   const monthly = data.monthly_acceptance || {};
+  const unblock = data.unblock || {};
+  const unblockRows = Array.isArray(unblock.rows) ? unblock.rows : [];
+  const blockedUnlocks = unblockRows.filter((row) => row.status !== "ready");
+  const nextUnlock = blockedUnlocks[0] || unblockRows.find((row) => row.status === "ready") || null;
   const launch = data.launch || {};
   const security = data.security || {};
   const dataBackend = security.data_backend || (security.data_connection || {}).data_backend || "unknown";
@@ -2544,7 +2548,7 @@ function renderHomeProjectCompletion(data) {
   const percent = Math.max(0, Math.min(100, Number(completion.percent || 0)));
   const firstCycle = Math.max(0, Math.min(100, Number(completion.first_cycle_percent || 0)));
   const primaryNext = completion.next_requirement || nextActions[0] || blockers[0] || "继续按首页下一步操作。";
-  const nextScreen = homeProgressNextScreen(primaryNext, data);
+  const nextScreen = homeProgressScreenFromPath(nextUnlock?.link) || homeProgressNextScreen(primaryNext, data);
   card.hidden = false;
   container.innerHTML = `
     <div class="home-progress-head">
@@ -2555,6 +2559,7 @@ function renderHomeProjectCompletion(data) {
       </div>
       <div class="home-progress-actions">
         <span class="home-progress-safe-label">只读状态</span>
+        <button type="button" data-home-open-next="${escapeHtml(nextScreen)}">打开下一步</button>
       </div>
     </div>
     <div class="home-progress-bars">
@@ -2578,6 +2583,20 @@ function renderHomeProjectCompletion(data) {
       <ul class="home-progress-next">
         ${nextActions.slice(0, 3).map((item) => `<li>${escapeHtml(translateText(item))}</li>`).join("")}
       </ul>
+    ` : ""}
+    ${nextUnlock ? `
+      <div class="home-unblock-focus ${escapeHtml(nextUnlock.status || "blocked")}">
+        <div>
+          <span>现在只做这一件事</span>
+          <strong>${escapeHtml(translateText(nextUnlock.gate || primaryNext))}</strong>
+          <p>${escapeHtml(translateText(nextUnlock.required_action || primaryNext))}</p>
+          <small><b>通过标准：</b>${escapeHtml(translateText(nextUnlock.required_evidence || "系统证据更新后，这个 gate 会变成 ready。"))}</small>
+        </div>
+        <div class="home-unblock-actions">
+          <button class="primary" type="button" data-home-open-next="${escapeHtml(nextScreen)}">打开相关页面</button>
+          <button type="button" data-home-download-unblock>下载完整解锁清单</button>
+        </div>
+      </div>
     ` : ""}
     ${blockers.length ? `
       <div class="home-progress-blockers">
@@ -2619,6 +2638,19 @@ function renderHomeProjectCompletion(data) {
   `;
 }
 
+function homeProgressScreenFromPath(path = "") {
+  const source = String(path || "").toLowerCase();
+  if (!source) return "";
+  if (source.includes("service-role") || source.includes("security") || source.includes("deployment") || source.includes("meta")) return "meta";
+  if (source.includes("doctor") || source.includes("asset") || source.includes("approval") || source.includes("production")) return "assets";
+  if (source.includes("review-to-schedule") || source.includes("review-queue")) return "review";
+  if (source.includes("pre-schedule") || source.includes("schedule") || source.includes("publish")) return "scheduler";
+  if (source.includes("metrics") || source.includes("outcome")) return "outcomes";
+  if (source.includes("learning") || source.includes("weekly-report")) return "learning";
+  if (source.includes("notion") || source.includes("monthly-carousel")) return "plan";
+  return "";
+}
+
 function homeProgressNextScreen(text, data = {}) {
   const source = `${text || ""} ${(data.completion?.next_requirement || "")}`.toLowerCase();
   const monthly = data.monthly_acceptance || {};
@@ -2651,7 +2683,13 @@ async function loadProjectCompletionAudit() {
   const card = document.getElementById("home-progress-card");
   const container = document.getElementById("home-progress-content");
   try {
-    const data = await fetchJson("/operations/project-completion-audit");
+    const [auditResult, unblockResult] = await Promise.allSettled([
+      fetchJson("/operations/project-completion-audit"),
+      fetchJson("/operations/project-unblock-board"),
+    ]);
+    if (auditResult.status !== "fulfilled") throw auditResult.reason;
+    const data = auditResult.value;
+    if (unblockResult.status === "fulfilled") data.unblock = unblockResult.value;
     renderHomeProjectCompletion(data);
   } catch (error) {
     if (card && container) {

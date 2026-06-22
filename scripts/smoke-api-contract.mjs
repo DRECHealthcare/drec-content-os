@@ -3092,6 +3092,31 @@ const requiredSnippets = [
     text: "homeProgressNextScreen",
   },
   {
+    name: "web home progress path screen router",
+    file: "web",
+    text: "homeProgressScreenFromPath",
+  },
+  {
+    name: "web home progress fetches unblock board",
+    file: "web",
+    text: "/operations/project-unblock-board",
+  },
+  {
+    name: "web home focused unblock copy",
+    file: "web",
+    text: "现在只做这一件事",
+  },
+  {
+    name: "web home focused unblock action",
+    file: "web",
+    text: "打开相关页面",
+  },
+  {
+    name: "web home focused unblock class",
+    file: "web",
+    text: "home-unblock-focus",
+  },
+  {
     name: "web home progress primary action styles",
     file: "styles",
     text: ".home-progress-actions button.primary",
@@ -3210,6 +3235,11 @@ const requiredSnippets = [
     name: "web home progress styles",
     file: "styles",
     text: ".home-progress",
+  },
+  {
+    name: "web home focused unblock styles",
+    file: "styles",
+    text: ".home-unblock-focus",
   },
   {
     name: "web home service role unblock styles",
@@ -3369,12 +3399,12 @@ const requiredSnippets = [
   {
     name: "web home step locks stylesheet cache bust",
     file: "webIndex",
-    text: "styles.css?v=20260622-legacy-asset-import-lock",
+    text: "styles.css?v=20260622-home-unblock-focus",
   },
   {
     name: "web home step locks script cache bust",
     file: "webIndex",
-    text: "app.js?v=20260622-legacy-asset-import-lock",
+    text: "app.js?v=20260622-home-unblock-focus",
   },
   {
     name: "web monthly queue confirm locked",
