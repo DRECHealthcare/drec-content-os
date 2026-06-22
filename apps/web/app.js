@@ -2707,10 +2707,22 @@ function todayActionExtraAttributes(action = {}) {
 }
 
 function renderSimpleSteps(steps = []) {
+  const safeSteps = steps.length ? steps : ["看最大按钮", "执行后重新检查", "缺证据就停住"];
   return `
     <ol class="simple-operator-steps" aria-label="完成顺序">
-      ${steps.slice(0, 3).map((step, index) => `<li><span>${escapeHtml(String(index + 1))}</span>${escapeHtml(step)}</li>`).join("")}
+      ${safeSteps.slice(0, 3).map((step, index) => `<li><span>${escapeHtml(String(index + 1))}</span>${escapeHtml(step)}</li>`).join("")}
     </ol>
+  `;
+}
+
+function renderSimpleEvidence(evidence = []) {
+  const visible = (evidence || []).filter(Boolean).slice(0, 4);
+  if (!visible.length) return "";
+  return `
+    <div class="simple-evidence">
+      <strong>要准备的证据</strong>
+      <ul>${visible.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+    </div>
   `;
 }
 
@@ -2811,28 +2823,43 @@ function renderTodaySimpleOperator(today) {
   const nextSteps = action.next_steps || ["看这里的主按钮", "执行后重新检查", "只有绿灯才进入下一步"];
   const primaryLabel = primary.label || "继续";
   const availability = today?.availability || {};
+  const project = today?.project_completion || {};
+  const monthly = today?.monthly || {};
+  const gateCounts = monthly.gate_counts || {};
+  const waitingDoctor = Number(gateCounts.waiting_doctor_safety_clear || 0);
+  const readyToQueue = Number(gateCounts.ready_to_queue || 0);
   const quickCardLabel = {
     doctor_reply: "我已有医生回复，粘贴这里",
     production_reply: "我已有图片回复，粘贴这里",
   }[quickCardAction?.target] || quickCardAction?.label || "打开当前输入区";
   return `
     <div class="simple-operator-copy">
-      <span class="simple-operator-status">${escapeHtml(action.eyebrow || "今日下一步")} · ${escapeHtml(action.status || "只读状态")}</span>
+      <div class="simple-operator-topline">
+        <span class="simple-operator-status">${escapeHtml(action.eyebrow || "今日下一步")} · ${escapeHtml(action.status || "只读状态")}</span>
+        <span class="simple-operator-safe">不会发布 FB/IG</span>
+      </div>
       <h2>${escapeHtml(action.title || "现在只看这里")}</h2>
       <p>${escapeHtml(action.body || "系统正在判断下一步。")}</p>
       ${availability.partial ? `<div class="simple-operator-warning">部分后台检查比较慢，系统已先显示安全可做的下一步。</div>` : ""}
+      <div class="simple-today-metrics" aria-label="当前状态">
+        <span><b>${escapeHtml(project.percent ?? "?")}%</b>总体</span>
+        <span><b>${escapeHtml(waitingDoctor)}</b>等医生</span>
+        <span><b>${escapeHtml(readyToQueue)}</b>可入队</span>
+      </div>
       ${renderSimpleSteps(nextSteps)}
+      ${renderSimpleEvidence(action.evidence_required)}
     </div>
     <div class="simple-operator-actions">
+      <div class="simple-action-label">现在只按这个</div>
       <button class="primary" type="button" ${todayActionExtraAttributes(primary)}>${escapeHtml(primaryLabel)}</button>
       ${quickCardAction ? `<button class="simple-secondary-action" type="button" ${todayActionExtraAttributes(quickCardAction)}>${escapeHtml(quickCardLabel)}</button>` : ""}
       <details class="simple-extra-actions">
-        <summary>需要时打开资料</summary>
+        <summary>更多资料和检查</summary>
         ${secondaryActions.slice(0, 4).map((item) => `<button type="button" ${todayActionExtraAttributes(item)}>${escapeHtml(item.label || "打开")}</button>`).join("")}
         <button type="button" data-simple-today-kind="download" data-simple-today-path="/operations/today-next-action.zh.md" data-simple-today-filename="drec-today-next-action-zh.md">下载今日下一步</button>
         <button type="button" data-simple-refresh>重新检查</button>
       </details>
-      <div class="simple-action-note">先按最大按钮；如果已有医生/制作回复，就按第二个按钮粘贴。</div>
+      <div class="simple-action-note">主按钮是当前推荐动作；其他按钮先不用管。</div>
     </div>
     <small>${escapeHtml(action.safety_note || "这里不会发布到 Facebook / Instagram。")} 找不到东西时，优先看这个卡片，不用进高级工具。</small>
   `;

@@ -262,7 +262,7 @@ const requiredSnippets = [
   {
     name: "live smoke checks latest web cache",
     file: "smokeLive",
-    text: "20260622-step-focus",
+    text: "20260623-one-action",
   },
   {
     name: "live smoke checks locked imports",
@@ -3212,7 +3212,27 @@ const requiredSnippets = [
   {
     name: "web simple operator clear secondary label",
     file: "web",
-    text: "需要时打开资料",
+    text: "更多资料和检查",
+  },
+  {
+    name: "web simple operator one action label",
+    file: "web",
+    text: "现在只按这个",
+  },
+  {
+    name: "web simple operator safe no publish pill",
+    file: "web",
+    text: "不会发布 FB/IG",
+  },
+  {
+    name: "web simple operator evidence block",
+    file: "web",
+    text: "renderSimpleEvidence",
+  },
+  {
+    name: "web simple operator today metrics",
+    file: "styles",
+    text: ".simple-today-metrics",
   },
   {
     name: "web simple operator status pill",
@@ -3487,12 +3507,12 @@ const requiredSnippets = [
   {
     name: "web home step locks stylesheet cache bust",
     file: "webIndex",
-    text: "styles.css?v=20260622-step-focus",
+    text: "styles.css?v=20260623-one-action",
   },
   {
     name: "web home step locks script cache bust",
     file: "webIndex",
-    text: "app.js?v=20260622-step-focus",
+    text: "app.js?v=20260623-one-action",
   },
   {
     name: "web monthly queue confirm locked",
