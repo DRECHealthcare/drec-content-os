@@ -9141,12 +9141,14 @@ async function uploadProductionDesignWorksheet({
       : (isMonthly ? translateText("Monthly carousel production worksheet imported.") : "Design worksheet imported."));
     renderAssetMediaAttachmentPreview(data);
     if (!dryRun) await Promise.all([loadAssets(), loadFirstCycleEvidenceWorkbench(), loadDoctorSendQueue(), loadDoctorReplyInboxPack(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadMonthlyCarouselStatusBoard(), loadPreScheduleGate(), loadLoopStatus()]);
+    return data;
   } catch (error) {
     message.textContent = error.message === "Access token required"
       ? translateText("Set the access token first.")
       : dryRun
         ? (isMonthly ? translateText("Could not preview monthly carousel production worksheet.") : "Could not preview design worksheet.")
         : (isMonthly ? translateText("Could not import monthly carousel production worksheet.") : "Could not import design worksheet.");
+    return null;
   }
 }
 
@@ -9173,12 +9175,14 @@ async function uploadMonthlyCarouselEvidenceBridge({ dryRun }) {
     renderAssetReviewDecisionPreview(data);
     renderAssetMediaAttachmentPreview(data);
     if (!dryRun) await Promise.all([loadAssets(), loadFirstCycleEvidenceWorkbench(), loadDoctorSendQueue(), loadDoctorReplyInboxPack(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadMonthlyCarouselStatusBoard(), loadPreScheduleGate(), loadLoopStatus(), loadLearningSummary()]);
+    return data;
   } catch (error) {
     message.textContent = error.message === "Access token required"
       ? translateText("Set the access token first.")
       : dryRun
         ? translateText("Could not preview monthly carousel evidence bridge.")
         : translateText("Could not import monthly carousel evidence bridge.");
+    return null;
   }
 }
 
@@ -9240,13 +9244,48 @@ document.getElementById("import-asset-review-decisions")?.addEventListener("clic
   await uploadAssetReviewDecisions({ dryRun: false });
 });
 
+function monthlyAdvancedReadyCount(data) {
+  return Number(data?.planned_count ?? data?.imported_count ?? data?.ready_count ?? data?.summary?.ready_count ?? 0);
+}
+
+function setMonthlyAdvancedImportButton(buttonId, enabled) {
+  setHomeActionButton(
+    buttonId,
+    enabled,
+    "检查通过，可以导入。",
+    "请先检查；有可导入行后才可以导入。",
+  );
+}
+
+function updateMonthlyAdvancedImportButton(buttonId, data, label) {
+  const readyCount = monthlyAdvancedReadyCount(data);
+  setMonthlyAdvancedImportButton(buttonId, readyCount > 0);
+  const message = document.getElementById("media-message");
+  if (message && data && readyCount > 0) {
+    message.textContent = `${message.textContent || "检查完成。"} ${label}可导入 ${readyCount} 行；不会发布 Facebook/IG。`;
+  }
+}
+
+function lockMonthlyAdvancedImportButtons() {
+  setMonthlyAdvancedImportButton("import-monthly-carousel-doctor-worksheet", false);
+  setMonthlyAdvancedImportButton("import-monthly-carousel-production-worksheet", false);
+  setMonthlyAdvancedImportButton("import-monthly-carousel-evidence-bridge", false);
+}
+
+document.getElementById("monthly-carousel-doctor-worksheet-file")?.addEventListener("change", () => setMonthlyAdvancedImportButton("import-monthly-carousel-doctor-worksheet", false));
+document.getElementById("monthly-carousel-production-worksheet-file")?.addEventListener("change", () => setMonthlyAdvancedImportButton("import-monthly-carousel-production-worksheet", false));
+document.getElementById("monthly-carousel-evidence-bridge-file")?.addEventListener("change", () => setMonthlyAdvancedImportButton("import-monthly-carousel-evidence-bridge", false));
+lockMonthlyAdvancedImportButtons();
+
 document.getElementById("preview-monthly-carousel-doctor-worksheet")?.addEventListener("click", async () => {
-  await uploadAssetReviewDecisions({
+  setMonthlyAdvancedImportButton("import-monthly-carousel-doctor-worksheet", false);
+  const data = await uploadAssetReviewDecisions({
     dryRun: true,
     fileInputId: "monthly-carousel-doctor-worksheet-file",
     allowPastedCsv: false,
     source: "monthly_doctor",
   });
+  updateMonthlyAdvancedImportButton("import-monthly-carousel-doctor-worksheet", data, "医生表");
 });
 
 document.getElementById("import-monthly-carousel-doctor-worksheet")?.addEventListener("click", async () => {
@@ -9256,6 +9295,7 @@ document.getElementById("import-monthly-carousel-doctor-worksheet")?.addEventLis
     allowPastedCsv: false,
     source: "monthly_doctor",
   });
+  setMonthlyAdvancedImportButton("import-monthly-carousel-doctor-worksheet", false);
 });
 
 document.getElementById("preview-asset-review-decisions-text")?.addEventListener("click", async () => {
@@ -9315,11 +9355,13 @@ document.getElementById("run-monthly-carousel-safe-advance")?.addEventListener("
 });
 
 document.getElementById("preview-monthly-carousel-production-worksheet")?.addEventListener("click", async () => {
-  await uploadProductionDesignWorksheet({
+  setMonthlyAdvancedImportButton("import-monthly-carousel-production-worksheet", false);
+  const data = await uploadProductionDesignWorksheet({
     dryRun: true,
     source: "monthly_carousel",
     fileInputId: "monthly-carousel-production-worksheet-file",
   });
+  updateMonthlyAdvancedImportButton("import-monthly-carousel-production-worksheet", data, "制作表");
 });
 
 document.getElementById("import-monthly-carousel-production-worksheet")?.addEventListener("click", async () => {
@@ -9328,14 +9370,18 @@ document.getElementById("import-monthly-carousel-production-worksheet")?.addEven
     source: "monthly_carousel",
     fileInputId: "monthly-carousel-production-worksheet-file",
   });
+  setMonthlyAdvancedImportButton("import-monthly-carousel-production-worksheet", false);
 });
 
 document.getElementById("preview-monthly-carousel-evidence-bridge")?.addEventListener("click", async () => {
-  await uploadMonthlyCarouselEvidenceBridge({ dryRun: true });
+  setMonthlyAdvancedImportButton("import-monthly-carousel-evidence-bridge", false);
+  const data = await uploadMonthlyCarouselEvidenceBridge({ dryRun: true });
+  updateMonthlyAdvancedImportButton("import-monthly-carousel-evidence-bridge", data, "证据桥接表");
 });
 
 document.getElementById("import-monthly-carousel-evidence-bridge")?.addEventListener("click", async () => {
   await uploadMonthlyCarouselEvidenceBridge({ dryRun: false });
+  setMonthlyAdvancedImportButton("import-monthly-carousel-evidence-bridge", false);
 });
 
 document.getElementById("preview-production-design-worksheet")?.addEventListener("click", async () => {

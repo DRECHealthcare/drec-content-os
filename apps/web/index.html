@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DREC 内容系统</title>
-  <link rel="stylesheet" href="./styles.css?v=20260622-review-step-lock">
+  <link rel="stylesheet" href="./styles.css?v=20260622-monthly-tools-lock">
 </head>
 <body>
   <aside>
@@ -665,20 +665,21 @@
                 <input id="monthly-carousel-doctor-worksheet-file" type="file" accept=".csv,text/csv">
               </label>
               <button id="preview-monthly-carousel-doctor-worksheet" type="button">先检查医生表</button>
-              <button id="import-monthly-carousel-doctor-worksheet" type="button">导入医生表</button>
+              <button id="import-monthly-carousel-doctor-worksheet" type="button" disabled>导入医生表</button>
               <label class="file-action">
                 图片制作 CSV
                 <input id="monthly-carousel-production-worksheet-file" type="file" accept=".csv,text/csv">
               </label>
               <button id="preview-monthly-carousel-production-worksheet" type="button">先检查制作表</button>
-              <button id="import-monthly-carousel-production-worksheet" type="button">导入图片制作表</button>
+              <button id="import-monthly-carousel-production-worksheet" type="button" disabled>导入图片制作表</button>
               <label class="file-action">
                 证据桥接 CSV
                 <input id="monthly-carousel-evidence-bridge-file" type="file" accept=".csv,text/csv">
               </label>
               <button id="preview-monthly-carousel-evidence-bridge" type="button">先检查证据表</button>
-              <button id="import-monthly-carousel-evidence-bridge" type="button">导入证据桥接表</button>
+              <button id="import-monthly-carousel-evidence-bridge" type="button" disabled>导入证据桥接表</button>
             </div>
+            <small class="home-doctor-import-hint">高级导入也必须先检查；有可导入行后按钮才会亮。这里不会发布 Facebook/IG。</small>
           </details>
           <details class="advanced-actions compact-tool-group">
             <summary>高级工具（平时不用）</summary>
@@ -1223,6 +1224,6 @@
     </section>
   </main>
 
-  <script src="./app.js?v=20260622-review-step-lock"></script>
+  <script src="./app.js?v=20260622-monthly-tools-lock"></script>
 </body>
 </html>

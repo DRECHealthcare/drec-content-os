@@ -3344,12 +3344,12 @@ const requiredSnippets = [
   {
     name: "web home step locks stylesheet cache bust",
     file: "webIndex",
-    text: "styles.css?v=20260622-review-step-lock",
+    text: "styles.css?v=20260622-monthly-tools-lock",
   },
   {
     name: "web home step locks script cache bust",
     file: "webIndex",
-    text: "app.js?v=20260622-review-step-lock",
+    text: "app.js?v=20260622-monthly-tools-lock",
   },
   {
     name: "web dashboard details are folded",
@@ -3455,6 +3455,36 @@ const requiredSnippets = [
     name: "web monthly doctor import publish lock copy",
     file: "web",
     text: "不会制作、入队、排程或发布",
+  },
+  {
+    name: "web monthly doctor worksheet import disabled by default",
+    file: "webIndex",
+    text: 'id="import-monthly-carousel-doctor-worksheet" type="button" disabled',
+  },
+  {
+    name: "web monthly production worksheet import disabled by default",
+    file: "webIndex",
+    text: 'id="import-monthly-carousel-production-worksheet" type="button" disabled',
+  },
+  {
+    name: "web monthly evidence bridge import disabled by default",
+    file: "webIndex",
+    text: 'id="import-monthly-carousel-evidence-bridge" type="button" disabled',
+  },
+  {
+    name: "web monthly advanced import lock helper",
+    file: "web",
+    text: "lockMonthlyAdvancedImportButtons",
+  },
+  {
+    name: "web monthly advanced import ready unlock",
+    file: "web",
+    text: "updateMonthlyAdvancedImportButton",
+  },
+  {
+    name: "web monthly advanced import safety hint",
+    file: "webIndex",
+    text: "高级导入也必须先检查",
   },
   {
     name: "web home production reply card",
