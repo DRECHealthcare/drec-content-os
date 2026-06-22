@@ -3342,14 +3342,14 @@ const requiredSnippets = [
     text: "nav-more",
   },
   {
-    name: "web production import lock stylesheet cache bust",
+    name: "web home step locks stylesheet cache bust",
     file: "webIndex",
-    text: "styles.css?v=20260622-production-import-lock",
+    text: "styles.css?v=20260622-home-step-locks",
   },
   {
-    name: "web production import lock script cache bust",
+    name: "web home step locks script cache bust",
     file: "webIndex",
-    text: "app.js?v=20260622-production-import-lock",
+    text: "app.js?v=20260622-home-step-locks",
   },
   {
     name: "web dashboard details are folded",
@@ -3500,6 +3500,26 @@ const requiredSnippets = [
     name: "web home monthly queue preview",
     file: "web",
     text: "home-preview-monthly-queue-ready",
+  },
+  {
+    name: "web home monthly queue run disabled by default",
+    file: "webIndex",
+    text: 'id="home-run-monthly-queue-ready" class="danger-safe-action" type="button" disabled',
+  },
+  {
+    name: "web home monthly queue lock helper",
+    file: "web",
+    text: "lockHomeQueueButton",
+  },
+  {
+    name: "web home monthly queue ready unlock",
+    file: "web",
+    text: "updateHomeQueueButton",
+  },
+  {
+    name: "web home monthly queue safety hint",
+    file: "webIndex",
+    text: "加入队列按钮会在检查通过后自动亮起",
   },
   {
     name: "web simple monthly queue action",
@@ -5659,7 +5679,32 @@ const requiredSnippets = [
   {
     name: "web home review queue import",
     file: "webIndex",
-    text: "home-import-review-queue-decisions",
+    text: 'id="home-import-review-queue-decisions" class="danger-safe-action" type="button" disabled',
+  },
+  {
+    name: "web home schedule disabled by default",
+    file: "webIndex",
+    text: 'id="home-schedule-approved-items" class="danger-safe-action" type="button" disabled',
+  },
+  {
+    name: "web home review schedule lock helper",
+    file: "web",
+    text: "lockHomeReviewScheduleButtons",
+  },
+  {
+    name: "web home review import ready unlock",
+    file: "web",
+    text: "updateHomeReviewImportButton",
+  },
+  {
+    name: "web home review schedule unlock after import",
+    file: "web",
+    text: "updateHomeScheduleButtonAfterImport",
+  },
+  {
+    name: "web home review schedule safety hint",
+    file: "webIndex",
+    text: "先检查审核决定；导入后才可以安排时间",
   },
   {
     name: "web home review schedule simple action",

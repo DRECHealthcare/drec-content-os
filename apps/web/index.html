@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DREC 内容系统</title>
-  <link rel="stylesheet" href="./styles.css?v=20260622-production-import-lock">
+  <link rel="stylesheet" href="./styles.css?v=20260622-home-step-locks">
 </head>
 <body>
   <aside>
@@ -127,12 +127,13 @@
         </div>
         <div class="form-actions">
           <button id="home-preview-monthly-queue-ready" type="button">1. 先检查</button>
-          <button id="home-run-monthly-queue-ready" class="danger-safe-action" type="button">2. 加入队列</button>
+          <button id="home-run-monthly-queue-ready" class="danger-safe-action" type="button" disabled>2. 加入队列</button>
           <details class="simple-extra-actions home-stage-more">
             <summary>需要时打开资料</summary>
             <button id="home-download-queue-readiness" type="button">下载检查表</button>
           </details>
         </div>
+        <small class="home-doctor-import-hint">加入队列按钮会在检查通过后自动亮起；加入队列不会发布 Facebook/IG。</small>
         <div id="home-queue-action-message" class="status-note"></div>
         <div id="home-queue-action-preview" class="learning-grid"></div>
       </div>
@@ -145,14 +146,15 @@
         </div>
         <div class="form-actions">
           <button id="home-preview-review-queue-decisions" type="button">1. 先检查</button>
-          <button id="home-import-review-queue-decisions" class="danger-safe-action" type="button">2. 确认导入</button>
-          <button id="home-schedule-approved-items" class="danger-safe-action" type="button">3. 安排时间</button>
+          <button id="home-import-review-queue-decisions" class="danger-safe-action" type="button" disabled>2. 确认导入</button>
+          <button id="home-schedule-approved-items" class="danger-safe-action" type="button" disabled>3. 安排时间</button>
           <details class="simple-extra-actions home-stage-more">
             <summary>需要时打开资料</summary>
             <button id="home-download-monthly-review-queue" type="button">下载审核队列</button>
             <button id="home-download-monthly-review-decisions" type="button">下载决定表</button>
           </details>
         </div>
+        <small class="home-doctor-import-hint">先检查审核决定；导入后才可以安排时间。这里不会发布 Facebook/IG。</small>
         <label>
           队列审核决定 CSV
           <textarea id="home-review-queue-decisions-text" placeholder="queue_id,reviewer_action,reviewer_name,review_notes&#10;...,approve,Dr. name,Approved for scheduling"></textarea>
@@ -1220,6 +1222,6 @@
     </section>
   </main>
 
-  <script src="./app.js?v=20260622-production-import-lock"></script>
+  <script src="./app.js?v=20260622-home-step-locks"></script>
 </body>
 </html>

@@ -6650,11 +6650,14 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
     }
     if (kind === "preview_monthly_queue" || kind === "run_monthly_queue") {
       showHomeActionCard("home-queue-action-card");
-      await runMonthlyCarouselQueueReady({
+      if (kind === "preview_monthly_queue") lockHomeQueueButton();
+      const data = await runMonthlyCarouselQueueReady({
         dryRun: kind === "preview_monthly_queue",
         messageId: "home-queue-action-message",
         targetId: "home-queue-action-preview",
       });
+      if (kind === "preview_monthly_queue") updateHomeQueueButton(data);
+      else lockHomeQueueButton();
       await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit()]);
       return;
     }
@@ -6721,11 +6724,14 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   }
   if (previewMonthlyQueue || runMonthlyQueue) {
     showHomeActionCard("home-queue-action-card");
-    await runMonthlyCarouselQueueReady({
+    if (previewMonthlyQueue) lockHomeQueueButton();
+    const data = await runMonthlyCarouselQueueReady({
       dryRun: Boolean(previewMonthlyQueue),
       messageId: "home-queue-action-message",
       targetId: "home-queue-action-preview",
     });
+    if (previewMonthlyQueue) updateHomeQueueButton(data);
+    else lockHomeQueueButton();
     await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit()]);
     return;
   }
@@ -6743,6 +6749,7 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   if (scheduleApprovedFromHome) {
     showHomeActionCard("home-review-schedule-card");
     await scheduleApprovedItems({ messageId: "home-review-schedule-message", stayOnHome: true });
+    lockHomeReviewScheduleButtons();
     await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit()]);
     return;
   }
@@ -6991,12 +6998,48 @@ document.getElementById("home-download-queue-readiness")?.addEventListener("clic
   }
 });
 
+function setHomeActionButton(buttonId, enabled, enabledTitle, disabledTitle) {
+  const button = document.getElementById(buttonId);
+  if (!button) return;
+  button.disabled = !enabled;
+  button.title = enabled ? enabledTitle : disabledTitle;
+}
+
+function monthlyQueueReadyCount(data) {
+  return Number(data?.would_queue ?? data?.queued ?? 0);
+}
+
+function lockHomeQueueButton() {
+  setHomeActionButton(
+    "home-run-monthly-queue-ready",
+    false,
+    "检查通过，可以加入队列。",
+    "请先检查；有 ready_to_queue 内容后才可以加入队列。",
+  );
+}
+
+function updateHomeQueueButton(data) {
+  const readyCount = monthlyQueueReadyCount(data);
+  setHomeActionButton(
+    "home-run-monthly-queue-ready",
+    readyCount > 0,
+    "检查通过，可以加入队列。",
+    "请先检查；有 ready_to_queue 内容后才可以加入队列。",
+  );
+  const message = document.getElementById("home-queue-action-message");
+  if (message && data && readyCount > 0) {
+    message.textContent = `${message.textContent || "检查完成。"} 可加入队列 ${readyCount} 条；不会发布 Facebook/IG。`;
+  }
+}
+
 document.getElementById("home-preview-monthly-queue-ready")?.addEventListener("click", async () => {
-  await runMonthlyCarouselQueueReady({
+  lockHomeQueueButton();
+  const data = await runMonthlyCarouselQueueReady({
     dryRun: true,
     messageId: "home-queue-action-message",
     targetId: "home-queue-action-preview",
   });
+  updateHomeQueueButton(data);
 });
 
 document.getElementById("home-run-monthly-queue-ready")?.addEventListener("click", async () => {
@@ -7005,6 +7048,7 @@ document.getElementById("home-run-monthly-queue-ready")?.addEventListener("click
     messageId: "home-queue-action-message",
     targetId: "home-queue-action-preview",
   });
+  lockHomeQueueButton();
   await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit()]);
 });
 
@@ -7028,8 +7072,61 @@ document.getElementById("home-download-monthly-review-decisions")?.addEventListe
   }
 });
 
+function reviewDecisionReadyCount(data) {
+  const result = data?.queue_review_import || data || {};
+  return Number(result.planned_count ?? result.imported_count ?? 0);
+}
+
+function lockHomeReviewScheduleButtons() {
+  setHomeActionButton(
+    "home-import-review-queue-decisions",
+    false,
+    "检查通过，可以导入审核决定。",
+    "请先检查；有通过的审核决定后才可以导入。",
+  );
+  setHomeActionButton(
+    "home-schedule-approved-items",
+    false,
+    "审核决定已导入，可以安排时间。",
+    "请先导入通过的审核决定；之后才可以安排时间。",
+  );
+}
+
+function updateHomeReviewImportButton(data) {
+  const readyCount = reviewDecisionReadyCount(data);
+  setHomeActionButton(
+    "home-import-review-queue-decisions",
+    readyCount > 0,
+    "检查通过，可以导入审核决定。",
+    "请先检查；有通过的审核决定后才可以导入。",
+  );
+  const message = document.getElementById("home-review-schedule-message");
+  if (message && data && readyCount > 0) {
+    message.textContent = `${message.textContent || "检查完成。"} 可导入 ${readyCount} 条审核决定；不会发布 Facebook/IG。`;
+  }
+}
+
+function updateHomeScheduleButtonAfterImport(data) {
+  const importedCount = reviewDecisionReadyCount(data);
+  setHomeActionButton(
+    "home-schedule-approved-items",
+    importedCount > 0,
+    "审核决定已导入，可以安排时间。",
+    "请先导入通过的审核决定；之后才可以安排时间。",
+  );
+  const message = document.getElementById("home-review-schedule-message");
+  if (message && data && importedCount > 0) {
+    message.textContent = `${message.textContent || "导入完成。"} 可以继续安排时间；排程仍不会发布 Facebook/IG。`;
+  }
+}
+
+document.getElementById("home-review-queue-decisions-text")?.addEventListener("input", lockHomeReviewScheduleButtons);
+lockHomeQueueButton();
+lockHomeReviewScheduleButtons();
+
 document.getElementById("home-preview-review-queue-decisions")?.addEventListener("click", async () => {
-  await uploadReviewQueueDecisions({
+  lockHomeReviewScheduleButtons();
+  const data = await uploadReviewQueueDecisions({
     dryRun: true,
     source: "monthly_carousel",
     fileInputId: "home-review-queue-decisions-file",
@@ -7040,10 +7137,11 @@ document.getElementById("home-preview-review-queue-decisions")?.addEventListener
     previewTargetId: "home-review-schedule-preview",
     safeAdvanceTargetId: "home-review-safe-advance-preview",
   });
+  updateHomeReviewImportButton(data);
 });
 
 document.getElementById("home-import-review-queue-decisions")?.addEventListener("click", async () => {
-  await uploadReviewQueueDecisions({
+  const data = await uploadReviewQueueDecisions({
     dryRun: false,
     source: "monthly_carousel",
     fileInputId: "home-review-queue-decisions-file",
@@ -7054,6 +7152,13 @@ document.getElementById("home-import-review-queue-decisions")?.addEventListener(
     previewTargetId: "home-review-schedule-preview",
     safeAdvanceTargetId: "home-review-safe-advance-preview",
   });
+  setHomeActionButton(
+    "home-import-review-queue-decisions",
+    false,
+    "检查通过，可以导入审核决定。",
+    "请先检查；有通过的审核决定后才可以导入。",
+  );
+  updateHomeScheduleButtonAfterImport(data);
   await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit()]);
 });
 
@@ -7063,6 +7168,7 @@ document.getElementById("home-schedule-approved-items")?.addEventListener("click
     messageId: "home-review-schedule-message",
     stayOnHome: true,
   });
+  lockHomeReviewScheduleButtons();
   await Promise.all([loadDashboardMonthlyActionQueue(), loadProjectCompletionAudit(), loadHomePublishingCloseout()]);
 });
 
@@ -9008,12 +9114,14 @@ async function runMonthlyCarouselQueueReady({
       : translateText("Monthly carousel ready items queued."));
     renderMonthlyQueueResult(data, targetId);
     if (!dryRun) await Promise.all([loadAssets(), loadMonthlyCarouselStatusBoard(), loadPreScheduleGate(), loadLoopStatus()]);
+    return data;
   } catch (error) {
     if (message) message.textContent = error.message === "Access token required"
       ? translateText("Set the access token first.")
       : dryRun
         ? translateText("Could not preview monthly carousel queue.")
         : translateText("Could not queue monthly carousel ready items.");
+    return null;
   }
 }
 
@@ -11125,12 +11233,14 @@ async function uploadReviewQueueDecisions({
     renderReviewQueueDecisionPreview(data.queue_review_import || data, previewTargetId);
     if (data.safe_advance) renderMonthlySafeAdvanceResult(data.safe_advance, safeAdvanceTargetId);
     if (!dryRun) await Promise.all([loadPublishQueue(), loadPreScheduleGate(), loadMonthlyCarouselStatusBoard(), loadLoopStatus(), loadProjectCompletionAudit()]);
+    return data;
   } catch (error) {
     if (message) message.textContent = error.message === "Access token required"
       ? translateText("Set the access token first.")
       : dryRun
         ? (safeAdvance ? translateText("Could not preview monthly queue decision safe intake.") : (isMonthly ? translateText("Could not preview monthly carousel queue decisions.") : "Could not preview queue decisions."))
         : (safeAdvance ? translateText("Could not import monthly queue decision safe intake.") : (isMonthly ? translateText("Could not import monthly carousel queue decisions.") : "Could not import queue decisions."));
+    return null;
   }
 }
 
