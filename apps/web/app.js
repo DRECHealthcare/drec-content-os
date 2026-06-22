@@ -8927,7 +8927,7 @@ async function uploadAssetReviewDecisions({
   const pastedCsv = allowPastedCsv ? (textInput?.value?.trim() || "") : "";
   if (!file && !pastedCsv) {
     if (message) message.textContent = translateText(source === "monthly_doctor" ? "Choose the monthly doctor worksheet CSV first." : "Choose a review decision CSV or paste decision CSV text first.");
-    return;
+    return null;
   }
   const body = new FormData();
   const uploadFile = file || new File([pastedCsv], source === "monthly_doctor" ? "monthly-carousel-doctor-worksheet.csv" : "pasted-asset-review-decisions.csv", { type: "text/csv" });
@@ -9045,7 +9045,7 @@ async function importDoctorReplies({
   const replyText = textInput?.value?.trim() || "";
   if (!replyText) {
     if (message) message.textContent = "Paste the doctor reply text first.";
-    return;
+    return null;
   }
   if (message) message.textContent = dryRun ? "Previewing doctor reply..." : "Importing doctor reply...";
   try {
@@ -9082,7 +9082,7 @@ async function importDoctorRepliesAndSafeAdvance({
   const replyText = textInput?.value?.trim() || "";
   if (!replyText) {
     if (message) message.textContent = "Paste the doctor reply text first.";
-    return;
+    return null;
   }
   if (message) message.textContent = dryRun
     ? translateText("Previewing doctor reply and safe advance...")
@@ -9138,7 +9138,7 @@ async function uploadAssetMediaAttachments({ dryRun }) {
   const file = fileInput?.files?.[0];
   if (!file) {
     message.textContent = "Choose a media attachment CSV first.";
-    return;
+    return null;
   }
   const body = new FormData();
   body.append("file", file);
@@ -9150,8 +9150,10 @@ async function uploadAssetMediaAttachments({ dryRun }) {
     message.textContent = data.message || (dryRun ? "Media attachments previewed." : "Media attachments imported.");
     renderAssetMediaAttachmentPreview(data);
     if (!dryRun) await Promise.all([loadAssets(), loadFirstCycleEvidenceWorkbench(), loadDoctorSendQueue(), loadDoctorReplyInboxPack(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadPreScheduleGate(), loadLoopStatus()]);
+    return data;
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : dryRun ? "Could not preview media attachments." : "Could not import media attachments.";
+    return null;
   }
 }
 
@@ -9168,7 +9170,7 @@ async function importProductionReplies({
   const replyText = textInput?.value?.trim() || "";
   if (!replyText) {
     if (message) message.textContent = "Paste the production reply text first.";
-    return;
+    return null;
   }
   if (message) message.textContent = dryRun ? "Previewing production reply..." : "Importing production reply...";
   try {
@@ -9204,7 +9206,7 @@ async function uploadProductionDesignWorksheet({
     message.textContent = isMonthly
       ? translateText("Choose the monthly carousel production worksheet CSV first.")
       : "Choose a production design worksheet CSV first.";
-    return;
+    return null;
   }
   const body = new FormData();
   body.append("file", file);
@@ -9320,12 +9322,92 @@ async function runMonthlyCarouselSafeAdvance({ dryRun }) {
   }
 }
 
+function legacyAssetReadyCount(data) {
+  return Math.max(
+    0,
+    ...[
+      data?.planned_count,
+      data?.imported_count,
+      data?.ready_count,
+      data?.attached_count,
+      data?.updated_count,
+      data?.action_count,
+      data?.summary?.ready_count,
+      data?.summary?.planned_count,
+      data?.summary?.attached_count,
+      data?.reply_import?.planned_count,
+      data?.reply_import?.imported_count,
+      data?.safe_advance?.action_count,
+    ].map((value) => Number(value) || 0),
+  );
+}
+
+function setLegacyAssetImportButton(buttonId, enabled) {
+  setHomeActionButton(
+    buttonId,
+    enabled,
+    "预览通过，可以导入。",
+    "请先预览；有可导入项后才可以导入。",
+  );
+}
+
+function updateLegacyAssetImportButton(buttonId, data, label) {
+  const readyCount = legacyAssetReadyCount(data);
+  setLegacyAssetImportButton(buttonId, readyCount > 0);
+  const message = document.getElementById("media-message");
+  if (message && data && readyCount > 0) {
+    message.textContent = `${message.textContent || "预览完成。"} ${label}可导入 ${readyCount} 项；不会发布 Facebook/IG。`;
+  }
+}
+
+function lockLegacyAssetImportButtons() {
+  [
+    "import-production-design-worksheet",
+    "import-asset-review-decisions",
+    "import-asset-media-attachments",
+    "import-asset-review-decisions-text",
+    "import-doctor-replies",
+    "import-doctor-replies-safe-advance",
+    "import-production-replies",
+  ].forEach((buttonId) => setLegacyAssetImportButton(buttonId, false));
+}
+
+document.getElementById("production-design-worksheet-file")?.addEventListener("change", () => setLegacyAssetImportButton("import-production-design-worksheet", false));
+document.getElementById("asset-review-decisions-file")?.addEventListener("change", () => setLegacyAssetImportButton("import-asset-review-decisions", false));
+document.getElementById("asset-media-attachments-file")?.addEventListener("change", () => setLegacyAssetImportButton("import-asset-media-attachments", false));
+document.getElementById("asset-review-decisions-text")?.addEventListener("input", () => setLegacyAssetImportButton("import-asset-review-decisions-text", false));
+document.getElementById("doctor-reply-text")?.addEventListener("input", () => {
+  setLegacyAssetImportButton("import-doctor-replies", false);
+  setLegacyAssetImportButton("import-doctor-replies-safe-advance", false);
+});
+document.getElementById("doctor-reply-reviewer")?.addEventListener("input", () => {
+  setLegacyAssetImportButton("import-doctor-replies", false);
+  setLegacyAssetImportButton("import-doctor-replies-safe-advance", false);
+});
+document.getElementById("production-reply-text")?.addEventListener("input", () => setLegacyAssetImportButton("import-production-replies", false));
+document.getElementById("production-reply-producer")?.addEventListener("input", () => setLegacyAssetImportButton("import-production-replies", false));
+lockLegacyAssetImportButtons();
+
+document.getElementById("preview-production-design-worksheet")?.addEventListener("click", async () => {
+  setLegacyAssetImportButton("import-production-design-worksheet", false);
+  const data = await uploadProductionDesignWorksheet({ dryRun: true });
+  updateLegacyAssetImportButton("import-production-design-worksheet", data, "制作表");
+});
+
+document.getElementById("import-production-design-worksheet")?.addEventListener("click", async () => {
+  await uploadProductionDesignWorksheet({ dryRun: false });
+  setLegacyAssetImportButton("import-production-design-worksheet", false);
+});
+
 document.getElementById("preview-asset-review-decisions")?.addEventListener("click", async () => {
-  await uploadAssetReviewDecisions({ dryRun: true });
+  setLegacyAssetImportButton("import-asset-review-decisions", false);
+  const data = await uploadAssetReviewDecisions({ dryRun: true, allowPastedCsv: false });
+  updateLegacyAssetImportButton("import-asset-review-decisions", data, "审核决定");
 });
 
 document.getElementById("import-asset-review-decisions")?.addEventListener("click", async () => {
-  await uploadAssetReviewDecisions({ dryRun: false });
+  await uploadAssetReviewDecisions({ dryRun: false, allowPastedCsv: false });
+  setLegacyAssetImportButton("import-asset-review-decisions", false);
 });
 
 function monthlyAdvancedReadyCount(data) {
@@ -9436,43 +9518,58 @@ document.getElementById("import-monthly-carousel-doctor-worksheet")?.addEventLis
 });
 
 document.getElementById("preview-asset-review-decisions-text")?.addEventListener("click", async () => {
-  await uploadAssetReviewDecisions({ dryRun: true });
+  setLegacyAssetImportButton("import-asset-review-decisions-text", false);
+  const data = await uploadAssetReviewDecisions({ dryRun: true });
+  updateLegacyAssetImportButton("import-asset-review-decisions-text", data, "粘贴决定");
 });
 
 document.getElementById("import-asset-review-decisions-text")?.addEventListener("click", async () => {
   await uploadAssetReviewDecisions({ dryRun: false });
+  setLegacyAssetImportButton("import-asset-review-decisions-text", false);
 });
 
 document.getElementById("preview-doctor-replies")?.addEventListener("click", async () => {
-  await importDoctorReplies({ dryRun: true });
+  setLegacyAssetImportButton("import-doctor-replies", false);
+  const data = await importDoctorReplies({ dryRun: true });
+  updateLegacyAssetImportButton("import-doctor-replies", data, "医生回复");
 });
 
 document.getElementById("import-doctor-replies")?.addEventListener("click", async () => {
   await importDoctorReplies({ dryRun: false });
+  setLegacyAssetImportButton("import-doctor-replies", false);
 });
 
 document.getElementById("preview-doctor-replies-safe-advance")?.addEventListener("click", async () => {
-  await importDoctorRepliesAndSafeAdvance({ dryRun: true });
+  setLegacyAssetImportButton("import-doctor-replies-safe-advance", false);
+  const data = await importDoctorRepliesAndSafeAdvance({ dryRun: true });
+  updateLegacyAssetImportButton("import-doctor-replies-safe-advance", data, "安全通过项");
 });
 
 document.getElementById("import-doctor-replies-safe-advance")?.addEventListener("click", async () => {
   await importDoctorRepliesAndSafeAdvance({ dryRun: false });
+  setLegacyAssetImportButton("import-doctor-replies-safe-advance", false);
 });
 
 document.getElementById("preview-asset-media-attachments")?.addEventListener("click", async () => {
-  await uploadAssetMediaAttachments({ dryRun: true });
+  setLegacyAssetImportButton("import-asset-media-attachments", false);
+  const data = await uploadAssetMediaAttachments({ dryRun: true });
+  updateLegacyAssetImportButton("import-asset-media-attachments", data, "媒体附件");
 });
 
 document.getElementById("import-asset-media-attachments")?.addEventListener("click", async () => {
   await uploadAssetMediaAttachments({ dryRun: false });
+  setLegacyAssetImportButton("import-asset-media-attachments", false);
 });
 
 document.getElementById("preview-production-replies")?.addEventListener("click", async () => {
-  await importProductionReplies({ dryRun: true });
+  setLegacyAssetImportButton("import-production-replies", false);
+  const data = await importProductionReplies({ dryRun: true });
+  updateLegacyAssetImportButton("import-production-replies", data, "制作回复");
 });
 
 document.getElementById("import-production-replies")?.addEventListener("click", async () => {
   await importProductionReplies({ dryRun: false });
+  setLegacyAssetImportButton("import-production-replies", false);
 });
 
 document.getElementById("preview-monthly-carousel-queue-ready")?.addEventListener("click", async () => {
@@ -9545,14 +9642,6 @@ document.getElementById("preview-monthly-carousel-evidence-bridge")?.addEventLis
 document.getElementById("import-monthly-carousel-evidence-bridge")?.addEventListener("click", async () => {
   await uploadMonthlyCarouselEvidenceBridge({ dryRun: false });
   setMonthlyAdvancedImportButton("import-monthly-carousel-evidence-bridge", false);
-});
-
-document.getElementById("preview-production-design-worksheet")?.addEventListener("click", async () => {
-  await uploadProductionDesignWorksheet({ dryRun: true });
-});
-
-document.getElementById("import-production-design-worksheet")?.addEventListener("click", async () => {
-  await uploadProductionDesignWorksheet({ dryRun: false });
 });
 
 document.getElementById("plan-form").addEventListener("submit", async (event) => {

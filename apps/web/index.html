@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DREC 内容系统</title>
-  <link rel="stylesheet" href="./styles.css?v=20260622-legacy-review-lock">
+  <link rel="stylesheet" href="./styles.css?v=20260622-legacy-asset-import-lock">
 </head>
 <body>
   <aside>
@@ -727,20 +727,21 @@
                 <input id="production-design-worksheet-file" type="file" accept=".csv,text/csv">
               </label>
               <button id="preview-production-design-worksheet" type="button">Preview Design</button>
-              <button id="import-production-design-worksheet" type="button">Import Design</button>
+              <button id="import-production-design-worksheet" type="button" disabled>Import Design</button>
               <label class="file-action">
                 Review CSV
                 <input id="asset-review-decisions-file" type="file" accept=".csv,text/csv">
               </label>
               <button id="preview-asset-review-decisions" type="button">Preview Decisions</button>
-              <button id="import-asset-review-decisions" type="button">Import Decisions</button>
+              <button id="import-asset-review-decisions" type="button" disabled>Import Decisions</button>
               <label class="file-action">
                 Media CSV
                 <input id="asset-media-attachments-file" type="file" accept=".csv,text/csv">
               </label>
               <button id="preview-asset-media-attachments" type="button">Preview Media</button>
-              <button id="import-asset-media-attachments" type="button">Import Media</button>
+              <button id="import-asset-media-attachments" type="button" disabled>Import Media</button>
             </div>
+            <p class="control-note">旧导入工具也必须先预览；有可导入项后按钮才会亮。这里不会发布 Facebook/IG。</p>
           </details>
         </div>
         <details class="advanced-actions compact-tool-group manual-entry-tools">
@@ -751,7 +752,7 @@
               <textarea id="asset-review-decisions-text" placeholder="把一行审核决定贴在这里，再预览。"></textarea>
             </label>
             <button id="preview-asset-review-decisions-text" type="button">预览决定</button>
-            <button id="import-asset-review-decisions-text" type="button">导入决定</button>
+            <button id="import-asset-review-decisions-text" type="button" disabled>导入决定</button>
           </div>
           <div class="quick-composer">
             <label>
@@ -763,9 +764,9 @@
               <input id="doctor-reply-reviewer" placeholder="医生或审核人姓名">
             </label>
             <button id="preview-doctor-replies" type="button">预览医生回复</button>
-            <button id="import-doctor-replies" type="button">导入医生回复</button>
+            <button id="import-doctor-replies" type="button" disabled>导入医生回复</button>
             <button id="preview-doctor-replies-safe-advance" type="button">安全预览</button>
-            <button id="import-doctor-replies-safe-advance" type="button">导入通过项</button>
+            <button id="import-doctor-replies-safe-advance" type="button" disabled>导入通过项</button>
           </div>
           <div class="quick-composer">
             <label>
@@ -777,8 +778,9 @@
               <input id="production-reply-producer" placeholder="设计/制作人姓名">
             </label>
             <button id="preview-production-replies" type="button">预览图片回复</button>
-            <button id="import-production-replies" type="button">导入图片回复</button>
+            <button id="import-production-replies" type="button" disabled>导入图片回复</button>
           </div>
+          <p class="control-note">手动粘贴也必须先预览；预览通过后才可以导入。</p>
         </details>
         <div id="first-cycle-evidence-workbench" class="learning-grid"></div>
         <div id="doctor-send-queue" class="learning-grid"></div>
@@ -1230,6 +1232,6 @@
     </section>
   </main>
 
-  <script src="./app.js?v=20260622-legacy-review-lock"></script>
+  <script src="./app.js?v=20260622-legacy-asset-import-lock"></script>
 </body>
 </html>

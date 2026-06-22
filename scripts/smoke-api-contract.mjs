@@ -3369,12 +3369,12 @@ const requiredSnippets = [
   {
     name: "web home step locks stylesheet cache bust",
     file: "webIndex",
-    text: "styles.css?v=20260622-legacy-review-lock",
+    text: "styles.css?v=20260622-legacy-asset-import-lock",
   },
   {
     name: "web home step locks script cache bust",
     file: "webIndex",
-    text: "app.js?v=20260622-legacy-review-lock",
+    text: "app.js?v=20260622-legacy-asset-import-lock",
   },
   {
     name: "web monthly queue confirm locked",
@@ -5213,8 +5213,13 @@ const requiredSnippets = [
   },
   {
     name: "web doctor reply import action",
-    file: "web",
-    text: "import-doctor-replies",
+    file: "webIndex",
+    text: 'id="import-doctor-replies" type="button" disabled',
+  },
+  {
+    name: "web doctor reply safe advance import action locked",
+    file: "webIndex",
+    text: 'id="import-doctor-replies-safe-advance" type="button" disabled',
   },
   {
     name: "web doctor reply import endpoint",
@@ -5298,8 +5303,8 @@ const requiredSnippets = [
   },
   {
     name: "web production design worksheet import action",
-    file: "web",
-    text: "import-production-design-worksheet",
+    file: "webIndex",
+    text: 'id="import-production-design-worksheet" type="button" disabled',
   },
   {
     name: "web post approval production loader",
@@ -5653,13 +5658,13 @@ const requiredSnippets = [
   },
   {
     name: "web asset review decisions paste import action",
-    file: "web",
-    text: "import-asset-review-decisions-text",
+    file: "webIndex",
+    text: 'id="import-asset-review-decisions-text" type="button" disabled',
   },
   {
     name: "web asset review decisions import action",
-    file: "web",
-    text: "import-asset-review-decisions",
+    file: "webIndex",
+    text: 'id="import-asset-review-decisions" type="button" disabled',
   },
   {
     name: "web asset review decisions import endpoint",
@@ -5688,8 +5693,8 @@ const requiredSnippets = [
   },
   {
     name: "web production reply import action",
-    file: "web",
-    text: "import-production-replies",
+    file: "webIndex",
+    text: 'id="import-production-replies" type="button" disabled',
   },
   {
     name: "web production reply import endpoint",
@@ -5698,8 +5703,8 @@ const requiredSnippets = [
   },
   {
     name: "web asset media attachments import action",
-    file: "web",
-    text: "import-asset-media-attachments",
+    file: "webIndex",
+    text: 'id="import-asset-media-attachments" type="button" disabled',
   },
   {
     name: "web asset media attachments import endpoint",
@@ -5710,6 +5715,26 @@ const requiredSnippets = [
     name: "web asset media attachments preview renderer",
     file: "web",
     text: "renderAssetMediaAttachmentPreview",
+  },
+  {
+    name: "web legacy import lock hint",
+    file: "webIndex",
+    text: "旧导入工具也必须先预览；有可导入项后按钮才会亮",
+  },
+  {
+    name: "web manual import lock hint",
+    file: "webIndex",
+    text: "手动粘贴也必须先预览；预览通过后才可以导入",
+  },
+  {
+    name: "web legacy asset import lock helper",
+    file: "web",
+    text: "lockLegacyAssetImportButtons",
+  },
+  {
+    name: "web legacy asset import update helper",
+    file: "web",
+    text: "updateLegacyAssetImportButton",
   },
   {
     name: "web asset review note action",
