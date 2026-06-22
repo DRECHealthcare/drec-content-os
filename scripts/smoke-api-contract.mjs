@@ -14,6 +14,7 @@ const files = {
   schedulerWorkflow: ".github/workflows/drec-scheduler-dry-run.yml",
   realMetricsWorkflow: ".github/workflows/drec-nightly-meta-metrics.yml",
   projectCompletionWorkflow: ".github/workflows/drec-project-completion-watch.yml",
+  publicLiveSmokeWorkflow: ".github/workflows/drec-public-live-smoke.yml",
   todayNextActionWorkflow: ".github/workflows/drec-today-next-action-watch.yml",
   flyDeployWorkflow: ".github/workflows/drec-fly-deploy.yml",
   strictRlsMigration: "supabase/migrations/20260617040906_strict_server_only_rls.sql",
@@ -6826,6 +6827,31 @@ const requiredSnippets = [
     name: "github project completion blockers summary",
     file: "projectCompletionWorkflow",
     text: "Top blockers:",
+  },
+  {
+    name: "github public live smoke workflow",
+    file: "publicLiveSmokeWorkflow",
+    text: "DREC Public Live Smoke",
+  },
+  {
+    name: "github public live smoke six hour schedule",
+    file: "publicLiveSmokeWorkflow",
+    text: "5 */6 * * *",
+  },
+  {
+    name: "github public live smoke command",
+    file: "publicLiveSmokeWorkflow",
+    text: "node scripts/smoke-live.mjs",
+  },
+  {
+    name: "github public live smoke no secrets",
+    file: "publicLiveSmokeWorkflow",
+    text: "Secrets required: no",
+  },
+  {
+    name: "github public live smoke safety",
+    file: "publicLiveSmokeWorkflow",
+    text: "does not approve, import, queue, schedule, publish, record post IDs, update Notion, store secrets, or call Meta",
   },
   {
     name: "github today next action workflow",

@@ -1,0 +1,54 @@
+name: DREC Public Live Smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Every 6 hours, no secrets required. This keeps public availability visible
+    # even before protected DREC_ACCESS_TOKEN workflows are configured.
+    - cron: "5 */6 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: drec-public-live-smoke
+  cancel-in-progress: false
+
+jobs:
+  public-live-smoke:
+    runs-on: ubuntu-latest
+    env:
+      DREC_API_BASE_URL: ${{ vars.DREC_API_BASE_URL || 'https://drec-content-os-api.fly.dev' }}
+      DREC_WEB_URL: ${{ vars.DREC_WEB_URL || 'https://drec-content-os.vercel.app' }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Run public live smoke
+        run: |
+          node scripts/smoke-live.mjs | tee public-live-smoke.log
+
+      - name: Write public smoke summary
+        if: ${{ always() }}
+        run: |
+          {
+            echo "## DREC Public Live Smoke"
+            echo ""
+            echo "- API: ${DREC_API_BASE_URL}"
+            echo "- Web: ${DREC_WEB_URL}"
+            echo "- Event: ${GITHUB_EVENT_NAME}"
+            echo "- Schedule: ${GITHUB_EVENT_SCHEDULE:-manual}"
+            echo "- Secrets required: no"
+            echo "- Safety: public availability checks only; this workflow does not approve, import, queue, schedule, publish, record post IDs, update Notion, store secrets, or call Meta."
+            echo ""
+            echo "Checks:"
+            echo "- API health"
+            echo "- Fly UI status/shell/script"
+            echo "- Vercel web shell/script/styles"
+            echo "- Locked import buttons remain disabled by default"
+          } >> "$GITHUB_STEP_SUMMARY"
