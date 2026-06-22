@@ -3342,6 +3342,16 @@ const requiredSnippets = [
     text: "nav-more",
   },
   {
+    name: "web doctor import lock stylesheet cache bust",
+    file: "webIndex",
+    text: "styles.css?v=20260622-doctor-import-lock",
+  },
+  {
+    name: "web doctor import lock script cache bust",
+    file: "webIndex",
+    text: "app.js?v=20260622-doctor-import-lock",
+  },
+  {
     name: "web dashboard details are folded",
     file: "webIndex",
     text: "dashboard-details",
