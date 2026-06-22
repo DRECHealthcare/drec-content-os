@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DREC 内容系统</title>
-  <link rel="stylesheet" href="./styles.css?v=20260622-schedule-import-lock">
+  <link rel="stylesheet" href="./styles.css?v=20260622-metrics-csv-lock">
 </head>
 <body>
   <aside>
@@ -1030,7 +1030,8 @@
                 导入后自动学习
               </label>
               <button id="preview-metrics-csv" type="button">预览 CSV</button>
-              <button id="import-metrics-csv" type="button">导入数据 CSV</button>
+              <button id="import-metrics-csv" type="button" disabled>导入数据 CSV</button>
+              <small class="home-doctor-import-hint">先预览数据 CSV；有可导入行后才可以导入。这里不会发布 Facebook/IG。</small>
               <button type="submit">只保存原始数据</button>
               <button id="rollup-metric" type="button">只学习最新数据</button>
             </details>
@@ -1225,6 +1226,6 @@
     </section>
   </main>
 
-  <script src="./app.js?v=20260622-schedule-import-lock"></script>
+  <script src="./app.js?v=20260622-metrics-csv-lock"></script>
 </body>
 </html>

@@ -3344,12 +3344,12 @@ const requiredSnippets = [
   {
     name: "web home step locks stylesheet cache bust",
     file: "webIndex",
-    text: "styles.css?v=20260622-schedule-import-lock",
+    text: "styles.css?v=20260622-metrics-csv-lock",
   },
   {
     name: "web home step locks script cache bust",
     file: "webIndex",
-    text: "app.js?v=20260622-schedule-import-lock",
+    text: "app.js?v=20260622-metrics-csv-lock",
   },
   {
     name: "web dashboard details are folded",
@@ -6263,8 +6263,23 @@ const requiredSnippets = [
   },
   {
     name: "web metrics csv import action",
+    file: "webIndex",
+    text: 'id="import-metrics-csv" type="button" disabled',
+  },
+  {
+    name: "web metrics csv import lock helper",
     file: "web",
-    text: "import-metrics-csv",
+    text: "setMetricsCsvImportButton",
+  },
+  {
+    name: "web metrics csv import ready unlock",
+    file: "web",
+    text: "updateMetricsCsvImportButton",
+  },
+  {
+    name: "web metrics csv import safety hint",
+    file: "webIndex",
+    text: "先预览数据 CSV；有可导入行后才可以导入",
   },
   {
     name: "web metrics csv preview action",

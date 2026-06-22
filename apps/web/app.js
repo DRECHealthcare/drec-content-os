@@ -11916,17 +11916,47 @@ async function uploadMetricsCsv({ dryRun }) {
     message.textContent = data.message || `Imported ${data.imported_count || 0} metric row(s).`;
     renderMetricsImportPreview(data);
     if (!dryRun) await Promise.all([loadOutcomes(), loadLoopStatus(), loadLearningSummary()]);
+    return data;
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "Set the access token first." : dryRun ? "Could not preview metrics CSV." : "Could not import metrics CSV.";
+    return null;
   }
 }
 
+function metricsCsvReadyCount(data) {
+  return Number(data?.planned_count ?? data?.imported_count ?? 0);
+}
+
+function setMetricsCsvImportButton(enabled) {
+  setHomeActionButton(
+    "import-metrics-csv",
+    enabled,
+    "预览通过，可以导入数据 CSV。",
+    "请先预览数据 CSV；有可导入行后才可以导入。",
+  );
+}
+
+function updateMetricsCsvImportButton(data) {
+  const readyCount = metricsCsvReadyCount(data);
+  setMetricsCsvImportButton(readyCount > 0);
+  if (readyCount > 0) {
+    const message = document.getElementById("metric-message");
+    if (message) message.textContent = `${message.textContent || "预览完成。"} 可导入 ${readyCount} 行；不会发布 Facebook/IG。`;
+  }
+}
+
+document.getElementById("metrics-csv-file")?.addEventListener("change", () => setMetricsCsvImportButton(false));
+setMetricsCsvImportButton(false);
+
 document.getElementById("preview-metrics-csv")?.addEventListener("click", async () => {
-  await uploadMetricsCsv({ dryRun: true });
+  setMetricsCsvImportButton(false);
+  const data = await uploadMetricsCsv({ dryRun: true });
+  updateMetricsCsvImportButton(data);
 });
 
 document.getElementById("import-metrics-csv")?.addEventListener("click", async () => {
   await uploadMetricsCsv({ dryRun: false });
+  setMetricsCsvImportButton(false);
 });
 
 document.getElementById("weight-form").addEventListener("submit", async (event) => {
