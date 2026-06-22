@@ -2852,16 +2852,21 @@ function renderTodaySimpleOperator(today) {
       ${renderSimpleEvidence(action.evidence_required)}
     </div>
     <div class="simple-operator-actions">
-      <div class="simple-action-label">现在只按这个</div>
+      <div class="simple-action-label">今天只按一个按钮</div>
       <button class="primary" type="button" ${todayActionExtraAttributes(primary)}>${escapeHtml(primaryLabel)}</button>
-      ${quickCardAction ? `<button class="simple-secondary-action" type="button" ${todayActionExtraAttributes(quickCardAction)}>${escapeHtml(quickCardLabel)}</button>` : ""}
       <details class="simple-extra-actions">
-        <summary>更多资料和检查</summary>
+        <summary>找不到 / 已有回复才打开</summary>
+        ${quickCardAction ? `
+          <div class="simple-extra-group">
+            <span>如果你已经收到资料</span>
+            <button class="simple-secondary-action" type="button" ${todayActionExtraAttributes(quickCardAction)}>${escapeHtml(quickCardLabel)}</button>
+          </div>
+        ` : ""}
         ${secondaryActions.slice(0, 4).map((item) => `<button type="button" ${todayActionExtraAttributes(item)}>${escapeHtml(item.label || "打开")}</button>`).join("")}
         <button type="button" data-simple-today-kind="download" data-simple-today-path="/operations/today-next-action.zh.md" data-simple-today-filename="drec-today-next-action-zh.md">下载今日下一步</button>
         <button type="button" data-simple-refresh>重新检查</button>
       </details>
-      <div class="simple-action-note">主按钮是当前推荐动作；其他按钮先不用管。</div>
+      <div class="simple-action-note">先按大按钮；下面折叠内容通常不用打开。</div>
     </div>
     <small>${escapeHtml(action.safety_note || "这里不会发布到 Facebook / Instagram。")} 找不到东西时，优先看这个卡片，不用进高级工具。</small>
   `;
@@ -3043,7 +3048,10 @@ function renderSimpleOperator(data, monthly = null, cycle = null, today = null) 
 
   container.innerHTML = `
     <div class="simple-operator-copy">
-      <span>${escapeHtml(eyebrow)} · ${escapeHtml(status)}</span>
+      <div class="simple-operator-topline">
+        <span class="simple-operator-status">${escapeHtml(eyebrow)} · ${escapeHtml(status)}</span>
+        <span class="simple-operator-safe">不会发布 FB/IG</span>
+      </div>
       <h2>${escapeHtml(title)}</h2>
       <p>${escapeHtml(body)}</p>
       <ol class="simple-operator-steps">
@@ -3051,7 +3059,9 @@ function renderSimpleOperator(data, monthly = null, cycle = null, today = null) 
       </ol>
     </div>
     <div class="simple-operator-actions">
+      <div class="simple-action-label">今天只按一个按钮</div>
       ${actions}
+      <div class="simple-action-note">先按大按钮；下面折叠内容通常不用打开。</div>
     </div>
     <small>${escapeHtml(safetyNote)} 找不到东西时，优先看这个卡片，不用进高级工具。</small>
   `;

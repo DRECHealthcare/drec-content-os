@@ -262,7 +262,7 @@ const requiredSnippets = [
   {
     name: "live smoke checks latest web cache",
     file: "smokeLive",
-    text: "20260623-safety-strip",
+    text: "20260623-simple-focus",
   },
   {
     name: "live smoke checks locked imports",
@@ -3237,12 +3237,12 @@ const requiredSnippets = [
   {
     name: "web simple operator clear secondary label",
     file: "web",
-    text: "更多资料和检查",
+    text: "找不到 / 已有回复才打开",
   },
   {
     name: "web simple operator one action label",
     file: "web",
-    text: "现在只按这个",
+    text: "今天只按一个按钮",
   },
   {
     name: "web simple operator safe no publish pill",
@@ -3267,7 +3267,7 @@ const requiredSnippets = [
   {
     name: "web cache bust safety strip",
     file: "webIndex",
-    text: "20260623-safety-strip",
+    text: "20260623-simple-focus",
   },
   {
     name: "web simple operator evidence block",
@@ -3562,12 +3562,12 @@ const requiredSnippets = [
   {
     name: "web home step locks stylesheet cache bust",
     file: "webIndex",
-    text: "styles.css?v=20260623-safety-strip",
+    text: "styles.css?v=20260623-simple-focus",
   },
   {
     name: "web home step locks script cache bust",
     file: "webIndex",
-    text: "app.js?v=20260623-safety-strip",
+    text: "app.js?v=20260623-simple-focus",
   },
   {
     name: "web monthly queue confirm locked",
@@ -6268,6 +6268,26 @@ const requiredSnippets = [
     name: "web home today safe pack action",
     file: "webIndex",
     text: "home-download-today-safe-pack",
+  },
+  {
+    name: "web home simple one button guidance",
+    file: "web",
+    text: "今天只按一个按钮",
+  },
+  {
+    name: "web home simple folded secondary guidance",
+    file: "web",
+    text: "找不到 / 已有回复才打开",
+  },
+  {
+    name: "web home simple secondary group style",
+    file: "styles",
+    text: ".simple-extra-group",
+  },
+  {
+    name: "web cache simple focus bust",
+    file: "webIndex",
+    text: "20260623-simple-focus",
   },
   {
     name: "web home publishing handoff action",
