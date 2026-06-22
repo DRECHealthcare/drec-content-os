@@ -1,0 +1,66 @@
+name: DREC Fly Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "apps/api/**"
+      - "apps/web/**"
+      - "core/**"
+      - "fly.toml"
+      - ".github/workflows/drec-fly-deploy.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: drec-fly-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      DREC_API_BASE_URL: ${{ vars.DREC_API_BASE_URL || 'https://drec-content-os-api.fly.dev' }}
+    steps:
+      - name: Skip when Fly token is missing
+        if: ${{ env.FLY_API_TOKEN == '' }}
+        run: |
+          echo "FLY_API_TOKEN is not configured. Skipping Fly deploy."
+
+      - name: Check out repository
+        if: ${{ env.FLY_API_TOKEN != '' }}
+        uses: actions/checkout@v4
+
+      - name: Set up Fly
+        if: ${{ env.FLY_API_TOKEN != '' }}
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy DREC Content OS
+        if: ${{ env.FLY_API_TOKEN != '' }}
+        run: |
+          flyctl deploy --remote-only --update-only --strategy rolling
+
+      - name: Verify deployed API health
+        if: ${{ env.FLY_API_TOKEN != '' }}
+        run: |
+          curl --fail --silent --show-error --retry 5 --retry-delay 10 --max-time 120 \
+            "${DREC_API_BASE_URL}/health" \
+            | tee health.json
+
+      - name: Write deploy summary
+        if: ${{ always() }}
+        run: |
+          {
+            echo "## DREC Fly Deploy"
+            echo ""
+            echo "- App: drec-content-os-api"
+            echo "- API: ${DREC_API_BASE_URL}"
+            echo "- Event: ${GITHUB_EVENT_NAME}"
+            echo "- Fly token configured: $([ -n "${FLY_API_TOKEN}" ] && echo yes || echo no)"
+            echo "- Safety: deploys code only. It does not enable Meta publishing, publish posts, import metrics, update Notion, or change secrets."
+            echo "- Post-deploy check: /health"
+          } >> "$GITHUB_STEP_SUMMARY"

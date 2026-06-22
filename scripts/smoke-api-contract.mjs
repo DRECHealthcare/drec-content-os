@@ -14,6 +14,7 @@ const files = {
   schedulerWorkflow: ".github/workflows/drec-scheduler-dry-run.yml",
   realMetricsWorkflow: ".github/workflows/drec-nightly-meta-metrics.yml",
   projectCompletionWorkflow: ".github/workflows/drec-project-completion-watch.yml",
+  flyDeployWorkflow: ".github/workflows/drec-fly-deploy.yml",
   strictRlsMigration: "supabase/migrations/20260617040906_strict_server_only_rls.sql",
 };
 
@@ -6164,6 +6165,31 @@ const requiredSnippets = [
     name: "github project completion blockers summary",
     file: "projectCompletionWorkflow",
     text: "Top blockers:",
+  },
+  {
+    name: "github fly deploy workflow",
+    file: "flyDeployWorkflow",
+    text: "DREC Fly Deploy",
+  },
+  {
+    name: "github fly deploy token gate",
+    file: "flyDeployWorkflow",
+    text: "FLY_API_TOKEN is not configured. Skipping Fly deploy.",
+  },
+  {
+    name: "github fly deploy command",
+    file: "flyDeployWorkflow",
+    text: "flyctl deploy --remote-only --update-only --strategy rolling",
+  },
+  {
+    name: "github fly deploy health check",
+    file: "flyDeployWorkflow",
+    text: "${DREC_API_BASE_URL}/health",
+  },
+  {
+    name: "github fly deploy safety copy",
+    file: "flyDeployWorkflow",
+    text: "It does not enable Meta publishing, publish posts, import metrics, update Notion, or change secrets.",
   },
   {
     name: "real metrics workflow job",
