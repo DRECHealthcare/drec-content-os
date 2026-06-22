@@ -28,34 +28,56 @@ jobs:
       - name: Check today next action
         if: ${{ env.DREC_ACCESS_TOKEN != '' }}
         run: |
-          curl --fail --silent --show-error --retry 3 --retry-delay 10 --max-time 120 \
+          http_code="$(curl --silent --show-error --retry 3 --retry-delay 10 --max-time 120 \
+            --output today-next-action.json \
+            --write-out "%{http_code}" \
             --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
-            "${DREC_API_BASE_URL}/operations/today-next-action" \
-            | tee today-next-action.json
+            "${DREC_API_BASE_URL}/operations/today-next-action" || true)"
+          echo "${http_code}" > today-next-action.status
+          if [ "${http_code}" != "200" ]; then
+            cat > today-next-action.json <<'JSON'
+          {"action":{"eyebrow":"Deployment needed","title":"Online API has not been updated to this workflow version yet.","status":"blocked_by_deployment","primary":{"label":"Install FLY_API_TOKEN, then deploy","kind":"deployment_activation"},"safety_note":"read-only; no business action was taken","next_steps":["Add the FLY_API_TOKEN GitHub secret.","Trigger DREC Fly Deploy or deploy from Fly once the token is ready.","Run this watch again after deployment."]}}
+          JSON
+          fi
 
       - name: Check monthly next action queue
         if: ${{ env.DREC_ACCESS_TOKEN != '' }}
         run: |
-          curl --fail --silent --show-error --retry 3 --retry-delay 10 --max-time 120 \
+          http_code="$(curl --silent --show-error --retry 3 --retry-delay 10 --max-time 120 \
+            --output monthly-next-action-queue.json \
+            --write-out "%{http_code}" \
             --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
-            "${DREC_API_BASE_URL}/operations/monthly-carousel-next-action-queue" \
-            | tee monthly-next-action-queue.json
+            "${DREC_API_BASE_URL}/operations/monthly-carousel-next-action-queue" || true)"
+          echo "${http_code}" > monthly-next-action-queue.status
+          if [ "${http_code}" != "200" ]; then
+            echo '{"asset_count":0,"primary_action":{"title":"Online API has not returned the monthly queue yet."},"top_three":[]}' > monthly-next-action-queue.json
+          fi
 
       - name: Check publishing closeout
         if: ${{ env.DREC_ACCESS_TOKEN != '' }}
         run: |
-          curl --fail --silent --show-error --retry 3 --retry-delay 10 --max-time 120 \
+          http_code="$(curl --silent --show-error --retry 3 --retry-delay 10 --max-time 120 \
+            --output publishing-closeout.json \
+            --write-out "%{http_code}" \
             --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
-            "${DREC_API_BASE_URL}/operations/publishing-closeout" \
-            | tee publishing-closeout.json
+            "${DREC_API_BASE_URL}/operations/publishing-closeout" || true)"
+          echo "${http_code}" > publishing-closeout.status
+          if [ "${http_code}" != "200" ]; then
+            echo '{"status":"unavailable_until_deploy"}' > publishing-closeout.json
+          fi
 
       - name: Check project unblock board
         if: ${{ env.DREC_ACCESS_TOKEN != '' }}
         run: |
-          curl --fail --silent --show-error --retry 3 --retry-delay 10 --max-time 120 \
+          http_code="$(curl --silent --show-error --retry 3 --retry-delay 10 --max-time 120 \
+            --output project-unblock-board.json \
+            --write-out "%{http_code}" \
             --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
-            "${DREC_API_BASE_URL}/operations/project-unblock-board" \
-            | tee project-unblock-board.json
+            "${DREC_API_BASE_URL}/operations/project-unblock-board" || true)"
+          echo "${http_code}" > project-unblock-board.status
+          if [ "${http_code}" != "200" ]; then
+            echo '{"ready_count":0,"blocked_count":1,"next_action":"Deploy the latest API before reading the unblock board."}' > project-unblock-board.json
+          fi
 
       - name: Write today next action summary
         if: ${{ env.DREC_ACCESS_TOKEN != '' }}
@@ -66,6 +88,7 @@ jobs:
             echo "- API: ${DREC_API_BASE_URL}"
             echo "- Event: ${GITHUB_EVENT_NAME}"
             echo "- Schedule: ${GITHUB_EVENT_SCHEDULE:-manual}"
+            echo "- Endpoint status: today $(cat today-next-action.status), monthly $(cat monthly-next-action-queue.status), closeout $(cat publishing-closeout.status), unblock $(cat project-unblock-board.status)"
             echo ""
             echo "### One Thing To Do"
             echo "- Category: $(jq -r '.action.eyebrow // \"unknown\"' today-next-action.json)"
