@@ -16976,6 +16976,52 @@ def is_affirmative_review_check(value: str | None):
     return text in {"yes", "y", "true", "pass", "passed", "clear", "ok", "checked", "done", "是", "通过", "已检查"}
 
 
+def review_import_summary(planned: list[dict], imported: list[dict], skipped: list[dict], dry_run: bool):
+    ready_rows = planned if dry_run else imported
+    missing_by_field: dict[str, int] = {}
+    missing_rows = 0
+    outside_source_count = 0
+    not_found_count = 0
+    invalid_decision_count = 0
+    approval_safety_block_count = 0
+    for row in skipped:
+        reason = row.get("reason") or ""
+        missing_evidence = row.get("missing_evidence") or []
+        if missing_evidence:
+            missing_rows += 1
+            for field in missing_evidence:
+                missing_by_field[field] = missing_by_field.get(field, 0) + 1
+        if "not part of the monthly carousel source of truth" in reason:
+            outside_source_count += 1
+        if "not found" in reason.lower():
+            not_found_count += 1
+        if "Decision must use" in reason:
+            invalid_decision_count += 1
+        if "Approval requires" in reason and "Safety" in reason:
+            approval_safety_block_count += 1
+    if ready_rows:
+        next_step_zh = "可以导入 ready 行；导入只记录医生审核和 Safety，不会发布。"
+    elif missing_rows:
+        next_step_zh = "先补齐 reviewer_name、review_notes 和所有 doctor_check_*，再重新预览。"
+    elif skipped:
+        next_step_zh = "先修正 skipped rows 的 Asset ID 或 decision 值，再重新预览。"
+    else:
+        next_step_zh = "还没有可处理的医生审核行。"
+    return {
+        "ready_count": len(ready_rows),
+        "skipped_count": len(skipped),
+        "missing_evidence_count": missing_rows,
+        "missing_by_field": missing_by_field,
+        "outside_source_count": outside_source_count,
+        "not_found_count": not_found_count,
+        "invalid_decision_count": invalid_decision_count,
+        "approval_safety_block_count": approval_safety_block_count,
+        "next_step_zh": next_step_zh,
+        "safe_to_preview": True,
+        "publishing_locked": True,
+    }
+
+
 def monthly_doctor_import_rules_payload():
     return {
         "mode": "read_only_monthly_doctor_import_rules",
@@ -17335,6 +17381,7 @@ async def process_asset_review_decisions_csv(
         "planned_count": len(planned),
         "imported_count": len(imported),
         "skipped_count": len(skipped),
+        "summary": review_import_summary(planned, imported, skipped, dry_run),
         "planned": planned,
         "imported": imported,
         "skipped": skipped,
@@ -17545,6 +17592,7 @@ async def import_doctor_replies(
         "planned_count": len(planned),
         "imported_count": len(imported),
         "skipped_count": len(skipped),
+        "summary": review_import_summary(planned, imported, skipped, payload.dry_run),
         "planned": planned,
         "imported": imported,
         "skipped": skipped,

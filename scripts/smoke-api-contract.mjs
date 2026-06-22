@@ -3412,6 +3412,21 @@ const requiredSnippets = [
     text: "missing_evidence.join",
   },
   {
+    name: "web monthly doctor import next step",
+    file: "web",
+    text: "<strong>下一步：</strong>",
+  },
+  {
+    name: "web monthly doctor summary source",
+    file: "web",
+    text: "summary.missing_by_field",
+  },
+  {
+    name: "web monthly doctor import publish lock copy",
+    file: "web",
+    text: "不会制作、入队、排程或发布",
+  },
+  {
     name: "web home production reply card",
     file: "webIndex",
     text: "home-production-reply-card",
@@ -3565,6 +3580,21 @@ const requiredSnippets = [
     name: "monthly doctor worksheet approval evidence copy",
     file: "main",
     text: "Monthly approval requires reviewer_name, review_notes, and all doctor_check_* fields marked yes/pass.",
+  },
+  {
+    name: "monthly doctor worksheet import summary helper",
+    file: "main",
+    text: "def review_import_summary",
+  },
+  {
+    name: "monthly doctor worksheet import next step copy",
+    file: "main",
+    text: "先补齐 reviewer_name、review_notes 和所有 doctor_check_*，再重新预览。",
+  },
+  {
+    name: "monthly doctor worksheet publish lock summary",
+    file: "main",
+    text: "\"publishing_locked\": True",
   },
   {
     name: "monthly carousel doctor triage safety",

@@ -8416,8 +8416,9 @@ function renderAssetReviewDecisionPreview(data, targetId = "asset-review-decisio
   if (!container) return;
   const rows = data.planned || data.imported || [];
   const skipped = data.skipped || [];
+  const summary = data.summary || {};
   const isMonthlyDoctor = ["monthly_carousel_doctor_worksheet", "monthly_carousel_doctor_reply_text"].includes(data.source);
-  const missingEvidence = skipped
+  const missingEvidence = summary.missing_by_field || skipped
     .flatMap((row) => Array.isArray(row.missing_evidence) ? row.missing_evidence : [])
     .reduce((acc, item) => {
       acc[item] = (acc[item] || 0) + 1;
@@ -8426,12 +8427,24 @@ function renderAssetReviewDecisionPreview(data, targetId = "asset-review-decisio
   const missingEvidenceRows = Object.entries(missingEvidence)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 8);
+  const nextStep = summary.next_step_zh || (rows.length
+    ? "可以导入 ready 行；导入只记录医生审核和 Safety，不会发布。"
+    : "目前没有可导入行。先补齐 Reviewer Name / Notes / doctor_check_*，再重新检查。");
   container.innerHTML = `
     <article class="insight-card">
       <strong>${isMonthlyDoctor ? "月度医生表检查" : data.dry_run ? "Review Decision Preview" : "Review Decision Import"}</strong>
       <small>${rows.length} row(s) ready · ${skipped.length} skipped</small>
       ${isMonthlyDoctor ? `
-        <p class="status-note">${rows.length ? "这些行可以导入；导入只会记录医生审核和 Safety，不会制作、入队、排程或发布。" : "目前没有可导入行。先补齐 Reviewer Name / Notes / doctor_check_*，再重新检查。"}</p>
+        <p class="status-note"><strong>下一步：</strong>${escapeHtml(nextStep)}</p>
+        <p class="status-note">安全线：这里只检查或导入医生审核结果，不会制作、入队、排程或发布。</p>
+        ${(summary.missing_evidence_count || summary.outside_source_count || summary.invalid_decision_count || summary.not_found_count) ? `
+          <ul>
+            ${summary.missing_evidence_count ? `<li>缺医生证据：${escapeHtml(summary.missing_evidence_count)} row(s)</li>` : ""}
+            ${summary.outside_source_count ? `<li>不属于本月 Notion 计划：${escapeHtml(summary.outside_source_count)} row(s)</li>` : ""}
+            ${summary.invalid_decision_count ? `<li>Decision 写法需要修正：${escapeHtml(summary.invalid_decision_count)} row(s)</li>` : ""}
+            ${summary.not_found_count ? `<li>找不到 Asset ID：${escapeHtml(summary.not_found_count)} row(s)</li>` : ""}
+          </ul>
+        ` : ""}
         ${missingEvidenceRows.length ? `
           <h4>最常缺的医生证据</h4>
           <ul>${missingEvidenceRows.map(([field, count]) => `<li><strong>${escapeHtml(field)}</strong> · ${escapeHtml(String(count))} row(s)</li>`).join("")}</ul>
