@@ -248,6 +248,16 @@ const requiredRoutes = [
 
 const requiredSnippets = [
   {
+    name: "live smoke loads local env",
+    file: "smokeLive",
+    text: "loadDotEnv();",
+  },
+  {
+    name: "live smoke keeps shell env precedence",
+    file: "smokeLive",
+    text: "process.env[key] !== undefined",
+  },
+  {
     name: "live smoke checks latest web cache",
     file: "smokeLive",
     text: "20260622-operator-simple",

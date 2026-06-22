@@ -1,3 +1,24 @@
+import { existsSync, readFileSync } from "node:fs";
+
+function loadDotEnv(path = ".env") {
+  if (!existsSync(path)) return;
+  const lines = readFileSync(path, "utf8").split(/\r?\n/);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#") || !trimmed.includes("=")) continue;
+    const separatorIndex = trimmed.indexOf("=");
+    const key = trimmed.slice(0, separatorIndex).trim();
+    let value = trimmed.slice(separatorIndex + 1).trim();
+    if (!key || process.env[key] !== undefined) continue;
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    process.env[key] = value;
+  }
+}
+
+loadDotEnv();
+
 const apiBase = process.env.DREC_API_BASE_URL || "https://drec-content-os-api.fly.dev";
 const webBase = process.env.DREC_WEB_URL || "https://drec-content-os.vercel.app";
 const flyUiBase = process.env.DREC_FLY_UI_URL || `${apiBase}/ui`;

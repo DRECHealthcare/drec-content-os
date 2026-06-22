@@ -55,6 +55,15 @@ uvicorn app.main:app --reload --port 8080
 
 5. Open `apps/web/index.html` in a browser, or deploy the repository root to Vercel.
 
+## Live Verification
+
+Use `node scripts/smoke-live.mjs` after each deploy. The smoke runner automatically reads local `.env` without printing secrets:
+
+- Without `DREC_ACCESS_TOKEN`, it runs public checks for Vercel, Fly UI, and API health.
+- With `DREC_ACCESS_TOKEN`, it also runs the protected dry-run workflow checks for planning, review, scheduling, learning, and Meta readiness.
+- Shell variables still win over `.env`, so one-off commands can safely override `DREC_WEB_URL`, `DREC_API_BASE_URL`, or `DREC_ACTOR`.
+- `npm run smoke:live` is equivalent when the local Node/npm installation is healthy.
+
 ## Standalone Meta Posting Helper
 
 The root-level `post.py` and `scheduler.py` scripts provide a direct Meta Graph API helper for controlled local tests:
