@@ -1,0 +1,104 @@
+name: DREC Today Next Action Watch
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Every 6 hours, matching the operator continuation rhythm.
+    - cron: "15 */6 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: drec-today-next-action-watch
+  cancel-in-progress: false
+
+jobs:
+  today-next-action:
+    runs-on: ubuntu-latest
+    env:
+      DREC_API_BASE_URL: ${{ vars.DREC_API_BASE_URL || 'https://drec-content-os-api.fly.dev' }}
+      DREC_ACCESS_TOKEN: ${{ secrets.DREC_ACCESS_TOKEN }}
+    steps:
+      - name: Skip when access token is missing
+        if: ${{ env.DREC_ACCESS_TOKEN == '' }}
+        run: |
+          echo "DREC_ACCESS_TOKEN is not configured. Skipping today-next-action watch."
+
+      - name: Check today next action
+        if: ${{ env.DREC_ACCESS_TOKEN != '' }}
+        run: |
+          curl --fail --silent --show-error --retry 3 --retry-delay 10 --max-time 120 \
+            --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
+            "${DREC_API_BASE_URL}/operations/today-next-action" \
+            | tee today-next-action.json
+
+      - name: Check monthly next action queue
+        if: ${{ env.DREC_ACCESS_TOKEN != '' }}
+        run: |
+          curl --fail --silent --show-error --retry 3 --retry-delay 10 --max-time 120 \
+            --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
+            "${DREC_API_BASE_URL}/operations/monthly-carousel-next-action-queue" \
+            | tee monthly-next-action-queue.json
+
+      - name: Check publishing closeout
+        if: ${{ env.DREC_ACCESS_TOKEN != '' }}
+        run: |
+          curl --fail --silent --show-error --retry 3 --retry-delay 10 --max-time 120 \
+            --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
+            "${DREC_API_BASE_URL}/operations/publishing-closeout" \
+            | tee publishing-closeout.json
+
+      - name: Check project unblock board
+        if: ${{ env.DREC_ACCESS_TOKEN != '' }}
+        run: |
+          curl --fail --silent --show-error --retry 3 --retry-delay 10 --max-time 120 \
+            --header "X-DREC-Access-Token: ${DREC_ACCESS_TOKEN}" \
+            "${DREC_API_BASE_URL}/operations/project-unblock-board" \
+            | tee project-unblock-board.json
+
+      - name: Write today next action summary
+        if: ${{ env.DREC_ACCESS_TOKEN != '' }}
+        run: |
+          {
+            echo "## DREC Today Next Action"
+            echo ""
+            echo "- API: ${DREC_API_BASE_URL}"
+            echo "- Event: ${GITHUB_EVENT_NAME}"
+            echo "- Schedule: ${GITHUB_EVENT_SCHEDULE:-manual}"
+            echo ""
+            echo "### One Thing To Do"
+            echo "- Category: $(jq -r '.action.eyebrow // \"unknown\"' today-next-action.json)"
+            echo "- Action: $(jq -r '.action.title // \"unknown\"' today-next-action.json)"
+            echo "- Status: $(jq -r '.action.status // \"unknown\"' today-next-action.json)"
+            echo "- Primary: $(jq -r '.action.primary.label // \"unknown\"' today-next-action.json) ($(jq -r '.action.primary.kind // \"unknown\"' today-next-action.json))"
+            echo "- Safety: $(jq -r '.action.safety_note // \"read-only\"' today-next-action.json)"
+            echo ""
+            echo "### Next Steps"
+            jq -r '(.action.next_steps // [])[:3][]? | \"- \" + .' today-next-action.json
+            echo ""
+            echo "### Monthly Queue"
+            echo "- Monthly assets: $(jq -r '.asset_count // 0' monthly-next-action-queue.json)"
+            echo "- Top action: $(jq -r '.top_three[0].action_zh // .primary_action.title // \"none\"' monthly-next-action-queue.json)"
+            echo ""
+            echo "### Project Unblock"
+            echo "- Ready / blocked: $(jq -r '(.ready_count // 0 | tostring) + \" / \" + (.blocked_count // 0 | tostring)' project-unblock-board.json)"
+            echo "- Next: $(jq -r '.next_action // \"none\"' project-unblock-board.json)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Write watch summary
+        if: ${{ always() }}
+        run: |
+          {
+            echo "## DREC Today Next Action Watch"
+            echo ""
+            echo "- API: ${DREC_API_BASE_URL}"
+            echo "- Token configured: $([ -n "${DREC_ACCESS_TOKEN}" ] && echo yes || echo no)"
+            echo "- Safety: read-only checks only; this workflow does not approve, import, queue, schedule, publish, record post IDs, update Notion, store secrets, or call Meta."
+            echo ""
+            echo "Checks:"
+            echo "- /operations/today-next-action"
+            echo "- /operations/monthly-carousel-next-action-queue"
+            echo "- /operations/publishing-closeout"
+            echo "- /operations/project-unblock-board"
+          } >> "$GITHUB_STEP_SUMMARY"

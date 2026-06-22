@@ -365,6 +365,37 @@ summary to see whether the next blocker is doctor/human approval, production
 media, queue review, scheduling evidence, metrics closeout, Supabase
 service-role/RLS, or Meta activation.
 
+## GitHub Today Next Action Watch
+
+The repository includes `.github/workflows/drec-today-next-action-watch.yml`.
+It runs every 6 hours and writes one concise Action summary with the single
+recommended operator action, the monthly carousel queue status, publishing
+closeout status, and the project unblock board.
+
+It uses the same GitHub Actions secret as the other safe monitors:
+
+```text
+DREC_ACCESS_TOKEN
+```
+
+Optional repository variable:
+
+```text
+DREC_API_BASE_URL=https://drec-content-os-api.fly.dev
+```
+
+The workflow is read-only. It calls:
+
+- `/operations/today-next-action`
+- `/operations/monthly-carousel-next-action-queue`
+- `/operations/publishing-closeout`
+- `/operations/project-unblock-board`
+
+It does not approve, import, queue, schedule, publish, record post IDs, update
+Notion, store secrets, or call Meta. Use it as the lightweight six-hour
+operator pulse: the summary should answer “what should I do next?” without
+opening the full UI.
+
 ## GitHub Nightly Meta Metrics Scheduler
 
 The repository also includes `.github/workflows/drec-nightly-meta-metrics.yml`.

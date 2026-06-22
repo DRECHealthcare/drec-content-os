@@ -14,6 +14,7 @@ const files = {
   schedulerWorkflow: ".github/workflows/drec-scheduler-dry-run.yml",
   realMetricsWorkflow: ".github/workflows/drec-nightly-meta-metrics.yml",
   projectCompletionWorkflow: ".github/workflows/drec-project-completion-watch.yml",
+  todayNextActionWorkflow: ".github/workflows/drec-today-next-action-watch.yml",
   flyDeployWorkflow: ".github/workflows/drec-fly-deploy.yml",
   strictRlsMigration: "supabase/migrations/20260617040906_strict_server_only_rls.sql",
 };
@@ -6209,6 +6210,41 @@ const requiredSnippets = [
     name: "github project completion blockers summary",
     file: "projectCompletionWorkflow",
     text: "Top blockers:",
+  },
+  {
+    name: "github today next action workflow",
+    file: "todayNextActionWorkflow",
+    text: "DREC Today Next Action Watch",
+  },
+  {
+    name: "github today next action six hour schedule",
+    file: "todayNextActionWorkflow",
+    text: "15 */6 * * *",
+  },
+  {
+    name: "github today next action endpoint",
+    file: "todayNextActionWorkflow",
+    text: "/operations/today-next-action",
+  },
+  {
+    name: "github today next action monthly queue check",
+    file: "todayNextActionWorkflow",
+    text: "/operations/monthly-carousel-next-action-queue",
+  },
+  {
+    name: "github today next action closeout check",
+    file: "todayNextActionWorkflow",
+    text: "/operations/publishing-closeout",
+  },
+  {
+    name: "github today next action unblock check",
+    file: "todayNextActionWorkflow",
+    text: "/operations/project-unblock-board",
+  },
+  {
+    name: "github today next action safety",
+    file: "todayNextActionWorkflow",
+    text: "does not approve, import, queue, schedule, publish, record post IDs, update Notion, store secrets, or call Meta.",
   },
   {
     name: "github fly deploy workflow",
