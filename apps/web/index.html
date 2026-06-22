@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DREC 内容系统</title>
-  <link rel="stylesheet" href="./styles.css?v=20260622-metrics-csv-lock">
+  <link rel="stylesheet" href="./styles.css?v=20260622-manual-evidence-lock">
 </head>
 <body>
   <aside>
@@ -1020,7 +1020,8 @@
                 <input id="manual-publish-evidence-file" type="file" accept=".csv,text/csv">
               </label>
               <button id="preview-manual-publish-evidence" type="button">预览发布证据</button>
-              <button id="import-manual-publish-evidence" type="button">导入发布证据</button>
+              <button id="import-manual-publish-evidence" type="button" disabled>导入发布证据</button>
+              <small class="home-doctor-import-hint">先预览发布证据；有可导入行后才可以导入。这里不会发布 Facebook/IG。</small>
               <label class="file-action">
                 数据 CSV
                 <input id="metrics-csv-file" type="file" accept=".csv,text/csv">
@@ -1226,6 +1227,6 @@
     </section>
   </main>
 
-  <script src="./app.js?v=20260622-metrics-csv-lock"></script>
+  <script src="./app.js?v=20260622-manual-evidence-lock"></script>
 </body>
 </html>

@@ -3344,12 +3344,12 @@ const requiredSnippets = [
   {
     name: "web home step locks stylesheet cache bust",
     file: "webIndex",
-    text: "styles.css?v=20260622-metrics-csv-lock",
+    text: "styles.css?v=20260622-manual-evidence-lock",
   },
   {
     name: "web home step locks script cache bust",
     file: "webIndex",
-    text: "app.js?v=20260622-metrics-csv-lock",
+    text: "app.js?v=20260622-manual-evidence-lock",
   },
   {
     name: "web dashboard details are folded",
@@ -4370,6 +4370,26 @@ const requiredSnippets = [
     name: "web home manual publish evidence import action",
     file: "webIndex",
     text: 'id="home-import-manual-publish-evidence" class="danger-safe-action" type="button" disabled',
+  },
+  {
+    name: "web manual publish evidence import disabled by default",
+    file: "webIndex",
+    text: 'id="import-manual-publish-evidence" type="button" disabled',
+  },
+  {
+    name: "web manual publish evidence import lock helper",
+    file: "web",
+    text: "setManualPublishEvidenceImportButton",
+  },
+  {
+    name: "web manual publish evidence import ready unlock",
+    file: "web",
+    text: "updateManualPublishEvidenceImportButton",
+  },
+  {
+    name: "web manual publish evidence import safety hint",
+    file: "webIndex",
+    text: "先预览发布证据；有可导入行后才可以导入",
   },
   {
     name: "web home manual publish evidence lock helper",

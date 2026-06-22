@@ -7328,6 +7328,27 @@ document.getElementById("home-record-published-id")?.addEventListener("input", u
 lockHomeManualPublishEvidenceButton();
 updateHomeRecordPublishedButton();
 
+function setManualPublishEvidenceImportButton(enabled) {
+  setHomeActionButton(
+    "import-manual-publish-evidence",
+    enabled,
+    "预览通过，可以导入发布证据。",
+    "请先预览发布证据；有可导入行后才可以导入。",
+  );
+}
+
+function updateManualPublishEvidenceImportButton(data) {
+  const readyCount = manualPublishEvidenceReadyCount(data);
+  setManualPublishEvidenceImportButton(readyCount > 0);
+  if (readyCount > 0) {
+    const message = document.getElementById("metric-message");
+    if (message) message.textContent = `${message.textContent || "预览完成。"} 可导入 ${readyCount} 行；不会发布 Facebook/IG。`;
+  }
+}
+
+document.getElementById("manual-publish-evidence-file")?.addEventListener("change", () => setManualPublishEvidenceImportButton(false));
+setManualPublishEvidenceImportButton(false);
+
 document.getElementById("home-preview-manual-publish-evidence")?.addEventListener("click", async () => {
   lockHomeManualPublishEvidenceButton();
   const data = await uploadManualPublishEvidence({
@@ -11860,11 +11881,14 @@ document.getElementById("download-post-publish-metrics-template")?.addEventListe
 });
 
 document.getElementById("preview-manual-publish-evidence")?.addEventListener("click", async () => {
-  await uploadManualPublishEvidence({ dryRun: true });
+  setManualPublishEvidenceImportButton(false);
+  const data = await uploadManualPublishEvidence({ dryRun: true });
+  updateManualPublishEvidenceImportButton(data);
 });
 
 document.getElementById("import-manual-publish-evidence")?.addEventListener("click", async () => {
   await uploadManualPublishEvidence({ dryRun: false });
+  setManualPublishEvidenceImportButton(false);
 });
 
 function renderMetricsImportPreview(data) {
