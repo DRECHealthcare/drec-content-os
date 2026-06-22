@@ -28501,11 +28501,39 @@ def today_action_from_completion(audit: dict, unblock: dict):
     }
 
 
+async def safe_today_payload(name: str, payload_coro, timeout_seconds: int = 12):
+    try:
+        return await asyncio.wait_for(payload_coro, timeout=timeout_seconds)
+    except asyncio.TimeoutError:
+        return {
+            "_today_unavailable": name,
+            "_today_error": "timeout",
+            "_today_timeout_seconds": timeout_seconds,
+        }
+    except Exception as exc:
+        return {
+            "_today_unavailable": name,
+            "_today_error": type(exc).__name__,
+        }
+
+
+def payload_unavailable_summary(payload: dict):
+    if not payload.get("_today_unavailable"):
+        return None
+    return {
+        "section": payload.get("_today_unavailable"),
+        "error": payload.get("_today_error"),
+        "timeout_seconds": payload.get("_today_timeout_seconds"),
+    }
+
+
 async def today_next_action_payload():
-    audit = await project_completion_audit_payload()
-    unblock = await project_unblock_board_payload()
-    monthly = await monthly_carousel_next_action_queue_payload()
-    cycle = await cycle_command_center_payload()
+    audit, monthly, cycle = await asyncio.gather(
+        safe_today_payload("project_completion", project_completion_audit_payload()),
+        safe_today_payload("monthly_carousel", monthly_carousel_next_action_queue_payload()),
+        safe_today_payload("cycle_command_center", cycle_command_center_payload()),
+    )
+    unblock = project_unblock_board_from_audit(audit)
     candidates = [
         today_action_from_monthly(monthly),
         today_action_from_cycle(cycle),
@@ -28541,6 +28569,21 @@ async def today_next_action_payload():
             "blocked_count": unblock.get("blocked_count"),
             "next_action": unblock.get("next_action"),
         },
+        "availability": {
+            "partial": any(
+                payload.get("_today_unavailable")
+                for payload in (audit, monthly, cycle)
+            ),
+            "unavailable": [
+                item
+                for item in [
+                    payload_unavailable_summary(audit),
+                    payload_unavailable_summary(monthly),
+                    payload_unavailable_summary(cycle),
+                ]
+                if item
+            ],
+        },
         "links": {
             "today_next_action": "/operations/today-next-action",
             "today_next_action_zh": "/operations/today-next-action.zh.md",
@@ -28567,10 +28610,12 @@ async def operations_today_next_action_zh(_: None = Depends(require_access_token
     action = payload.get("action") or {}
     primary = action.get("primary") or {}
     secondary = action.get("secondary") or []
+    availability = payload.get("availability") or {}
     lines = [
         "# DREC 今日下一步",
         "",
         f"生成时间：{payload.get('generated_at')}",
+        f"状态：{'部分后台检查较慢，已先显示可执行安全步骤' if availability.get('partial') else '完整读取'}",
         "",
         "这是一张只读指路卡：只告诉你现在最该做什么，不会批准、导入、入队、排程、发布、记录 post ID、保存 secret、更新 Notion 或调用 Meta。",
         "",
@@ -28610,6 +28655,10 @@ async def operations_today_next_action_zh(_: None = Depends(require_access_token
 
 async def project_unblock_board_payload():
     audit = await project_completion_audit_payload()
+    return project_unblock_board_from_audit(audit)
+
+
+def project_unblock_board_from_audit(audit: dict):
     completion = audit.get("completion") or {}
     workflow_summary = audit.get("workflow_summary") or {}
     automation_summary = audit.get("automation_summary") or {}

@@ -1102,6 +1102,21 @@ const requiredSnippets = [
     text: "It does not approve, import, queue, schedule, publish, record post IDs, store secrets, update Notion, or call Meta.",
   },
   {
+    name: "today next action timeout guard",
+    file: "main",
+    text: "safe_today_payload",
+  },
+  {
+    name: "today next action bounded wait",
+    file: "main",
+    text: "asyncio.wait_for(payload_coro, timeout=timeout_seconds)",
+  },
+  {
+    name: "today next action partial availability",
+    file: "main",
+    text: "\"availability\": {",
+  },
+  {
     name: "web today next action fetch",
     file: "web",
     text: "/operations/today-next-action",
