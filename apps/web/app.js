@@ -2710,6 +2710,7 @@ function renderInvalidAccessSimpleOperator() {
       <button class="primary" type="button" data-simple-open-access>重新输入访问码</button>
       <details class="simple-extra-actions">
         <summary>需要时打开</summary>
+        <button type="button" data-simple-clear-access>清除旧访问码</button>
         <button type="button" data-simple-refresh>重新检查</button>
       </details>
       <div class="simple-action-note">访问码正确后，这里会变成今日下一步。</div>
@@ -6622,13 +6623,19 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   const downloadNextPlanHandback = event.target.closest("[data-simple-download-next-plan-handback]");
   const openCycleScreen = event.target.closest("[data-simple-open-cycle-screen]");
   const downloadCycleCommandCenter = event.target.closest("[data-simple-download-cycle-command-center]");
+  const clearAccess = event.target.closest("[data-simple-clear-access]");
   const todayAction = event.target.closest("[data-simple-today-kind]");
   const refresh = event.target.closest("[data-simple-refresh]");
-  if (!openAccess && !runReadyAssets && !openAssets && !openReview && !openScheduler && !pasteDoctorReply && !uploadDoctorWorksheet && !pasteProductionReply && !previewMonthlyQueue && !runMonthlyQueue && !downloadMonthlyReviewQueue && !pasteReviewDecisions && !scheduleApprovedFromHome && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorEvidence && !downloadMonthlyDoctorMessage && !copyMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadManualPublishEvidence && !downloadTodayPack && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !openLearning && !useLearningTopics && !downloadWeeklyReportZh && !downloadNextPlanHandback && !openCycleScreen && !downloadCycleCommandCenter && !todayAction && !refresh) return;
+  if (!openAccess && !runReadyAssets && !openAssets && !openReview && !openScheduler && !pasteDoctorReply && !uploadDoctorWorksheet && !pasteProductionReply && !previewMonthlyQueue && !runMonthlyQueue && !downloadMonthlyReviewQueue && !pasteReviewDecisions && !scheduleApprovedFromHome && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorEvidence && !downloadMonthlyDoctorMessage && !copyMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadManualPublishEvidence && !downloadTodayPack && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !openLearning && !useLearningTopics && !downloadWeeklyReportZh && !downloadNextPlanHandback && !openCycleScreen && !downloadCycleCommandCenter && !clearAccess && !todayAction && !refresh) return;
   if (openAccess) {
     const panel = document.getElementById("token-panel");
     if (panel?.hidden) showTokenPanel();
     document.getElementById("token-input")?.focus();
+    return;
+  }
+  if (clearAccess) {
+    clearAccessToken();
+    showTokenPanel();
     return;
   }
   if (refresh) {

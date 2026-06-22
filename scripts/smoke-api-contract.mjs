@@ -3344,12 +3344,12 @@ const requiredSnippets = [
   {
     name: "web home step locks stylesheet cache bust",
     file: "webIndex",
-    text: "styles.css?v=20260622-access-code-guidance",
+    text: "styles.css?v=20260622-access-code-clear",
   },
   {
     name: "web home step locks script cache bust",
     file: "webIndex",
-    text: "app.js?v=20260622-access-code-guidance",
+    text: "app.js?v=20260622-access-code-clear",
   },
   {
     name: "web monthly queue confirm locked",
@@ -4545,6 +4545,16 @@ const requiredSnippets = [
     name: "web invalid access code primary action",
     file: "web",
     text: "重新输入访问码",
+  },
+  {
+    name: "web invalid access code clear action",
+    file: "web",
+    text: "data-simple-clear-access",
+  },
+  {
+    name: "web invalid access code clear copy",
+    file: "web",
+    text: "清除旧访问码",
   },
   {
     name: "web header access code button",
