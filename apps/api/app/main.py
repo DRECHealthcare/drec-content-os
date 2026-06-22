@@ -28447,6 +28447,8 @@ async def project_completion_audit_payload():
         "ready_count": unblock.get("ready_count"),
         "blocked_count": unblock.get("blocked_count"),
         "next_action": unblock.get("next_action"),
+        "next_gate": unblock.get("next_gate"),
+        "next_action_source": unblock.get("next_action_source"),
         "rows": [
             {
                 "gate": row.get("gate"),
@@ -28852,6 +28854,25 @@ def project_unblock_board_from_audit(audit: dict):
         },
     ]
     blocked_rows = [row for row in rows if row.get("status") != "ready"]
+    completion_blockers = [
+        str(item)
+        for item in (completion.get("blockers") or [])
+        if item
+    ]
+
+    def row_matches_completion_blocker(row: dict):
+        row_text = " ".join(
+            str(row.get(key) or "")
+            for key in ("required_action", "required_evidence", "blocker", "current_status")
+        ).lower()
+        for blocker in completion_blockers:
+            blocker_text = blocker.lower()
+            if blocker_text and (blocker_text in row_text or row_text in blocker_text):
+                return True
+        return False
+
+    priority_blocked_rows = [row for row in blocked_rows if row_matches_completion_blocker(row)]
+    next_row = priority_blocked_rows[0] if priority_blocked_rows else (blocked_rows[0] if blocked_rows else None)
     return {
         "mode": "read_only_project_unblock_board",
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -28864,7 +28885,9 @@ def project_unblock_board_from_audit(audit: dict):
         "blocked_count": len(blocked_rows),
         "ready_count": len(rows) - len(blocked_rows),
         "rows": rows,
-        "next_action": (blocked_rows[0].get("required_action") if blocked_rows else "Run final publish, metrics, and learning closeout evidence."),
+        "next_action": (next_row.get("required_action") if next_row else "Run final publish, metrics, and learning closeout evidence."),
+        "next_gate": next_row.get("gate") if next_row else None,
+        "next_action_source": "completion_blocker" if priority_blocked_rows else "first_blocked_gate" if blocked_rows else "all_ready",
         "context": {
             "launch_status": launch.get("overall_status"),
             "meta_status": meta.get("overall_status"),
@@ -29167,6 +29190,8 @@ async def operations_project_completion_audit_zh(_: None = Depends(require_acces
         f"- 已解锁：{unblock_summary.get('ready_count')}",
         f"- 仍阻塞：{unblock_summary.get('blocked_count')}",
         f"- 下一步：{unblock_summary.get('next_action')}",
+        f"- 下一 Gate：`{unblock_summary.get('next_gate')}`",
+        f"- 下一步来源：`{unblock_summary.get('next_action_source')}`",
         "",
     ])
     for row in unblock_summary.get("rows") or []:

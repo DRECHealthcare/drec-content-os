@@ -880,6 +880,21 @@ const requiredSnippets = [
     text: "\"unblock_summary\"",
   },
   {
+    name: "project unblock prioritizes completion blocker",
+    file: "main",
+    text: "priority_blocked_rows",
+  },
+  {
+    name: "project unblock exposes next gate",
+    file: "main",
+    text: "\"next_gate\": next_row.get(\"gate\")",
+  },
+  {
+    name: "project completion audit next action source",
+    file: "main",
+    text: "下一步来源",
+  },
+  {
     name: "project completion audit unblock summary is read only",
     file: "main",
     text: "Read-only evidence summary; it does not approve, import, queue, schedule, publish, store secrets, or call Meta.",
