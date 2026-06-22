@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DREC 内容系统</title>
-  <link rel="stylesheet" href="./styles.css?v=20260623-simple-focus">
+  <link rel="stylesheet" href="./styles.css?v=20260623-stage-guide">
 </head>
 <body>
   <aside>
@@ -73,6 +73,11 @@
           </div>
           <button id="home-fill-doctor-reply-template" type="button">填回复模板</button>
         </div>
+        <ol class="home-stage-guide" aria-label="医生回复顺序">
+          <li class="active"><span>1</span><b>粘贴医生回复</b><small>可以先填模板</small></li>
+          <li><span>2</span><b>检查医生回复</b><small>只预览，不写入</small></li>
+          <li class="locked"><span>3</span><b>导入通过回复</b><small>检查有 ready 行才会亮</small></li>
+        </ol>
         <label>
           医生回复内容
           <textarea id="home-doctor-reply-text" placeholder="Asset ID: ...&#10;Decision: approve / needs edits / reject&#10;Safety: clear / needs review / blocked&#10;Use polished copy: yes / no&#10;doctor_check_educational_not_diagnostic: yes / no&#10;doctor_check_no_guaranteed_outcome: yes / no&#10;doctor_check_no_medication_instruction: yes / no&#10;doctor_check_mandarin_accurate: yes / no&#10;doctor_check_cta_appropriate: yes / no&#10;Notes: ..."></textarea>
@@ -109,6 +114,11 @@
           </div>
           <button id="home-fill-production-reply-template" type="button">填模板</button>
         </div>
+        <ol class="home-stage-guide" aria-label="制作回复顺序">
+          <li class="active"><span>1</span><b>粘贴图片回复</b><small>最终公开媒体 URL</small></li>
+          <li><span>2</span><b>检查制作回复</b><small>确认 QA 和版权</small></li>
+          <li class="locked"><span>3</span><b>挂载 ready 图片</b><small>检查通过才会亮</small></li>
+        </ol>
         <label>
           制作回复内容
           <textarea id="home-production-reply-text" placeholder="Asset ID: ...&#10;Media URLs: https://...&#10;Visual QA: passed / pending / needs_work&#10;Rights: owned / licensed / approved stock&#10;Notes: ..."></textarea>
@@ -132,6 +142,11 @@
             <p class="section-note">只处理 ready_to_queue 的内容。加入队列不是发布，后面还要审核和排程。</p>
           </div>
         </div>
+        <ol class="home-stage-guide" aria-label="入队顺序">
+          <li class="active"><span>1</span><b>先检查</b><small>确认 ready_to_queue</small></li>
+          <li class="locked"><span>2</span><b>加入队列</b><small>检查通过才会亮</small></li>
+          <li><span>3</span><b>继续队列审核</b><small>仍然不会发布</small></li>
+        </ol>
         <div class="form-actions">
           <button id="home-preview-monthly-queue-ready" type="button">1. 先检查</button>
           <button id="home-run-monthly-queue-ready" class="danger-safe-action" type="button" disabled>2. 加入队列</button>
@@ -151,6 +166,11 @@
             <p class="section-note">粘贴审核决定，先检查，再导入。只有 approve + clear 的内容才会排程；不会发布。</p>
           </div>
         </div>
+        <ol class="home-stage-guide" aria-label="审核排程顺序">
+          <li class="active"><span>1</span><b>检查审核决定</b><small>只预览</small></li>
+          <li class="locked"><span>2</span><b>确认导入</b><small>检查通过才会亮</small></li>
+          <li class="locked"><span>3</span><b>安排时间</b><small>导入后才会亮</small></li>
+        </ol>
         <label>
           队列审核决定 CSV
           <textarea id="home-review-queue-decisions-text" placeholder="queue_id,reviewer_action,reviewer_name,review_notes&#10;...,approve,Dr. name,Approved for scheduling"></textarea>
@@ -178,6 +198,11 @@
           </div>
           <button id="home-download-today-safe-pack" class="primary" type="button">下载安全包</button>
         </div>
+        <ol class="home-stage-guide" aria-label="人工发布交接顺序">
+          <li class="active"><span>1</span><b>下载安全包</b><small>给真人发布人</small></li>
+          <li><span>2</span><b>真人手动发布</b><small>系统不发布</small></li>
+          <li class="locked"><span>3</span><b>回来填 ID/数据</b><small>发布后才做</small></li>
+        </ol>
         <div id="home-publish-closeout-status" class="home-closeout-status"></div>
         <details class="simple-extra-actions home-stage-more home-manual-more">
           <summary>需要时打开排程和发布证据</summary>
@@ -223,6 +248,11 @@
           </div>
           <button id="home-use-learning-topics" class="primary" type="button">带入计划</button>
         </div>
+        <ol class="home-stage-guide" aria-label="学习回流顺序">
+          <li class="active"><span>1</span><b>选择已发布帖子</b><small>填至少一个数据</small></li>
+          <li><span>2</span><b>保存数据并学习</b><small>生成学习结果</small></li>
+          <li><span>3</span><b>带入下一轮计划</b><small>不创建 Notion 新行</small></li>
+        </ol>
         <div class="form-actions">
           <button id="home-open-learning" type="button">查看学习页</button>
           <details class="simple-extra-actions home-stage-more">
@@ -1239,6 +1269,6 @@
     </section>
   </main>
 
-  <script src="./app.js?v=20260623-simple-focus"></script>
+  <script src="./app.js?v=20260623-stage-guide"></script>
 </body>
 </html>

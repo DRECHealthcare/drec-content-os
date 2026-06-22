@@ -262,7 +262,7 @@ const requiredSnippets = [
   {
     name: "live smoke checks latest web cache",
     file: "smokeLive",
-    text: "20260623-simple-focus",
+    text: "20260623-stage-guide",
   },
   {
     name: "live smoke checks locked imports",
@@ -3267,7 +3267,7 @@ const requiredSnippets = [
   {
     name: "web cache bust safety strip",
     file: "webIndex",
-    text: "20260623-simple-focus",
+    text: "20260623-stage-guide",
   },
   {
     name: "web simple operator evidence block",
@@ -3562,12 +3562,12 @@ const requiredSnippets = [
   {
     name: "web home step locks stylesheet cache bust",
     file: "webIndex",
-    text: "styles.css?v=20260623-simple-focus",
+    text: "styles.css?v=20260623-stage-guide",
   },
   {
     name: "web home step locks script cache bust",
     file: "webIndex",
-    text: "app.js?v=20260623-simple-focus",
+    text: "app.js?v=20260623-stage-guide",
   },
   {
     name: "web monthly queue confirm locked",
@@ -6287,7 +6287,22 @@ const requiredSnippets = [
   {
     name: "web cache simple focus bust",
     file: "webIndex",
-    text: "20260623-simple-focus",
+    text: "20260623-stage-guide",
+  },
+  {
+    name: "web home stage guide markup",
+    file: "webIndex",
+    text: "home-stage-guide",
+  },
+  {
+    name: "web home stage guide copy",
+    file: "webIndex",
+    text: "检查通过才会亮",
+  },
+  {
+    name: "web home stage guide styles",
+    file: "styles",
+    text: ".home-stage-guide",
   },
   {
     name: "web home publishing handoff action",
