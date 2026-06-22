@@ -1262,6 +1262,11 @@ header span { color: var(--muted); font-size: 12px; }
   background: #FFF;
 }
 
+.home-handoff-item.blocked {
+  border-color: #FED7AA;
+  background: #FFF7ED;
+}
+
 .home-handoff-item strong,
 .home-handoff-item small {
   display: block;

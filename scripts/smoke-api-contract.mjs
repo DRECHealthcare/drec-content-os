@@ -6230,6 +6230,41 @@ const requiredSnippets = [
     text: "已选中这条内容。人工发布完成后，把真实 Meta Post ID 填进来",
   },
   {
+    name: "web home blocked media section",
+    file: "web",
+    text: "暂不能发布：先补媒体",
+  },
+  {
+    name: "web home blocked media copy action",
+    file: "web",
+    text: "data-home-copy-media-repair",
+  },
+  {
+    name: "web home blocked media workbench action",
+    file: "web",
+    text: "data-home-open-media-workbench",
+  },
+  {
+    name: "web home blocked media csv helper",
+    file: "web",
+    text: "homeMediaRepairCsvText",
+  },
+  {
+    name: "api blocked media repair context",
+    file: "main",
+    text: "def media_repair_context",
+  },
+  {
+    name: "api blocked media repair payload",
+    file: "main",
+    text: "\"media_repair\"",
+  },
+  {
+    name: "web home blocked handoff styles",
+    file: "styles",
+    text: ".home-handoff-item.blocked",
+  },
+  {
     name: "web home today safe pack action",
     file: "webIndex",
     text: "home-download-today-safe-pack",

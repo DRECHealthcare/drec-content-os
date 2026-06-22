@@ -6073,6 +6073,7 @@ function renderHomePublishingCloseout(data) {
   const readyItems = data.scheduled_ready || [];
   const recordableItems = data.scheduled_recordable || readyItems.filter(homeCanRecordPublished);
   const upcomingItems = data.scheduled_upcoming || readyItems.filter((item) => !homeCanRecordPublished(item));
+  const blockedItems = data.scheduled_blocked || [];
   const orderedReadyItems = [...recordableItems, ...upcomingItems];
   const select = document.getElementById("home-record-published-item");
   if (select) {
@@ -6241,10 +6242,66 @@ function renderHomePublishingCloseout(data) {
         `).join("")}
       </div>
     ` : ""}
+    ${blockedItems.length ? `
+      <div class="home-handoff-list">
+        <h4>暂不能发布：先补媒体</h4>
+        ${blockedItems.slice(0, 4).map((item, index) => {
+          const repair = item.media_repair || {};
+          const blockers = Array.isArray(item.handoff_blockers) ? item.handoff_blockers : [];
+          return `
+            <article class="home-handoff-item blocked">
+              <div>
+                <strong>${escapeHtml(index + 1)}. ${escapeHtml(item.channel || "post")} / ${escapeHtml(item.format || "content")}</strong>
+                <small>Queue ID: ${escapeHtml(item.id || "")}</small>
+                <small>Asset ID: ${escapeHtml(item.asset_id || "未知")}</small>
+                <small>需要补：${escapeHtml(repair.required_media || homeRequiredMediaText(item))}</small>
+                <code class="home-queue-id">${escapeHtml(blockers.join("; ") || "缺媒体，暂不能发布")}</code>
+              </div>
+              <p>把最终公开媒体 URL 补进媒体附件 CSV，先预览，再导入。导入成功后重新检查发布交接。</p>
+              <div class="home-handoff-actions">
+                <button type="button" data-home-copy-media-repair="${escapeHtml(item.id || "")}">复制媒体补充行</button>
+                <button class="secondary-action" type="button" data-home-open-media-workbench>打开月度工作台</button>
+              </div>
+            </article>
+          `;
+        }).join("")}
+      </div>
+    ` : ""}
   `;
   container.dataset.readyItems = JSON.stringify(orderedReadyItems);
+  container.dataset.blockedItems = JSON.stringify(blockedItems);
   updateHomeRecordPublishedButton();
   updateHomeMetricsSaveButton();
+}
+
+function homeRequiredMediaText(item) {
+  if (item.format === "reel") return "公开 MP4/MOV 视频链接";
+  if (item.format === "carousel") return "2 到 10 个公开图片链接";
+  if (["single", "story"].includes(item.format || "")) return "公开最终图片或视频链接";
+  return "公开最终媒体链接";
+}
+
+function csvCell(value) {
+  const text = String(value ?? "");
+  if (/[",\n]/.test(text)) return `"${text.replaceAll('"', '""')}"`;
+  return text;
+}
+
+function homeMediaRepairCsvText(item) {
+  const repair = item.media_repair || {};
+  const row = repair.csv_row || {
+    asset_id: item.asset_id || "",
+    new_media_urls: item.format === "reel" ? "PASTE_PUBLIC_MP4_OR_MOV_URL_HERE" : "PASTE_PUBLIC_MEDIA_URL_HERE",
+    visual_qa_status: "passed",
+    rights_note: "owned/licensed/approved for DREC use",
+    producer_name: "",
+    production_notes: `Media repair for scheduled queue item ${item.id || ""}. Replace placeholder URL(s) before import.`,
+  };
+  const columns = repair.csv_columns || ["asset_id", "new_media_urls", "visual_qa_status", "rights_note", "producer_name", "production_notes"];
+  return [
+    columns.join(","),
+    columns.map((column) => csvCell(row[column] || "")).join(","),
+  ].join("\n");
 }
 
 function homeMetricsPayload(item) {
@@ -7628,8 +7685,31 @@ document.getElementById("home-publish-closeout-status")?.addEventListener("click
   const fullButton = event.target.closest("[data-home-copy-handoff-full]");
   const captionButton = event.target.closest("[data-home-copy-handoff-caption]");
   const mediaButton = event.target.closest("[data-home-copy-handoff-media]");
-  if (!metricsButton && !recordButton && !fullButton && !captionButton && !mediaButton) return;
+  const mediaRepairButton = event.target.closest("[data-home-copy-media-repair]");
+  const openMediaWorkbenchButton = event.target.closest("[data-home-open-media-workbench]");
+  if (!metricsButton && !recordButton && !fullButton && !captionButton && !mediaButton && !mediaRepairButton && !openMediaWorkbenchButton) return;
   const message = document.getElementById("home-publish-closeout-message");
+  if (openMediaWorkbenchButton) {
+    showScreen("assets");
+    if (message) message.textContent = "已打开月度工作台。使用媒体附件 CSV：下载模板、填公开媒体 URL、先预览、再导入。";
+    return;
+  }
+  if (mediaRepairButton) {
+    const container = document.getElementById("home-publish-closeout-status");
+    const blockedItems = JSON.parse(container?.dataset.blockedItems || "[]");
+    const item = blockedItems.find((row) => row.id === mediaRepairButton.dataset.homeCopyMediaRepair);
+    if (!item) {
+      if (message) message.textContent = "找不到这条 blocked 项目，请刷新。";
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(homeMediaRepairCsvText(item));
+      if (message) message.textContent = "媒体补充 CSV 行已复制。把 placeholder 换成最终公开媒体 URL 后，去月度工作台预览并导入。";
+    } catch {
+      if (message) message.textContent = "浏览器挡住了复制。请打开月度工作台下载媒体附件 CSV。";
+    }
+    return;
+  }
   if (metricsButton) {
     const learningCard = document.getElementById("home-learning-handback-card");
     const select = document.getElementById("home-metrics-post");

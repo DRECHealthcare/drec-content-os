@@ -23856,6 +23856,38 @@ def visual_media_blockers(item: dict):
     return blockers
 
 
+def media_repair_context(item: dict):
+    fmt = item.get("format")
+    if fmt == "reel":
+        required_media = "Public MP4/MOV video URL"
+        placeholder = "PASTE_PUBLIC_MP4_OR_MOV_URL_HERE"
+    elif fmt == "carousel":
+        required_media = "2 to 10 public image URLs, one per line"
+        placeholder = "PASTE_PUBLIC_IMAGE_URL_1_HERE\nPASTE_PUBLIC_IMAGE_URL_2_HERE"
+    elif fmt in {"single", "story"}:
+        required_media = "Public final image or video URL"
+        placeholder = "PASTE_PUBLIC_IMAGE_OR_VIDEO_URL_HERE"
+    else:
+        required_media = "Public final media URL"
+        placeholder = "PASTE_PUBLIC_MEDIA_URL_HERE"
+    return {
+        "asset_id": item.get("asset_id"),
+        "queue_id": item.get("id"),
+        "required_media": required_media,
+        "new_media_urls_placeholder": placeholder,
+        "csv_columns": ["asset_id", "new_media_urls", "visual_qa_status", "rights_note", "producer_name", "production_notes"],
+        "csv_row": {
+            "asset_id": item.get("asset_id") or "",
+            "new_media_urls": placeholder,
+            "visual_qa_status": "passed",
+            "rights_note": "owned/licensed/approved for DREC use",
+            "producer_name": "",
+            "production_notes": f"Media repair for scheduled queue item {item.get('id') or ''}. Replace placeholder URL(s) before import.",
+        },
+        "next_step": "Replace placeholder URL(s), preview the media attachment CSV, then import only after visual QA and rights are confirmed.",
+    }
+
+
 async def pre_schedule_gate_payload():
     queue_items = await fetch_publish_queue_items(200)
     production = await post_approval_production_payload()
@@ -26466,6 +26498,7 @@ async def publishing_closeout_payload(limit: int = 50):
                 "metric_window": "7d",
             }
             if handoff_blockers:
+                enriched["media_repair"] = media_repair_context(enriched)
                 scheduled_blocked.append(enriched)
             else:
                 scheduled_ready.append(enriched)
@@ -26698,11 +26731,15 @@ async def operations_publishing_closeout_zh(_: None = Depends(require_access_tok
     if blocked:
         lines.extend(["## 已排程但暂不能发布", ""])
         for item in blocked:
+            repair = item.get("media_repair") or media_repair_context(item)
             lines.extend(
                 [
                     f"### {item.get('channel')} / {item.get('format')} · {item.get('id')}",
                     f"- 计划时间：{item.get('planned_slot') or '尚未设置'}",
                     f"- 阻碍：{'; '.join([zh_handoff_blocker(blocker) for blocker in item.get('handoff_blockers') or []])}",
+                    f"- Asset ID：{item.get('asset_id') or '未知'}",
+                    f"- 需要补的媒体：{repair.get('required_media')}",
+                    "- 修复方式：把最终公开媒体 URL 填进媒体附件 CSV，先预览，再导入；导入后重新检查发布交接。",
                     "",
                 ]
             )
