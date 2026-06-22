@@ -3469,7 +3469,17 @@ const requiredSnippets = [
   {
     name: "monthly doctor import rules zip inclusion",
     file: "main",
-    text: "06-import-validation-rules.zh.md",
+    text: "07-import-validation-rules.zh.md",
+  },
+  {
+    name: "monthly doctor legacy import rules zip inclusion",
+    file: "main",
+    text: "legacy/06-import-validation-rules.zh.md",
+  },
+  {
+    name: "monthly doctor handoff canonical sequence note",
+    file: "main",
+    text: "正常交接请使用根目录 00-07 文件",
   },
   {
     name: "monthly doctor import rules safety",
@@ -3495,6 +3505,31 @@ const requiredSnippets = [
     name: "monthly carousel doctor evidence sheet zip inclusion",
     file: "main",
     text: "04-doctor-evidence-sheet.csv",
+  },
+  {
+    name: "monthly carousel doctor decision worksheet canonical zip inclusion",
+    file: "main",
+    text: "05-doctor-decision-worksheet.csv",
+  },
+  {
+    name: "monthly carousel doctor legacy worksheet zip inclusion",
+    file: "main",
+    text: "legacy/04-doctor-decision-worksheet.csv",
+  },
+  {
+    name: "monthly carousel doctor no root legacy worksheet",
+    file: "main",
+    absentText: 'archive.writestr("04-doctor-decision-worksheet.csv"',
+  },
+  {
+    name: "monthly carousel doctor png links canonical zip inclusion",
+    file: "main",
+    text: "06-png-review-links.csv",
+  },
+  {
+    name: "monthly carousel doctor no root legacy png links",
+    file: "main",
+    absentText: 'archive.writestr("05-png-review-links.csv"',
   },
   {
     name: "monthly carousel doctor evidence sheet route",

@@ -11156,6 +11156,7 @@ async def operations_monthly_carousel_doctor_handoff_pack_zip(_: None = Depends(
                     "6. 旧版兼容表是 `05-doctor-decision-worksheet.csv`；若要 approve，`reviewer_name`、`review_notes` 和五个 `doctor_check_*` 栏位都必须填写 yes/pass。",
                     "7. 图片素材下载链接在 `06-png-review-links.csv`；完整图片 ZIP 仍由系统端点 `/operations/monthly-carousel-png-assets.zip` 下载。",
                     "8. 导入前规则在 `07-import-validation-rules.zh.md`；不符合规则的 approve/clear 会被 dry-run 和 import 跳过。",
+                    "9. `legacy/` 文件夹只保留旧编号兼容副本；正常交接请使用根目录 00-07 文件。",
                     "",
                     "只有医生明确写 `Decision: approve` 且 `Safety: clear`，才可以进入后续导入和制作步骤。",
                     "导入时系统仍会检查 evidence，不会因为 CSV 误填 approve 就绕过医生审核门槛。",
@@ -11237,7 +11238,7 @@ async def operations_monthly_carousel_doctor_handoff_pack_zip(_: None = Depends(
         )
         archive.writestr("04-doctor-evidence-sheet.csv", monthly_carousel_doctor_evidence_sheet_csv_text(review_payload))
         archive.writestr("05-doctor-decision-worksheet.csv", monthly_carousel_doctor_decision_worksheet_csv_text(review_payload))
-        archive.writestr("04-doctor-decision-worksheet.csv", monthly_carousel_doctor_decision_worksheet_csv_text(review_payload))
+        archive.writestr("legacy/04-doctor-decision-worksheet.csv", monthly_carousel_doctor_decision_worksheet_csv_text(review_payload))
         output = StringIO()
         writer = csv.DictWriter(
             output,
@@ -11257,9 +11258,9 @@ async def operations_monthly_carousel_doctor_handoff_pack_zip(_: None = Depends(
                 }
             )
         archive.writestr("06-png-review-links.csv", output.getvalue())
-        archive.writestr("05-png-review-links.csv", output.getvalue())
+        archive.writestr("legacy/05-png-review-links.csv", output.getvalue())
         archive.writestr("07-import-validation-rules.zh.md", monthly_doctor_import_rules_markdown())
-        archive.writestr("06-import-validation-rules.zh.md", monthly_doctor_import_rules_markdown())
+        archive.writestr("legacy/06-import-validation-rules.zh.md", monthly_doctor_import_rules_markdown())
     buffer.seek(0)
     return Response(
         buffer.getvalue(),
