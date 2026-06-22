@@ -735,6 +735,11 @@ const requiredSnippets = [
     text: "latest_scheduler_heartbeat",
   },
   {
+    name: "scheduler heartbeat source-neutral copy",
+    file: "main",
+    text: "Dry-run scheduler heartbeat recorded",
+  },
+  {
     name: "scheduler heartbeat six hour threshold",
     file: "main",
     text: "SCHEDULER_HEARTBEAT_RECENT_MINUTES = 6 * 60",

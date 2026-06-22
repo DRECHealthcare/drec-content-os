@@ -608,7 +608,7 @@ async def latest_scheduler_heartbeat():
             "status": "missing",
             "last_seen_at": None,
             "age_minutes": None,
-            "detail": "No GitHub scheduler heartbeat has been recorded yet.",
+            "detail": "No dry-run scheduler heartbeat has been recorded yet.",
         }
     created_at = parse_datetime(row.get("created_at"))
     age_minutes = None
@@ -620,9 +620,9 @@ async def latest_scheduler_heartbeat():
         "last_seen_at": row.get("created_at"),
         "age_minutes": age_minutes,
         "detail": (
-            f"GitHub scheduler heartbeat recorded {age_minutes} minute(s) ago."
+            f"Dry-run scheduler heartbeat recorded {age_minutes} minute(s) ago."
             if age_minutes is not None
-            else "GitHub scheduler heartbeat exists but its timestamp could not be parsed."
+            else "Dry-run scheduler heartbeat exists but its timestamp could not be parsed."
         ),
         "item": row,
     }
