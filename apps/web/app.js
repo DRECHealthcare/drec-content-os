@@ -8320,6 +8320,59 @@ function clearHomeMetricInputs() {
   updateHomeMetricsSaveButton();
 }
 
+function selectedHomeMetricPost() {
+  const selected = document.getElementById("home-metrics-post")?.value || "";
+  if (!selected) return null;
+  try {
+    return JSON.parse(decodeURIComponent(selected));
+  } catch {
+    return null;
+  }
+}
+
+function homeMetricsTemplateCsvText(post) {
+  const columns = [
+    "row_type",
+    "source",
+    "external_post_id",
+    "captured_at",
+    "reach",
+    "likes",
+    "comments",
+    "saves",
+    "shares",
+    "leads",
+    "spend",
+    "channel",
+    "format",
+    "funnel_stage",
+    "metric_window",
+    "notes",
+  ];
+  const row = {
+    row_type: "fill_after_publish",
+    source: post.source || post.channel || "manual",
+    external_post_id: post.external_post_id || "",
+    captured_at: new Date().toISOString(),
+    reach: homeMetricNumber("home-metrics-reach") || 0,
+    likes: homeMetricNumber("home-metrics-likes") || 0,
+    comments: homeMetricNumber("home-metrics-comments") || 0,
+    saves: homeMetricNumber("home-metrics-saves") || 0,
+    shares: homeMetricNumber("home-metrics-shares") || 0,
+    leads: homeMetricNumber("home-metrics-leads") || 0,
+    spend: homeMetricNumber("home-metrics-spend") || 0,
+    channel: post.channel || "manual",
+    format: post.format || "carousel",
+    funnel_stage: "TOFU",
+    metric_window: "7d",
+    notes: "Fill real 7-day metrics, preview CSV, then import with rollup enabled. This records learning only and does not publish.",
+  };
+  return [
+    columns.join(","),
+    columns.map((column) => csvCell(row[column] || "")).join(","),
+  ].join("\n");
+}
+
 function renderHomeLearningNextAction(message) {
   if (!message) return;
   message.innerHTML = `
@@ -8333,15 +8386,12 @@ function renderHomeLearningNextAction(message) {
 
 document.getElementById("home-save-rollup-metrics")?.addEventListener("click", async (event) => {
   const message = document.getElementById("home-learning-handback-message");
-  const selected = document.getElementById("home-metrics-post")?.value || "";
-  if (!selected) {
+  if (!document.getElementById("home-metrics-post")?.value) {
     if (message) message.textContent = "请选择已经发布、等待录数据的帖子。";
     return;
   }
-  let post;
-  try {
-    post = JSON.parse(decodeURIComponent(selected));
-  } catch {
+  const post = selectedHomeMetricPost();
+  if (!post) {
     if (message) message.textContent = "无法读取所选帖子，请刷新首页后再试。";
     return;
   }
@@ -8402,6 +8452,25 @@ document.getElementById("home-save-rollup-metrics")?.addEventListener("click", a
 document.getElementById("home-metrics-post")?.addEventListener("change", updateHomeMetricsSaveButton);
 homeMetricInputIds.forEach((id) => document.getElementById(id)?.addEventListener("input", updateHomeMetricsSaveButton));
 updateHomeMetricsSaveButton();
+
+document.getElementById("home-copy-metrics-template")?.addEventListener("click", async () => {
+  const message = document.getElementById("home-learning-handback-message");
+  const post = selectedHomeMetricPost();
+  if (!post) {
+    if (message) message.textContent = "请先选择等待录数据的帖子。";
+    return;
+  }
+  if (!post.external_post_id) {
+    if (message) message.textContent = "这个帖子缺少 Post ID，请先在发布交接卡记录。";
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(homeMetricsTemplateCsvText(post));
+    if (message) message.textContent = "数据 CSV 模板已复制。填真实 7 天数据后可预览导入；不会发布。";
+  } catch {
+    if (message) message.textContent = "浏览器挡住了复制。请下载“数据记录表”填写。";
+  }
+});
 
 document.getElementById("home-learning-handback-card")?.addEventListener("click", async (event) => {
   const planButton = event.target.closest("[data-home-after-metrics-plan]");

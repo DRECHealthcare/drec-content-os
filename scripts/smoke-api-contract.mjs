@@ -6661,6 +6661,21 @@ const requiredSnippets = [
     text: 'id="home-save-rollup-metrics" class="danger-safe-action" type="button" disabled',
   },
   {
+    name: "web home metrics copy template action",
+    file: "webIndex",
+    text: "home-copy-metrics-template",
+  },
+  {
+    name: "web home metrics copy template helper",
+    file: "web",
+    text: "homeMetricsTemplateCsvText",
+  },
+  {
+    name: "web home metrics selected post helper",
+    file: "web",
+    text: "selectedHomeMetricPost",
+  },
+  {
     name: "web home metrics save lock helper",
     file: "web",
     text: "updateHomeMetricsSaveButton",
