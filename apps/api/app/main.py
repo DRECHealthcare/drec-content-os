@@ -25830,8 +25830,9 @@ def today_safe_operator_pack_readme(payload: dict):
         "9. `09-service-role-install-pack.md`：解除 93% 卡点的 Supabase service-role 安装步骤。",
         "10. `10-project-completion-audit.json`：当前完成度、扣分项和证据。",
         "11. `11-project-unblock-board.json`：从 93% 继续往完成走的真实证据清单。",
+        "12. `12-monthly-learning-handback-pack.zip`：月度数据复盘、metrics 模板和下月候选主题回流包。",
         "",
-        "旧编号兼容文件只放在 `legacy/`；正常操作只看根目录 `01` 到 `11`。",
+        "旧编号兼容文件只放在 `legacy/`；正常操作只看根目录 `01` 到 `12`。",
         "",
         "## 下一步",
         "",
@@ -25851,6 +25852,7 @@ def today_safe_operator_pack_readme(payload: dict):
 @app.get("/operations/today-safe-operator-pack.zip")
 async def operations_today_safe_operator_pack_zip(_: None = Depends(require_access_token)):
     payload = await today_safe_operator_pack_payload()
+    monthly_learning_handback = await operations_monthly_carousel_learning_handback_pack_zip()
     buffer = BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
         archive.writestr("README.zh.md", today_safe_operator_pack_readme(payload))
@@ -25869,6 +25871,7 @@ async def operations_today_safe_operator_pack_zip(_: None = Depends(require_acce
         archive.writestr("09-service-role-install-pack.md", service_role_install_pack_markdown(payload.get("security") or {}))
         archive.writestr("10-project-completion-audit.json", json.dumps(payload.get("project_completion") or {}, ensure_ascii=False, indent=2, default=str))
         archive.writestr("11-project-unblock-board.json", json.dumps(payload.get("project_unblock") or {}, ensure_ascii=False, indent=2, default=str))
+        archive.writestr("12-monthly-learning-handback-pack.zip", monthly_learning_handback.body)
         archive.writestr("legacy/08-service-role-install-pack.md", service_role_install_pack_markdown(payload.get("security") or {}))
         archive.writestr("legacy/09-project-completion-audit.json", json.dumps(payload.get("project_completion") or {}, ensure_ascii=False, indent=2, default=str))
         archive.writestr("legacy/10-project-unblock-board.json", json.dumps(payload.get("project_unblock") or {}, ensure_ascii=False, indent=2, default=str))

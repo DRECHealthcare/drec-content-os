@@ -4912,6 +4912,16 @@ const requiredSnippets = [
     text: "11-project-unblock-board.json",
   },
   {
+    name: "today safe pack includes learning handback zip",
+    file: "main",
+    text: "12-monthly-learning-handback-pack.zip",
+  },
+  {
+    name: "today safe pack root file count note",
+    file: "main",
+    text: "根目录 `01` 到 `12`",
+  },
+  {
     name: "today safe pack legacy folder note",
     file: "main",
     text: "旧编号兼容文件只放在 `legacy/`",
