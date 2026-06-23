@@ -22101,6 +22101,15 @@ async def creative_carousel_design_spec(_: None = Depends(require_access_token))
     }
 
 
+@app.get("/creative/carousel-design-qa.zh.md")
+async def creative_carousel_design_qa(_: None = Depends(require_access_token)):
+    return Response(
+        dr_chang_carousel_design_qa_markdown(),
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="dr-chang-carousel-design-qa.zh.md"'},
+    )
+
+
 @app.get("/creative/style-guide.md")
 async def creative_style_guide(_: None = Depends(require_access_token)):
     generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
@@ -22137,6 +22146,7 @@ async def creative_style_guide(_: None = Depends(require_access_token)):
             "",
         ]
     )
+    lines.extend([dr_chang_carousel_design_qa_markdown(), ""])
     for style in library.get("styles", []):
         signal = style.get("learning_signal") or {}
         lines.extend(
@@ -22336,6 +22346,7 @@ async def template_static_render_pack(_: None = Depends(require_access_token)):
             "",
         ]
     )
+    lines.extend([dr_chang_carousel_design_qa_markdown(), ""])
     for template in payload.get("templates") or []:
         lines.extend(
             [
@@ -26992,6 +27003,68 @@ def blocked_media_repair_import_rules(items: list[dict]):
     )
 
 
+def dr_chang_carousel_design_qa_markdown():
+    spec = DR_CHANG_CAROUSEL_DESIGN_SPEC
+    colors = spec.get("colors") or {}
+    return "\n".join(
+        [
+            "# 医生 Chang 轮播设计与 QA 清单",
+            "",
+            "用途：给 AI 图片、设计师、运营审核同一套标准。这个清单只指导制作和检查，不会批准、排程或发布内容。",
+            "",
+            "## 必用品牌素材",
+            "",
+            "- Logo：`/ui/assets/brand/drec-healthcare-academy-logo.jpeg`",
+            "- 医生照 cover presenting：`/ui/assets/brand/dr-eason-presenting.png`",
+            "- 医生照 cover standing：`/ui/assets/brand/dr-eason-standing.png`",
+            "- 医生照 pointing：`/ui/assets/brand/dr-eason-pointing.jpeg`",
+            "- 不要让 AI 重新画 logo；logo 以原文件为准。",
+            "- 医生真人照只用于封面或明确需要医生引导的位置；内容页不要每页放大真人。",
+            "",
+            "## 画面规格",
+            "",
+            f"- 每一页独立输出 `{spec.get('canvas')}`，不要把多页拼成一张图。",
+            f"- 深绿 `{colors.get('deep_green')}`：封面、收尾、主标题。",
+            f"- 米白 `{colors.get('warm_off_white')}`：内容页正文文字板。",
+            f"- 深红 `{colors.get('deep_red')}`：关键医学词或风险提示，不要大面积使用。",
+            f"- 亮金 `{colors.get('bright_gold')}`：少量重点强调。",
+            "- 每页左上放 logo，右上放 X/N 页码，底部保留小字 `医生 Chang`。",
+            "",
+            "## Slide 结构",
+            "",
+            "- Slide 1：只放 Big Title/Hook 和视觉元素；不要放解释正文。",
+            "- Slide 1 可用医生照，标题要大、白色为主，关键词可用亮金。",
+            "- Slide 2 以后：Big Title、Explanation Text、Highlighted Keywords、Visual Element、Bottom Takeaway/Teaser 都要保留。",
+            "- 内容页上半部放支持理解的小图、报告、曲线、仪表或场景；下半部用米白文字板承载解释。",
+            "- 视觉元素是辅助，不要取代文字解释。",
+            "",
+            "## 中文可读性",
+            "",
+            "- 50 岁左右手机用户要看得清：正文宁可少一点，也不要小到读不清。",
+            "- 标题、正文、底部 takeaway 要形成一个顺畅阅读区，不要分散在画面四角。",
+            "- 不使用中文角引号 `「」`，不使用长破折号 `——`。",
+            "- 避免密密麻麻表格；复杂医学细节放到 caption。",
+            "",
+            "## 医学与品牌安全",
+            "",
+            "- 不写保证逆转、奇迹疗效、一定有效、停药指令或直接卖课话术。",
+            "- 不用恐吓画面、并发症伤口、针头、截肢、夸张 before/after。",
+            "- 用温和医学表达：可能、风险、讯号、建议检查、可以和医生讨论。",
+            "- 发布前仍需人工确认医学意思、中文错字、画面版权和平台适配。",
+            "",
+            "## 通过标准",
+            "",
+            "- Slide 1 没有解释正文。",
+            "- Slides 2+ 有完整解释，不是口号图。",
+            "- Logo、页码、医生 Chang 标识一致。",
+            "- 医生照使用自然，不遮挡标题和正文。",
+            "- 手机预览可读，无文字裁切、遮挡或错字。",
+            "- 权益来源清楚后，才能把 `visual_qa_status` 标为 `passed`。",
+            "",
+        ]
+    )
+
+
 def reel_script_lines_from_caption(caption: str | None):
     text = (caption or "").strip()
     if not text:
@@ -27320,6 +27393,7 @@ async def operations_blocked_media_repair_pack_zip(_: None = Depends(require_acc
                     "- `media-repair.csv`：可粘贴最终公开媒体 URL 的导入模板。",
                     "- `import-rules.zh.md`：导入和安全规则。",
                     "- `dr-chang-carousel-design-spec.json`：医生 Chang carousel 设计规范。",
+                    "- `carousel-design-qa.zh.md`：使用 DREC logo 和医生照片的中文设计/QA 清单。",
                     "- `producer-briefs/`：每个缺媒体项目的一份制作需求。",
                     "",
                     "## 安全边界",
@@ -27333,6 +27407,7 @@ async def operations_blocked_media_repair_pack_zip(_: None = Depends(require_acc
         )
         archive.writestr("media-repair.csv", blocked_media_repair_csv(items))
         archive.writestr("import-rules.zh.md", blocked_media_repair_import_rules(items))
+        archive.writestr("carousel-design-qa.zh.md", dr_chang_carousel_design_qa_markdown())
         archive.writestr(
             "dr-chang-carousel-design-spec.json",
             json.dumps(

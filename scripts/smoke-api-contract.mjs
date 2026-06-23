@@ -7520,6 +7520,26 @@ const requiredSnippets = [
     text: "这个包只用于补媒体；不会发布到 Facebook / Instagram。",
   },
   {
+    name: "carousel design qa route",
+    file: "main",
+    text: "/creative/carousel-design-qa.zh.md",
+  },
+  {
+    name: "carousel design qa pack file",
+    file: "main",
+    text: "carousel-design-qa.zh.md",
+  },
+  {
+    name: "carousel design qa uses supplied logo",
+    file: "main",
+    text: "不要让 AI 重新画 logo",
+  },
+  {
+    name: "carousel design qa cover doctor only",
+    file: "main",
+    text: "医生真人照只用于封面",
+  },
+  {
     name: "blocked media repair csv defaults pending",
     file: "main",
     text: "\"visual_qa_status\": \"pending\"",
