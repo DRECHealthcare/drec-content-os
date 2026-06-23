@@ -176,6 +176,7 @@ const requiredRoutes = [
   "GET /operations/metrics-closeout-pack.zh.md",
   "GET /operations/publishing-closeout",
   "GET /operations/publishing-closeout.zh.md",
+  "GET /operations/blocked-reel-production-pack.zip",
   "GET /operations/blocked-media-repair-pack.zip",
   "GET /operations/weekly-cycle-pack.md",
   "GET /operations/weekly-cycle-pack.zh.md",
@@ -7441,6 +7442,21 @@ const requiredSnippets = [
     name: "blocked media repair pack route",
     file: "main",
     text: "/operations/blocked-media-repair-pack.zip",
+  },
+  {
+    name: "blocked reel production pack route",
+    file: "main",
+    text: "/operations/blocked-reel-production-pack.zip",
+  },
+  {
+    name: "blocked reel production pack storyboard",
+    file: "main",
+    text: "storyboard/frame-",
+  },
+  {
+    name: "home blocked reel production pack button",
+    file: "web",
+    text: "data-home-download-reel-production-pack",
   },
   {
     name: "blocked media repair pack safety",

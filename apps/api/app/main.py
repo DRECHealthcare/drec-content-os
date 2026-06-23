@@ -26976,6 +26976,193 @@ def blocked_media_repair_import_rules(items: list[dict]):
     )
 
 
+def reel_script_lines_from_caption(caption: str | None):
+    text = (caption or "").strip()
+    if not text:
+        return [
+            "Hook：为什么改善代谢要先看习惯和数据，而不是奇迹。",
+            "代谢状态通常要看趋势，不是只看一次数字。",
+            "把血糖、腰围、HbA1c 和饭后反应放在一起理解。",
+            "如果数字长期异常，带着记录和医生讨论。",
+            "这不是诊断或个人治疗建议。",
+        ]
+    lines = []
+    for raw_line in text.splitlines():
+        clean = dr_chang_slide_text(raw_line)
+        if clean:
+            lines.append(clean)
+    if len(lines) <= 1:
+        lines = [item.strip() for item in re.split(r"[。！？!?]\s*", text) if item.strip()]
+    return [line for line in lines if line][:8]
+
+
+def srt_timestamp(seconds: int):
+    minutes, sec = divmod(max(0, int(seconds)), 60)
+    hours, minutes = divmod(minutes, 60)
+    return f"{hours:02d}:{minutes:02d}:{sec:02d},000"
+
+
+def reel_srt_from_lines(lines: list[str], seconds_per_line: int = 5):
+    chunks = []
+    for index, line in enumerate(lines, start=1):
+        start = (index - 1) * seconds_per_line
+        end = start + seconds_per_line
+        chunks.extend(
+            [
+                str(index),
+                f"{srt_timestamp(start)} --> {srt_timestamp(end)}",
+                line,
+                "",
+            ]
+        )
+    return "\n".join(chunks)
+
+
+def reel_storyboard_frame_png(item: dict, line: str, index: int, total: int):
+    deep_green = "#0A463F"
+    off_white = "#FBF7EF"
+    deep_red = "#C0392B"
+    gold = "#F5C518"
+    slate = "#1D2935"
+    image = Image.new("RGB", (1080, 1920), deep_green)
+    draw = ImageDraw.Draw(image)
+    draw.ellipse((690, 120, 1210, 640), fill="#155F55")
+    draw.ellipse((-240, 1450, 420, 2110), fill="#123E38")
+    draw.arc((92, 1260, 520, 1690), 195, 348, fill=gold, width=18)
+    draw_dr_chang_logo(draw, image)
+    draw.text((870, 80), f"{index}/{total}", font=first_publish_font(34, bold=True), fill=off_white)
+    paste_image_contain(image, DR_CHANG_DOCTOR_PRESENTING_PATH if index == 1 else DR_CHANG_DOCTOR_STANDING_PATH, (620, 250, 1045, 1120), opacity=0.95)
+    draw.rounded_rectangle((70, 970, 1010, 1605), radius=36, fill=off_white)
+    draw.rectangle((104, 1034, 120, 1510), fill=gold)
+    heading = "Reel Hook" if index == 1 else "Key Beat"
+    draw.text((150, 1040), heading, font=first_publish_font(42, bold=True), fill=deep_red if index == 1 else deep_green)
+    y = 1140
+    for text_line in wrap_draw_text(draw, line, first_publish_font(50, bold=True), 780, 5):
+        draw.text((150, y), text_line, font=first_publish_font(50, bold=True), fill=deep_green)
+        y += 70
+    draw.rounded_rectangle((120, 1528, 960, 1610), radius=18, fill="white")
+    draw.text((150, 1552), "字幕大、语气稳、不要承诺疗效", font=first_publish_font(28, bold=True), fill=slate)
+    draw.text((86, 1770), "医生 Chang", font=first_publish_font(34, bold=True), fill=off_white)
+    draw.text((86, 1825), "一般健康教育，不代替个人诊断或治疗建议。", font=first_publish_font(24), fill="#DDEBE6")
+    output = BytesIO()
+    image.save(output, format="PNG", optimize=True)
+    return output.getvalue()
+
+
+def reel_production_brief(item: dict):
+    lines = reel_script_lines_from_caption(item.get("caption"))
+    return "\n".join(
+        [
+            "# DREC Reel 制作包",
+            "",
+            f"Queue ID: {item.get('id') or ''}",
+            f"Asset ID: {item.get('asset_id') or ''}",
+            f"平台 / 格式: {item.get('channel') or ''} / {item.get('format') or ''}",
+            f"计划发布时间: {item.get('planned_slot_myt') or item.get('planned_slot') or '未设置'}",
+            "",
+            "## 目标",
+            "",
+            "制作一个公开 MP4/MOV/M4V 视频 URL，用于补媒体证据。制作完成后仍需人工 visual QA 和 rights note；系统不会自动发布。",
+            "",
+            "## 推荐结构",
+            "",
+            "1. 0-3 秒：Hook，大字字幕。",
+            "2. 3-15 秒：解释为什么看趋势。",
+            "3. 15-30 秒：列出要观察的数据。",
+            "4. 30-40 秒：复诊讨论提醒。",
+            "5. 40-45 秒：健康教育免责声明。",
+            "",
+            "## 旁白 / 字幕",
+            "",
+            *[f"{index}. {line}" for index, line in enumerate(lines, start=1)],
+            "",
+            "## 视觉规则",
+            "",
+            "- 竖版 1080x1920。",
+            "- 使用医生 Chang 深绿/米白/红/金品牌风格。",
+            "- 可以使用包内医生照和 logo。",
+            "- 字幕必须大，50 岁左右观众看得清。",
+            "- 不要用恐吓画面、药物指令、保证逆转或直接卖课语言。",
+            "",
+            "## 交付",
+            "",
+            "- 最终公开视频 URL：MP4/MOV/M4V。",
+            "- rights_note：owned/licensed/approved for DREC use。",
+            "- visual_qa_status：人工确认后才填 passed。",
+            "",
+        ]
+    )
+
+
+@app.get("/operations/blocked-reel-production-pack.zip")
+async def operations_blocked_reel_production_pack_zip(_: None = Depends(require_access_token)):
+    closeout = await publishing_closeout_payload(100)
+    items = [
+        item
+        for item in closeout.get("scheduled_blocked") or []
+        if item.get("format") == "reel"
+    ]
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr(
+            "README.zh.md",
+            "\n".join(
+                [
+                    "# DREC Reel 制作交接包",
+                    "",
+                    f"生成时间：{datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}",
+                    f"需要制作 Reel 数量：{len(items)}",
+                    "",
+                    "这个 ZIP 用于把缺 MP4/MOV 的 Reel 交给制作人员。",
+                    "它不会发布、不会排程、不会调用 Meta，也不会把 visual QA 自动标成 passed。",
+                    "",
+                    "## 文件",
+                    "",
+                    "- `reels/*/production-brief.zh.md`：每条 Reel 的制作需求。",
+                    "- `reels/*/captions.srt`：可导入剪辑软件的字幕草稿。",
+                    "- `reels/*/voiceover.txt`：旁白草稿。",
+                    "- `reels/*/storyboard/*.png`：竖版 storyboard 参考图。",
+                    "- `brand-assets/`：DREC logo 和医生照片。",
+                    "",
+                    "## 完成后",
+                    "",
+                    "把最终公开 MP4/MOV/M4V URL 粘贴回首页补媒体区，先检查，再保存媒体证据。",
+                    "",
+                ]
+            ),
+        )
+        if DR_CHANG_LOGO_PATH.exists():
+            archive.write(DR_CHANG_LOGO_PATH, "brand-assets/drec-healthcare-academy-logo.jpeg")
+        if DR_CHANG_DOCTOR_PRESENTING_PATH.exists():
+            archive.write(DR_CHANG_DOCTOR_PRESENTING_PATH, "brand-assets/dr-eason-presenting.png")
+        if DR_CHANG_DOCTOR_STANDING_PATH.exists():
+            archive.write(DR_CHANG_DOCTOR_STANDING_PATH, "brand-assets/dr-eason-standing.png")
+        if DR_CHANG_DOCTOR_POINTING_PATH.exists():
+            archive.write(DR_CHANG_DOCTOR_POINTING_PATH, "brand-assets/dr-eason-pointing.jpeg")
+        for index, item in enumerate(items, start=1):
+            queue_id = str(item.get("id") or f"reel-{index}")
+            folder = f"reels/{index:02d}-{queue_id}"
+            lines = reel_script_lines_from_caption(item.get("caption"))
+            archive.writestr(f"{folder}/production-brief.zh.md", reel_production_brief(item))
+            archive.writestr(f"{folder}/voiceover.txt", "\n".join(lines))
+            archive.writestr(f"{folder}/captions.srt", reel_srt_from_lines(lines))
+            archive.writestr(
+                f"{folder}/media-repair-row.csv",
+                blocked_media_repair_csv([item]),
+            )
+            for beat_index, line in enumerate(lines[:6], start=1):
+                archive.writestr(
+                    f"{folder}/storyboard/frame-{beat_index:02d}.png",
+                    reel_storyboard_frame_png(item, line, beat_index, min(len(lines), 6)),
+                )
+    buffer.seek(0)
+    return Response(
+        buffer.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": 'attachment; filename="drec-blocked-reel-production-pack.zip"'},
+    )
+
+
 @app.get("/operations/blocked-media-repair-pack.zip")
 async def operations_blocked_media_repair_pack_zip(_: None = Depends(require_access_token)):
     closeout = await publishing_closeout_payload(100)

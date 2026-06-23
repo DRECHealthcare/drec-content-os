@@ -1730,6 +1730,23 @@ const checks = [
     },
   },
   {
+    name: "Blocked reel production pack",
+    url: `${apiBase}/operations/blocked-reel-production-pack.zip`,
+    auth: true,
+    validate: async (res) => {
+      const buffer = Buffer.from(await res.arrayBuffer());
+      const text = buffer.toString("latin1");
+      return buffer.length > 500
+        && buffer[0] === 0x50
+        && buffer[1] === 0x4b
+        && text.includes("README.zh.md")
+        && text.includes("captions.srt")
+        && text.includes("storyboard/frame-")
+        && text.includes("brand-assets/dr-eason-presenting.png")
+        && text.includes("brand-assets/dr-eason-pointing.jpeg");
+    },
+  },
+  {
     name: "Video studio readiness",
     url: `${apiBase}/video/studio-readiness`,
     auth: true,

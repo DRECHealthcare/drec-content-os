@@ -6152,6 +6152,7 @@ function renderHomePublishingCloseout(data) {
             <button class="secondary-action" type="button" data-home-import-media-repair="${escapeHtml(firstBlockedMedia.id || "")}" disabled>2. 保存媒体证据</button>
           </div>
           <button class="quiet-action" type="button" data-home-copy-media-brief="${escapeHtml(firstBlockedMedia.id || "")}">复制制作需求</button>
+          ${firstBlockedMedia.format === "reel" ? '<button class="quiet-action" type="button" data-home-download-reel-production-pack>下载 Reel 制作包</button>' : ""}
           <button class="quiet-action" type="button" data-home-download-media-repair-pack>下载补媒体包</button>
           <button class="quiet-action" type="button" data-home-copy-media-repair="${escapeHtml(firstBlockedMedia.id || "")}">复制 CSV 行</button>
         </div>
@@ -6301,6 +6302,7 @@ function renderHomePublishingCloseout(data) {
               <p>把最终公开媒体 URL 补进媒体附件 CSV，先预览，再导入。导入成功后重新检查发布交接。</p>
               <div class="home-handoff-actions">
                 <button type="button" data-home-copy-media-repair="${escapeHtml(item.id || "")}">复制媒体补充行</button>
+                ${item.format === "reel" ? '<button type="button" data-home-download-reel-production-pack>下载 Reel 制作包</button>' : ""}
                 <button type="button" data-home-download-media-repair-pack>下载补媒体包</button>
                 <button class="secondary-action" type="button" data-home-open-media-workbench>打开月度工作台</button>
               </div>
@@ -7868,10 +7870,20 @@ document.getElementById("home-publish-closeout-status")?.addEventListener("click
   const mediaBriefButton = event.target.closest("[data-home-copy-media-brief]");
   const previewMediaRepairButton = event.target.closest("[data-home-preview-media-repair]");
   const importMediaRepairButton = event.target.closest("[data-home-import-media-repair]");
+  const downloadReelProductionPackButton = event.target.closest("[data-home-download-reel-production-pack]");
   const downloadMediaRepairPackButton = event.target.closest("[data-home-download-media-repair-pack]");
   const openMediaWorkbenchButton = event.target.closest("[data-home-open-media-workbench]");
-  if (!metricsButton && !recordButton && !fullButton && !captionButton && !mediaButton && !mediaRepairButton && !mediaBriefButton && !previewMediaRepairButton && !importMediaRepairButton && !downloadMediaRepairPackButton && !openMediaWorkbenchButton) return;
+  if (!metricsButton && !recordButton && !fullButton && !captionButton && !mediaButton && !mediaRepairButton && !mediaBriefButton && !previewMediaRepairButton && !importMediaRepairButton && !downloadReelProductionPackButton && !downloadMediaRepairPackButton && !openMediaWorkbenchButton) return;
   const message = document.getElementById("home-publish-closeout-message");
+  if (downloadReelProductionPackButton) {
+    try {
+      await downloadProtectedFile("/operations/blocked-reel-production-pack.zip", "drec-blocked-reel-production-pack.zip", "application/zip");
+      if (message) message.textContent = "Reel 制作包已下载。里面有旁白、SRT 字幕、storyboard PNG、品牌素材；不会发布。";
+    } catch (error) {
+      if (message) message.textContent = error.message === "Access token required" ? "请先设置访问码。" : "无法下载 Reel 制作包。";
+    }
+    return;
+  }
   if (downloadMediaRepairPackButton) {
     try {
       await downloadProtectedFile("/operations/blocked-media-repair-pack.zip", "drec-blocked-media-repair-pack.zip", "application/zip");
