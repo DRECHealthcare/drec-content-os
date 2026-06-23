@@ -6162,14 +6162,22 @@ function renderHomePublishingCloseout(data) {
             <span>公开媒体 URL</span>
             <textarea data-home-media-repair-url="${escapeHtml(firstBlockedMedia.id || "")}" rows="2" placeholder="${escapeHtml(homeRequiredMediaText(firstBlockedMedia))}；多张图可每行一个或用逗号分开"></textarea>
           </label>
+          ${homeDraftReelUrl(firstBlockedMedia) ? `<button class="primary-action" type="button" data-home-use-draft-reel-url="${escapeHtml(firstBlockedMedia.id || "")}">填入草稿 MP4 URL</button>` : ""}
+          <label class="home-media-qa-confirm">
+            <input type="checkbox" data-home-media-qa-confirm="${escapeHtml(firstBlockedMedia.id || "")}">
+            <span>我已看过媒体，画面/字幕/版权 OK</span>
+          </label>
           <div class="home-handoff-actions">
             <button type="button" data-home-preview-media-repair="${escapeHtml(firstBlockedMedia.id || "")}">1. 检查媒体</button>
             <button class="secondary-action" type="button" data-home-import-media-repair="${escapeHtml(firstBlockedMedia.id || "")}" disabled>2. 保存媒体证据</button>
           </div>
-          <button class="quiet-action" type="button" data-home-copy-media-brief="${escapeHtml(firstBlockedMedia.id || "")}">复制制作需求</button>
-          ${firstBlockedMedia.format === "reel" ? '<button class="quiet-action" type="button" data-home-download-reel-production-pack>下载 Reel 制作包</button>' : ""}
-          <button class="quiet-action" type="button" data-home-download-media-repair-pack>下载补媒体包</button>
-          <button class="quiet-action" type="button" data-home-copy-media-repair="${escapeHtml(firstBlockedMedia.id || "")}">复制 CSV 行</button>
+          <details class="home-media-more">
+            <summary>更多</summary>
+            <button class="quiet-action" type="button" data-home-copy-media-brief="${escapeHtml(firstBlockedMedia.id || "")}">复制制作需求</button>
+            ${firstBlockedMedia.format === "reel" ? '<button class="quiet-action" type="button" data-home-download-reel-production-pack>下载 Reel 制作包</button>' : ""}
+            <button class="quiet-action" type="button" data-home-download-media-repair-pack>下载补媒体包</button>
+            <button class="quiet-action" type="button" data-home-copy-media-repair="${escapeHtml(firstBlockedMedia.id || "")}">复制 CSV 行</button>
+          </details>
         </div>
       </article>
     ` : ""}
@@ -6316,6 +6324,7 @@ function renderHomePublishingCloseout(data) {
               </div>
               <p>把最终公开媒体 URL 补进媒体附件 CSV，先预览，再导入。导入成功后重新检查发布交接。</p>
               <div class="home-handoff-actions">
+                ${homeDraftReelUrl(item) ? `<button type="button" data-home-use-draft-reel-url="${escapeHtml(item.id || "")}">填入草稿 MP4 URL</button>` : ""}
                 <button type="button" data-home-copy-media-repair="${escapeHtml(item.id || "")}">复制媒体补充行</button>
                 ${item.format === "reel" ? '<button type="button" data-home-download-reel-production-pack>下载 Reel 制作包</button>' : ""}
                 <button type="button" data-home-download-media-repair-pack>下载补媒体包</button>
@@ -6347,11 +6356,12 @@ function csvCell(value) {
 }
 
 function homeMediaRepairCsvText(item, mediaUrls = "") {
+  const visualQaStatus = homeMediaRepairQaConfirmed(item.id || "") ? "passed" : "pending";
   const repair = item.media_repair || {};
   const row = repair.csv_row || {
     asset_id: item.asset_id || "",
     new_media_urls: item.format === "reel" ? "PASTE_PUBLIC_MP4_OR_MOV_URL_HERE" : "PASTE_PUBLIC_MEDIA_URL_HERE",
-    visual_qa_status: "passed",
+    visual_qa_status: visualQaStatus,
     rights_note: "owned/licensed/approved for DREC use",
     producer_name: "",
     production_notes: `Media repair for scheduled queue item ${item.id || ""}. Replace placeholder URL(s) before import.`,
@@ -6359,6 +6369,7 @@ function homeMediaRepairCsvText(item, mediaUrls = "") {
   const resolvedRow = {
     ...row,
     new_media_urls: mediaUrls || row.new_media_urls || "",
+    visual_qa_status: visualQaStatus,
   };
   const columns = repair.csv_columns || ["asset_id", "new_media_urls", "visual_qa_status", "rights_note", "producer_name", "production_notes"];
   return [
@@ -6408,6 +6419,33 @@ function homeMediaRepairInputValue(itemId) {
   return input?.value?.trim() || "";
 }
 
+function homeSetMediaRepairInputValue(itemId, value) {
+  const inputs = [...document.querySelectorAll("[data-home-media-repair-url]")];
+  const input = inputs.find((node) => node.dataset.homeMediaRepairUrl === itemId);
+  if (!input) return false;
+  input.value = value;
+  input.focus();
+  homeSetMediaRepairImportReady(itemId, false);
+  return true;
+}
+
+function homeMediaRepairQaConfirmed(itemId) {
+  const checks = [...document.querySelectorAll("[data-home-media-qa-confirm]")];
+  const check = checks.find((node) => node.dataset.homeMediaQaConfirm === itemId);
+  return Boolean(check?.checked);
+}
+
+function homeDraftReelUrl(item) {
+  const path = (item?.media_repair || {}).draft_reel_mp4_path || "";
+  if (!path) return "";
+  if (/^https?:\/\//i.test(path)) return path;
+  try {
+    return new URL(path, apiBase || window.location.origin).toString();
+  } catch {
+    return "";
+  }
+}
+
 function homeMediaRepairUrlsAreValid(text) {
   const urls = text
     .split(/[\n,]+/)
@@ -6446,6 +6484,10 @@ async function homeUploadMediaRepair(item, { dryRun, button }) {
   const container = document.getElementById("home-publish-closeout-status");
   if (!dryRun && container?.dataset.mediaRepairPreviewReady !== (item.id || "")) {
     if (message) message.textContent = "先按“检查媒体”，检查通过后再保存媒体证据。这里不会发布。";
+    return null;
+  }
+  if (!dryRun && !homeMediaRepairQaConfirmed(item.id || "")) {
+    if (message) message.textContent = "保存前请先勾选：我已看过媒体，画面/字幕/版权 OK。这里不会发布。";
     return null;
   }
   const body = new FormData();
@@ -7888,13 +7930,34 @@ document.getElementById("home-publish-closeout-status")?.addEventListener("click
   const mediaButton = event.target.closest("[data-home-copy-handoff-media]");
   const mediaRepairButton = event.target.closest("[data-home-copy-media-repair]");
   const mediaBriefButton = event.target.closest("[data-home-copy-media-brief]");
+  const useDraftReelUrlButton = event.target.closest("[data-home-use-draft-reel-url]");
   const previewMediaRepairButton = event.target.closest("[data-home-preview-media-repair]");
   const importMediaRepairButton = event.target.closest("[data-home-import-media-repair]");
   const downloadReelProductionPackButton = event.target.closest("[data-home-download-reel-production-pack]");
   const downloadMediaRepairPackButton = event.target.closest("[data-home-download-media-repair-pack]");
   const openMediaWorkbenchButton = event.target.closest("[data-home-open-media-workbench]");
-  if (!metricsButton && !recordButton && !fullButton && !captionButton && !mediaButton && !mediaRepairButton && !mediaBriefButton && !previewMediaRepairButton && !importMediaRepairButton && !downloadReelProductionPackButton && !downloadMediaRepairPackButton && !openMediaWorkbenchButton) return;
+  if (!metricsButton && !recordButton && !fullButton && !captionButton && !mediaButton && !mediaRepairButton && !mediaBriefButton && !useDraftReelUrlButton && !previewMediaRepairButton && !importMediaRepairButton && !downloadReelProductionPackButton && !downloadMediaRepairPackButton && !openMediaWorkbenchButton) return;
   const message = document.getElementById("home-publish-closeout-message");
+  if (useDraftReelUrlButton) {
+    const container = document.getElementById("home-publish-closeout-status");
+    const blockedItems = JSON.parse(container?.dataset.blockedItems || "[]");
+    const item = blockedItems.find((row) => row.id === useDraftReelUrlButton.dataset.homeUseDraftReelUrl);
+    if (!item) {
+      if (message) message.textContent = "找不到这条 Reel，请刷新。";
+      return;
+    }
+    const draftUrl = homeDraftReelUrl(item);
+    if (!draftUrl) {
+      if (message) message.textContent = "这条 Reel 还没有系统草稿 URL，请下载 Reel 制作包。";
+      return;
+    }
+    if (homeSetMediaRepairInputValue(item.id || "", draftUrl)) {
+      if (message) message.textContent = "已填入系统草稿 MP4 URL。请先打开预览确认画面/字幕/版权，再检查并保存；不会发布。";
+    } else if (message) {
+      message.textContent = "已找到草稿 URL，但当前页没有输入框。请回到上方“现在先补媒体”区域。";
+    }
+    return;
+  }
   if (downloadReelProductionPackButton) {
     try {
       await downloadProtectedFile("/operations/blocked-reel-production-pack.zip", "drec-blocked-reel-production-pack.zip", "application/zip");
@@ -8033,9 +8096,15 @@ document.getElementById("home-publish-closeout-status")?.addEventListener("click
 });
 
 document.getElementById("home-publish-closeout-status")?.addEventListener("input", (event) => {
-  const input = event.target.closest("[data-home-media-repair-url]");
-  if (!input) return;
-  homeSetMediaRepairImportReady(input.dataset.homeMediaRepairUrl || "", false);
+  const mediaInput = event.target.closest?.("[data-home-media-repair-url]");
+  if (!mediaInput) return;
+  homeSetMediaRepairImportReady(mediaInput.dataset.homeMediaRepairUrl || "", false);
+});
+
+document.getElementById("home-publish-closeout-status")?.addEventListener("change", (event) => {
+  const qaCheck = event.target.closest?.("[data-home-media-qa-confirm]");
+  if (!qaCheck) return;
+  homeSetMediaRepairImportReady(qaCheck.dataset.homeMediaQaConfirm || "", false);
 });
 
 async function downloadHomeLearningHandback(path, filename, mediaType, doneMessage) {

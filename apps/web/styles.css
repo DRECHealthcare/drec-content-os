@@ -1397,6 +1397,51 @@ header span { color: var(--muted); font-size: 12px; }
   box-shadow: none;
 }
 
+.home-media-repair-controls .primary-action {
+  width: 100%;
+  justify-content: center;
+}
+
+.home-media-qa-confirm {
+  display: flex !important;
+  grid-template-columns: none !important;
+  align-items: center;
+  gap: 8px !important;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #FFFFFF;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.home-media-qa-confirm input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--teal);
+}
+
+.home-media-qa-confirm span {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.home-media-more {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.home-media-more summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.home-media-more .quiet-action {
+  display: block;
+  margin-top: 7px;
+}
+
 .home-queue-id {
   display: inline-block;
   margin-top: 6px;

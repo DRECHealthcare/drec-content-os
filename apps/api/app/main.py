@@ -178,6 +178,8 @@ DR_CHANG_CAROUSEL_DESIGN_SPEC = {
     "layout_rules": [
         "Generate one independent 1080x1350 image per slide; never combine slides into a collage.",
         "Readability is more important than decoration for Chinese-speaking adults age 30+ with possible presbyopia.",
+        "Use the supplied DREC Healthcare Academy logo file as the logo source; do not redraw it unless the design tool cannot preserve the logo.",
+        "Use the supplied Dr. Eason Chang photos as the doctor photo source, with the presenting/standing cutout preferred for the cover.",
         "Cover/signature pages: deep green background, extra-large bold white type, and gold emphasis for key words.",
         "Content pages: upper half clean medical illustration/photo area; lower half solid warm off-white text panel.",
         "Keep all Chinese explanation text on the solid panel, not over the image.",
@@ -192,6 +194,12 @@ DR_CHANG_CAROUSEL_DESIGN_SPEC = {
         "content": "Clean upper visual, warm off-white lower board, deep green title, deep red keywords, clear explanation text.",
         "save": "Content layout plus a deep green/gold vertical bar for summary or 收藏/save emphasis.",
         "signature": "Deep green closing slide with white/gold quote and 医生 Chang / Dr Eason Chang.",
+    },
+    "brand_assets": {
+        "logo": "/ui/assets/brand/drec-healthcare-academy-logo.jpeg",
+        "doctor_presenting": "/ui/assets/brand/dr-eason-presenting.png",
+        "doctor_standing": "/ui/assets/brand/dr-eason-standing.png",
+        "doctor_pointing": "/ui/assets/brand/dr-eason-pointing.jpeg",
     },
 }
 
@@ -26973,8 +26981,11 @@ def blocked_media_repair_import_rules(items: list[dict]):
             "",
             "- 1080x1350 单页输出，不要拼图。",
             "- 深绿 `#0A463F`，米白 `#FBF7EF`，关键词深红 `#C0392B`，重点亮金 `#F5C518`。",
-            "- 封面才放医生照片；内容页正文放在米白文字板。",
-            "- 每页左上 DREC/logo，右上 X/N，底部 `医生 Chang`。",
+            "- 使用包内 DREC Healthcare Academy logo；不要让 AI 重新画 logo。",
+            "- 使用包内医生照片；封面才放医生照片，内容页通常不放真人大图。",
+            "- 内容页正文放在米白文字板，不要把中文说明压在图片上。",
+            "- 每页左上 logo，右上 X/N，底部 `医生 Chang`。",
+            "- 看得清比好看重要；中文要大、粗、少错字。",
             "",
         ]
     )

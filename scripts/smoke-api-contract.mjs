@@ -7495,6 +7495,26 @@ const requiredSnippets = [
     text: "data-home-download-reel-production-pack",
   },
   {
+    name: "home blocked reel draft url button",
+    file: "web",
+    text: "data-home-use-draft-reel-url",
+  },
+  {
+    name: "home blocked media qa confirm gate",
+    file: "web",
+    text: "data-home-media-qa-confirm",
+  },
+  {
+    name: "home blocked media qa save warning",
+    file: "web",
+    text: "保存前请先勾选",
+  },
+  {
+    name: "home blocked media more drawer",
+    file: "styles",
+    text: ".home-media-more",
+  },
+  {
     name: "blocked media repair pack safety",
     file: "main",
     text: "这个包只用于补媒体；不会发布到 Facebook / Instagram。",
