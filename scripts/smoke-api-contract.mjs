@@ -7539,6 +7539,31 @@ const requiredSnippets = [
     text: "does not create tokens, store secrets, deploy code, approve content, publish to Meta, update Notion, import metrics, or change Fly/GitHub/Supabase settings",
   },
   {
+    name: "deployment activation manual deploy channel",
+    file: "main",
+    text: "\"manual_deploy_channel\": \"ready_via_flyctl\"",
+  },
+  {
+    name: "deployment activation does not block manual ops",
+    file: "main",
+    text: "\"blocks_manual_ops\": False",
+  },
+  {
+    name: "deployment activation manual command",
+    file: "main",
+    text: "flyctl deploy --remote-only --app drec-content-os-api",
+  },
+  {
+    name: "external setup deploy secret nonblocking",
+    file: "main",
+    text: "\"current_status\": f\"manual_deploy_ready; github_auto_deploy=",
+  },
+  {
+    name: "project unblock deployment path ready",
+    file: "main",
+    text: "\"gate\": \"deployment_path\"",
+  },
+  {
     name: "deployment activation enabled evidence",
     file: "main",
     text: "Deploy channel status: enabled",
