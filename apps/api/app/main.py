@@ -28632,6 +28632,39 @@ async def today_project_completion_payload():
     return payload
 
 
+async def today_cycle_command_payload():
+    loop = await build_loop_status()
+    workflow = build_workflow_guidance(loop)
+    steps = workflow.get("steps") or []
+    required_steps = [step for step in steps if not step.get("optional")]
+    done_count = sum(1 for step in required_steps if step.get("state") == "done")
+    next_step = workflow.get("next_action") or {}
+    return {
+        "mode": "read_only_today_cycle_command",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "overall_status": "manual_cycle_verified" if required_steps and done_count == len(required_steps) else "manual_cycle_in_progress",
+        "immediate_action": {
+            "label": next_step.get("title") or "继续人工安全流程",
+            "action": next_step.get("body") or "打开当前步骤，补齐需要的证据。",
+            "screen": next_step.get("screen") or "dashboard",
+        },
+        "summary": {
+            "manual_cycle_done": done_count,
+            "manual_cycle_required": len(required_steps),
+            **(workflow.get("summary") or {}),
+        },
+        "evidence_fields": [
+            "current workflow step",
+            "operator action completed",
+            "no Meta publishing unless explicitly enabled",
+        ],
+        "safety": [
+            "Fast homepage summary only; use the full cycle command center for detailed evidence.",
+            "It does not approve, schedule, publish, record post IDs, or call Meta.",
+        ],
+    }
+
+
 def today_action_download_filename(path: str):
     return {
         "/operations/monthly-carousel-doctor-handoff-pack.zip": "drec-monthly-carousel-doctor-handoff-pack.zip",
@@ -28945,7 +28978,7 @@ async def today_next_action_payload():
     audit, monthly, cycle, closeout = await asyncio.gather(
         safe_today_payload("project_completion", today_project_completion_payload(), timeout_seconds=6),
         safe_today_payload("monthly_carousel", monthly_carousel_next_action_queue_payload()),
-        safe_today_payload("cycle_command_center", cycle_command_center_payload(), timeout_seconds=4),
+        safe_today_payload("cycle_command_center", today_cycle_command_payload(), timeout_seconds=3),
         safe_today_payload("publishing_closeout", publishing_closeout_payload()),
     )
     unblock = project_unblock_board_from_audit(audit)

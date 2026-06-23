@@ -1197,7 +1197,12 @@ const requiredSnippets = [
   {
     name: "today next action bounded cycle timeout",
     file: "main",
-    text: "safe_today_payload(\"cycle_command_center\", cycle_command_center_payload(), timeout_seconds=4)",
+    text: "safe_today_payload(\"cycle_command_center\", today_cycle_command_payload(), timeout_seconds=3)",
+  },
+  {
+    name: "today next action fast cycle payload",
+    file: "main",
+    text: "async def today_cycle_command_payload",
   },
   {
     name: "today next action closeout candidate",
