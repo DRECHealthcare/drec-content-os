@@ -6300,6 +6300,21 @@ const requiredSnippets = [
     text: "暂不能发布：先补媒体",
   },
   {
+    name: "web home blocked media primary repair feature",
+    file: "web",
+    text: "home-media-repair-feature",
+  },
+  {
+    name: "web home blocked media primary copy",
+    file: "web",
+    text: "现在先补媒体",
+  },
+  {
+    name: "web home blocked media primary CTA",
+    file: "web",
+    text: "1. 复制补媒体行",
+  },
+  {
     name: "web home blocked media copy action",
     file: "web",
     text: "data-home-copy-media-repair",
@@ -6313,6 +6328,11 @@ const requiredSnippets = [
     name: "web home blocked media csv helper",
     file: "web",
     text: "homeMediaRepairCsvText",
+  },
+  {
+    name: "web home blocked media primary styles",
+    file: "styles",
+    text: ".home-media-repair-feature",
   },
   {
     name: "api blocked media repair context",

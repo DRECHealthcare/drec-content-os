@@ -6121,11 +6121,28 @@ function renderHomePublishingCloseout(data) {
   const waitingRollup = Number(counts.waiting_for_rollup || 0);
   const complete = Number(counts.complete || 0);
   const nextReadyItem = recordableItems[0] || null;
+  const firstBlockedMedia = blockedItems[0] || null;
   const learningCard = document.getElementById("home-learning-handback-card");
   if (learningCard && (waitingMetricsCount > 0 || waitingRollup > 0 || complete > 0)) {
     learningCard.hidden = false;
   }
   container.innerHTML = `
+    ${firstBlockedMedia ? `
+      <article class="home-media-repair-feature">
+        <div>
+          <span>现在先补媒体</span>
+          <strong>${escapeHtml(firstBlockedMedia.channel || "post")} / ${escapeHtml(firstBlockedMedia.format || "content")} 缺最终公开媒体 URL</strong>
+          <small>Queue ID: ${escapeHtml(firstBlockedMedia.id || "")}</small>
+          <small>Asset ID: ${escapeHtml(firstBlockedMedia.asset_id || "未知")}</small>
+          <small>需要补：${escapeHtml((firstBlockedMedia.media_repair || {}).required_media || homeRequiredMediaText(firstBlockedMedia))}</small>
+          <p>复制媒体补充行，把 placeholder 换成最终公开媒体 URL；先预览，再导入。这里不会发布 Facebook/IG。</p>
+        </div>
+        <div class="home-handoff-actions">
+          <button type="button" data-home-copy-media-repair="${escapeHtml(firstBlockedMedia.id || "")}">1. 复制补媒体行</button>
+          <button class="secondary-action" type="button" data-home-open-media-workbench>2. 打开导入位置</button>
+        </div>
+      </article>
+    ` : ""}
     <div class="home-closeout-simple">
       <div class="home-closeout-next">
         <strong>${escapeHtml(translateText(next.label || "Build handoff and publish manually"))}</strong>
