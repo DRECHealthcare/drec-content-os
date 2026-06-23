@@ -201,6 +201,12 @@ DR_CHANG_CAROUSEL_DESIGN_SPEC = {
         "doctor_standing": "/ui/assets/brand/dr-eason-standing.png",
         "doctor_pointing": "/ui/assets/brand/dr-eason-pointing.jpeg",
     },
+    "doctor_photo_usage": {
+        "dr-eason-presenting.png": "Default Slide 1 cover cutout when the hook needs a calm doctor presence beside the title.",
+        "dr-eason-standing.png": "Backup Slide 1 cover cutout when the layout needs more open space around the title.",
+        "dr-eason-pointing.jpeg": "Slide 1 cover or doctor-guidance visual when the slide plan mentions pointing, direction, report review, or a clear next step.",
+        "content_slide_rule": "Slides 2 onward should normally use diagrams, reports, curves, meters, or small medical visuals instead of large doctor photos.",
+    },
 }
 
 FORMAT_ROTATION = ["carousel", "single", "reel", "carousel", "story"]
@@ -438,6 +444,9 @@ def write_dr_chang_brand_assets(archive: zipfile.ZipFile):
                 "这些文件只用于医生 Chang 内容设计和人工视觉 QA。",
                 "",
                 "- Logo 放在每页左上角品牌位；不要让 AI 重新画 logo。",
+                "- `dr-eason-presenting.png`：默认封面医生照，适合大标题旁边的稳定医生形象。",
+                "- `dr-eason-standing.png`：封面备选，适合需要更多标题留白的版面。",
+                "- `dr-eason-pointing.jpeg`：封面或医生引导位，适合 slide plan 写到指向、提示、报告、下一步时使用。",
                 "- 医生真人照优先用于 Slide 1 封面或明确需要医生引导的位置。",
                 "- 内容页以中文解释文字为主，不要每页放大真人照。",
                 "- 使用前仍需检查画面版权、文字遮挡、手机可读性和医学安全。",
@@ -3061,6 +3070,17 @@ def draw_dr_chang_logo(draw: ImageDraw.ImageDraw, image: Image.Image):
         draw.text((88, 78), "DREC", font=first_publish_font(32, bold=True), fill="#0A463F")
 
 
+def dr_chang_cover_doctor_photo_path(slide: dict):
+    visual = dr_chang_slide_text(slide.get("visual_note") or "")
+    title = dr_chang_slide_text(slide.get("title") or "")
+    combined = f"{title} {visual}".lower()
+    if any(term in combined for term in ["指", "point", "提示", "下一步", "方向", "报告", "看这里"]):
+        return DR_CHANG_DOCTOR_POINTING_PATH
+    if any(term in combined for term in ["站", "standing", "全身", "留白", "space"]):
+        return DR_CHANG_DOCTOR_STANDING_PATH
+    return DR_CHANG_DOCTOR_PRESENTING_PATH
+
+
 def first_publish_slide_png(asset: dict, slide: dict, index: int, total: int):
     metadata = asset.get("metadata") or {}
     topic = dr_chang_slide_text(metadata.get("topic") or "DREC")
@@ -3098,7 +3118,7 @@ def first_publish_slide_png(asset: dict, slide: dict, index: int, total: int):
         for line_index, line in enumerate(wrap_draw_text(draw, title, cover_font, 600, 5)):
             draw.text((84, y), line, font=cover_font, fill=gold if line_index == 1 else "white")
             y += 90
-        paste_image_contain(image, DR_CHANG_DOCTOR_PRESENTING_PATH, (610, 300, 1040, 1285))
+        paste_image_contain(image, dr_chang_cover_doctor_photo_path(slide), (610, 300, 1040, 1285))
         draw.text((84, 1234), "医生 Chang", font=footer_font, fill=off_white)
         draw.text((84, 1278), "一般健康教育，不代替个人诊断或治疗建议。", font=first_publish_font(22), fill="#DDEBE6")
         output = BytesIO()
@@ -20123,6 +20143,7 @@ async def notion_carousel_image_workflow(_: None = Depends(require_access_token)
         "- Keep visuals small or medium; do not over-enlarge illustrations or replace text with graphics.",
         "- Use the Dr. Eason Chang readable carousel design: 1080x1350, deep green `#0A463F`, warm off-white `#FBF7EF`, deep red keywords `#C0392B`, bright gold emphasis `#F5C518`.",
         "- Brand assets are bundled in the app: `/ui/assets/brand/drec-healthcare-academy-logo.jpeg`, `/ui/assets/brand/dr-eason-presenting.png`, `/ui/assets/brand/dr-eason-standing.png`, `/ui/assets/brand/dr-eason-pointing.jpeg`.",
+        "- Doctor photo usage: `presenting` is the default cover, `standing` is cover backup when the title needs more open space, and `pointing` is for cover/guidance when the slide mentions pointing, reports, or next step.",
         "- Cover/signature slides use deep green, huge white title text, gold key words, and doctor photo only on Slide 1 cover.",
         "- Content slides use an upper clean visual area plus lower warm off-white text panel; put explanation text on the panel, not over the image.",
         "- Every slide needs top-left logo, top-right `X/N` page number, and bottom `医生 Chang` label.",
@@ -22276,7 +22297,8 @@ async def creative_style_guide(_: None = Depends(require_access_token)):
             f"- Warm off-white: `{colors.get('warm_off_white')}`",
             f"- Deep red keywords: `{colors.get('deep_red')}`",
             f"- Bright gold emphasis: `{colors.get('bright_gold')}`",
-            "- Brand assets: `/ui/assets/brand/drec-healthcare-academy-logo.jpeg`, `/ui/assets/brand/dr-eason-presenting.png`, `/ui/assets/brand/dr-eason-standing.png`.",
+            "- Brand assets: `/ui/assets/brand/drec-healthcare-academy-logo.jpeg`, `/ui/assets/brand/dr-eason-presenting.png`, `/ui/assets/brand/dr-eason-standing.png`, `/ui/assets/brand/dr-eason-pointing.jpeg`.",
+            "- Doctor photo usage: presenting = default cover, standing = cover with more title space, pointing = cover/guidance when the slide mentions pointing, reports, or next step.",
             "- Cover uses doctor photo only; content pages keep explanation text on the solid off-white panel.",
             "- Do not use `「」` or `——` in generated slide text.",
             "",
@@ -22475,6 +22497,7 @@ async def template_static_render_pack(_: None = Depends(require_access_token)):
             f"- Canvas: `{spec.get('canvas')}`，每页独立输出，不要拼成 collage。",
             f"- Colors: `{colors.get('deep_green')}` deep green, `{colors.get('warm_off_white')}` warm off-white, `{colors.get('deep_red')}` deep red keywords, `{colors.get('bright_gold')}` bright gold emphasis.",
             "- Brand assets: `/ui/assets/brand/drec-healthcare-academy-logo.jpeg`, `/ui/assets/brand/dr-eason-presenting.png`, `/ui/assets/brand/dr-eason-standing.png`, `/ui/assets/brand/dr-eason-pointing.jpeg`.",
+            "- Doctor photo usage: presenting = default cover, standing = cover with more title space, pointing = cover/guidance when the slide mentions pointing, reports, or next step.",
             "- Cover/signature: deep green background, extra-large white title, gold key words, doctor photo only on cover.",
             "- Content pages: clean upper visual area and solid warm off-white text panel; explanation text stays on the panel.",
             "- Every page: top-left logo, top-right X/N page number, bottom small `医生 Chang`.",
@@ -27134,6 +27157,7 @@ def blocked_media_repair_import_rules(items: list[dict]):
             "- 深绿 `#0A463F`，米白 `#FBF7EF`，关键词深红 `#C0392B`，重点亮金 `#F5C518`。",
             "- 使用包内 DREC Healthcare Academy logo；不要让 AI 重新画 logo。",
             "- 使用包内医生照片；封面才放医生照片，内容页通常不放真人大图。",
+            "- 医生照片选择：`presenting` 默认封面；`standing` 用于标题需要更多留白；`pointing` 用于指向、报告、提示或下一步导向。",
             "- 内容页正文放在米白文字板，不要把中文说明压在图片上。",
             "- 每页左上 logo，右上 X/N，底部 `医生 Chang`。",
             "- 看得清比好看重要；中文要大、粗、少错字。",

@@ -7677,6 +7677,16 @@ const requiredSnippets = [
     text: "brand-assets/dr-eason-presenting.png",
   },
   {
+    name: "carousel brand doctor photo usage map",
+    file: "main",
+    text: "\"doctor_photo_usage\"",
+  },
+  {
+    name: "carousel cover doctor photo selector",
+    file: "main",
+    text: "def dr_chang_cover_doctor_photo_path",
+  },
+  {
     name: "monthly learning handback zip route",
     file: "main",
     text: "/operations/monthly-carousel-learning-handback-pack.zip",
