@@ -7520,6 +7520,16 @@ const requiredSnippets = [
     text: "这个包只用于补媒体；不会发布到 Facebook / Instagram。",
   },
   {
+    name: "blocked media repair csv defaults pending",
+    file: "main",
+    text: "\"visual_qa_status\": \"pending\"",
+  },
+  {
+    name: "blocked media repair rules no default pass",
+    file: "main",
+    text: "visual_qa_status` 默认是 `pending`",
+  },
+  {
     name: "home blocked media repair pack button",
     file: "web",
     text: "data-home-download-media-repair-pack",
