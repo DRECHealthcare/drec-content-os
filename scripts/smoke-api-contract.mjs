@@ -4934,6 +4934,11 @@ const requiredSnippets = [
     text: "data-simple-download-reel",
   },
   {
+    name: "web simple operator reel production pack action",
+    file: "web",
+    text: "data-simple-download-reel-production-pack",
+  },
+  {
     name: "web simple operator post-publish action",
     file: "web",
     text: "data-simple-download-post-publish",
@@ -4947,6 +4952,11 @@ const requiredSnippets = [
     name: "web simple operator reel handoff endpoint",
     file: "web",
     text: "/video/manual-reel-handoff.zh.md",
+  },
+  {
+    name: "web simple operator reel production pack endpoint",
+    file: "web",
+    text: "/operations/blocked-reel-production-pack.zip",
   },
   {
     name: "web manual publish record label",

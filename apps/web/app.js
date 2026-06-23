@@ -2733,6 +2733,17 @@ function renderSimpleEvidence(evidence = []) {
   `;
 }
 
+function todayNeedsReelProductionPack(action = {}) {
+  const evidence = Array.isArray(action.evidence_required) ? action.evidence_required.join(" ") : "";
+  const text = [
+    action.title || "",
+    action.body || "",
+    action.status || "",
+    evidence,
+  ].join(" ").toLowerCase();
+  return text.includes("reel") && (text.includes("mp4") || text.includes("mov") || text.includes("video"));
+}
+
 function renderAccessPromptSimpleOperator() {
   return `
     <div class="simple-operator-copy">
@@ -2839,6 +2850,7 @@ function renderTodaySimpleOperator(today) {
     doctor_reply: "我已有医生回复，粘贴这里",
     production_reply: "我已有图片回复，粘贴这里",
   }[quickCardAction?.target] || quickCardAction?.label || "打开当前输入区";
+  const showReelProductionPack = todayNeedsReelProductionPack(action);
   return `
     <div class="simple-operator-copy">
       <div class="simple-operator-topline">
@@ -2859,6 +2871,9 @@ function renderTodaySimpleOperator(today) {
     <div class="simple-operator-actions">
       <div class="simple-action-label">今天只按一个按钮</div>
       <button class="primary" type="button" ${todayActionExtraAttributes(primary)}>${escapeHtml(primaryLabel)}</button>
+      ${showReelProductionPack ? `
+        <button class="simple-secondary-action" type="button" data-simple-download-reel-production-pack>下载 Reel 制作包</button>
+      ` : ""}
       <details class="simple-extra-actions">
         <summary>找不到 / 已有回复才打开</summary>
         ${quickCardAction ? `
@@ -7021,6 +7036,7 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   const downloadManualPublishEvidence = event.target.closest("[data-simple-download-manual-publish-evidence]");
   const downloadTodayPack = event.target.closest("[data-simple-download-today-pack]");
   const downloadReel = event.target.closest("[data-simple-download-reel]");
+  const downloadReelProductionPack = event.target.closest("[data-simple-download-reel-production-pack]");
   const downloadPostPublish = event.target.closest("[data-simple-download-post-publish]");
   const downloadPostMetrics = event.target.closest("[data-simple-download-post-metrics]");
   const openLearning = event.target.closest("[data-simple-open-learning]");
@@ -7032,7 +7048,7 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   const clearAccess = event.target.closest("[data-simple-clear-access]");
   const todayAction = event.target.closest("[data-simple-today-kind]");
   const refresh = event.target.closest("[data-simple-refresh]");
-  if (!openAccess && !runReadyAssets && !openAssets && !openReview && !openScheduler && !pasteDoctorReply && !uploadDoctorWorksheet && !pasteProductionReply && !previewMonthlyQueue && !runMonthlyQueue && !downloadMonthlyReviewQueue && !pasteReviewDecisions && !scheduleApprovedFromHome && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorEvidence && !downloadMonthlyDoctorMessage && !copyMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadManualPublishEvidence && !downloadTodayPack && !downloadReel && !downloadPostPublish && !downloadPostMetrics && !openLearning && !useLearningTopics && !downloadWeeklyReportZh && !downloadNextPlanHandback && !openCycleScreen && !downloadCycleCommandCenter && !clearAccess && !todayAction && !refresh) return;
+  if (!openAccess && !runReadyAssets && !openAssets && !openReview && !openScheduler && !pasteDoctorReply && !uploadDoctorWorksheet && !pasteProductionReply && !previewMonthlyQueue && !runMonthlyQueue && !downloadMonthlyReviewQueue && !pasteReviewDecisions && !scheduleApprovedFromHome && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorEvidence && !downloadMonthlyDoctorMessage && !copyMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadManualPublishEvidence && !downloadTodayPack && !downloadReel && !downloadReelProductionPack && !downloadPostPublish && !downloadPostMetrics && !openLearning && !useLearningTopics && !downloadWeeklyReportZh && !downloadNextPlanHandback && !openCycleScreen && !downloadCycleCommandCenter && !clearAccess && !todayAction && !refresh) return;
   if (openAccess) {
     const panel = document.getElementById("token-panel");
     if (panel?.hidden) showTokenPanel();
@@ -7267,6 +7283,10 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   }
   if (downloadReel) {
     await downloadProtectedFile("/video/manual-reel-handoff.zh.md", "drec-manual-reel-handoff-zh.md", "text/markdown");
+    return;
+  }
+  if (downloadReelProductionPack) {
+    await downloadProtectedFile("/operations/blocked-reel-production-pack.zip", "drec-blocked-reel-production-pack.zip", "application/zip");
     return;
   }
   if (downloadPostPublish) {
