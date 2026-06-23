@@ -15,6 +15,7 @@ const files = {
   schedulerWorkflow: ".github/workflows/drec-scheduler-dry-run.yml",
   realMetricsWorkflow: ".github/workflows/drec-nightly-meta-metrics.yml",
   projectCompletionWorkflow: ".github/workflows/drec-project-completion-watch.yml",
+  monthlyNotionRefreshWorkflow: ".github/workflows/drec-monthly-notion-refresh-watch.yml",
   publicLiveSmokeWorkflow: ".github/workflows/drec-public-live-smoke.yml",
   todayNextActionWorkflow: ".github/workflows/drec-today-next-action-watch.yml",
   flyDeployWorkflow: ".github/workflows/drec-fly-deploy.yml",
@@ -53,6 +54,7 @@ const requiredRoutes = [
   "GET /notion/carousel-image-workflow.md",
   "GET /notion/connector-fallback-pack.md",
   "GET /notion/monthly-refresh-workbench",
+  "GET /notion/monthly-refresh-status",
   "GET /notion/monthly-refresh-evidence.csv",
   "GET /notion/monthly-refresh-workbench.md",
   "GET /notion/monthly-refresh-workbench.zh.md",
@@ -1037,6 +1039,16 @@ const requiredSnippets = [
     text: "/notion/monthly-refresh-workbench.zh.md",
   },
   {
+    name: "notion carousel monthly refresh status route",
+    file: "main",
+    text: "/notion/monthly-refresh-status",
+  },
+  {
+    name: "notion monthly refresh status includes connector status",
+    file: "main",
+    text: "\"connector_status\": workbench.get(\"connector_status\") or {}",
+  },
+  {
     name: "notion carousel monthly refresh operator checklist",
     file: "main",
     text: "operator_checklist",
@@ -1440,6 +1452,16 @@ const requiredSnippets = [
     name: "daily ops doctor reply inbox link",
     file: "main",
     text: "- Doctor reply inbox: `/operations/doctor-reply-inbox-pack.md`",
+  },
+  {
+    name: "daily ops notion refresh status link",
+    file: "main",
+    text: "- Notion monthly refresh status: `/notion/monthly-refresh-status`",
+  },
+  {
+    name: "daily ops monthly learning handback link",
+    file: "main",
+    text: "- Monthly learning handback ZIP: `/operations/monthly-carousel-learning-handback-pack.zip`",
   },
   {
     name: "daily ops production reply inbox link",
@@ -2855,6 +2877,16 @@ const requiredSnippets = [
     name: "operator pack doctor reply inbox link",
     file: "main",
     text: "- Doctor reply inbox: `/operations/doctor-reply-inbox-pack.md`",
+  },
+  {
+    name: "operator pack notion refresh workbench link",
+    file: "main",
+    text: "- Notion monthly refresh workbench: `/notion/monthly-refresh-workbench.zh.md`",
+  },
+  {
+    name: "operator pack monthly learning handback link",
+    file: "main",
+    text: "- Monthly learning handback ZIP: `/operations/monthly-carousel-learning-handback-pack.zip`",
   },
   {
     name: "operator pack production reply inbox link",
@@ -7360,6 +7392,36 @@ const requiredSnippets = [
     name: "github project completion blockers summary",
     file: "projectCompletionWorkflow",
     text: "Top blockers:",
+  },
+  {
+    name: "github monthly notion refresh workflow",
+    file: "monthlyNotionRefreshWorkflow",
+    text: "DREC Monthly Notion Refresh Watch",
+  },
+  {
+    name: "github monthly notion refresh schedule 19th",
+    file: "monthlyNotionRefreshWorkflow",
+    text: "15 1 19 * *",
+  },
+  {
+    name: "github monthly notion refresh status endpoint",
+    file: "monthlyNotionRefreshWorkflow",
+    text: "/notion/monthly-refresh-status",
+  },
+  {
+    name: "github monthly notion acceptance audit endpoint",
+    file: "monthlyNotionRefreshWorkflow",
+    text: "/operations/monthly-carousel-acceptance-audit",
+  },
+  {
+    name: "github monthly notion production smoke endpoint",
+    file: "monthlyNotionRefreshWorkflow",
+    text: "/operations/monthly-carousel-production-smoke-test",
+  },
+  {
+    name: "github monthly notion refresh safety",
+    file: "monthlyNotionRefreshWorkflow",
+    text: "does not approve, queue, schedule, publish, update Notion, or call Meta",
   },
   {
     name: "github public live smoke workflow",
