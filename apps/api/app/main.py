@@ -3050,13 +3050,16 @@ def paste_image_contain(base: Image.Image, path: Path, box: tuple[int, int, int,
         layer = Image.open(path).convert("RGBA")
     except OSError:
         return False
-    if path == DR_CHANG_LOGO_PATH:
+    if path in {DR_CHANG_LOGO_PATH, DR_CHANG_DOCTOR_POINTING_PATH}:
         white = Image.new("RGBA", layer.size, (255, 255, 255, 255))
         diff = ImageChops.difference(layer, white).convert("L")
-        mask = diff.point(lambda value: 255 if value > 18 else 0)
+        threshold = 18 if path == DR_CHANG_LOGO_PATH else 24
+        mask = diff.point(lambda value: 255 if value > threshold else 0)
+        if path == DR_CHANG_DOCTOR_POINTING_PATH:
+            layer.putalpha(mask)
         bbox = mask.getbbox()
         if bbox:
-            pad = 18
+            pad = 18 if path == DR_CHANG_LOGO_PATH else 8
             crop_box = (
                 max(0, bbox[0] - pad),
                 max(0, bbox[1] - pad),
