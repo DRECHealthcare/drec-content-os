@@ -25963,6 +25963,109 @@ def manual_publish_evidence_csv(payload: dict):
     return output.getvalue()
 
 
+def manual_publish_record_pack_markdown(payload: dict):
+    recordable_items = payload.get("recordable_items") or []
+    upcoming_items = payload.get("upcoming_items") or []
+    blocked_items = payload.get("blocked_items") or []
+    lines = [
+        "# DREC 人工发布记录包",
+        "",
+        f"生成时间：{datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}",
+        "",
+        "用途：给真人发布人和运营回填用。这个文件只读，不会发布 Facebook / Instagram，不会记录 Post ID，也不会调用 Meta。",
+        "",
+        "## 先看这一段",
+        "",
+        "- 只有真人已经发布，才可以把该项目记录为 published。",
+        "- 优先填真实 Meta Post ID；如果只有帖子链接，也可以填真实 posted_url。",
+        "- 如果不是发在 Meta，才使用人工标签。",
+        "- 未到发布时间的项目，只能提前复制资料，不能提前回填。",
+        "- 回填前先预览发布证据 CSV；预览通过后再导入。",
+        "",
+        "## 到点可处理项目",
+        "",
+    ]
+    if not recordable_items:
+        lines.extend(["目前没有已到/过发布时间、可人工发布后回填的项目。", ""])
+    for index, item in enumerate(recordable_items, start=1):
+        media_urls = [url for url in item.get("media_urls") or [] if url]
+        evidence_payload = {"ready_items": [item], "blocked_items": []}
+        lines.extend(
+            [
+                f"### {index}. {item.get('channel')} / {item.get('format')}",
+                "",
+                f"- Queue ID：`{item.get('queue_id')}`",
+                f"- Asset ID：`{item.get('asset_id')}`",
+                f"- 计划时间：{item.get('planned_slot_myt') or item.get('planned_slot') or '未排程'}",
+                f"- 发布时间状态：{manual_publish_timing_label_zh(item)}",
+                f"- 数据回填日期：{item.get('metrics_due_date') or manual_publish_metric_due_date(item)}",
+                f"- 人工标签建议：`{item.get('manual_label_suggestion') or manual_publish_label(item)}`",
+                "",
+                "发布前核对：",
+                "",
+                "- 医生/人工已 approve，Safety clear。",
+                "- 媒体链接都能公开打开。",
+                "- 视觉 QA 已通过，版权/使用权说明已留档。",
+                "- 文案不要临时改成疗效承诺、停药建议或卖课话术。",
+                "",
+                "文案：",
+                "",
+                item.get("caption") or "暂无文案。",
+                "",
+                "媒体链接：",
+                "",
+                *markdown_list(media_urls, "- 无媒体链接，不应发布。"),
+                "",
+                "发布后回填 CSV 行：",
+                "",
+                "```csv",
+                manual_publish_evidence_csv(evidence_payload).strip(),
+                "```",
+                "",
+            ]
+        )
+    if upcoming_items:
+        lines.extend(["## 未到发布时间，先不要回填", ""])
+        for item in upcoming_items:
+            lines.extend(
+                [
+                    f"### {item.get('channel')} / {item.get('format')} · `{item.get('queue_id')}`",
+                    f"- 计划时间：{item.get('planned_slot_myt') or item.get('planned_slot') or '未排程'}",
+                    f"- 发布时间状态：{manual_publish_timing_label_zh(item)}",
+                    "- 可以先复制文案和媒体给发布人；到时间、真人发布完成后再回填。",
+                    "",
+                ]
+            )
+    if blocked_items:
+        lines.extend(["## 暂不能发布项目", ""])
+        for item in blocked_items:
+            lines.extend(
+                [
+                    f"### {item.get('channel')} / {item.get('format')} · `{item.get('id')}`",
+                    f"- 阻碍：{'; '.join([zh_handoff_blocker(blocker) for blocker in item.get('handoff_blockers') or []])}",
+                    "- 处理：先补齐媒体/QA/版权证据，再重新生成发布交接。",
+                    "",
+                ]
+            )
+    lines.extend(
+        [
+            "## 回填后",
+            "",
+            "1. 发布证据导入成功后，系统会把 queue item 标为 published。",
+            "2. 发布后 7 天，填写表现数据模板。",
+            "3. 导入 metrics 并 rollup，学习系统才会进入下一轮建议。",
+            "",
+            "## 安全边界",
+            "",
+            "- 这个记录包不会发帖。",
+            "- 这个记录包不能替代医生审核。",
+            "- 不能用 placeholder 或未真实发布的 ID 来完成闭环。",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def today_safe_project_completion_snapshot(loop: dict, workflow: dict, security: dict, automation: dict):
     completion = workflow.get("completion") or build_completion_status(loop, workflow, security, automation)
     return {
@@ -26109,12 +26212,13 @@ def today_safe_operator_pack_readme(payload: dict):
         "6. `06-schedule-audit.json`：排程阻碍和提醒。",
         "7. `07-security-status.json`：Supabase / RLS / service-role 当前状态。",
         "8. `08-workflow-status.json`：规划、审核、排程、发布、学习的工作流状态。",
-        "9. `09-service-role-install-pack.md`：解除 93% 卡点的 Supabase service-role 安装步骤。",
-        "10. `10-project-completion-audit.json`：当前完成度、扣分项和证据。",
-        "11. `11-project-unblock-board.json`：从 93% 继续往完成走的真实证据清单。",
-        "12. `12-monthly-learning-handback-pack.zip`：月度数据复盘、metrics 模板和下月候选主题回流包。",
+        "9. `09-manual-publish-record-pack.zh.md`：到点项目的一页式人工发布和回填包。",
+        "10. `10-service-role-install-pack.md`：解除 93% 卡点的 Supabase service-role 安装步骤。",
+        "11. `11-project-completion-audit.json`：当前完成度、扣分项和证据。",
+        "12. `12-project-unblock-board.json`：从 93% 继续往完成走的真实证据清单。",
+        "13. `13-monthly-learning-handback-pack.zip`：月度数据复盘、metrics 模板和下月候选主题回流包。",
         "",
-        "旧编号兼容文件只放在 `legacy/`；正常操作只看根目录 `01` 到 `12`。",
+        "旧编号兼容文件只放在 `legacy/`；正常操作只看根目录 `01` 到 `13`。",
         "",
         "## 下一步",
         "",
@@ -26150,10 +26254,11 @@ async def operations_today_safe_operator_pack_zip(_: None = Depends(require_acce
             "workflow": payload.get("workflow") or {},
             "automation": payload.get("automation") or {},
         }, ensure_ascii=False, indent=2, default=str))
-        archive.writestr("09-service-role-install-pack.md", service_role_install_pack_markdown(payload.get("security") or {}))
-        archive.writestr("10-project-completion-audit.json", json.dumps(payload.get("project_completion") or {}, ensure_ascii=False, indent=2, default=str))
-        archive.writestr("11-project-unblock-board.json", json.dumps(payload.get("project_unblock") or {}, ensure_ascii=False, indent=2, default=str))
-        archive.writestr("12-monthly-learning-handback-pack.zip", monthly_learning_handback.body)
+        archive.writestr("09-manual-publish-record-pack.zh.md", manual_publish_record_pack_markdown(payload.get("post_publish") or {}))
+        archive.writestr("10-service-role-install-pack.md", service_role_install_pack_markdown(payload.get("security") or {}))
+        archive.writestr("11-project-completion-audit.json", json.dumps(payload.get("project_completion") or {}, ensure_ascii=False, indent=2, default=str))
+        archive.writestr("12-project-unblock-board.json", json.dumps(payload.get("project_unblock") or {}, ensure_ascii=False, indent=2, default=str))
+        archive.writestr("13-monthly-learning-handback-pack.zip", monthly_learning_handback.body)
         archive.writestr("legacy/08-service-role-install-pack.md", service_role_install_pack_markdown(payload.get("security") or {}))
         archive.writestr("legacy/09-project-completion-audit.json", json.dumps(payload.get("project_completion") or {}, ensure_ascii=False, indent=2, default=str))
         archive.writestr("legacy/10-project-unblock-board.json", json.dumps(payload.get("project_unblock") or {}, ensure_ascii=False, indent=2, default=str))
@@ -28003,7 +28108,8 @@ async def operations_publishing_closeout_zh(_: None = Depends(require_access_tok
 
 def manual_publish_label(item: dict):
     planned = parse_datetime(item.get("planned_slot") or item.get("created_at")) or datetime.utcnow()
-    return f"manual-{item.get('channel') or 'post'}-{planned.strftime('%Y%m%d')}-{str(item.get('id') or '')[:8]}"
+    item_id = item.get("id") or item.get("queue_id") or ""
+    return f"manual-{item.get('channel') or 'post'}-{planned.strftime('%Y%m%d')}-{str(item_id)[:8]}"
 
 
 def metric_template_for_queue_item(item: dict):
@@ -28193,6 +28299,16 @@ async def operations_post_publish_next_steps_zh(_: None = Depends(require_access
         "\n".join(lines),
         media_type="text/markdown; charset=utf-8",
         headers={"Content-Disposition": 'attachment; filename="drec-post-publish-next-steps-zh.md"'},
+    )
+
+
+@app.get("/operations/manual-publish-record-pack.zh.md")
+async def operations_manual_publish_record_pack_zh(_: None = Depends(require_access_token)):
+    payload = await post_publish_next_steps_payload()
+    return Response(
+        manual_publish_record_pack_markdown(payload),
+        media_type="text/markdown; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="drec-manual-publish-record-pack-zh.md"'},
     )
 
 

@@ -3101,6 +3101,7 @@ function renderSimpleOperator(data, monthly = null, cycle = null, today = null) 
         <summary>需要时打开交接资料</summary>
         <button type="button" data-simple-open-scheduler>看排程</button>
         <button type="button" data-simple-download-handoff>交接包</button>
+        <button type="button" data-simple-download-manual-publish-record-pack>一页式记录包</button>
         <button type="button" data-simple-download-manual-publish-evidence>发布证据表</button>
         <button type="button" data-simple-download-post-publish>发布后下一步</button>
         <button type="button" data-simple-download-post-metrics>数据表</button>
@@ -7252,6 +7253,7 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   const downloadMonthlyProductionQa = event.target.closest("[data-simple-download-monthly-production-qa]");
   const downloadMonthlyQueueReadiness = event.target.closest("[data-simple-download-monthly-queue-readiness]");
   const downloadHandoff = event.target.closest("[data-simple-download-handoff]");
+  const downloadManualPublishRecordPack = event.target.closest("[data-simple-download-manual-publish-record-pack]");
   const downloadManualPublishEvidence = event.target.closest("[data-simple-download-manual-publish-evidence]");
   const downloadTodayPack = event.target.closest("[data-simple-download-today-pack]");
   const downloadReel = event.target.closest("[data-simple-download-reel]");
@@ -7514,6 +7516,10 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   }
   if (downloadHandoff) {
     await downloadProtectedFile("/operations/publishing-handoff.zh.md", "drec-publishing-handoff-zh.md", "text/markdown");
+    return;
+  }
+  if (downloadManualPublishRecordPack) {
+    await downloadProtectedFile("/operations/manual-publish-record-pack.zh.md", "drec-manual-publish-record-pack-zh.md", "text/markdown");
     return;
   }
   if (downloadManualPublishEvidence) {
@@ -7901,6 +7907,10 @@ document.getElementById("home-download-today-safe-pack")?.addEventListener("clic
 
 document.getElementById("home-download-publishing-handoff")?.addEventListener("click", async () => {
   await downloadHomePublishCloseout("/operations/publishing-handoff.zh.md", "drec-publishing-handoff-zh.md", "text/markdown", "发布交接包已下载。");
+});
+
+document.getElementById("home-download-manual-publish-record-pack")?.addEventListener("click", async () => {
+  await downloadHomePublishCloseout("/operations/manual-publish-record-pack.zh.md", "drec-manual-publish-record-pack-zh.md", "text/markdown", "一页式记录包已下载。");
 });
 
 document.getElementById("home-download-manual-publish-evidence")?.addEventListener("click", async () => {

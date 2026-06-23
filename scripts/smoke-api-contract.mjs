@@ -217,6 +217,7 @@ const requiredRoutes = [
   "GET /operations/post-publish-next-steps",
   "GET /operations/post-publish-next-steps.zh.md",
   "GET /operations/manual-publish-evidence.csv",
+  "GET /operations/manual-publish-record-pack.zh.md",
   "POST /operations/import-manual-publish-evidence",
   "GET /operations/post-publish-metrics-template.csv",
   "GET /briefs/plan.csv",
@@ -4845,6 +4846,21 @@ const requiredSnippets = [
     text: "/operations/manual-publish-evidence.csv",
   },
   {
+    name: "api manual publish record pack route",
+    file: "main",
+    text: "operations_manual_publish_record_pack_zh",
+  },
+  {
+    name: "api manual publish record pack export",
+    file: "main",
+    text: "drec-manual-publish-record-pack-zh.md",
+  },
+  {
+    name: "api manual publish record pack no publish safety",
+    file: "main",
+    text: "这个文件只读，不会发布 Facebook / Instagram，不会记录 Post ID，也不会调用 Meta。",
+  },
+  {
     name: "api publishing closeout recordable count",
     file: "main",
     text: "\"scheduled_recordable\": len(scheduled_recordable)",
@@ -4950,6 +4966,16 @@ const requiredSnippets = [
     text: "data-simple-download-handoff",
   },
   {
+    name: "web simple operator manual publish record pack action",
+    file: "web",
+    text: "data-simple-download-manual-publish-record-pack",
+  },
+  {
+    name: "web simple operator manual publish record pack endpoint",
+    file: "web",
+    text: "/operations/manual-publish-record-pack.zh.md",
+  },
+  {
     name: "web simple operator today safe pack action",
     file: "web",
     text: "data-simple-download-today-pack",
@@ -4962,7 +4988,12 @@ const requiredSnippets = [
   {
     name: "today safe pack includes service role guide",
     file: "main",
-    text: "09-service-role-install-pack.md",
+    text: "10-service-role-install-pack.md",
+  },
+  {
+    name: "today safe pack includes manual publish record pack",
+    file: "main",
+    text: "09-manual-publish-record-pack.zh.md",
   },
   {
     name: "today safe pack service role blocker copy",
@@ -4972,22 +5003,22 @@ const requiredSnippets = [
   {
     name: "today safe pack includes completion audit",
     file: "main",
-    text: "10-project-completion-audit.json",
+    text: "11-project-completion-audit.json",
   },
   {
     name: "today safe pack includes unblock board",
     file: "main",
-    text: "11-project-unblock-board.json",
+    text: "12-project-unblock-board.json",
   },
   {
     name: "today safe pack includes learning handback zip",
     file: "main",
-    text: "12-monthly-learning-handback-pack.zip",
+    text: "13-monthly-learning-handback-pack.zip",
   },
   {
     name: "today safe pack root file count note",
     file: "main",
-    text: "根目录 `01` 到 `12`",
+    text: "根目录 `01` 到 `13`",
   },
   {
     name: "today safe pack legacy folder note",
@@ -6693,6 +6724,11 @@ const requiredSnippets = [
     name: "web home manual publish evidence action",
     file: "webIndex",
     text: "home-download-manual-publish-evidence",
+  },
+  {
+    name: "web home manual publish record pack action",
+    file: "webIndex",
+    text: "home-download-manual-publish-record-pack",
   },
   {
     name: "web home post publish action",
