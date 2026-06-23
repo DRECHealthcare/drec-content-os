@@ -11069,6 +11069,31 @@ document.getElementById("save-all-assets").addEventListener("click", async () =>
   }
 });
 
+document.getElementById("first-cycle-safe-start")?.addEventListener("click", async () => {
+  const button = document.getElementById("first-cycle-safe-start");
+  const message = document.getElementById("plan-message");
+  const form = document.getElementById("plan-form");
+  const data = new FormData(form);
+  const limit = Number(data.get("count")) || 5;
+  const language = data.get("language") || "zh";
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = "启动中";
+  message.textContent = "正在生成首轮安全 brief 和待审核素材；不会发布 Facebook/IG。";
+  try {
+    const result = await fetchJson(`/operations/first-cycle-safe-start?count=${encodeURIComponent(limit)}&language=${encodeURIComponent(language)}`, { method: "POST" });
+    const assetResult = result.asset_result || {};
+    message.textContent = `首轮安全启动完成：${result.created_brief_count || 0} 个 brief，${assetResult.created || 0} 个新素材，${assetResult.reused || 0} 个复用素材。下一步：医生/人工审核。`;
+    await Promise.all([loadBriefs(), loadAssets(), loadFirstCycleEvidenceWorkbench(), loadDoctorSendQueue(), loadDoctorReplyInboxPack(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
+    showScreen("assets");
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not start the first safe cycle.";
+  } finally {
+    button.disabled = false;
+    button.textContent = originalText || "首轮安全启动";
+  }
+});
+
 document.getElementById("archive-drafted-briefs").addEventListener("click", async () => {
   const button = document.getElementById("archive-drafted-briefs");
   const message = document.getElementById("plan-message");

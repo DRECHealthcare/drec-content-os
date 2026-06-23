@@ -21381,6 +21381,58 @@ async def generate_weekly_plan(plan: WeeklyPlanIn, _: None = Depends(require_rev
     return {"items": generated, "source": source, "knowledge_context": knowledge}
 
 
+@app.post("/operations/first-cycle-safe-start")
+async def operations_first_cycle_safe_start(
+    count: int = 5,
+    language: Literal["zh", "en", "mixed"] = "zh",
+    _: None = Depends(require_review_access),
+):
+    bounded_count = max(1, min(int(count or 5), 10))
+    safe_language = language if language in {"zh", "en", "mixed"} else "zh"
+    knowledge = await active_knowledge_context()
+    existing_briefs = await fetch_content_brief_list(200)
+    existing_topics = {
+        dr_chang_slide_text(str(brief.get("topic") or "")).lower()
+        for brief in existing_briefs
+        if (brief.get("status") or "") != "archived"
+    }
+    created_briefs = []
+    skipped_topics = []
+    for index, topic in enumerate(DEFAULT_PLAN_TOPICS[:bounded_count]):
+        topic_key = dr_chang_slide_text(topic).lower()
+        if topic_key in existing_topics:
+            skipped_topics.append({"topic": topic, "reason": "brief_already_exists"})
+            continue
+        brief = await insert_brief(make_generated_brief(topic, index, safe_language, knowledge))
+        created_briefs.append(brief)
+        existing_topics.add(topic_key)
+
+    asset_result = await create_assets_from_recent_briefs(bounded_count)
+    return {
+        "mode": "first_cycle_safe_start",
+        "language": safe_language,
+        "requested_count": bounded_count,
+        "created_brief_count": len(created_briefs),
+        "skipped_topic_count": len(skipped_topics),
+        "created_briefs": created_briefs,
+        "skipped_topics": skipped_topics,
+        "asset_result": asset_result,
+        "next_step": "Open Assets, review the draft assets, then collect explicit doctor/human approval before queueing.",
+        "links": {
+            "assets": "/assets",
+            "approval_cockpit": "/operations/approval-cockpit.zh.md",
+            "doctor_review_sheet": "/operations/first-publish-doctor-review-sheet.zh.md",
+            "first_publish_readiness": "/operations/first-publish-readiness.zh.md",
+        },
+        "safety": [
+            "This creates conservative internal briefs and draft assets only.",
+            "It does not approve assets, attach final media, queue, schedule, publish, update Notion, or call Meta.",
+            "Doctor or human approval remains required before any queue or schedule step.",
+            "Repeated runs reuse existing topics/assets where possible to avoid duplicate first-cycle work.",
+        ],
+    }
+
+
 def asset_payload(asset: AssetIn):
     return {
         "brief_id": asset.brief_id,

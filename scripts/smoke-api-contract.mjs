@@ -59,6 +59,7 @@ const requiredRoutes = [
   "GET /notion/monthly-refresh-workbench.md",
   "GET /notion/monthly-refresh-workbench.zh.md",
   "POST /notion/carousel-row/import",
+  "POST /operations/first-cycle-safe-start",
   "POST /operations/first-publish-advance",
   "POST /operations/first-publish-attach-generated-media",
   "POST /operations/first-publish-approve-current-asset",
@@ -1927,6 +1928,21 @@ const requiredSnippets = [
     name: "first publish readiness export",
     file: "main",
     text: "drec-first-publish-readiness.md",
+  },
+  {
+    name: "first cycle safe start route",
+    file: "main",
+    text: "operations_first_cycle_safe_start",
+  },
+  {
+    name: "first cycle safe start no publish safety",
+    file: "main",
+    text: "It does not approve assets, attach final media, queue, schedule, publish, update Notion, or call Meta.",
+  },
+  {
+    name: "first cycle safe start dedupe safety",
+    file: "main",
+    text: "Repeated runs reuse existing topics/assets where possible to avoid duplicate first-cycle work.",
   },
   {
     name: "first publish after approval plan payload",
@@ -5247,6 +5263,21 @@ const requiredSnippets = [
     name: "web first publish readiness card",
     file: "web",
     text: "first-publish-readiness",
+  },
+  {
+    name: "web first cycle safe start button",
+    file: "webIndex",
+    text: "first-cycle-safe-start",
+  },
+  {
+    name: "web first cycle safe start endpoint",
+    file: "web",
+    text: "/operations/first-cycle-safe-start",
+  },
+  {
+    name: "web first cycle safe start no publish copy",
+    file: "web",
+    text: "不会发布 Facebook/IG",
   },
   {
     name: "web first publish next action card",
