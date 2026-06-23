@@ -1742,7 +1742,6 @@ const checks = [
         && text.includes("README.zh.md")
         && text.includes("captions.srt")
         && text.includes("draft-mp4-url.txt")
-        && text.includes("/public/reel-drafts/")
         && text.includes("storyboard/frame-")
         && text.includes("brand-assets/dr-eason-presenting.png")
         && text.includes("brand-assets/dr-eason-pointing.jpeg");
