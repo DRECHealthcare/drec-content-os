@@ -4501,6 +4501,26 @@ const requiredSnippets = [
     text: "dr-chang-carousel-design-qa.zh.md",
   },
   {
+    name: "web brand asset board",
+    file: "webIndex",
+    text: "brand-asset-board",
+  },
+  {
+    name: "web brand asset renderer",
+    file: "web",
+    text: "renderBrandAssets",
+  },
+  {
+    name: "web brand asset api url helper",
+    file: "web",
+    text: "apiAssetUrl",
+  },
+  {
+    name: "web brand asset mobile grid",
+    file: "styles",
+    text: ".brand-asset-grid",
+  },
+  {
     name: "template studio library route",
     file: "main",
     text: "template_studio_library",

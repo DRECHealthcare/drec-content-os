@@ -2357,6 +2357,49 @@ button[type="submit"] {
   font-size: 12px;
 }
 
+.brand-asset-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.brand-asset-card {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #FBFDFE;
+}
+
+.brand-asset-preview {
+  height: 150px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #F8FAFC;
+}
+
+.brand-asset-preview img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.brand-asset-card h3 {
+  margin: 0;
+  color: var(--navy);
+  font-size: 13px;
+}
+
+.brand-asset-card p {
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .summary-row {
   display: flex;
   flex-wrap: wrap;
@@ -2826,7 +2869,7 @@ button[type="submit"] {
   .token-remember { flex: 0 0 auto; }
   .token-button { margin-left: auto; }
   .screen { padding: 18px; }
-  .grid, .loop, .split-form, .learning-grid, .handoff-summary, .creative-preview, .weight-row, .scheduler-toolbar, .week-schedule, .workflow-steps, .test-path-list, .quick-composer, .sprint-board, .completion-bars { grid-template-columns: 1fr; }
+  .grid, .loop, .split-form, .learning-grid, .brand-asset-grid, .handoff-summary, .creative-preview, .weight-row, .scheduler-toolbar, .week-schedule, .workflow-steps, .test-path-list, .quick-composer, .sprint-board, .completion-bars { grid-template-columns: 1fr; }
   .simple-operator { grid-template-columns: 1fr; }
   .simple-operator-actions { justify-content: stretch; }
   .simple-operator-actions button { width: 100%; white-space: normal; }

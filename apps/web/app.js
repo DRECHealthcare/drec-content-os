@@ -4105,6 +4105,38 @@ function renderBrandTokens(tokens) {
     : '<p class="status-note">No brand tokens found.</p>';
 }
 
+function apiAssetUrl(path) {
+  if (!path) return "";
+  if (/^https?:\/\//i.test(path)) return path;
+  try {
+    return new URL(path, apiBase || window.location.origin).toString();
+  } catch {
+    return path;
+  }
+}
+
+function renderBrandAssets(assets) {
+  const container = document.getElementById("brand-asset-board");
+  if (!container) return;
+  const entries = [
+    ["logo", "DREC logo", "每页左上角品牌位；不要让 AI 重新画 logo。"],
+    ["doctor_cover_presenting", "医生封面照 1", "封面优先使用；内容页不要放大真人。"],
+    ["doctor_cover_standing", "医生封面照 2", "可用于封面或手动设计备选。"],
+    ["doctor_pointing_photo", "医生指向照", "适合封面或医生引导位，避免遮挡标题。"],
+  ].filter(([key]) => assets?.[key]);
+  container.innerHTML = entries.length
+    ? entries.map(([key, label, note]) => `
+      <article class="brand-asset-card">
+        <div class="brand-asset-preview">
+          <img src="${escapeHtml(apiAssetUrl(assets[key]))}" alt="${escapeHtml(label)}" loading="lazy">
+        </div>
+        <h3>${escapeHtml(label)}</h3>
+        <p>${escapeHtml(note)}</p>
+      </article>
+    `).join("")
+    : '<p class="status-note">No brand assets found.</p>';
+}
+
 function renderStyleLibrary(data) {
   const container = document.getElementById("style-library");
   if (!container) return;
@@ -4147,10 +4179,12 @@ async function loadStyleLibrary() {
   const message = document.getElementById("creative-message");
   try {
     const data = await fetchJson("/creative/style-library");
+    renderBrandAssets(data.brand_assets || {});
     renderBrandTokens(data.brand_tokens || {});
     renderStyleLibrary(data);
     if (message) message.textContent = data.next_step || "Style library loaded.";
   } catch (error) {
+    document.getElementById("brand-asset-board").innerHTML = "";
     document.getElementById("brand-token-board").innerHTML = "";
     document.getElementById("style-library").innerHTML = '<p class="status-note">Set the access token to load Creative Studio.</p>';
     if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not load Creative Studio.";
