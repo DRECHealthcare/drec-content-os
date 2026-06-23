@@ -29556,7 +29556,7 @@ def zh_completion_status(value: str | None):
     }.get(value or "", value or "未知")
 
 
-def build_completion_status(loop, workflow, security, automation):
+def build_completion_status(loop, workflow, security, automation, publishing_closeout: dict | None = None):
     summary = workflow.get("summary") or {}
     automation_summary = (automation or {}).get("summary") or {}
     automation_gates = {item.get("key"): item for item in (automation or {}).get("gates") or []}
@@ -29569,6 +29569,9 @@ def build_completion_status(loop, workflow, security, automation):
     queue_total = int(summary.get("queue_total") or automation_summary.get("queue_total") or 0)
     scheduled_queue = int(automation_summary.get("scheduled_queue") or 0)
     published_queue = int(automation_summary.get("published_queue") or 0)
+    closeout_counts = (publishing_closeout or {}).get("counts") or {}
+    handoff_ready_queue = int(closeout_counts.get("scheduled_ready") or 0)
+    handoff_blocked_queue = int(closeout_counts.get("scheduled_blocked") or 0)
     meta_ready = (automation_gates.get("meta") or {}).get("status") == "ready"
     data_connection = security.get("data_connection") or {}
     data_backend_ready = (security.get("data_backend") or data_connection.get("data_backend")) in {"postgres", "supabase_rest"}
@@ -29582,7 +29585,7 @@ def build_completion_status(loop, workflow, security, automation):
         first_cycle_score += 4
     if queue_total:
         first_cycle_score += 3
-    if scheduled_queue:
+    if handoff_ready_queue:
         first_cycle_score += 2
     if published_queue:
         first_cycle_score += 1
@@ -29590,9 +29593,13 @@ def build_completion_status(loop, workflow, security, automation):
     if published_queue:
         first_cycle_status = "ready"
         first_cycle_detail = f"{published_queue} published queue item(s) have evidence; record metrics and roll learning forward."
+    elif handoff_ready_queue:
+        first_cycle_status = "waiting"
+        blocked_tail = f" {handoff_blocked_queue} scheduled item(s) still need media/QA evidence." if handoff_blocked_queue else ""
+        first_cycle_detail = f"{handoff_ready_queue} scheduled item(s) are ready for manual publishing evidence; after a human posts, record the Meta post ID or manual label, then add metrics.{blocked_tail}"
     elif scheduled_queue:
         first_cycle_status = "waiting"
-        first_cycle_detail = f"{scheduled_queue} scheduled item(s) are ready for manual publishing evidence; after a human posts, record the Meta post ID or manual label, then add metrics."
+        first_cycle_detail = f"{scheduled_queue} scheduled item(s) exist, but media/QA evidence still blocks manual handoff."
     elif queue_total:
         first_cycle_status = "waiting"
         first_cycle_detail = f"{queue_total} queue item(s) exist; finish queue review approval and scheduling before manual handoff."
@@ -29650,10 +29657,16 @@ def build_completion_status(loop, workflow, security, automation):
         completion_item(
             "scheduling_handoff",
             "Scheduling and handoff path",
-            6 if scheduled_queue else 3 if queue_total or asset_count else 0,
+            6 if handoff_ready_queue else 3 if scheduled_queue or queue_total or asset_count else 0,
             6,
-            "ready" if scheduled_queue else "waiting",
-            "Queue and schedule are ready as tooling, but need an approved item." if not scheduled_queue else f"{scheduled_queue} item(s) are scheduled.",
+            "ready" if handoff_ready_queue else "waiting",
+            (
+                "Queue and schedule are ready as tooling, but need an approved item."
+                if not scheduled_queue
+                else f"{handoff_ready_queue} item(s) are ready for handoff; {handoff_blocked_queue} scheduled item(s) still need media/QA evidence."
+                if handoff_blocked_queue
+                else f"{handoff_ready_queue} item(s) are ready for handoff."
+            ),
         ),
         completion_item(
             "learning_loop",
@@ -29709,6 +29722,8 @@ def build_completion_status(loop, workflow, security, automation):
         blockers.append(security.get("next_step") or "Supabase service-role security evidence is incomplete.")
     if scheduled_queue == 0:
         blockers.append("No reviewed item has been scheduled yet.")
+    elif handoff_blocked_queue:
+        blockers.append("Attach final public media URL, visual QA passed, and rights note for the blocked scheduled item.")
     elif not published_queue:
         blockers.append("Manually publish the next scheduled item at its planned time, then record the Meta post ID or manual label.")
     return {
@@ -29730,7 +29745,8 @@ async def project_completion_audit_payload():
     workflow = build_workflow_guidance(loop)
     security = await strict_security_status_payload()
     automation = await automation_status_payload()
-    completion = build_completion_status(loop, workflow, security, automation)
+    publishing_closeout = await publishing_closeout_payload(100)
+    completion = build_completion_status(loop, workflow, security, automation, publishing_closeout)
     launch = await launch_readiness_payload()
     meta = await meta_readiness_payload(check_graph=False)
     monthly = await monthly_carousel_acceptance_audit_payload()
@@ -29827,7 +29843,8 @@ async def today_project_completion_payload():
     workflow = build_workflow_guidance(loop)
     security = await strict_security_status_payload()
     automation = await automation_status_payload()
-    completion = build_completion_status(loop, workflow, security, automation)
+    publishing_closeout = await publishing_closeout_payload(100)
+    completion = build_completion_status(loop, workflow, security, automation, publishing_closeout)
     meta_gate = next(
         (gate for gate in (automation.get("gates") or []) if gate.get("key") == "meta"),
         {},
@@ -30685,7 +30702,8 @@ async def workflow_status(_: None = Depends(require_access_token)):
     workflow = build_workflow_guidance(loop)
     security = await strict_security_status_payload()
     automation = await automation_status_payload()
-    workflow["completion"] = build_completion_status(loop, workflow, security, automation)
+    publishing_closeout = await publishing_closeout_payload(100)
+    workflow["completion"] = build_completion_status(loop, workflow, security, automation, publishing_closeout)
     return {
         "loop": loop,
         "workflow": workflow,
