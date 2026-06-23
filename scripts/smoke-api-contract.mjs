@@ -7636,6 +7636,26 @@ const requiredSnippets = [
     text: "医生真人照只用于封面",
   },
   {
+    name: "carousel zip brand asset helper",
+    file: "main",
+    text: "def write_dr_chang_brand_assets",
+  },
+  {
+    name: "carousel zip includes brand assets",
+    file: "main",
+    text: "write_dr_chang_brand_assets(archive)",
+  },
+  {
+    name: "carousel zip brand asset readme",
+    file: "main",
+    text: "Brand source files are included in `brand-assets/`",
+  },
+  {
+    name: "carousel zip doctor presenting asset",
+    file: "main",
+    text: "brand-assets/dr-eason-presenting.png",
+  },
+  {
     name: "blocked media repair csv defaults pending",
     file: "main",
     text: "\"visual_qa_status\": \"pending\"",

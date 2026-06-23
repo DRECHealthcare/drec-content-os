@@ -419,6 +419,34 @@ DR_CHANG_DOCTOR_PRESENTING_PATH = DR_CHANG_BRAND_ASSET_DIR / "dr-eason-presentin
 DR_CHANG_DOCTOR_POINTING_PATH = DR_CHANG_BRAND_ASSET_DIR / "dr-eason-pointing.jpeg"
 
 
+def write_dr_chang_brand_assets(archive: zipfile.ZipFile):
+    brand_files = [
+        (DR_CHANG_LOGO_PATH, "brand-assets/drec-healthcare-academy-logo.jpeg"),
+        (DR_CHANG_DOCTOR_PRESENTING_PATH, "brand-assets/dr-eason-presenting.png"),
+        (DR_CHANG_DOCTOR_STANDING_PATH, "brand-assets/dr-eason-standing.png"),
+        (DR_CHANG_DOCTOR_POINTING_PATH, "brand-assets/dr-eason-pointing.jpeg"),
+    ]
+    for source, target in brand_files:
+        if source.exists():
+            archive.write(source, target)
+    archive.writestr(
+        "brand-assets/README.zh.md",
+        "\n".join(
+            [
+                "# DREC 品牌素材",
+                "",
+                "这些文件只用于医生 Chang 内容设计和人工视觉 QA。",
+                "",
+                "- Logo 放在每页左上角品牌位；不要让 AI 重新画 logo。",
+                "- 医生真人照优先用于 Slide 1 封面或明确需要医生引导的位置。",
+                "- 内容页以中文解释文字为主，不要每页放大真人照。",
+                "- 使用前仍需检查画面版权、文字遮挡、手机可读性和医学安全。",
+                "",
+            ]
+        ),
+    )
+
+
 @app.get("/health")
 async def health():
     data_connection = await data_connection_status_payload(sample_tables=["kb_entries", "assets", "publish_queue", "feedback"])
@@ -3163,10 +3191,12 @@ def asset_carousel_zip(asset: dict, kind: str):
                     "Use approved DREC storage before attaching media URLs for publishing.",
                     "",
                     "Image size: 1080x1350.",
+                    "Brand source files are included in `brand-assets/` for manual design and QA.",
                 ]
             ),
         )
         archive.writestr("media-attachments-template.csv", first_publish_media_attachment_csv(asset))
+        write_dr_chang_brand_assets(archive)
         for index, slide in enumerate(slides, start=1):
             if kind == "png":
                 archive.writestr(
@@ -5445,10 +5475,12 @@ async def operations_first_publish_carousel_assets_zip(_: None = Depends(require
                     "This ZIP does not approve, attach, schedule, or publish anything.",
                     "",
                     "Recommended export size: 1080x1350.",
+                    "Brand source files are included in `brand-assets/` for manual design and QA.",
                 ]
             ),
         )
         archive.writestr("media-attachments-template.csv", first_publish_media_attachment_csv(asset))
+        write_dr_chang_brand_assets(archive)
         for index, slide in enumerate(slides, start=1):
             archive.writestr(
                 f"slides/{asset_id}-slide-{index:02d}.svg",
@@ -5508,10 +5540,12 @@ async def operations_first_publish_carousel_png_assets_zip(_: None = Depends(req
                     "",
                     "Image size: 1080x1350.",
                     "After review, upload the final approved PNG files to approved public media storage and replace placeholder URLs in the CSV.",
+                    "Brand source files are included in `brand-assets/` for manual design and QA.",
                 ]
             ),
         )
         archive.writestr("media-attachments-template.csv", first_publish_media_attachment_csv(asset))
+        write_dr_chang_brand_assets(archive)
         for index, slide in enumerate(slides, start=1):
             archive.writestr(
                 f"slides/{asset_id}-slide-{index:02d}.png",
@@ -11384,6 +11418,7 @@ async def operations_monthly_carousel_doctor_handoff_pack_zip(_: None = Depends(
                     "7. 图片素材下载链接在 `06-png-review-links.csv`；完整图片 ZIP 仍由系统端点 `/operations/monthly-carousel-png-assets.zip` 下载。",
                     "8. 导入前规则在 `07-import-validation-rules.zh.md`；不符合规则的 approve/clear 会被 dry-run 和 import 跳过。",
                     "9. `legacy/` 文件夹只保留旧编号兼容副本；正常交接请使用根目录 00-07 文件。",
+                    "10. `brand-assets/` 内含 DREC logo 和医生照，供人工设计/QA 对照。",
                     "",
                     "只有医生明确写 `Decision: approve` 且 `Safety: clear`，才可以进入后续导入和制作步骤。",
                     "导入时系统仍会检查 evidence，不会因为 CSV 误填 approve 就绕过医生审核门槛。",
@@ -11488,6 +11523,7 @@ async def operations_monthly_carousel_doctor_handoff_pack_zip(_: None = Depends(
         archive.writestr("legacy/05-png-review-links.csv", output.getvalue())
         archive.writestr("07-import-validation-rules.zh.md", monthly_doctor_import_rules_markdown())
         archive.writestr("legacy/06-import-validation-rules.zh.md", monthly_doctor_import_rules_markdown())
+        write_dr_chang_brand_assets(archive)
     buffer.seek(0)
     return Response(
         buffer.getvalue(),
@@ -11516,9 +11552,11 @@ async def operations_monthly_carousel_png_assets_zip(_: None = Depends(require_a
                     f"Source: {NOTION_CAROUSEL_SOURCE.get('name')}",
                     f"Monthly refresh day: {NOTION_CAROUSEL_SOURCE.get('monthly_refresh_day')}",
                     f"Asset count: {len(assets)}",
+                    "Brand source files are included in `brand-assets/` for manual design and QA.",
                 ]
             ),
         )
+        write_dr_chang_brand_assets(archive)
         output = StringIO()
         writer = csv.DictWriter(
             output,
@@ -27394,6 +27432,7 @@ async def operations_blocked_media_repair_pack_zip(_: None = Depends(require_acc
                     "- `import-rules.zh.md`：导入和安全规则。",
                     "- `dr-chang-carousel-design-spec.json`：医生 Chang carousel 设计规范。",
                     "- `carousel-design-qa.zh.md`：使用 DREC logo 和医生照片的中文设计/QA 清单。",
+                    "- `brand-assets/`：DREC logo 和医生照原始素材，供设计和人工 QA 使用。",
                     "- `producer-briefs/`：每个缺媒体项目的一份制作需求。",
                     "",
                     "## 安全边界",
@@ -27408,6 +27447,7 @@ async def operations_blocked_media_repair_pack_zip(_: None = Depends(require_acc
         archive.writestr("media-repair.csv", blocked_media_repair_csv(items))
         archive.writestr("import-rules.zh.md", blocked_media_repair_import_rules(items))
         archive.writestr("carousel-design-qa.zh.md", dr_chang_carousel_design_qa_markdown())
+        write_dr_chang_brand_assets(archive)
         archive.writestr(
             "dr-chang-carousel-design-spec.json",
             json.dumps(
