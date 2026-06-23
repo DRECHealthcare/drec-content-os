@@ -8720,6 +8720,104 @@ async def operations_monthly_carousel_next_plan_handback_zh(_: None = Depends(re
     )
 
 
+@app.get("/operations/monthly-carousel-learning-handback-pack.zip")
+async def operations_monthly_carousel_learning_handback_pack_zip(_: None = Depends(require_access_token)):
+    generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    closeout = await monthly_carousel_learning_closeout_payload()
+    handback = await monthly_carousel_next_plan_handback_payload()
+    source = closeout.get("source") or {}
+    buffer = BytesIO()
+    closeout_md = await operations_monthly_carousel_learning_closeout_zh()
+    closeout_csv = await operations_monthly_carousel_learning_closeout_csv()
+    metrics_template = await operations_monthly_carousel_metrics_template_csv()
+    metrics_pack = await operations_monthly_carousel_metrics_execution_pack_zh()
+    handback_md = await operations_monthly_carousel_next_plan_handback_zh()
+    handback_csv = await operations_monthly_carousel_next_plan_handback_csv()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr(
+            "README.zh.md",
+            "\n".join(
+                [
+                    "# DREC 月度 Carousel 学习回流 ZIP",
+                    "",
+                    f"生成时间：{generated_at}",
+                    f"Notion 来源：{source.get('name')}",
+                    f"月度刷新日：每月 {source.get('monthly_refresh_day')} 日",
+                    "",
+                    "用途：把发布后的数据复盘、metrics 导入模板、学习 closeout、下月候选主题集中在一个包里，给运营/医生/下月计划使用。",
+                    "",
+                    "安全线：这个 ZIP 只读，不会导入 metrics、创建 outcome、创建 Notion row、修改 Topic ID、排程、发布或调用 Meta。",
+                    "",
+                    "## 文件顺序",
+                    "",
+                    "1. `01-monthly-learning-closeout.zh.md`：逐 Topic ID 查看发布、数据、outcome 状态。",
+                    "2. `02-monthly-learning-closeout.csv`：机器可读的复盘表。",
+                    "3. `03-monthly-metrics-template.csv`：发布后填真实表现数据的模板。",
+                    "4. `04-monthly-metrics-execution-pack.zh.md`：数据录入步骤。",
+                    "5. `05-next-plan-handback.zh.md`：下月计划回流说明。",
+                    "6. `06-next-plan-candidates.csv`：下月候选主题 CSV。",
+                    "7. `07-handback-summary.json`：本包摘要和计数。",
+                    "",
+                    "## 当前摘要",
+                    "",
+                    f"- 月度内容数：{closeout.get('asset_count')}",
+                    f"- 等待录入数据：{closeout.get('waiting_metrics_count')}",
+                    f"- 等待 rollup：{closeout.get('waiting_rollup_count')}",
+                    f"- 学习闭环完成：{closeout.get('learning_complete_count')}",
+                    f"- 下月候选主题：{len(handback.get('candidate_topics') or [])}",
+                    "",
+                    "## 使用方式",
+                    "",
+                    "- 发布后先记录 post ID，再填真实 metrics。",
+                    "- 导入前先 Preview；不要猜数据。",
+                    "- 每月 19 日 Notion 刷新后，再用候选主题 CSV 做人工筛选。",
+                    "- 先检查 Topic ID 和主题文字，避免重复 row。",
+                    "",
+                ]
+            ),
+        )
+        archive.writestr("01-monthly-learning-closeout.zh.md", closeout_md.body)
+        archive.writestr("02-monthly-learning-closeout.csv", closeout_csv.body)
+        archive.writestr("03-monthly-metrics-template.csv", metrics_template.body)
+        archive.writestr("04-monthly-metrics-execution-pack.zh.md", metrics_pack.body)
+        archive.writestr("05-next-plan-handback.zh.md", handback_md.body)
+        archive.writestr("06-next-plan-candidates.csv", handback_csv.body)
+        archive.writestr(
+            "07-handback-summary.json",
+            json.dumps(
+                {
+                    "generated_at": generated_at,
+                    "source": source,
+                    "asset_count": closeout.get("asset_count"),
+                    "stage_counts": closeout.get("stage_counts"),
+                    "waiting_metrics_count": closeout.get("waiting_metrics_count"),
+                    "waiting_rollup_count": closeout.get("waiting_rollup_count"),
+                    "learning_complete_count": closeout.get("learning_complete_count"),
+                    "candidate_topics_count": len(handback.get("candidate_topics") or []),
+                    "candidate_topics": handback.get("candidate_topics") or [],
+                    "next_step": handback.get("next_step") or closeout.get("next_step"),
+                    "safety": [
+                        "read_only_zip",
+                        "does_not_import_metrics",
+                        "does_not_create_outcomes",
+                        "does_not_create_or_update_notion_rows",
+                        "does_not_schedule_or_publish",
+                        "does_not_call_meta",
+                    ],
+                },
+                ensure_ascii=False,
+                indent=2,
+                default=str,
+            ),
+        )
+    buffer.seek(0)
+    return Response(
+        buffer.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": 'attachment; filename="drec-monthly-carousel-learning-handback-pack.zip"'},
+    )
+
+
 def snapshot_row(record_type, item_id="", status="", channel="", fmt="", title="", created_at="", detail=""):
     return {
         "record_type": record_type,

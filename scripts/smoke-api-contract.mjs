@@ -174,6 +174,7 @@ const requiredRoutes = [
   "GET /operations/metrics-template.csv",
   "GET /operations/metrics-closeout-pack.md",
   "GET /operations/metrics-closeout-pack.zh.md",
+  "GET /operations/monthly-carousel-learning-handback-pack.zip",
   "GET /operations/publishing-closeout",
   "GET /operations/publishing-closeout.zh.md",
   "GET /operations/blocked-reel-production-pack.zip",
@@ -4251,6 +4252,11 @@ const requiredSnippets = [
     text: "download-dashboard-monthly-learning-csv",
   },
   {
+    name: "web dashboard monthly learning zip action",
+    file: "web",
+    text: "download-dashboard-monthly-learning-handback-zip",
+  },
+  {
     name: "web dashboard monthly next plan handback action",
     file: "web",
     text: "download-dashboard-monthly-next-plan-handback",
@@ -6731,6 +6737,11 @@ const requiredSnippets = [
     text: "home-download-next-plan-handback",
   },
   {
+    name: "web home learning zip action",
+    file: "webIndex",
+    text: "home-download-learning-handback-zip",
+  },
+  {
     name: "web home next plan csv action",
     file: "webIndex",
     text: "home-download-next-plan-csv",
@@ -7654,6 +7665,26 @@ const requiredSnippets = [
     name: "carousel zip doctor presenting asset",
     file: "main",
     text: "brand-assets/dr-eason-presenting.png",
+  },
+  {
+    name: "monthly learning handback zip route",
+    file: "main",
+    text: "/operations/monthly-carousel-learning-handback-pack.zip",
+  },
+  {
+    name: "monthly learning handback zip filename",
+    file: "main",
+    text: "drec-monthly-carousel-learning-handback-pack.zip",
+  },
+  {
+    name: "monthly learning handback zip safety",
+    file: "main",
+    text: "does_not_create_or_update_notion_rows",
+  },
+  {
+    name: "web learning page zip action",
+    file: "webIndex",
+    text: "download-monthly-carousel-learning-handback-zip",
   },
   {
     name: "blocked media repair csv defaults pending",

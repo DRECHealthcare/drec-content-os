@@ -3584,6 +3584,7 @@ function renderDashboardMonthlyActionQueue(data) {
         <button type="button" data-download-dashboard-monthly-metrics-pack>下载数据执行包</button>
         <button type="button" data-download-dashboard-monthly-learning-closeout>下载月度数据复盘</button>
         <button type="button" data-download-dashboard-monthly-learning-csv>下载月度复盘 CSV</button>
+        <button type="button" data-download-dashboard-monthly-learning-handback-zip>下载学习回流 ZIP</button>
         <button type="button" data-download-dashboard-monthly-next-plan-handback>下载学习回流包</button>
         <button type="button" data-download-dashboard-monthly-next-plan-csv>下载下月主题 CSV</button>
         <button type="button" data-download-dashboard-monthly-action-queue>下载月度行动队列</button>
@@ -8305,6 +8306,10 @@ document.getElementById("home-download-learning-snapshot")?.addEventListener("cl
   await downloadHomeLearningHandback("/operations/learning-snapshot.csv", "drec-learning-snapshot.csv", "text/csv", "学习数据 CSV 已下载。");
 });
 
+document.getElementById("home-download-learning-handback-zip")?.addEventListener("click", async () => {
+  await downloadHomeLearningHandback("/operations/monthly-carousel-learning-handback-pack.zip", "drec-monthly-carousel-learning-handback-pack.zip", "application/zip", "学习回流 ZIP 已下载。");
+});
+
 document.getElementById("home-download-next-plan-handback")?.addEventListener("click", async () => {
   await downloadHomeLearningHandback("/operations/monthly-carousel-next-plan-handback.zh.md", "drec-monthly-carousel-next-plan-handback-zh.md", "text/markdown", "下月回流包已下载。");
 });
@@ -10681,11 +10686,12 @@ document.getElementById("dashboard-monthly-action-queue")?.addEventListener("cli
   const downloadMetricsPack = event.target.closest("[data-download-dashboard-monthly-metrics-pack]");
   const downloadLearningCloseout = event.target.closest("[data-download-dashboard-monthly-learning-closeout]");
   const downloadLearningCsv = event.target.closest("[data-download-dashboard-monthly-learning-csv]");
+  const downloadLearningZip = event.target.closest("[data-download-dashboard-monthly-learning-handback-zip]");
   const downloadNextPlanHandback = event.target.closest("[data-download-dashboard-monthly-next-plan-handback]");
   const downloadNextPlanCsv = event.target.closest("[data-download-dashboard-monthly-next-plan-csv]");
   const downloadQueue = event.target.closest("[data-download-dashboard-monthly-action-queue]");
   const downloadCsv = event.target.closest("[data-download-dashboard-monthly-action-csv]");
-  if (!openAssets && !downloadDoctorHandoff && !downloadDoctorMessage && !downloadDoctorTriage && !downloadDoctorImportRules && !downloadDoctorReview && !downloadPngAssets && !downloadDoctorWorksheet && !fillDoctorReplyTemplateButton && !previewDoctorReplySafe && !importDoctorReplySafe && !downloadProductionWorksheet && !downloadProductionQa && !downloadProductionImportRules && !fillProductionReplyTemplateButton && !downloadQueueReadiness && !downloadQueueExecution && !previewQueueReady && !runQueueReady && !previewSafeAdvance && !runSafeAdvance && !downloadScheduleWorksheet && !downloadSchedulePack && !downloadScheduleAudit && !downloadPublishingHandoff && !downloadMetricsTemplate && !downloadMetricsPack && !downloadLearningCloseout && !downloadLearningCsv && !downloadNextPlanHandback && !downloadNextPlanCsv && !downloadQueue && !downloadCsv) return;
+  if (!openAssets && !downloadDoctorHandoff && !downloadDoctorMessage && !downloadDoctorTriage && !downloadDoctorImportRules && !downloadDoctorReview && !downloadPngAssets && !downloadDoctorWorksheet && !fillDoctorReplyTemplateButton && !previewDoctorReplySafe && !importDoctorReplySafe && !downloadProductionWorksheet && !downloadProductionQa && !downloadProductionImportRules && !fillProductionReplyTemplateButton && !downloadQueueReadiness && !downloadQueueExecution && !previewQueueReady && !runQueueReady && !previewSafeAdvance && !runSafeAdvance && !downloadScheduleWorksheet && !downloadSchedulePack && !downloadScheduleAudit && !downloadPublishingHandoff && !downloadMetricsTemplate && !downloadMetricsPack && !downloadLearningCloseout && !downloadLearningCsv && !downloadLearningZip && !downloadNextPlanHandback && !downloadNextPlanCsv && !downloadQueue && !downloadCsv) return;
   if (openAssets) {
     showScreen("assets");
     const card = document.getElementById("monthly-carousel-status-board");
@@ -10925,6 +10931,16 @@ document.getElementById("dashboard-monthly-action-queue")?.addEventListener("cli
         preparing: "Preparing monthly learning CSV...",
         done: "Monthly carousel learning CSV downloaded.",
         failed: "Could not download monthly carousel learning CSV.",
+      };
+    }
+    if (downloadLearningZip) {
+      return {
+        path: "/operations/monthly-carousel-learning-handback-pack.zip",
+        filename: "drec-monthly-carousel-learning-handback-pack.zip",
+        type: "application/zip",
+        preparing: "Preparing monthly learning handback ZIP...",
+        done: "Monthly carousel learning handback ZIP downloaded.",
+        failed: "Could not download monthly carousel learning handback ZIP.",
       };
     }
     if (downloadNextPlanHandback) {
@@ -12867,6 +12883,16 @@ document.getElementById("download-monthly-carousel-next-plan-handback")?.addEven
     message.textContent = "月度学习回流包已下载。";
   } catch (error) {
     message.textContent = error.message === "Access token required" ? "请先设置访问码。" : "无法下载月度学习回流包。";
+  }
+});
+
+document.getElementById("download-monthly-carousel-learning-handback-zip")?.addEventListener("click", async () => {
+  const message = document.getElementById("weight-message");
+  try {
+    await downloadProtectedFile("/operations/monthly-carousel-learning-handback-pack.zip", "drec-monthly-carousel-learning-handback-pack.zip", "application/zip");
+    message.textContent = "月度学习回流 ZIP 已下载。";
+  } catch (error) {
+    message.textContent = error.message === "Access token required" ? "请先设置访问码。" : "无法下载月度学习回流 ZIP。";
   }
 });
 
