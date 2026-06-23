@@ -1185,6 +1185,21 @@ const requiredSnippets = [
     text: "today_next_action_payload",
   },
   {
+    name: "today next action fast completion payload",
+    file: "main",
+    text: "async def today_project_completion_payload",
+  },
+  {
+    name: "today next action uses fast completion payload",
+    file: "main",
+    text: "safe_today_payload(\"project_completion\", today_project_completion_payload(), timeout_seconds=6)",
+  },
+  {
+    name: "today next action bounded cycle timeout",
+    file: "main",
+    text: "safe_today_payload(\"cycle_command_center\", cycle_command_center_payload(), timeout_seconds=4)",
+  },
+  {
     name: "today next action closeout candidate",
     file: "main",
     text: "def today_action_from_closeout",

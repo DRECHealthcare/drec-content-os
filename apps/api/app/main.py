@@ -28579,6 +28579,59 @@ async def project_completion_audit_payload():
     return payload
 
 
+async def today_project_completion_payload():
+    loop = await build_loop_status()
+    workflow = build_workflow_guidance(loop)
+    security = await strict_security_status_payload()
+    automation = await automation_status_payload()
+    completion = build_completion_status(loop, workflow, security, automation)
+    meta_gate = next(
+        (gate for gate in (automation.get("gates") or []) if gate.get("key") == "meta"),
+        {},
+    )
+    readiness = "ready_for_manual_ops"
+    if completion.get("percent", 0) >= 95 and not completion.get("blockers"):
+        readiness = "ready_for_live_acceptance_test"
+    elif completion.get("percent", 0) < 80:
+        readiness = "build_in_progress"
+    payload = {
+        "mode": "read_only_today_project_completion",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "readiness": readiness,
+        "completion": completion,
+        "workflow_summary": workflow.get("summary") or {},
+        "security": security,
+        "automation_summary": (automation or {}).get("summary") or {},
+        "launch": {
+            "overall_status": "manual_ops_ready_auto_blocked"
+            if security.get("supabase_rest") == "configured"
+            else "setup_needed",
+            "next_step": security.get("next_step") or "Continue the first manual publish and learning cycle.",
+        },
+        "meta": {
+            "overall_status": meta_gate.get("status"),
+            "next_step": "Keep Meta live switches off until readiness, scheduler, and security gates are green.",
+        },
+        "monthly_acceptance": {},
+        "next_actions": (completion.get("blockers") or [completion.get("next_requirement")])[:8],
+        "links": {
+            "workflow_status": "/workflow/status",
+            "project_completion_audit": "/operations/project-completion-audit.zh.md",
+            "project_completion_audit_csv": "/operations/project-completion-audit.csv",
+        },
+        "safety": [
+            "Fast homepage summary only; use the full completion audit for detailed evidence.",
+            "It does not approve, import, queue, schedule, publish, store secrets, or call Meta.",
+        ],
+    }
+    payload["unblock_summary"] = {
+        key: value
+        for key, value in project_unblock_board_from_audit(payload).items()
+        if key in {"ready_count", "blocked_count", "next_action", "next_gate", "next_action_source"}
+    }
+    return payload
+
+
 def today_action_download_filename(path: str):
     return {
         "/operations/monthly-carousel-doctor-handoff-pack.zip": "drec-monthly-carousel-doctor-handoff-pack.zip",
@@ -28890,9 +28943,9 @@ def payload_unavailable_summary(payload: dict):
 
 async def today_next_action_payload():
     audit, monthly, cycle, closeout = await asyncio.gather(
-        safe_today_payload("project_completion", project_completion_audit_payload()),
+        safe_today_payload("project_completion", today_project_completion_payload(), timeout_seconds=6),
         safe_today_payload("monthly_carousel", monthly_carousel_next_action_queue_payload()),
-        safe_today_payload("cycle_command_center", cycle_command_center_payload()),
+        safe_today_payload("cycle_command_center", cycle_command_center_payload(), timeout_seconds=4),
         safe_today_payload("publishing_closeout", publishing_closeout_payload()),
     )
     unblock = project_unblock_board_from_audit(audit)
