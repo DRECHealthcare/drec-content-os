@@ -178,6 +178,7 @@ const requiredRoutes = [
   "GET /operations/publishing-closeout.zh.md",
   "GET /operations/blocked-reel-production-pack.zip",
   "GET /operations/blocked-media-repair-pack.zip",
+  "GET /public/reel-drafts/{queue_id}.mp4",
   "GET /operations/weekly-cycle-pack.md",
   "GET /operations/weekly-cycle-pack.zh.md",
   "GET /operations/publishing-run-sheet.md",
@@ -7459,9 +7460,34 @@ const requiredSnippets = [
     text: "/operations/blocked-reel-production-pack.zip",
   },
   {
+    name: "blocked reel public draft route",
+    file: "main",
+    text: "/public/reel-drafts/{queue_id}.mp4",
+  },
+  {
+    name: "blocked reel public draft generator",
+    file: "main",
+    text: "reel_draft_mp4_bytes",
+  },
+  {
+    name: "blocked reel docker ffmpeg",
+    file: "dockerfile",
+    text: "fonts-noto-cjk ffmpeg",
+  },
+  {
     name: "blocked reel production pack storyboard",
     file: "main",
     text: "storyboard/frame-",
+  },
+  {
+    name: "blocked reel production pack draft url",
+    file: "main",
+    text: "draft-mp4-url.txt",
+  },
+  {
+    name: "today action reel draft copy",
+    file: "main",
+    text: "Reel 可先下载系统草稿 MP4 预览",
   },
   {
     name: "home blocked reel production pack button",

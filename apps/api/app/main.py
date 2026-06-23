@@ -8,6 +8,9 @@ import html
 from io import BytesIO, StringIO
 import json
 import re
+import shutil
+import subprocess
+import tempfile
 import zipfile
 from pathlib import Path
 from urllib.parse import urlparse, urlencode
@@ -24145,6 +24148,7 @@ def media_repair_context(item: dict):
         "asset_id": item.get("asset_id"),
         "queue_id": item.get("id"),
         "required_media": required_media,
+        "draft_reel_mp4_path": f"/public/reel-drafts/{item.get('id')}.mp4" if fmt == "reel" and item.get("id") else "",
         "new_media_urls_placeholder": placeholder,
         "csv_columns": ["asset_id", "new_media_urls", "visual_qa_status", "rights_note", "producer_name", "production_notes"],
         "csv_row": {
@@ -27049,7 +27053,79 @@ def reel_storyboard_frame_png(item: dict, line: str, index: int, total: int):
     return output.getvalue()
 
 
-def reel_production_brief(item: dict):
+def reel_draft_public_url(request: Request, item: dict):
+    queue_id = item.get("id")
+    if not queue_id:
+        return ""
+    return f"{request_public_base_url(request)}/public/reel-drafts/{queue_id}.mp4"
+
+
+async def blocked_reel_queue_item(queue_id: str):
+    closeout = await publishing_closeout_payload(100)
+    for item in closeout.get("scheduled_blocked") or []:
+        if str(item.get("id") or "") == str(queue_id) and item.get("format") == "reel":
+            return item
+    return None
+
+
+def ffmpeg_executable():
+    exe = shutil.which("ffmpeg")
+    if exe:
+        return exe
+    raise HTTPException(status_code=503, detail="FFmpeg is not available in this runtime.")
+
+
+def reel_draft_mp4_bytes(item: dict):
+    lines = reel_script_lines_from_caption(item.get("caption"))[:6]
+    if not lines:
+        raise HTTPException(status_code=404, detail="No Reel script is available.")
+    total = len(lines)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+        frame_paths = []
+        for index, line in enumerate(lines, start=1):
+            frame_path = temp_path / f"frame-{index:02d}.png"
+            frame_path.write_bytes(reel_storyboard_frame_png(item, line, index, total))
+            frame_paths.append(frame_path)
+        concat_path = temp_path / "frames.txt"
+        concat_lines = []
+        for frame_path in frame_paths:
+            concat_lines.append(f"file '{frame_path.as_posix()}'")
+            concat_lines.append("duration 5")
+        concat_lines.append(f"file '{frame_paths[-1].as_posix()}'")
+        concat_path.write_text("\n".join(concat_lines) + "\n", encoding="utf-8")
+        output_path = temp_path / "drec-reel-draft.mp4"
+        command = [
+            ffmpeg_executable(),
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-y",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            str(concat_path),
+            "-c:v",
+            "libx264",
+            "-vf",
+            "fps=30,format=yuv420p",
+            "-movflags",
+            "+faststart",
+            str(output_path),
+        ]
+        try:
+            subprocess.run(command, check=True, capture_output=True, timeout=45)
+        except subprocess.TimeoutExpired as exc:
+            raise HTTPException(status_code=504, detail="Reel draft generation timed out.") from exc
+        except subprocess.CalledProcessError as exc:
+            detail = (exc.stderr or b"").decode("utf-8", errors="ignore")[:500] or "Reel draft generation failed."
+            raise HTTPException(status_code=500, detail=detail) from exc
+        return output_path.read_bytes()
+
+
+def reel_production_brief(item: dict, draft_url: str | None = None):
     lines = reel_script_lines_from_caption(item.get("caption"))
     return "\n".join(
         [
@@ -27063,6 +27139,12 @@ def reel_production_brief(item: dict):
             "## 目标",
             "",
             "制作一个公开 MP4/MOV/M4V 视频 URL，用于补媒体证据。制作完成后仍需人工 visual QA 和 rights note；系统不会自动发布。",
+            "",
+            "## 系统草稿 MP4",
+            "",
+            draft_url or "暂无系统草稿 MP4 URL。",
+            "",
+            "这个草稿只用于预览和人工确认。只有确认画面、字幕、权益都没问题后，才可以把 URL 填回补媒体表，并把 visual_qa_status 标为 passed。",
             "",
             "## 推荐结构",
             "",
@@ -27094,8 +27176,24 @@ def reel_production_brief(item: dict):
     )
 
 
+@app.get("/public/reel-drafts/{queue_id}.mp4")
+async def public_blocked_reel_draft_mp4(queue_id: str):
+    item = await blocked_reel_queue_item(queue_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Reel draft is available only for blocked Reel queue items.")
+    return Response(
+        reel_draft_mp4_bytes(item),
+        media_type="video/mp4",
+        headers={
+            "Cache-Control": "public, max-age=300",
+            "Content-Disposition": f'inline; filename="drec-reel-draft-{queue_id}.mp4"',
+            "X-DREC-Safety": "Draft preview only. This does not approve, attach, schedule, or publish.",
+        },
+    )
+
+
 @app.get("/operations/blocked-reel-production-pack.zip")
-async def operations_blocked_reel_production_pack_zip(_: None = Depends(require_access_token)):
+async def operations_blocked_reel_production_pack_zip(request: Request, _: None = Depends(require_access_token)):
     closeout = await publishing_closeout_payload(100)
     items = [
         item
@@ -27119,6 +27217,7 @@ async def operations_blocked_reel_production_pack_zip(_: None = Depends(require_
                     "## 文件",
                     "",
                     "- `reels/*/production-brief.zh.md`：每条 Reel 的制作需求。",
+                    "- `reels/*/draft-mp4-url.txt`：系统生成的公开视频草稿 URL，用于预览，不代表 QA 已通过。",
                     "- `reels/*/captions.srt`：可导入剪辑软件的字幕草稿。",
                     "- `reels/*/voiceover.txt`：旁白草稿。",
                     "- `reels/*/storyboard/*.png`：竖版 storyboard 参考图。",
@@ -27143,7 +27242,21 @@ async def operations_blocked_reel_production_pack_zip(_: None = Depends(require_
             queue_id = str(item.get("id") or f"reel-{index}")
             folder = f"reels/{index:02d}-{queue_id}"
             lines = reel_script_lines_from_caption(item.get("caption"))
-            archive.writestr(f"{folder}/production-brief.zh.md", reel_production_brief(item))
+            draft_url = reel_draft_public_url(request, item)
+            archive.writestr(f"{folder}/production-brief.zh.md", reel_production_brief(item, draft_url))
+            archive.writestr(
+                f"{folder}/draft-mp4-url.txt",
+                "\n".join(
+                    [
+                        draft_url,
+                        "",
+                        "这个 URL 是系统生成的 Reel 草稿 MP4。",
+                        "它不会自动发布，也不会自动通过 visual QA。",
+                        "人工确认画面、字幕、权益没问题后，才可以把它作为最终媒体 URL 填回补媒体表。",
+                        "",
+                    ]
+                ),
+            )
             archive.writestr(f"{folder}/voiceover.txt", "\n".join(lines))
             archive.writestr(f"{folder}/captions.srt", reel_srt_from_lines(lines))
             archive.writestr(
@@ -29431,16 +29544,17 @@ def today_action_from_closeout(closeout: dict):
             "priority": 8,
             "eyebrow": "发布交接下一步",
             "title": f"{scheduled_blocked} 条排程内容先补媒体",
-            "body": "这些内容已经进入交接区，但缺最终公开媒体 URL。先复制制作需求给制作人员；拿到公开视频 URL 后，在首页检查并保存媒体证据。",
+            "body": "这些内容已经进入交接区，但缺最终公开媒体 URL。Reel 可先下载系统草稿 MP4 预览；人工确认画面、字幕、权益没问题后，再保存媒体证据。",
             "status": "缺媒体 · 不会发布",
             "primary": {"kind": "show_card", "label": "打开补媒体步骤", "target": "publish_closeout"},
             "secondary": [
+                {"kind": "download", "label": "下载 Reel 制作包", "path": "/operations/blocked-reel-production-pack.zip", "filename": "drec-blocked-reel-production-pack.zip"},
                 {"kind": "download", "label": "发布交接清单", "path": "/operations/publishing-closeout.zh.md"},
                 {"kind": "show_card", "label": "打开图片回复区", "target": "production_reply"},
             ],
-            "next_steps": ["打开补媒体步骤", "复制制作需求", "粘贴公开视频 URL，检查后保存媒体证据"],
+            "next_steps": ["下载 Reel 制作包", "打开草稿 MP4 预览", "确认后保存媒体证据"],
             "safety_note": "补媒体只更新交接资料；不会自动发布到 Facebook / Instagram。",
-            "evidence_required": ["asset_id", "final public MP4/MOV URL for reel", "visual_qa_status=passed", "rights_note"],
+            "evidence_required": ["asset_id", "draft or final public MP4/MOV URL for reel", "visual_qa_status=passed after human check", "rights_note"],
         }
     if scheduled_recordable:
         return {

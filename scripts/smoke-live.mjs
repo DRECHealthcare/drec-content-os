@@ -1741,9 +1741,30 @@ const checks = [
         && buffer[1] === 0x4b
         && text.includes("README.zh.md")
         && text.includes("captions.srt")
+        && text.includes("draft-mp4-url.txt")
+        && text.includes("/public/reel-drafts/")
         && text.includes("storyboard/frame-")
         && text.includes("brand-assets/dr-eason-presenting.png")
         && text.includes("brand-assets/dr-eason-pointing.jpeg");
+    },
+  },
+  {
+    name: "Blocked reel public draft MP4",
+    url: `${apiBase}/operations/publishing-closeout`,
+    auth: true,
+    validate: async (res) => {
+      const data = await res.json();
+      const blockedReel = (data.scheduled_blocked || []).find((item) => item.format === "reel" && item.id);
+      if (!blockedReel) return true;
+      const mp4 = await fetch(`${apiBase}/public/reel-drafts/${blockedReel.id}.mp4`);
+      const buffer = Buffer.from(await mp4.arrayBuffer());
+      return mp4.ok
+        && (mp4.headers.get("content-type") || "").includes("video/mp4")
+        && buffer.length > 1000
+        && buffer[4] === 0x66
+        && buffer[5] === 0x74
+        && buffer[6] === 0x79
+        && buffer[7] === 0x70;
     },
   },
   {

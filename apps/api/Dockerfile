@@ -3,7 +3,7 @@ FROM python:3.12-slim
 WORKDIR /app
 COPY apps/api/requirements.txt .
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends fonts-noto-cjk \
+    && apt-get install -y --no-install-recommends fonts-noto-cjk ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir -r requirements.txt
 
