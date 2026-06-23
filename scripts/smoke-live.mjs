@@ -1715,6 +1715,21 @@ const checks = [
     },
   },
   {
+    name: "Blocked media repair pack",
+    url: `${apiBase}/operations/blocked-media-repair-pack.zip`,
+    auth: true,
+    validate: async (res) => {
+      const buffer = Buffer.from(await res.arrayBuffer());
+      const text = buffer.toString("latin1");
+      return buffer.length > 200
+        && buffer[0] === 0x50
+        && buffer[1] === 0x4b
+        && text.includes("README.zh.md")
+        && text.includes("media-repair.csv")
+        && text.includes("dr-chang-carousel-design-spec.json");
+    },
+  },
+  {
     name: "Video studio readiness",
     url: `${apiBase}/video/studio-readiness`,
     auth: true,

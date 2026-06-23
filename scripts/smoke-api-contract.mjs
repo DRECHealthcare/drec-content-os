@@ -176,6 +176,7 @@ const requiredRoutes = [
   "GET /operations/metrics-closeout-pack.zh.md",
   "GET /operations/publishing-closeout",
   "GET /operations/publishing-closeout.zh.md",
+  "GET /operations/blocked-media-repair-pack.zip",
   "GET /operations/weekly-cycle-pack.md",
   "GET /operations/weekly-cycle-pack.zh.md",
   "GET /operations/publishing-run-sheet.md",
@@ -7435,6 +7436,21 @@ const requiredSnippets = [
     name: "dr chang web default style",
     file: "web",
     text: "dr_chang_readable_green",
+  },
+  {
+    name: "blocked media repair pack route",
+    file: "main",
+    text: "/operations/blocked-media-repair-pack.zip",
+  },
+  {
+    name: "blocked media repair pack safety",
+    file: "main",
+    text: "这个包只用于补媒体；不会发布到 Facebook / Instagram。",
+  },
+  {
+    name: "home blocked media repair pack button",
+    file: "web",
+    text: "data-home-download-media-repair-pack",
   },
   {
     name: "real metrics workflow live heartbeat",

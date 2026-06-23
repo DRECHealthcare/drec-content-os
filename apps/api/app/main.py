@@ -26885,6 +26885,159 @@ async def operations_publishing_closeout(limit: int = 50, _: None = Depends(requ
     return await publishing_closeout_payload(limit)
 
 
+def blocked_media_repair_csv(items: list[dict]):
+    output = StringIO()
+    columns = ["asset_id", "new_media_urls", "visual_qa_status", "rights_note", "producer_name", "production_notes"]
+    writer = csv.DictWriter(output, fieldnames=columns)
+    writer.writeheader()
+    for item in items:
+        repair = item.get("media_repair") or media_repair_context(item)
+        row = repair.get("csv_row") or {}
+        writer.writerow({column: row.get(column) or "" for column in columns})
+    return output.getvalue()
+
+
+def blocked_media_producer_brief(item: dict):
+    repair = item.get("media_repair") or media_repair_context(item)
+    blockers = [zh_handoff_blocker(blocker) for blocker in item.get("handoff_blockers") or []]
+    return "\n".join(
+        [
+            "# DREC 补媒体制作需求",
+            "",
+            f"Queue ID: {item.get('id') or ''}",
+            f"Asset ID: {item.get('asset_id') or ''}",
+            f"平台 / 格式: {item.get('channel') or ''} / {item.get('format') or ''}",
+            f"计划发布时间: {item.get('planned_slot_myt') or item.get('planned_slot') or '未设置'}",
+            f"需要交付: {repair.get('required_media') or ''}",
+            f"阻碍: {'；'.join(blockers) if blockers else '缺最终公开媒体 URL'}",
+            "",
+            "## 内容文字",
+            "",
+            item.get("caption") or "暂无文案。",
+            "",
+            "## 交付要求",
+            "",
+            "- 提供最终公开媒体 URL，不要提供本地文件路径。",
+            "- Reel 必须是公开 MP4/MOV/M4V 视频 URL。",
+            "- Carousel 必须是 2 到 10 个公开图片 URL，每行一个。",
+            "- 素材必须是 DREC 自有、授权、可商用，或已批准生成素材。",
+            "- 视觉 QA 通过后，才把 `visual_qa_status` 填为 `passed`。",
+            "- 不要新增医疗承诺、保证逆转、恐吓画面或卖课语言。",
+            "",
+            "## 导入方式",
+            "",
+            "1. 打开 `media-repair.csv`。",
+            "2. 把 placeholder URL 换成最终公开媒体 URL。",
+            "3. 回到 DREC 首页，先点检查媒体，再保存媒体证据。",
+            "4. 保存成功后重新检查发布交接。",
+            "",
+            "## 安全边界",
+            "",
+            "这个包只用于补媒体；不会发布到 Facebook / Instagram。",
+            "",
+        ]
+    )
+
+
+def blocked_media_repair_import_rules(items: list[dict]):
+    return "\n".join(
+        [
+            "# DREC 补媒体导入规则",
+            "",
+            "用途：把已排程但缺最终公开媒体 URL 的项目补齐。这个包只读，不会发布、不会排程、不会调用 Meta。",
+            "",
+            f"当前需要补媒体项目数：{len(items)}",
+            "",
+            "## CSV 字段",
+            "",
+            "- `asset_id`：不要改。",
+            "- `new_media_urls`：替换为最终公开 URL；多个图片 URL 可每行一个。",
+            "- `visual_qa_status`：只有人工看过最终画面后才填 `passed`。",
+            "- `rights_note`：必须说明 owned/licensed/approved for DREC use。",
+            "- `producer_name`：填写制作人或负责人。",
+            "- `production_notes`：保留 queue id 和制作说明。",
+            "",
+            "## 格式规则",
+            "",
+            "- Reel：至少 1 个公开 MP4/MOV/M4V URL。",
+            "- Carousel：2 到 10 个公开图片 URL。",
+            "- Single / Story：至少 1 个公开最终图片或视频 URL。",
+            "- 禁止 `PASTE_PUBLIC_...` placeholder。",
+            "- 禁止本机路径、私有云端路径、需要登录才可打开的链接。",
+            "",
+            "## 医生 Chang carousel 设计规则",
+            "",
+            "- 1080x1350 单页输出，不要拼图。",
+            "- 深绿 `#0A463F`，米白 `#FBF7EF`，关键词深红 `#C0392B`，重点亮金 `#F5C518`。",
+            "- 封面才放医生照片；内容页正文放在米白文字板。",
+            "- 每页左上 DREC/logo，右上 X/N，底部 `医生 Chang`。",
+            "",
+        ]
+    )
+
+
+@app.get("/operations/blocked-media-repair-pack.zip")
+async def operations_blocked_media_repair_pack_zip(_: None = Depends(require_access_token)):
+    closeout = await publishing_closeout_payload(100)
+    items = closeout.get("scheduled_blocked") or []
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr(
+            "README.zh.md",
+            "\n".join(
+                [
+                    "# DREC 补媒体交接包",
+                    "",
+                    f"生成时间：{datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}",
+                    f"需要补媒体项目数：{len(items)}",
+                    "",
+                    "这个 ZIP 用来把“已排程但缺媒体”的项目交给制作人员处理。",
+                    "",
+                    "## 文件",
+                    "",
+                    "- `media-repair.csv`：可粘贴最终公开媒体 URL 的导入模板。",
+                    "- `import-rules.zh.md`：导入和安全规则。",
+                    "- `dr-chang-carousel-design-spec.json`：医生 Chang carousel 设计规范。",
+                    "- `producer-briefs/`：每个缺媒体项目的一份制作需求。",
+                    "",
+                    "## 安全边界",
+                    "",
+                    "- 这个包只读。",
+                    "- 下载不会发布 Facebook / Instagram。",
+                    "- 导入媒体证据也只会补资料；发布仍需人工和独立关卡。",
+                    "",
+                ]
+            ),
+        )
+        archive.writestr("media-repair.csv", blocked_media_repair_csv(items))
+        archive.writestr("import-rules.zh.md", blocked_media_repair_import_rules(items))
+        archive.writestr(
+            "dr-chang-carousel-design-spec.json",
+            json.dumps(
+                {
+                    "spec": DR_CHANG_CAROUSEL_DESIGN_SPEC,
+                    "brand_assets": {
+                        "logo": "/ui/assets/brand/drec-healthcare-academy-logo.jpeg",
+                        "doctor_cover_presenting": "/ui/assets/brand/dr-eason-presenting.png",
+                        "doctor_cover_standing": "/ui/assets/brand/dr-eason-standing.png",
+                        "doctor_pointing_photo": "/ui/assets/brand/dr-eason-pointing.jpeg",
+                    },
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+        )
+        for index, item in enumerate(items, start=1):
+            queue_id = str(item.get("id") or f"item-{index}")
+            archive.writestr(f"producer-briefs/{index:02d}-{queue_id}.zh.md", blocked_media_producer_brief(item))
+    buffer.seek(0)
+    return Response(
+        buffer.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": 'attachment; filename="drec-blocked-media-repair-pack.zip"'},
+    )
+
+
 @app.get("/operations/publishing-closeout.zh.md")
 async def operations_publishing_closeout_zh(_: None = Depends(require_access_token)):
     payload = await publishing_closeout_payload(100)
