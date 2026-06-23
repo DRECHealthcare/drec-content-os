@@ -10,7 +10,7 @@ import json
 import re
 import zipfile
 from pathlib import Path
-from urllib.parse import urlencode
+from urllib.parse import urlparse, urlencode
 from uuid import UUID, uuid4
 
 import httpx
@@ -16413,6 +16413,35 @@ def parse_media_url_cell(value: str | None):
     return parts
 
 
+def media_url_structure_errors(media_urls: list[str], fmt: str | None = None):
+    errors = []
+    placeholder_urls = [url for url in media_urls if "PASTE_PUBLIC_" in str(url).upper()]
+    if placeholder_urls:
+        errors.append(
+            {
+                "reason": "Replace placeholder media URLs before preview/import.",
+                "invalid_urls": placeholder_urls,
+            }
+        )
+    invalid_scheme = []
+    for url in media_urls:
+        parsed = urlparse(str(url))
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            invalid_scheme.append(url)
+    if invalid_scheme:
+        errors.append(
+            {
+                "reason": "Media URLs must be public http or https URLs.",
+                "invalid_urls": invalid_scheme,
+            }
+        )
+    if fmt == "carousel" and not 2 <= len(media_urls) <= 10:
+        errors.append({"reason": "Carousel media requires 2 to 10 public image URLs."})
+    if fmt == "reel" and not any(media_url_is_video(str(url)) for url in media_urls):
+        errors.append({"reason": "Reel media requires at least one public MP4/MOV/M4V video URL."})
+    return errors
+
+
 def parse_production_reply_blocks(reply_text: str):
     blocks = []
     current = {}
@@ -16513,10 +16542,6 @@ async def process_asset_media_attachment_csv(
         if not media_urls:
             skipped.append({"row": index, "asset_id": asset_id, "reason": "No new_media_urls provided."})
             continue
-        invalid_urls = [url for url in media_urls if not str(url).startswith("http")]
-        if invalid_urls:
-            skipped.append({"row": index, "asset_id": asset_id, "reason": "Media URLs must start with http or https.", "invalid_urls": invalid_urls})
-            continue
         visual_qa_status = normalize_visual_qa_status(row.get("visual_qa_status"))
         if visual_qa_status == "invalid":
             skipped.append({"row": index, "asset_id": asset_id, "reason": "visual_qa_status must be pending, passed, or needs_work."})
@@ -16524,6 +16549,22 @@ async def process_asset_media_attachment_csv(
         existing = await asset_by_id(asset_id)
         if existing is None:
             skipped.append({"row": index, "asset_id": asset_id, "reason": "Asset not found."})
+            continue
+        media_url_errors = media_url_structure_errors(media_urls, existing.get("format"))
+        if media_url_errors:
+            skipped.append(
+                {
+                    "row": index,
+                    "asset_id": asset_id,
+                    "reason": "; ".join(error.get("reason", "") for error in media_url_errors if error.get("reason")),
+                    "invalid_urls": [
+                        invalid_url
+                        for error in media_url_errors
+                        for invalid_url in (error.get("invalid_urls") or [])
+                    ],
+                    "format": existing.get("format"),
+                }
+            )
             continue
         producer_name = (row.get("producer_name") or "").strip()
         rights_note = (row.get("rights_note") or "").strip()

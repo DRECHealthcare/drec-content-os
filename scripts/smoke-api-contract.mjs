@@ -6031,6 +6031,26 @@ const requiredSnippets = [
     text: "/operations/import-asset-media-attachments",
   },
   {
+    name: "api media url structure guard helper",
+    file: "main",
+    text: "def media_url_structure_errors",
+  },
+  {
+    name: "api media url placeholder guard",
+    file: "main",
+    text: "Replace placeholder media URLs before preview/import.",
+  },
+  {
+    name: "api reel media video extension guard",
+    file: "main",
+    text: "Reel media requires at least one public MP4/MOV/M4V video URL.",
+  },
+  {
+    name: "api carousel media count guard",
+    file: "main",
+    text: "Carousel media requires 2 to 10 public image URLs.",
+  },
+  {
     name: "web asset media attachments preview renderer",
     file: "web",
     text: "renderAssetMediaAttachmentPreview",
