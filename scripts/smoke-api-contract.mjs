@@ -6356,6 +6356,26 @@ const requiredSnippets = [
     text: "data-home-import-media-repair",
   },
   {
+    name: "web home blocked media producer brief action",
+    file: "web",
+    text: "data-home-copy-media-brief",
+  },
+  {
+    name: "web home blocked media producer brief helper",
+    file: "web",
+    text: "homeMediaRepairProducerBrief",
+  },
+  {
+    name: "web home blocked media producer brief copy",
+    file: "web",
+    text: "DREC 视频/媒体制作需求",
+  },
+  {
+    name: "web home blocked media producer brief safety",
+    file: "web",
+    text: "这里不会发布 Facebook/IG",
+  },
+  {
     name: "web home blocked media no publish copy",
     file: "web",
     text: "这里只补资料，不会发布 Facebook/IG",

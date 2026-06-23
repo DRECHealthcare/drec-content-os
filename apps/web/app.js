@@ -6151,6 +6151,7 @@ function renderHomePublishingCloseout(data) {
             <button type="button" data-home-preview-media-repair="${escapeHtml(firstBlockedMedia.id || "")}">1. 检查媒体</button>
             <button class="secondary-action" type="button" data-home-import-media-repair="${escapeHtml(firstBlockedMedia.id || "")}" disabled>2. 保存媒体证据</button>
           </div>
+          <button class="quiet-action" type="button" data-home-copy-media-brief="${escapeHtml(firstBlockedMedia.id || "")}">复制制作需求</button>
           <button class="quiet-action" type="button" data-home-copy-media-repair="${escapeHtml(firstBlockedMedia.id || "")}">复制 CSV 行</button>
         </div>
       </article>
@@ -6344,6 +6345,41 @@ function homeMediaRepairCsvText(item, mediaUrls = "") {
   return [
     columns.join(","),
     columns.map((column) => csvCell(resolvedRow[column] || "")).join(","),
+  ].join("\n");
+}
+
+function homeMediaRepairProducerBrief(item) {
+  const requiredMedia = (item.media_repair || {}).required_media || homeRequiredMediaText(item);
+  const plannedTime = item.planned_slot_myt || item.planned_slot || "未排程";
+  const caption = String(item.caption || "").trim();
+  return [
+    "DREC 视频/媒体制作需求",
+    "",
+    `Queue ID: ${item.id || ""}`,
+    `Asset ID: ${item.asset_id || ""}`,
+    `平台/格式: ${item.channel || "post"} / ${item.format || "content"}`,
+    `计划发布时间: ${plannedTime}`,
+    `需要交付: ${requiredMedia}`,
+    "",
+    "内容文字:",
+    caption || "(请按 DREC 内容计划制作，不添加新医学承诺。)",
+    "",
+    "制作要求:",
+    "- 中文为主，清楚、专业、适合约 50 岁华人受众。",
+    "- DREC 蓝/绿/青绿色医疗风格；避免卡通、恐吓、夸张疗效画面。",
+    "- 画面支持解释，不要用视觉替代医学说明。",
+    "- 字幕/文字必须清晰可读，手机观看也能看清。",
+    "- 不要加入 miracle cure、保证逆转、一定逆转、直接卖课等表述。",
+    "- 不要给个人诊断、药物调整或停药指示。",
+    "",
+    "交付方式:",
+    "- 提供一个公开可访问的最终媒体 URL。",
+    "- Reel 请交付 MP4/MOV 公开视频链接。",
+    "- 如果是多张图，请每张图一个公开 URL。",
+    "- 同时说明 rights_note、producer_name、production_notes。",
+    "",
+    "回填给 DREC:",
+    "把最终公开媒体 URL 粘贴到首页“公开媒体 URL”，先点“检查媒体”，通过后点“保存媒体证据”。这里不会发布 Facebook/IG。",
   ].join("\n");
 }
 
@@ -7827,10 +7863,11 @@ document.getElementById("home-publish-closeout-status")?.addEventListener("click
   const captionButton = event.target.closest("[data-home-copy-handoff-caption]");
   const mediaButton = event.target.closest("[data-home-copy-handoff-media]");
   const mediaRepairButton = event.target.closest("[data-home-copy-media-repair]");
+  const mediaBriefButton = event.target.closest("[data-home-copy-media-brief]");
   const previewMediaRepairButton = event.target.closest("[data-home-preview-media-repair]");
   const importMediaRepairButton = event.target.closest("[data-home-import-media-repair]");
   const openMediaWorkbenchButton = event.target.closest("[data-home-open-media-workbench]");
-  if (!metricsButton && !recordButton && !fullButton && !captionButton && !mediaButton && !mediaRepairButton && !previewMediaRepairButton && !importMediaRepairButton && !openMediaWorkbenchButton) return;
+  if (!metricsButton && !recordButton && !fullButton && !captionButton && !mediaButton && !mediaRepairButton && !mediaBriefButton && !previewMediaRepairButton && !importMediaRepairButton && !openMediaWorkbenchButton) return;
   const message = document.getElementById("home-publish-closeout-message");
   if (previewMediaRepairButton || importMediaRepairButton) {
     const container = document.getElementById("home-publish-closeout-status");
@@ -7845,6 +7882,22 @@ document.getElementById("home-publish-closeout-status")?.addEventListener("click
       dryRun: Boolean(previewMediaRepairButton),
       button: previewMediaRepairButton || importMediaRepairButton,
     });
+    return;
+  }
+  if (mediaBriefButton) {
+    const container = document.getElementById("home-publish-closeout-status");
+    const blockedItems = JSON.parse(container?.dataset.blockedItems || "[]");
+    const item = blockedItems.find((row) => row.id === mediaBriefButton.dataset.homeCopyMediaBrief);
+    if (!item) {
+      if (message) message.textContent = "找不到这条 blocked 项目，请刷新。";
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(homeMediaRepairProducerBrief(item));
+      if (message) message.textContent = "制作需求已复制。发给制作人员；拿到公开 MP4/MOV 链接后，粘贴到上方检查并保存。";
+    } catch {
+      if (message) message.textContent = "浏览器挡住了复制。请打开发布交接清单查看这条内容的制作要求。";
+    }
     return;
   }
   if (openMediaWorkbenchButton) {
