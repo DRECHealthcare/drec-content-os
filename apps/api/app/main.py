@@ -28696,6 +28696,135 @@ def today_action_from_cycle(cycle: dict):
     }
 
 
+def today_action_from_closeout(closeout: dict):
+    counts = closeout.get("counts") or {}
+    action = closeout.get("next_action") or {}
+    scheduled_blocked = int(counts.get("scheduled_blocked") or 0)
+    scheduled_recordable = int(counts.get("scheduled_recordable") or 0)
+    scheduled_upcoming = int(counts.get("scheduled_upcoming") or 0)
+    waiting_for_post_id = int(counts.get("waiting_for_post_id") or 0)
+    waiting_for_metrics = int(counts.get("waiting_for_metrics") or 0)
+    waiting_for_rollup = int(counts.get("waiting_for_rollup") or 0)
+    complete = int(counts.get("complete") or 0)
+    if scheduled_blocked:
+        return {
+            "source": "publishing_closeout",
+            "priority": 12,
+            "eyebrow": "发布交接下一步",
+            "title": f"{scheduled_blocked} 条排程内容先补媒体",
+            "body": "这些内容已经进入交接区，但缺最终公开媒体 URL。先复制媒体补充行，补好后预览并导入。",
+            "status": "缺媒体 · 不会发布",
+            "primary": {"kind": "show_card", "label": "打开补媒体步骤", "target": "publish_closeout"},
+            "secondary": [
+                {"kind": "download", "label": "发布交接清单", "path": "/operations/publishing-closeout.zh.md"},
+                {"kind": "show_card", "label": "打开图片回复区", "target": "production_reply"},
+            ],
+            "next_steps": ["打开补媒体步骤", "复制媒体补充行", "补 URL 后预览并导入"],
+            "safety_note": "补媒体只更新交接资料；不会自动发布到 Facebook / Instagram。",
+            "evidence_required": ["asset_id", "final public media URL", "visual_qa_status=passed", "rights_note"],
+        }
+    if scheduled_recordable:
+        return {
+            "source": "publishing_closeout",
+            "priority": 14,
+            "eyebrow": "人工发布下一步",
+            "title": f"{scheduled_recordable} 条内容到点，可交给真人发布",
+            "body": action.get("detail") or "下载安全包或复制发布资料；真人发布后，回来填真实 Post ID。",
+            "status": "到点交接 · 系统不发布",
+            "primary": {"kind": "show_card", "label": "打开人工发布交接", "target": "publish_closeout"},
+            "secondary": [
+                {"kind": "download", "label": "下载安全包", "path": "/operations/today-safe-operator-pack.zip"},
+                {"kind": "download", "label": "发布交接清单", "path": "/operations/publishing-closeout.zh.md"},
+            ],
+            "next_steps": ["打开人工发布交接", "真人按计划发布时间发布", "回来填真实 Post ID"],
+            "safety_note": "这里不会调用 Meta；只有真人发布后才记录证据。",
+            "evidence_required": ["real Meta Post ID or posted URL", "posted_at", "published_by"],
+        }
+    if waiting_for_post_id:
+        return {
+            "source": "publishing_closeout",
+            "priority": 16,
+            "eyebrow": "发布证据下一步",
+            "title": f"{waiting_for_post_id} 条已发布内容缺 Post ID",
+            "body": "先补真实 Meta Post ID 或人工标签；没有 ID 时后续数据学习无法闭环。",
+            "status": "等发布证据 · 不会发布",
+            "primary": {"kind": "show_card", "label": "打开发布证据区", "target": "publish_closeout"},
+            "secondary": [
+                {"kind": "download", "label": "发布证据表", "path": "/operations/manual-publish-evidence.csv"},
+            ],
+            "next_steps": ["打开发布证据区", "填写真实 Post ID", "保存记录后等待数据"],
+            "safety_note": "只保存人工发布证据；不会发帖。",
+            "evidence_required": ["queue_id", "real_meta_post_id or manual label", "posted_at", "published_by"],
+        }
+    if waiting_for_metrics:
+        return {
+            "source": "publishing_closeout",
+            "priority": 22,
+            "eyebrow": "数据回流下一步",
+            "title": f"{waiting_for_metrics} 条已发布内容等待表现数据",
+            "body": action.get("detail") or "录入 Reach、Likes、Comments、Saves、Shares 等数据，再生成学习结果。",
+            "status": "等数据 · 不会发布",
+            "primary": {"kind": "show_card", "label": "打开数据回流", "target": "learning_handback"},
+            "secondary": [
+                {"kind": "download", "label": "数据模板", "path": "/operations/post-publish-metrics-template.csv"},
+                {"kind": "download", "label": "收尾包", "path": "/operations/metrics-closeout-pack.zh.md"},
+            ],
+            "next_steps": ["打开数据回流", "选择已发布帖子", "填数据并保存学习"],
+            "safety_note": "数据回流只产生学习结果；不会发布或创建 Notion 新行。",
+            "evidence_required": ["external_post_id", "reach or engagement metric", "captured_at"],
+        }
+    if waiting_for_rollup:
+        return {
+            "source": "publishing_closeout",
+            "priority": 24,
+            "eyebrow": "学习汇总下一步",
+            "title": f"{waiting_for_rollup} 条数据需要汇总成学习结果",
+            "body": "已有 raw metrics，但还没有 learning outcome。请从数据回流区保存学习结果。",
+            "status": "等学习汇总 · 不会发布",
+            "primary": {"kind": "show_card", "label": "打开数据回流", "target": "learning_handback"},
+            "secondary": [
+                {"kind": "download", "label": "学习收尾包", "path": "/operations/metrics-closeout-pack.zh.md"},
+            ],
+            "next_steps": ["打开数据回流", "确认数据", "保存并生成学习结果"],
+            "safety_note": "学习汇总只更新分析记录；不会发布。",
+            "evidence_required": ["raw metric row", "metric_window=7d", "learning outcome"],
+        }
+    if complete:
+        return {
+            "source": "publishing_closeout",
+            "priority": 70,
+            "eyebrow": "学习闭环下一步",
+            "title": "可以生成本周学习报告",
+            "body": action.get("detail") or "已有发布、数据和学习结果，可以把结论带回下一轮内容计划。",
+            "status": f"{complete} 条已闭环 · 不会发布",
+            "primary": {"kind": "show_card", "label": "打开学习回流", "target": "learning_handback"},
+            "secondary": [
+                {"kind": "download", "label": "中文周报", "path": "/weekly-report.zh.md"},
+                {"kind": "download", "label": "下月回流包", "path": "/operations/monthly-carousel-next-plan-handback.zh.md"},
+            ],
+            "next_steps": ["打开学习回流", "查看中文周报", "带入下一轮计划"],
+            "safety_note": "这里只做学习和计划回流；不会发布，也不会创建 Notion 新行。",
+            "evidence_required": ["weekly report", "learning recommendation", "next-cycle planning note"],
+        }
+    if scheduled_upcoming:
+        return {
+            "source": "publishing_closeout",
+            "priority": 65,
+            "eyebrow": "排程等待中",
+            "title": f"{scheduled_upcoming} 条内容已准备，未到发布时间",
+            "body": "可以先查看交接资料，但不要提前记录 Post ID。到时间真人发布后再回来回填。",
+            "status": "等待发布时间 · 不会发布",
+            "primary": {"kind": "show_card", "label": "查看发布交接", "target": "publish_closeout"},
+            "secondary": [
+                {"kind": "download", "label": "发布交接清单", "path": "/operations/publishing-closeout.zh.md"},
+            ],
+            "next_steps": ["查看交接资料", "等到计划发布时间", "真人发布后回填 ID"],
+            "safety_note": "未到发布点时，系统会阻止提前记录已发布。",
+            "evidence_required": ["planned_slot", "manual publish evidence after planned time"],
+        }
+    return None
+
+
 def today_action_from_completion(audit: dict, unblock: dict):
     completion = audit.get("completion") or {}
     workflow_summary = audit.get("workflow_summary") or {}
@@ -28760,14 +28889,16 @@ def payload_unavailable_summary(payload: dict):
 
 
 async def today_next_action_payload():
-    audit, monthly, cycle = await asyncio.gather(
+    audit, monthly, cycle, closeout = await asyncio.gather(
         safe_today_payload("project_completion", project_completion_audit_payload()),
         safe_today_payload("monthly_carousel", monthly_carousel_next_action_queue_payload()),
         safe_today_payload("cycle_command_center", cycle_command_center_payload()),
+        safe_today_payload("publishing_closeout", publishing_closeout_payload()),
     )
     unblock = project_unblock_board_from_audit(audit)
     candidates = [
         today_action_from_monthly(monthly),
+        today_action_from_closeout(closeout),
         today_action_from_cycle(cycle),
         today_action_from_completion(audit, unblock),
     ]
@@ -28796,6 +28927,11 @@ async def today_next_action_payload():
             "stage_counts": monthly.get("stage_counts") or {},
             "top_three": monthly.get("top_three") or [],
         },
+        "publishing_closeout": {
+            "overall_status": closeout.get("overall_status"),
+            "counts": closeout.get("counts") or {},
+            "next_action": closeout.get("next_action") or {},
+        },
         "unblock": {
             "ready_count": unblock.get("ready_count"),
             "blocked_count": unblock.get("blocked_count"),
@@ -28804,7 +28940,7 @@ async def today_next_action_payload():
         "availability": {
             "partial": any(
                 payload.get("_today_unavailable")
-                for payload in (audit, monthly, cycle)
+                for payload in (audit, monthly, cycle, closeout)
             ),
             "unavailable": [
                 item
@@ -28812,6 +28948,7 @@ async def today_next_action_payload():
                     payload_unavailable_summary(audit),
                     payload_unavailable_summary(monthly),
                     payload_unavailable_summary(cycle),
+                    payload_unavailable_summary(closeout),
                 ]
                 if item
             ],
@@ -28821,6 +28958,7 @@ async def today_next_action_payload():
             "today_next_action_zh": "/operations/today-next-action.zh.md",
             "project_unblock": "/operations/project-unblock-board.zh.md",
             "monthly_next_action_queue": "/operations/monthly-carousel-next-action-queue.zh.md",
+            "publishing_closeout": "/operations/publishing-closeout.zh.md",
             "cycle_command_center": "/operations/cycle-command-center.md",
         },
         "safety": [

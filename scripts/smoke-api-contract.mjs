@@ -1185,6 +1185,36 @@ const requiredSnippets = [
     text: "today_next_action_payload",
   },
   {
+    name: "today next action closeout candidate",
+    file: "main",
+    text: "def today_action_from_closeout",
+  },
+  {
+    name: "today next action fetches publishing closeout",
+    file: "main",
+    text: "safe_today_payload(\"publishing_closeout\", publishing_closeout_payload())",
+  },
+  {
+    name: "today next action exposes publishing closeout summary",
+    file: "main",
+    text: "\"publishing_closeout\": {",
+  },
+  {
+    name: "today next action closeout link",
+    file: "main",
+    text: "\"publishing_closeout\": \"/operations/publishing-closeout.zh.md\"",
+  },
+  {
+    name: "web today action opens publish closeout card",
+    file: "web",
+    text: "target === \"publish_closeout\"",
+  },
+  {
+    name: "web today action opens learning handback card",
+    file: "web",
+    text: "target === \"learning_handback\"",
+  },
+  {
     name: "today next action chinese route",
     file: "main",
     text: "/operations/today-next-action.zh.md",

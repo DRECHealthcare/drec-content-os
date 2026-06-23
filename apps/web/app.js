@@ -6926,6 +6926,17 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
       } else if (target === "production_reply") {
         const card = showHomeActionCard("home-production-reply-card");
         if (card) document.getElementById("home-production-reply-text")?.focus();
+      } else if (target === "publish_closeout") {
+        const card = showHomeActionCard("home-publish-closeout-card");
+        await loadHomePublishingCloseout();
+        if (card) document.getElementById("home-download-today-safe-pack")?.focus();
+      } else if (target === "learning_handback") {
+        const card = showHomeActionCard("home-learning-handback-card");
+        await loadHomePublishingCloseout();
+        if (card) document.getElementById("home-metrics-post")?.focus();
+      } else if (target === "review_schedule") {
+        const card = showHomeActionCard("home-review-schedule-card");
+        if (card) document.getElementById("home-review-queue-decisions-text")?.focus();
       } else {
         showHomeActionCard("home-queue-action-card");
       }
