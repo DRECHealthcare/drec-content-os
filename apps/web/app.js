@@ -2880,6 +2880,15 @@ function renderTodaySimpleOperator(today) {
     production_reply: "我已有图片回复，粘贴这里",
   }[quickCardAction?.target] || quickCardAction?.label || "打开当前输入区";
   const showReelProductionPack = todayNeedsReelProductionPack(action);
+  const canSafeStartFirstCycle = [
+    action.title || "",
+    action.body || "",
+    primary.label || "",
+    primary.screen || "",
+    action.screen || "",
+  ].join(" ").toLowerCase().includes("generate this week's briefs")
+    || primary.screen === "plan"
+    || action.screen === "plan";
   return `
     <div class="simple-operator-copy">
       <div class="simple-operator-topline">
@@ -2899,13 +2908,18 @@ function renderTodaySimpleOperator(today) {
     </div>
     <div class="simple-operator-actions">
       <div class="simple-action-label">今天只按一个按钮</div>
-      <button class="primary" type="button" ${todayActionExtraAttributes(primary)}>${escapeHtml(primaryLabel)}</button>
+      ${canSafeStartFirstCycle ? `
+        <button class="primary" type="button" data-simple-first-cycle-safe-start>首轮安全启动</button>
+      ` : `
+        <button class="primary" type="button" ${todayActionExtraAttributes(primary)}>${escapeHtml(primaryLabel)}</button>
+      `}
       <button class="simple-secondary-action" type="button" data-simple-copy-evidence="${escapeHtml(encodeURIComponent(evidenceText))}">复制证据清单</button>
       ${showReelProductionPack ? `
         <button class="simple-secondary-action" type="button" data-simple-download-reel-production-pack>下载 Reel 制作包</button>
       ` : ""}
       <details class="simple-extra-actions">
         <summary>找不到 / 已有回复才打开</summary>
+        ${canSafeStartFirstCycle ? `<button type="button" ${todayActionExtraAttributes(primary)}>${escapeHtml(primaryLabel)}</button>` : ""}
         ${quickCardAction ? `
           <div class="simple-extra-group">
             <span>如果你已经收到资料</span>
@@ -2943,6 +2957,8 @@ function renderSimpleOperator(data, monthly = null, cycle = null, today = null) 
   const completion = data.workflow?.completion || data.completion || {};
   const nextAction = data.workflow?.next_action || data.next_action || {};
   const readyAssets = Number(summary.queue_ready_asset_count || 0);
+  const briefCount = Number(summary.brief_count || 0);
+  const assetCount = Number(summary.asset_count || 0);
   const queueTotal = Number(summary.queue_total || loopQueueTotal || 0);
   const scheduledQueue = Number(summary.scheduled_queue || loopScheduledQueue || 0);
   const outcomeCount = Number(summary.outcome_count || data.loop?.outcome_count || 0);
@@ -2977,7 +2993,22 @@ function renderSimpleOperator(data, monthly = null, cycle = null, today = null) 
     nextSteps = ["按继续这一步", "完成指定证据", "回首页重新检查"];
   }
 
-  if (Number(monthlyGateCounts.waiting_doctor_safety_clear || 0) > 0) {
+  if (briefCount === 0 && assetCount === 0 && queueTotal === 0) {
+    eyebrow = "首轮启动";
+    title = "先生成第一批待审核素材";
+    body = "系统会生成默认中文 DREC 代谢教育 brief，并保存成 draft assets。下一步仍然是医生/人工审核。";
+    status = "内部草稿 · 不会发布";
+    actions = `
+      <button class="primary" type="button" data-simple-first-cycle-safe-start>首轮安全启动</button>
+      <details class="simple-extra-actions">
+        <summary>需要时打开资料</summary>
+        <button type="button" data-simple-today-kind="show_screen" data-simple-today-screen="plan">打开内容计划</button>
+        <button type="button" data-simple-refresh>重新检查</button>
+      </details>
+    `;
+    safetyNote = "安全锁：只创建内部 brief 和 draft assets；不会审批、排程、发布、更新 Notion 或调用 Meta。";
+    nextSteps = ["首轮安全启动", "去素材页看草稿", "发给医生/人工审核"];
+  } else if (Number(monthlyGateCounts.waiting_doctor_safety_clear || 0) > 0) {
     eyebrow = "月度内容下一步";
     title = `${Number(monthlyGateCounts.waiting_doctor_safety_clear || 0)} 条内容等待医生 Safety clear`;
     body = monthlyPrimary.detail || "先把医生审核消息发给医生。收到回复后，点“粘贴回复”贴回来检查。";
@@ -7233,11 +7264,12 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   const downloadNextPlanHandback = event.target.closest("[data-simple-download-next-plan-handback]");
   const openCycleScreen = event.target.closest("[data-simple-open-cycle-screen]");
   const downloadCycleCommandCenter = event.target.closest("[data-simple-download-cycle-command-center]");
+  const firstCycleSafeStart = event.target.closest("[data-simple-first-cycle-safe-start]");
   const clearAccess = event.target.closest("[data-simple-clear-access]");
   const copyEvidence = event.target.closest("[data-simple-copy-evidence]");
   const todayAction = event.target.closest("[data-simple-today-kind]");
   const refresh = event.target.closest("[data-simple-refresh]");
-  if (!openAccess && !runReadyAssets && !openAssets && !openReview && !openScheduler && !pasteDoctorReply && !uploadDoctorWorksheet && !pasteProductionReply && !previewMonthlyQueue && !runMonthlyQueue && !downloadMonthlyReviewQueue && !pasteReviewDecisions && !scheduleApprovedFromHome && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorEvidence && !downloadMonthlyDoctorMessage && !copyMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadManualPublishEvidence && !downloadTodayPack && !downloadReel && !downloadReelProductionPack && !downloadPostPublish && !downloadPostMetrics && !openLearning && !useLearningTopics && !downloadWeeklyReportZh && !downloadNextPlanHandback && !openCycleScreen && !downloadCycleCommandCenter && !clearAccess && !copyEvidence && !todayAction && !refresh) return;
+  if (!openAccess && !runReadyAssets && !openAssets && !openReview && !openScheduler && !pasteDoctorReply && !uploadDoctorWorksheet && !pasteProductionReply && !previewMonthlyQueue && !runMonthlyQueue && !downloadMonthlyReviewQueue && !pasteReviewDecisions && !scheduleApprovedFromHome && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorEvidence && !downloadMonthlyDoctorMessage && !copyMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadManualPublishEvidence && !downloadTodayPack && !downloadReel && !downloadReelProductionPack && !downloadPostPublish && !downloadPostMetrics && !openLearning && !useLearningTopics && !downloadWeeklyReportZh && !downloadNextPlanHandback && !openCycleScreen && !downloadCycleCommandCenter && !firstCycleSafeStart && !clearAccess && !copyEvidence && !todayAction && !refresh) return;
   if (openAccess) {
     const panel = document.getElementById("token-panel");
     if (panel?.hidden) showTokenPanel();
@@ -7267,6 +7299,10 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
       const simple = document.getElementById("simple-operator");
       simple?.insertAdjacentHTML("beforeend", `<pre class="handoff-panel">${escapeHtml(text)}</pre>`);
     }
+    return;
+  }
+  if (firstCycleSafeStart) {
+    await runFirstCycleSafeStart(firstCycleSafeStart, document.getElementById("simple-operator"));
     return;
   }
   if (todayAction) {
@@ -11069,29 +11105,35 @@ document.getElementById("save-all-assets").addEventListener("click", async () =>
   }
 });
 
-document.getElementById("first-cycle-safe-start")?.addEventListener("click", async () => {
-  const button = document.getElementById("first-cycle-safe-start");
-  const message = document.getElementById("plan-message");
+async function runFirstCycleSafeStart(button, message) {
   const form = document.getElementById("plan-form");
   const data = new FormData(form);
   const limit = Number(data.get("count")) || 5;
   const language = data.get("language") || "zh";
-  const originalText = button.textContent;
-  button.disabled = true;
-  button.textContent = "启动中";
-  message.textContent = "正在生成首轮安全 brief 和待审核素材；不会发布 Facebook/IG。";
+  const originalText = button?.textContent;
+  if (button) {
+    button.disabled = true;
+    button.textContent = "启动中";
+  }
+  if (message) message.textContent = "正在生成首轮安全 brief 和待审核素材；不会发布 Facebook/IG。";
   try {
     const result = await fetchJson(`/operations/first-cycle-safe-start?count=${encodeURIComponent(limit)}&language=${encodeURIComponent(language)}`, { method: "POST" });
     const assetResult = result.asset_result || {};
-    message.textContent = `首轮安全启动完成：${result.created_brief_count || 0} 个 brief，${assetResult.created || 0} 个新素材，${assetResult.reused || 0} 个复用素材。下一步：医生/人工审核。`;
-    await Promise.all([loadBriefs(), loadAssets(), loadFirstCycleEvidenceWorkbench(), loadDoctorSendQueue(), loadDoctorReplyInboxPack(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary()]);
+    if (message) message.textContent = `首轮安全启动完成：${result.created_brief_count || 0} 个 brief，${assetResult.created || 0} 个新素材，${assetResult.reused || 0} 个复用素材。下一步：医生/人工审核。`;
+    await Promise.all([loadBriefs(), loadAssets(), loadFirstCycleEvidenceWorkbench(), loadDoctorSendQueue(), loadDoctorReplyInboxPack(), loadDoctorReviewPolishPack(), loadFirstCycleSprintPack(), loadFirstCycleHandoff(), loadApprovalCockpit(), loadPostApprovalProduction(), loadAssetReviewSession(), loadAssetRewritePack(), loadLoopStatus(), loadLearningSummary(), loadProjectCompletionAudit()]);
     showScreen("assets");
   } catch (error) {
-    message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not start the first safe cycle.";
+    if (message) message.textContent = error.message === "Access token required" ? "Set the access token first." : "Could not start the first safe cycle.";
   } finally {
-    button.disabled = false;
-    button.textContent = originalText || "首轮安全启动";
+    if (button) {
+      button.disabled = false;
+      button.textContent = originalText || "首轮安全启动";
+    }
   }
+}
+
+document.getElementById("first-cycle-safe-start")?.addEventListener("click", async () => {
+  await runFirstCycleSafeStart(document.getElementById("first-cycle-safe-start"), document.getElementById("plan-message"));
 });
 
 document.getElementById("archive-drafted-briefs").addEventListener("click", async () => {

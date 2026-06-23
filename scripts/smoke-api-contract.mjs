@@ -5275,6 +5275,16 @@ const requiredSnippets = [
     text: "/operations/first-cycle-safe-start",
   },
   {
+    name: "web first cycle safe start shared runner",
+    file: "web",
+    text: "runFirstCycleSafeStart",
+  },
+  {
+    name: "web first cycle safe start home action",
+    file: "web",
+    text: "data-simple-first-cycle-safe-start",
+  },
+  {
     name: "web first cycle safe start no publish copy",
     file: "web",
     text: "不会发布 Facebook/IG",
