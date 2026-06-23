@@ -3381,6 +3381,21 @@ const requiredSnippets = [
     text: "renderSimpleEvidence",
   },
   {
+    name: "web simple operator evidence copy helper",
+    file: "web",
+    text: "simpleEvidenceCopyText",
+  },
+  {
+    name: "web simple operator evidence copy action",
+    file: "web",
+    text: "data-simple-copy-evidence",
+  },
+  {
+    name: "web simple operator evidence copy label",
+    file: "web",
+    text: "复制证据清单",
+  },
+  {
     name: "web simple operator today metrics",
     file: "styles",
     text: ".simple-today-metrics",

@@ -2761,6 +2761,17 @@ function todayNeedsReelProductionPack(action = {}) {
   return text.includes("reel") && (text.includes("mp4") || text.includes("mov") || text.includes("video"));
 }
 
+function simpleEvidenceCopyText(action = {}) {
+  const lines = [
+    `下一步: ${action.title || "今日下一步"}`,
+    `说明: ${action.body || ""}`,
+    "要准备的证据:",
+    ...((action.evidence_required || []).filter(Boolean).map((item) => `- ${item}`)),
+    `安全边界: ${action.safety_note || "这里不会发布到 Facebook / Instagram。"}`,
+  ];
+  return lines.join("\n");
+}
+
 function renderAccessPromptSimpleOperator() {
   return `
     <div class="simple-operator-copy">
@@ -2857,6 +2868,7 @@ function renderTodaySimpleOperator(today) {
     : secondary;
   const nextSteps = action.next_steps || ["看这里的主按钮", "执行后重新检查", "只有绿灯才进入下一步"];
   const primaryLabel = primary.label || "继续";
+  const evidenceText = simpleEvidenceCopyText(action);
   const availability = today?.availability || {};
   const project = today?.project_completion || {};
   const monthly = today?.monthly || {};
@@ -2888,6 +2900,7 @@ function renderTodaySimpleOperator(today) {
     <div class="simple-operator-actions">
       <div class="simple-action-label">今天只按一个按钮</div>
       <button class="primary" type="button" ${todayActionExtraAttributes(primary)}>${escapeHtml(primaryLabel)}</button>
+      <button class="simple-secondary-action" type="button" data-simple-copy-evidence="${escapeHtml(encodeURIComponent(evidenceText))}">复制证据清单</button>
       ${showReelProductionPack ? `
         <button class="simple-secondary-action" type="button" data-simple-download-reel-production-pack>下载 Reel 制作包</button>
       ` : ""}
@@ -7131,9 +7144,10 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
   const openCycleScreen = event.target.closest("[data-simple-open-cycle-screen]");
   const downloadCycleCommandCenter = event.target.closest("[data-simple-download-cycle-command-center]");
   const clearAccess = event.target.closest("[data-simple-clear-access]");
+  const copyEvidence = event.target.closest("[data-simple-copy-evidence]");
   const todayAction = event.target.closest("[data-simple-today-kind]");
   const refresh = event.target.closest("[data-simple-refresh]");
-  if (!openAccess && !runReadyAssets && !openAssets && !openReview && !openScheduler && !pasteDoctorReply && !uploadDoctorWorksheet && !pasteProductionReply && !previewMonthlyQueue && !runMonthlyQueue && !downloadMonthlyReviewQueue && !pasteReviewDecisions && !scheduleApprovedFromHome && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorEvidence && !downloadMonthlyDoctorMessage && !copyMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadManualPublishEvidence && !downloadTodayPack && !downloadReel && !downloadReelProductionPack && !downloadPostPublish && !downloadPostMetrics && !openLearning && !useLearningTopics && !downloadWeeklyReportZh && !downloadNextPlanHandback && !openCycleScreen && !downloadCycleCommandCenter && !clearAccess && !todayAction && !refresh) return;
+  if (!openAccess && !runReadyAssets && !openAssets && !openReview && !openScheduler && !pasteDoctorReply && !uploadDoctorWorksheet && !pasteProductionReply && !previewMonthlyQueue && !runMonthlyQueue && !downloadMonthlyReviewQueue && !pasteReviewDecisions && !scheduleApprovedFromHome && !downloadMonthlyDoctorHandoff && !downloadMonthlyDoctorEvidence && !downloadMonthlyDoctorMessage && !copyMonthlyDoctorMessage && !downloadMonthlyActionQueue && !downloadMonthlyProductionRules && !downloadMonthlyProductionQa && !downloadMonthlyQueueReadiness && !downloadHandoff && !downloadManualPublishEvidence && !downloadTodayPack && !downloadReel && !downloadReelProductionPack && !downloadPostPublish && !downloadPostMetrics && !openLearning && !useLearningTopics && !downloadWeeklyReportZh && !downloadNextPlanHandback && !openCycleScreen && !downloadCycleCommandCenter && !clearAccess && !copyEvidence && !todayAction && !refresh) return;
   if (openAccess) {
     const panel = document.getElementById("token-panel");
     if (panel?.hidden) showTokenPanel();
@@ -7149,6 +7163,20 @@ document.getElementById("simple-operator")?.addEventListener("click", async (eve
     await loadLoopStatus();
     await loadDashboardMonthlyActionQueue();
     await loadHomePublishingCloseout();
+    return;
+  }
+  if (copyEvidence) {
+    const text = decodeURIComponent(copyEvidence.dataset.simpleCopyEvidence || "");
+    try {
+      await navigator.clipboard.writeText(text);
+      copyEvidence.textContent = "已复制证据清单";
+      setTimeout(() => {
+        copyEvidence.textContent = "复制证据清单";
+      }, 1500);
+    } catch {
+      const simple = document.getElementById("simple-operator");
+      simple?.insertAdjacentHTML("beforeend", `<pre class="handoff-panel">${escapeHtml(text)}</pre>`);
+    }
     return;
   }
   if (todayAction) {
