@@ -3264,25 +3264,120 @@ def asset_carousel_zip(asset: dict, kind: str):
                     "Use approved DREC storage before attaching media URLs for publishing.",
                     "",
                     "Image size: 1080x1350.",
+                    "PNG packages include `visual-qa-checklist.csv` with per-slide render and structure checks for manual review.",
                     "Brand source files are included in `brand-assets/` for manual design and QA.",
                 ]
             ),
         )
         archive.writestr("media-attachments-template.csv", first_publish_media_attachment_csv(asset))
         write_dr_chang_brand_assets(archive)
+        qa_rows = []
         for index, slide in enumerate(slides, start=1):
             if kind == "png":
+                png_bytes = first_publish_slide_png(asset, slide, index, len(slides))
                 archive.writestr(
                     f"slides/{asset_id}-slide-{index:02d}.png",
-                    first_publish_slide_png(asset, slide, index, len(slides)),
+                    png_bytes,
                 )
+                qa_rows.append(dr_chang_carousel_slide_qa_row(asset, slide, index, len(slides), png_bytes))
             else:
                 archive.writestr(
                     f"slides/{asset_id}-slide-{index:02d}.svg",
                     first_publish_slide_svg(asset, slide, index, len(slides)),
                 )
+        if qa_rows:
+            archive.writestr("visual-qa-checklist.csv", dr_chang_carousel_visual_qa_csv(qa_rows))
     buffer.seek(0)
     return buffer.getvalue()
+
+
+def dr_chang_carousel_slide_qa_row(asset: dict, slide: dict, index: int, total: int, png_bytes: bytes | None = None):
+    metadata = asset.get("metadata") or {}
+    topic_id = monthly_carousel_topic_id(asset) or ""
+    title = dr_chang_slide_text(slide.get("title") or metadata.get("topic") or "")
+    body = dr_chang_slide_text(slide.get("body") or slide.get("explanation") or "")
+    takeaway = dr_chang_slide_text(slide.get("bottom_takeaway") or slide.get("takeaway") or "")
+    keywords = [dr_chang_slide_text(str(item)) for item in (slide.get("highlighted_keywords") or []) if dr_chang_slide_text(str(item))]
+    warnings = []
+    render_status = "not_rendered"
+    width = ""
+    height = ""
+    png_size_bytes = len(png_bytes or b"")
+    if png_bytes:
+        try:
+            image = Image.open(BytesIO(png_bytes))
+            width, height = image.size
+            render_status = "rendered"
+            if image.size != (1080, 1350):
+                warnings.append(f"PNG size is {image.width}x{image.height}; expected 1080x1350.")
+        except OSError:
+            render_status = "render_failed"
+            warnings.append("PNG could not be opened for visual QA.")
+    else:
+        warnings.append("PNG bytes were not provided for QA.")
+
+    if index == 1:
+        if body:
+            warnings.append("Slide 1 has body/explanation text; cover should be hook only.")
+        if not title:
+            warnings.append("Slide 1 missing Big Title/Hook.")
+    else:
+        if not title:
+            warnings.append(f"Slide {index} missing Big Title.")
+        if not body:
+            warnings.append(f"Slide {index} missing Explanation Text.")
+        if not takeaway:
+            warnings.append(f"Slide {index} missing Bottom Takeaway/Teaser.")
+        if len(keywords) < 1:
+            warnings.append(f"Slide {index} has no Highlighted Keywords.")
+        if len(keywords) > 3:
+            warnings.append(f"Slide {index} has more than 3 Highlighted Keywords; keep emphasis focused.")
+
+    return {
+        "topic_id": topic_id,
+        "asset_id": asset.get("id") or "",
+        "slide": index,
+        "slide_total": total,
+        "slide_type": "cover" if index == 1 else "content",
+        "render_status": render_status,
+        "width": width,
+        "height": height,
+        "png_size_bytes": png_size_bytes,
+        "title_present": "yes" if title else "no",
+        "body_rule": "cover_only" if index == 1 and not body else "body_present" if index > 1 and body else "needs_review",
+        "keyword_count": len(keywords),
+        "takeaway_present": "yes" if takeaway else "not_required" if index == 1 else "no",
+        "doctor_photo_rule": "cover_only_template" if index == 1 else "content_pages_no_large_doctor_photo",
+        "manual_visual_qa_required": "yes",
+        "warnings": " | ".join(warnings),
+    }
+
+
+def dr_chang_carousel_visual_qa_csv(rows: list[dict]):
+    output = StringIO()
+    fieldnames = [
+        "topic_id",
+        "asset_id",
+        "slide",
+        "slide_total",
+        "slide_type",
+        "render_status",
+        "width",
+        "height",
+        "png_size_bytes",
+        "title_present",
+        "body_rule",
+        "keyword_count",
+        "takeaway_present",
+        "doctor_photo_rule",
+        "manual_visual_qa_required",
+        "warnings",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for row in rows:
+        writer.writerow({field: row.get(field, "") for field in fieldnames})
+    return output.getvalue()
 
 
 @app.get("/assets/{asset_id}/carousel-preview/{slide_number}.png")
@@ -11731,6 +11826,7 @@ async def operations_monthly_carousel_png_assets_zip(_: None = Depends(require_a
                     f"Source: {NOTION_CAROUSEL_SOURCE.get('name')}",
                     f"Monthly refresh day: {NOTION_CAROUSEL_SOURCE.get('monthly_refresh_day')}",
                     f"Asset count: {len(assets)}",
+                    "Review `visual-qa-checklist.csv` before doctor/design approval; it records per-slide render size, structure checks, and manual QA prompts.",
                     "Brand source files are included in `brand-assets/` for manual design and QA.",
                 ]
             ),
@@ -11750,6 +11846,7 @@ async def operations_monthly_carousel_png_assets_zip(_: None = Depends(require_a
             ],
         )
         writer.writeheader()
+        qa_rows = []
         for asset in assets:
             topic_id = monthly_carousel_topic_id(asset) or "DC000"
             metadata = asset.get("metadata") or {}
@@ -11790,11 +11887,14 @@ async def operations_monthly_carousel_png_assets_zip(_: None = Depends(require_a
                 ),
             )
             for index, slide in enumerate(slides, start=1):
+                png_bytes = first_publish_slide_png(asset, slide, index, len(slides))
                 archive.writestr(
                     f"{folder}/slides/{topic_id}-slide-{index:02d}.png",
-                    first_publish_slide_png(asset, slide, index, len(slides)),
+                    png_bytes,
                 )
+                qa_rows.append(dr_chang_carousel_slide_qa_row(asset, slide, index, len(slides), png_bytes))
         archive.writestr("monthly-carousel-index.csv", output.getvalue())
+        archive.writestr("visual-qa-checklist.csv", dr_chang_carousel_visual_qa_csv(qa_rows))
     buffer.seek(0)
     return Response(
         buffer.getvalue(),

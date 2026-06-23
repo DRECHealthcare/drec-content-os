@@ -7804,6 +7804,26 @@ const requiredSnippets = [
     text: "fill = \"#F5C518\" if used == 0 else \"#FFFFFF\"",
   },
   {
+    name: "carousel visual qa row helper",
+    file: "main",
+    text: "def dr_chang_carousel_slide_qa_row",
+  },
+  {
+    name: "carousel visual qa csv helper",
+    file: "main",
+    text: "def dr_chang_carousel_visual_qa_csv",
+  },
+  {
+    name: "carousel png zip includes visual qa",
+    file: "main",
+    text: "visual-qa-checklist.csv",
+  },
+  {
+    name: "carousel visual qa manual gate",
+    file: "main",
+    text: "\"manual_visual_qa_required\"",
+  },
+  {
     name: "monthly learning handback zip route",
     file: "main",
     text: "/operations/monthly-carousel-learning-handback-pack.zip",
