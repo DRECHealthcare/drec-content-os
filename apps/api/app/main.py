@@ -3084,6 +3084,46 @@ def draw_dr_chang_logo(draw: ImageDraw.ImageDraw, image: Image.Image):
         draw.text((88, 78), "DREC", font=first_publish_font(32, bold=True), fill="#0A463F")
 
 
+def draw_dr_chang_keyword_chips(
+    draw: ImageDraw.ImageDraw,
+    keywords: list,
+    *,
+    x: int,
+    y: int,
+    max_width: int,
+):
+    chip_font = first_publish_font(28, bold=True)
+    current_x = x
+    current_y = y
+    used = 0
+    for raw_keyword in keywords[:3]:
+        keyword = dr_chang_slide_text(str(raw_keyword))
+        if not keyword:
+            continue
+        label = keyword[:18]
+        width = int(draw.textlength(label, font=chip_font)) + 42
+        height = 48
+        if current_x > x and current_x + width > x + max_width:
+            current_x = x
+            current_y += height + 12
+        if current_y > y + 62:
+            break
+        fill = "#F5C518" if used == 0 else "#FFFFFF"
+        outline = "#C0392B" if used == 0 else "#F5C518"
+        text_fill = "#0A463F" if used == 0 else "#C0392B"
+        draw.rounded_rectangle(
+            (current_x, current_y, current_x + width, current_y + height),
+            radius=18,
+            fill=fill,
+            outline=outline,
+            width=3,
+        )
+        draw.text((current_x + 21, current_y + 7), label, font=chip_font, fill=text_fill)
+        current_x += width + 12
+        used += 1
+    return used
+
+
 def dr_chang_cover_doctor_photo_path(slide: dict):
     visual = dr_chang_slide_text(slide.get("visual_note") or "")
     title = dr_chang_slide_text(slide.get("title") or "")
@@ -3157,14 +3197,13 @@ def first_publish_slide_png(asset: dict, slide: dict, index: int, total: int):
         draw.text((124, y), line, font=body_font, fill=slate)
         y += 52
 
-    keyword_text = dr_chang_slide_text("  ".join(str(item) for item in highlighted_keywords[:4]))
-    if keyword_text:
-        draw.text((124, 1060), keyword_text, font=first_publish_font(30, bold=True), fill=deep_red)
+    if highlighted_keywords:
+        draw_dr_chang_keyword_chips(draw, highlighted_keywords, x=124, y=1044, max_width=830)
 
-    draw.rounded_rectangle((104, 1125, 976, 1218), radius=18, fill="white")
+    draw.rounded_rectangle((104, 1134, 976, 1226), radius=18, fill="white", outline="#E4D8C6", width=2)
     footer_text = takeaway or "一般健康教育，不代替个人诊断或治疗建议。"
     for line in wrap_draw_text(draw, footer_text, footer_font, 820, 1):
-        draw.text((124, 1155), line, font=footer_font, fill=deep_green)
+        draw.text((124, 1162), line, font=footer_font, fill=deep_green)
 
     topic_lines = wrap_draw_text(draw, str(topic), small_font, 760, 1)
     note_lines = wrap_draw_text(draw, str(note), first_publish_font(20), 880, 1)

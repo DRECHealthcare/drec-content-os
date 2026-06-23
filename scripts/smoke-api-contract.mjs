@@ -7794,6 +7794,16 @@ const requiredSnippets = [
     text: "def dr_chang_cover_doctor_photo_path",
   },
   {
+    name: "carousel keyword chip renderer",
+    file: "main",
+    text: "def draw_dr_chang_keyword_chips",
+  },
+  {
+    name: "carousel keyword chip gold first emphasis",
+    file: "main",
+    text: "fill = \"#F5C518\" if used == 0 else \"#FFFFFF\"",
+  },
+  {
     name: "monthly learning handback zip route",
     file: "main",
     text: "/operations/monthly-carousel-learning-handback-pack.zip",
