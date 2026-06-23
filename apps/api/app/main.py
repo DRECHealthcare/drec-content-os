@@ -23603,7 +23603,38 @@ async def fetch_publish_queue_items(limit: int = 100):
                 "limit": str(bounded_limit),
             },
         )
+    rows = await attach_asset_media_metadata(rows)
     rows = await attach_latest_feedback(rows)
+    return rows
+
+
+async def attach_asset_media_metadata(rows: list[dict]):
+    asset_ids = sorted({str(row.get("asset_id")) for row in rows if row.get("asset_id")})
+    if not asset_ids:
+        return rows
+    asset_rows = await fetch_rows(
+        """
+        select id, metadata
+        from assets
+        where id::text = any($1::text[])
+        """,
+        asset_ids,
+    )
+    if not asset_rows and supabase_rest.configured():
+        asset_rows = await supabase_rest.select(
+            "assets",
+            {
+                "select": "id,metadata",
+                "id": f"in.({','.join(asset_ids)})",
+                "limit": "500",
+            },
+        )
+    metadata_by_asset_id = {str(asset.get("id")): asset.get("metadata") or {} for asset in asset_rows}
+    for row in rows:
+        metadata = metadata_by_asset_id.get(str(row.get("asset_id")), {})
+        row["asset_media_metadata"] = metadata
+        row["latest_visual_qa_status"] = metadata.get("latest_visual_qa_status") or "pending"
+        row["latest_media_rights_note"] = metadata.get("latest_media_rights_note") or ""
     return rows
 
 
@@ -24490,7 +24521,6 @@ def review_schedule_queue_lines(item: dict, index: int, label: str):
 
 def pre_schedule_production_blockers(item: dict):
     blockers = []
-    media_urls = [url for url in item.get("media_urls") or [] if url]
     latest_feedback = item.get("latest_feedback") or {}
     if item.get("status") != "draft":
         blockers.append("Needs draft status before schedule approval.")
@@ -24502,8 +24532,7 @@ def pre_schedule_production_blockers(item: dict):
         blockers.append("Needs final caption.")
     if item.get("planned_slot"):
         blockers.append("Already has planned time; use schedule audit instead.")
-    if item.get("format") in {"carousel", "single", "reel", "story"} and not media_urls:
-        blockers.append("Needs approved media/design URL before scheduling.")
+    blockers.extend(visual_media_blockers(item))
     return blockers
 
 
@@ -24526,6 +24555,14 @@ def visual_media_blockers(item: dict):
         blockers.append("Carousel needs 2 to 10 media URLs.")
     if fmt == "reel" and not any(media_url_is_video(str(url)) for url in media_urls):
         blockers.append("Reel needs a public video URL.")
+    if fmt in {"carousel", "single", "reel", "story"} and media_urls:
+        metadata = item.get("asset_media_metadata") or {}
+        visual_qa_status = item.get("latest_visual_qa_status") or metadata.get("latest_visual_qa_status") or "pending"
+        rights_note = item.get("latest_media_rights_note") or metadata.get("latest_media_rights_note") or ""
+        if visual_qa_status != "passed":
+            blockers.append("Visual QA must be passed before handoff or Meta dispatch.")
+        if not str(rights_note).strip():
+            blockers.append("Media rights note is required before handoff or Meta dispatch.")
     return blockers
 
 
@@ -25078,6 +25115,7 @@ async def schedule_publish_queue_next_slot(item_id: str, _: None = Depends(requi
         existing = rows[0] if rows else None
     if existing is None:
         raise HTTPException(status_code=404, detail="Queue item not found.")
+    existing = (await attach_asset_media_metadata([existing]))[0]
     if existing.get("status") == "published":
         raise HTTPException(status_code=422, detail="Published items cannot be rescheduled.")
     if existing.get("status") == "cancelled":
@@ -26315,6 +26353,8 @@ async def next_facebook_publish_item(item_id: str | None = None):
                 },
             )
             row = rows[0] if rows else None
+        if row:
+            row = (await attach_asset_media_metadata([row]))[0]
         return row
     rows = await fetch_rows(
         """
@@ -26342,6 +26382,7 @@ async def next_facebook_publish_item(item_id: str | None = None):
                 "limit": "1",
             },
         )
+    rows = await attach_asset_media_metadata(rows)
     return rows[0] if rows else None
 
 
@@ -26391,6 +26432,8 @@ async def next_instagram_publish_item(item_id: str | None = None):
                 },
             )
             row = rows[0] if rows else None
+        if row:
+            row = (await attach_asset_media_metadata([row]))[0]
         return row
     rows = await fetch_rows(
         """
@@ -26418,6 +26461,7 @@ async def next_instagram_publish_item(item_id: str | None = None):
                 "limit": "1",
             },
         )
+    rows = await attach_asset_media_metadata(rows)
     return rows[0] if rows else None
 
 
@@ -26438,16 +26482,7 @@ def instagram_dispatch_blockers(item: dict | None, readiness: dict):
         blockers.append("Item already has an external Meta post ID.")
     if readiness.get("overall_status") != "ready_for_worker_testing":
         blockers.append("Meta credentials or permissions are not ready.")
-    media_urls = [url for url in item.get("media_urls") or [] if url]
-    if not media_urls:
-        blockers.append("Instagram publishing needs at least one image or video URL.")
-    unsupported_media = [url for url in media_urls if not str(url).startswith("http")]
-    if unsupported_media:
-        blockers.append("Private media needs a public/signed publishing URL before Meta can receive it.")
-    if item.get("format") == "carousel" and not 2 <= len(media_urls) <= 10:
-        blockers.append("Instagram carousel needs 2 to 10 media URLs.")
-    if item.get("format") == "reel" and not any(is_video_url(str(url)) for url in media_urls):
-        blockers.append("Instagram reel needs a public video URL.")
+    blockers.extend(visual_media_blockers(item))
     return blockers
 
 
@@ -26658,6 +26693,7 @@ async def next_due_publish_item(channel: str):
                 "limit": "1",
             },
         )
+    rows = await attach_asset_media_metadata(rows)
     return rows[0] if rows else None
 
 

@@ -7895,6 +7895,26 @@ const requiredSnippets = [
     text: "visual_qa_status` 默认是 `pending`",
   },
   {
+    name: "publish queue attaches asset media qa metadata",
+    file: "main",
+    text: "async def attach_asset_media_metadata",
+  },
+  {
+    name: "publish handoff requires visual qa passed",
+    file: "main",
+    text: "Visual QA must be passed before handoff or Meta dispatch.",
+  },
+  {
+    name: "publish handoff requires media rights note",
+    file: "main",
+    text: "Media rights note is required before handoff or Meta dispatch.",
+  },
+  {
+    name: "pre schedule gate uses visual media blockers",
+    file: "main",
+    text: "blockers.extend(visual_media_blockers(item))",
+  },
+  {
     name: "home blocked media repair pack button",
     file: "web",
     text: "data-home-download-media-repair-pack",
