@@ -461,24 +461,51 @@
             <button id="load-learning-topics" type="button">带入学习主题</button>
             <button type="submit">生成内容计划</button>
             <details class="simple-extra-actions compact-tool-group">
-              <summary>需要时打开资料 / Notion 同步</summary>
+              <summary>其他计划工具</summary>
               <button id="download-plan-csv" type="button">下载计划 CSV</button>
               <button id="download-brief-asset-pack" type="button">下载素材包</button>
-              <button id="refresh-notion-carousel-source" type="button">刷新 Notion 来源</button>
-              <button id="download-notion-monthly-refresh" type="button">月度刷新说明</button>
-              <button id="download-notion-monthly-refresh-evidence" type="button">月度刷新证据表</button>
-              <button id="download-notion-carousel-workflow" type="button">下载 Notion 图片流程</button>
-              <button id="download-notion-connector-fallback" type="button">下载 Notion CSV 备用包</button>
-              <button id="download-notion-carousel-template" type="button">下载 Notion 导入模板</button>
-              <label class="file-action">
-                Notion CSV
-                <input id="notion-carousel-csv-file" type="file" accept=".csv,text/csv">
-              </label>
-              <button id="preview-notion-carousel-csv" type="button">预览 Notion CSV</button>
-              <button id="import-notion-carousel-csv" type="button" disabled>导入 Notion CSV</button>
-              <small class="home-doctor-import-hint">先预览 Notion CSV；有可导入行且没有 CSV 内重复 Topic ID 后才可以导入。这里不会创建 Notion 新行，也不会发布。</small>
               <button id="save-all-assets" type="button">保存全部素材</button>
               <button id="archive-drafted-briefs" type="button">归档已生成草稿</button>
+            </details>
+          </div>
+          <div class="notion-sync-steps full" data-notion-sync-steps>
+            <div class="sync-step">
+              <span>1</span>
+              <strong>拿到 Notion CSV</strong>
+              <p>每月 19 号后，从 Notion 当前视图导出 CSV；也可以先下载模板对照栏位。</p>
+              <div class="learning-actions">
+                <button id="refresh-notion-carousel-source" type="button">刷新状态</button>
+                <button id="download-notion-carousel-template" type="button">下载导入模板</button>
+                <button id="download-notion-connector-fallback" type="button">CSV 备用说明</button>
+              </div>
+            </div>
+            <div class="sync-step">
+              <span>2</span>
+              <strong>先预览</strong>
+              <p>选择 Notion CSV 后先预览。系统会检查 Topic ID、Published 跳过、重复主题和必要栏位。</p>
+              <div class="learning-actions">
+                <label class="file-action">
+                  选择 Notion CSV
+                  <input id="notion-carousel-csv-file" type="file" accept=".csv,text/csv">
+                </label>
+                <button id="preview-notion-carousel-csv" type="button">预览 Notion CSV</button>
+              </div>
+            </div>
+            <div class="sync-step">
+              <span>3</span>
+              <strong>确认后导入</strong>
+              <p>先预览 Notion CSV；有可导入行且没有 CSV 内重复 Topic ID 后才可以导入。导入会创建本地 brief/asset，不会创建 Notion 新行，也不会发布。</p>
+              <div class="learning-actions">
+                <button id="import-notion-carousel-csv" type="button" disabled>导入 Notion CSV</button>
+                <button id="download-notion-monthly-refresh-evidence" type="button">下载证据表</button>
+              </div>
+            </div>
+            <details class="notion-sync-extra">
+              <summary>月度说明和图片流程</summary>
+              <div class="learning-actions">
+                <button id="download-notion-monthly-refresh" type="button">月度刷新说明</button>
+                <button id="download-notion-carousel-workflow" type="button">下载 Notion 图片流程</button>
+              </div>
             </details>
           </div>
         </form>

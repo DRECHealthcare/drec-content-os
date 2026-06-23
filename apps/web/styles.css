@@ -2400,6 +2400,88 @@ button[type="submit"] {
   font-size: 12px;
 }
 
+.notion-sync-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid #BFD7D4;
+  border-radius: 8px;
+  background: #F6FBFA;
+}
+
+.sync-step {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #FFFFFF;
+}
+
+.sync-step > span {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--teal);
+  color: #FFFFFF;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.sync-step strong {
+  color: var(--navy);
+  font-size: 15px;
+}
+
+.sync-step p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.sync-step .learning-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  margin-top: 2px;
+}
+
+.sync-step .learning-actions button,
+.sync-step .file-action {
+  min-width: 0;
+  width: 100%;
+}
+
+.sync-step .file-action input {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+}
+
+.notion-sync-extra {
+  grid-column: 1 / -1;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #FFFFFF;
+}
+
+.notion-sync-extra summary {
+  cursor: pointer;
+  color: var(--navy);
+  font-weight: 700;
+}
+
+.notion-sync-extra .learning-actions {
+  margin-top: 10px;
+}
+
 .summary-row {
   display: flex;
   flex-wrap: wrap;
@@ -2869,7 +2951,7 @@ button[type="submit"] {
   .token-remember { flex: 0 0 auto; }
   .token-button { margin-left: auto; }
   .screen { padding: 18px; }
-  .grid, .loop, .split-form, .learning-grid, .brand-asset-grid, .handoff-summary, .creative-preview, .weight-row, .scheduler-toolbar, .week-schedule, .workflow-steps, .test-path-list, .quick-composer, .sprint-board, .completion-bars { grid-template-columns: 1fr; }
+  .grid, .loop, .split-form, .learning-grid, .brand-asset-grid, .notion-sync-steps, .handoff-summary, .creative-preview, .weight-row, .scheduler-toolbar, .week-schedule, .workflow-steps, .test-path-list, .quick-composer, .sprint-board, .completion-bars { grid-template-columns: 1fr; }
   .simple-operator { grid-template-columns: 1fr; }
   .simple-operator-actions { justify-content: stretch; }
   .simple-operator-actions button { width: 100%; white-space: normal; }

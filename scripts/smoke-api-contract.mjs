@@ -3599,6 +3599,26 @@ const requiredSnippets = [
     text: "先预览 Notion CSV；有可导入行且没有 CSV 内重复 Topic ID 后才可以导入",
   },
   {
+    name: "web notion sync visible steps",
+    file: "webIndex",
+    text: "data-notion-sync-steps",
+  },
+  {
+    name: "web notion sync step class",
+    file: "styles",
+    text: ".notion-sync-steps",
+  },
+  {
+    name: "web notion sync three step copy",
+    file: "webIndex",
+    text: "确认后导入",
+  },
+  {
+    name: "web notion csv import no publish copy",
+    file: "webIndex",
+    text: "不会创建 Notion 新行，也不会发布",
+  },
+  {
     name: "web dashboard notion refresh card",
     file: "web",
     text: "data-dashboard-notion-refresh-status",
