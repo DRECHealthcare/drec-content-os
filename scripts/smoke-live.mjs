@@ -1656,8 +1656,25 @@ const checks = [
       const data = await res.json();
       return Array.isArray(data.styles)
         && data.styles.some((style) => style.key === "edu_carousel_navy")
+        && data.styles.some((style) => style.key === "dr_chang_readable_green")
         && data.brand_tokens?.navy === "#0F2A4A"
+        && data.brand_tokens?.dr_chang_deep_green === "#0A463F"
+        && data.carousel_design_spec?.colors?.warm_off_white === "#FBF7EF"
         && Array.isArray(data.review_rules);
+    },
+  },
+  {
+    name: "Carousel design spec",
+    url: `${apiBase}/creative/carousel-design-spec`,
+    auth: true,
+    validate: async (res) => {
+      const data = await res.json();
+      return data.spec?.key === "dr_chang_readable_green"
+        && data.spec?.canvas === "1080x1350"
+        && data.spec?.colors?.deep_green === "#0A463F"
+        && data.spec?.colors?.deep_red === "#C0392B"
+        && data.brand_assets?.logo?.includes("/ui/assets/brand/drec-healthcare-academy-logo.jpeg")
+        && data.brand_assets?.doctor_cover_presenting?.includes("/ui/assets/brand/dr-eason-presenting.png");
     },
   },
   {
@@ -1668,7 +1685,9 @@ const checks = [
       const text = await res.text();
       return text.includes("Creative Style Guide")
         && text.includes("Brand Tokens")
-        && text.includes("Style Library");
+        && text.includes("Style Library")
+        && text.includes("#0A463F")
+        && text.includes("dr-eason-presenting.png");
     },
   },
   {
@@ -1733,7 +1752,7 @@ const checks = [
       topic: "composer smoke test only",
       points: ["Explain a safe education point.", "Avoid personal medical advice.", "Invite clinician discussion."],
       media_urls: [],
-      style_key: "edu_carousel_navy",
+      style_key: "dr_chang_readable_green",
       target_signal: "saves",
     }),
     validate: async (res) => {

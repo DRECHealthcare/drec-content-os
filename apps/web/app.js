@@ -10754,7 +10754,7 @@ document.getElementById("brief-items").addEventListener("click", async (event) =
   form.elements.format.value = brief.format || "carousel";
   form.elements.stage.value = brief.funnel_stage || "TOFU";
   form.elements.language.value = brief.language || "zh";
-  form.elements.style_key.value = brief.style_hint || (brief.format === "reel" ? "reel_script_v1" : "edu_carousel_navy");
+  form.elements.style_key.value = brief.style_hint || (brief.format === "reel" ? "reel_script_v1" : "dr_chang_readable_green");
   form.elements.target_signal.value = brief.target_signal || "";
   form.elements.topic.value = brief.topic || "";
   form.elements.points.value = defaultPointsForBrief(brief).join("\n");
@@ -10827,7 +10827,7 @@ document.getElementById("compose-form").addEventListener("submit", async (event)
     topic: form.get("topic"),
     points,
     mediaUrls,
-    styleKey: form.get("style_key") || (form.get("format") === "reel" ? "reel_script_v1" : "edu_carousel_navy"),
+    styleKey: form.get("style_key") || (form.get("format") === "reel" ? "reel_script_v1" : "dr_chang_readable_green"),
     targetSignal: form.get("target_signal") || null,
   };
   draft.caption = draftCaption(draft);

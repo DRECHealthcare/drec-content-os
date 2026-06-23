@@ -14,7 +14,7 @@ from urllib.parse import urlparse, urlencode
 from uuid import UUID, uuid4
 
 import httpx
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageChops, ImageDraw, ImageFont
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
@@ -152,14 +152,57 @@ NOTION_CAROUSEL_SOURCE = {
         "Slides 2 onward must include Big Title, Explanation Text, Highlighted Keywords, Visual Element, and Bottom Takeaway/Teaser.",
         "Mandarin is primary; text-explanation-led educational carousel, not sparse infographic slogans.",
         "Visuals support the explanation and should not overtake the educational text.",
-        "Use professional DREC blue, green, and teal medical style.",
+        "Use the Dr. Eason Chang readable carousel design: 1080x1350 single slides, deep green #0A463F, warm off-white #FBF7EF, deep red #C0392B, and bright gold #F5C518.",
+        "Cover and signature slides use a deep green background, extra-large white title text, and gold-highlighted key words.",
+        "Content slides use a clean upper visual area and a solid warm off-white lower text panel; text stays on the panel, not over the image.",
+        "Every slide includes top-left DREC/logo placement guidance, top-right X/N page number, and a small bottom label: 医生 Chang.",
+        "Doctor photo appears only on the cover slide when an approved real photo is available; otherwise leave a safe placeholder for manual design placement.",
+        "Do not use Chinese corner quotes 「」 or long em dash punctuation —— inside generated slide text.",
         "Avoid cartoonish, childish, overly decorative, scary, fear-based, miracle-cure, guaranteed reversal, or direct course-selling language.",
     ],
+}
+
+DR_CHANG_CAROUSEL_DESIGN_SPEC = {
+    "key": "dr_chang_readable_green",
+    "name": "医生 Chang Readable Green Carousel",
+    "canvas": "1080x1350",
+    "colors": {
+        "deep_green": "#0A463F",
+        "warm_off_white": "#FBF7EF",
+        "deep_red": "#C0392B",
+        "bright_gold": "#F5C518",
+    },
+    "layout_rules": [
+        "Generate one independent 1080x1350 image per slide; never combine slides into a collage.",
+        "Readability is more important than decoration for Chinese-speaking adults age 30+ with possible presbyopia.",
+        "Cover/signature pages: deep green background, extra-large bold white type, and gold emphasis for key words.",
+        "Content pages: upper half clean medical illustration/photo area; lower half solid warm off-white text panel.",
+        "Keep all Chinese explanation text on the solid panel, not over the image.",
+        "Use deep green titles, deep red bold/enlarged keywords, and bright gold only for high-priority emphasis.",
+        "Top-left: DREC/logo placement. Top-right: X/N page number. Bottom: small 医生 Chang label.",
+        "Doctor photo only on slide 1 cover, and only when an approved real photo is supplied.",
+        "Retain English medical terms such as HbA1c, GI, and GLP-1 when they appear.",
+        "Do not use Chinese corner quotes 「」 or em dash —— in generated slide text.",
+    ],
+    "page_types": {
+        "cover": "Deep green, centered huge white hook, gold key words, faint medical background, optional approved doctor photo.",
+        "content": "Clean upper visual, warm off-white lower board, deep green title, deep red keywords, clear explanation text.",
+        "save": "Content layout plus a deep green/gold vertical bar for summary or 收藏/save emphasis.",
+        "signature": "Deep green closing slide with white/gold quote and 医生 Chang / Dr Eason Chang.",
+    },
 }
 
 FORMAT_ROTATION = ["carousel", "single", "reel", "carousel", "story"]
 STAGE_ROTATION = ["TOFU", "TOFU", "MOFU", "MOFU", "BOFU"]
 CREATIVE_STYLE_LIBRARY = [
+    {
+        "key": "dr_chang_readable_green",
+        "name": "医生 Chang Readable Green Carousel",
+        "best_for": "Mandarin diabetes and metabolic-health carousels where 50-ish readers need large, clear explanation text",
+        "formats": ["carousel", "single", "story"],
+        "palette": ["#0A463F", "#FBF7EF", "#C0392B", "#F5C518"],
+        "rules": DR_CHANG_CAROUSEL_DESIGN_SPEC["layout_rules"],
+    },
     {
         "key": "edu_carousel_navy",
         "name": "DREC Navy Education",
@@ -230,8 +273,28 @@ CREATIVE_BRAND_TOKENS = {
     "orange_video": "#E8722A",
     "background": "#F1F5F8",
     "ink": "#1D2935",
+    "dr_chang_deep_green": "#0A463F",
+    "dr_chang_warm_off_white": "#FBF7EF",
+    "dr_chang_deep_red": "#C0392B",
+    "dr_chang_bright_gold": "#F5C518",
 }
 STATIC_TEMPLATE_LIBRARY = [
+    {
+        "key": "dr_chang_readable_carousel",
+        "name": "医生 Chang Readable Carousel",
+        "formats": ["carousel"],
+        "best_for": "Text-explanation-led Mandarin diabetes education sourced from the Notion Carousel Slide Plan.",
+        "canvas": "1080x1350",
+        "slots": ["cover_hook", "clean_visual", "explanation_panel", "keywords", "bottom_takeaway"],
+        "rules": [
+            "Slide 1 is cover hook only: no explanation body text.",
+            "Slides 2 onward keep Big Title, Explanation Text, Highlighted Keywords, Visual Element, and Bottom Takeaway/Teaser.",
+            "Use deep green #0A463F, warm off-white #FBF7EF, deep red #C0392B, and bright gold #F5C518.",
+            "Place explanation text on the warm off-white panel, never over the visual.",
+            "Include top-left logo placement, top-right X/N page number, and bottom 医生 Chang label.",
+            "Do not use 「」 or —— in generated slide text.",
+        ],
+    },
     {
         "key": "carousel_mechanism_5",
         "name": "Mechanism Carousel",
@@ -337,6 +400,12 @@ WEB_STATIC_CANDIDATES = [
 WEB_STATIC_DIR = next((path for path in WEB_STATIC_CANDIDATES if path.exists()), WEB_STATIC_CANDIDATES[0])
 if WEB_STATIC_DIR.exists():
     app.mount("/ui", StaticFiles(directory=str(WEB_STATIC_DIR), html=True), name="ui")
+
+DR_CHANG_BRAND_ASSET_DIR = WEB_STATIC_DIR / "assets" / "brand"
+DR_CHANG_LOGO_PATH = DR_CHANG_BRAND_ASSET_DIR / "drec-healthcare-academy-logo.jpeg"
+DR_CHANG_DOCTOR_STANDING_PATH = DR_CHANG_BRAND_ASSET_DIR / "dr-eason-standing.png"
+DR_CHANG_DOCTOR_PRESENTING_PATH = DR_CHANG_BRAND_ASSET_DIR / "dr-eason-presenting.png"
+DR_CHANG_DOCTOR_POINTING_PATH = DR_CHANG_BRAND_ASSET_DIR / "dr-eason-pointing.jpeg"
 
 
 @app.get("/health")
@@ -2731,6 +2800,13 @@ def text_chunks(value: str, limit: int):
     return chunks
 
 
+def dr_chang_slide_text(value: str | None):
+    text = html.unescape(value or "")
+    text = text.replace("「", "").replace("」", "")
+    text = text.replace("——", "，").replace("—", "，")
+    return re.sub(r"\s+", " ", text).strip()
+
+
 def first_publish_slide_items(asset: dict | None):
     if not asset:
         return []
@@ -2744,7 +2820,7 @@ def first_publish_slide_items(asset: dict | None):
             "slide": 1,
             "title": metadata.get("topic") or "DREC educational post",
             "body": caption[:260],
-            "visual_note": "Use DREC navy/teal template; keep copy readable on mobile.",
+            "visual_note": "Use Dr. Eason Chang readable green carousel with logo, page number, and 医生 Chang label.",
         }
     ]
 
@@ -2797,49 +2873,68 @@ def first_publish_media_attachment_csv(asset: dict | None):
 
 def first_publish_slide_svg(asset: dict, slide: dict, index: int, total: int):
     metadata = asset.get("metadata") or {}
-    topic = metadata.get("topic") or "DREC"
-    title = slide.get("title") or topic
-    body = slide.get("body") or ""
-    note = slide.get("visual_note") or "DREC educational carousel"
-    takeaway = slide.get("bottom_takeaway") or slide.get("takeaway") or ""
+    topic = dr_chang_slide_text(metadata.get("topic") or "DREC")
+    title = dr_chang_slide_text(slide.get("title") or topic)
+    body = "" if index == 1 else dr_chang_slide_text(slide.get("body") or "")
+    note = dr_chang_slide_text(slide.get("visual_note") or "DREC educational carousel")
+    takeaway = dr_chang_slide_text(slide.get("bottom_takeaway") or slide.get("takeaway") or "")
     highlighted_keywords = slide.get("highlighted_keywords") or []
     title_lines = text_chunks(title, 15)[:3]
     body_lines = text_chunks(body, 22)[:7]
     safe_note = html.escape(note)
     keyword_text = "  ".join(str(item) for item in highlighted_keywords[:4])
     keyword_svg = (
-        f'<text x="120" y="1022" font-size="28" font-weight="800" fill="#1FA9A0">{html.escape(keyword_text)}</text>'
+        f'<text x="120" y="1060" font-size="30" font-weight="800" fill="#C0392B">{html.escape(dr_chang_slide_text(keyword_text))}</text>'
         if keyword_text
         else ""
     )
     takeaway_svg = (
-        f'<text x="120" y="1168" font-size="30" font-weight="700" fill="#FFFFFF">{html.escape(takeaway[:42])}</text>'
+        f'<text x="120" y="1186" font-size="30" font-weight="700" fill="#0A463F">{html.escape(takeaway[:42])}</text>'
         if takeaway
-        else '<text x="120" y="1168" font-size="30" font-weight="700" fill="#FFFFFF">一般健康教育，不代替个人诊断或治疗建议。</text>'
+        else '<text x="120" y="1186" font-size="30" font-weight="700" fill="#0A463F">一般健康教育，不代替个人诊断或治疗建议。</text>'
     )
+    if index == 1:
+        cover_title = "\n".join(
+            f'<text x="92" y="{390 + line_index * 86}" font-size="70" font-weight="900" fill="{"#F5C518" if line_index == 1 else "#FFFFFF"}">{html.escape(line)}</text>'
+            for line_index, line in enumerate(title_lines)
+        )
+        return f'''<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350">
+  <rect width="1080" height="1350" fill="#0A463F"/>
+  <circle cx="880" cy="250" r="210" fill="#FBF7EF" opacity="0.08"/>
+  <circle cx="160" cy="1120" r="280" fill="#F5C518" opacity="0.12"/>
+  <rect x="66" y="62" width="184" height="64" rx="22" fill="#FBF7EF"/>
+  <text x="92" y="105" font-size="28" font-weight="900" fill="#0A463F">DREC</text>
+  <text x="858" y="105" font-size="30" font-weight="900" fill="#FBF7EF">{index}/{total}</text>
+  <text x="92" y="306" font-size="30" font-weight="800" fill="#FBF7EF">医生 Chang 控糖科普</text>
+  {cover_title}
+  <text x="92" y="1236" font-size="30" font-weight="800" fill="#FBF7EF">医生 Chang</text>
+  <text x="92" y="1284" font-size="22" font-weight="600" fill="#FBF7EF" opacity="0.78">封面只放 hook；医生照片由品牌素材放置。</text>
+</svg>'''
     title_text = "\n".join(
-        f'<text x="86" y="{270 + line_index * 74}" font-size="56" font-weight="800" fill="#FFFFFF">{html.escape(line)}</text>'
+        f'<text x="112" y="{602 + line_index * 64}" font-size="52" font-weight="900" fill="#0A463F">{html.escape(line)}</text>'
         for line_index, line in enumerate(title_lines)
     )
     body_text = "\n".join(
-        f'<text x="92" y="{575 + line_index * 50}" font-size="34" font-weight="500" fill="#1D2935">{html.escape(line)}</text>'
+        f'<text x="112" y="{790 + line_index * 48}" font-size="34" font-weight="500" fill="#1D2935">{html.escape(line)}</text>'
         for line_index, line in enumerate(body_lines)
     )
     return f'''<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350">
-  <rect width="1080" height="1350" fill="#F1F5F8"/>
-  <rect x="0" y="0" width="1080" height="430" fill="#0F2A4A"/>
-  <rect x="68" y="76" width="186" height="48" rx="24" fill="#1FA9A0"/>
-  <text x="95" y="109" font-size="24" font-weight="800" fill="#FFFFFF">DREC EDUCATION</text>
-  <text x="860" y="109" font-size="28" font-weight="800" fill="#FFFFFF">{index:02d}/{total:02d}</text>
+  <rect width="1080" height="1350" fill="#F6F2EA"/>
+  <rect x="0" y="0" width="1080" height="520" fill="#0A463F"/>
+  <circle cx="880" cy="230" r="180" fill="#FBF7EF" opacity="0.10"/>
+  <path d="M120 338 C250 244, 395 430, 540 312 S804 260, 948 348" fill="none" stroke="#F5C518" stroke-width="18" opacity="0.35"/>
+  <rect x="66" y="62" width="184" height="64" rx="22" fill="#FBF7EF"/>
+  <text x="92" y="105" font-size="28" font-weight="900" fill="#0A463F">DREC</text>
+  <text x="858" y="105" font-size="30" font-weight="900" fill="#FBF7EF">{index}/{total}</text>
   {title_text}
-  <rect x="68" y="494" width="944" height="570" rx="28" fill="#FFFFFF"/>
-  <rect x="68" y="494" width="14" height="570" fill="#1FA9A0"/>
+  <rect x="56" y="510" width="968" height="740" rx="34" fill="#FBF7EF"/>
+  <rect x="82" y="560" width="12" height="610" fill="#F5C518"/>
   {body_text}
   {keyword_svg}
-  <rect x="88" y="1105" width="904" height="110" rx="18" fill="#0F2A4A"/>
+  <rect x="104" y="1125" width="872" height="92" rx="18" fill="#FFFFFF"/>
   {takeaway_svg}
-  <text x="88" y="1260" font-size="24" font-weight="600" fill="#0F2A4A">{html.escape(str(topic))}</text>
-  <text x="88" y="1298" font-size="20" font-weight="500" fill="#64748B">{safe_note}</text>
+  <text x="88" y="1294" font-size="24" font-weight="700" fill="#0A463F">医生 Chang</text>
+  <text x="225" y="1294" font-size="20" font-weight="500" fill="#64748B">{safe_note}</text>
 </svg>'''
 
 
@@ -2886,63 +2981,125 @@ def wrap_draw_text(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFo
     return lines
 
 
+def paste_image_contain(base: Image.Image, path: Path, box: tuple[int, int, int, int], opacity: float = 1.0):
+    if not path.exists():
+        return False
+    try:
+        layer = Image.open(path).convert("RGBA")
+    except OSError:
+        return False
+    if path == DR_CHANG_LOGO_PATH:
+        white = Image.new("RGBA", layer.size, (255, 255, 255, 255))
+        diff = ImageChops.difference(layer, white).convert("L")
+        mask = diff.point(lambda value: 255 if value > 18 else 0)
+        bbox = mask.getbbox()
+        if bbox:
+            pad = 18
+            crop_box = (
+                max(0, bbox[0] - pad),
+                max(0, bbox[1] - pad),
+                min(layer.width, bbox[2] + pad),
+                min(layer.height, bbox[3] + pad),
+            )
+            layer = layer.crop(crop_box)
+    max_width = max(1, box[2] - box[0])
+    max_height = max(1, box[3] - box[1])
+    layer.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
+    if opacity < 1:
+        alpha = layer.getchannel("A")
+        alpha = alpha.point(lambda pixel: int(pixel * opacity))
+        layer.putalpha(alpha)
+    x = box[0] + (max_width - layer.width) // 2
+    y = box[1] + (max_height - layer.height) // 2
+    base.paste(layer, (x, y), layer)
+    return True
+
+
+def draw_dr_chang_logo(draw: ImageDraw.ImageDraw, image: Image.Image):
+    x1, y1, x2, y2 = 56, 52, 244, 132
+    draw.rounded_rectangle((x1, y1, x2, y2), radius=22, fill="#FBF7EF")
+    if not paste_image_contain(image, DR_CHANG_LOGO_PATH, (x1 + 12, y1 + 8, x2 - 12, y2 - 8)):
+        draw.text((88, 78), "DREC", font=first_publish_font(32, bold=True), fill="#0A463F")
+
+
 def first_publish_slide_png(asset: dict, slide: dict, index: int, total: int):
     metadata = asset.get("metadata") or {}
-    topic = metadata.get("topic") or "DREC"
-    title = slide.get("title") or topic
-    body = slide.get("body") or ""
-    note = slide.get("visual_note") or "DREC educational carousel"
-    takeaway = slide.get("bottom_takeaway") or slide.get("takeaway") or ""
+    topic = dr_chang_slide_text(metadata.get("topic") or "DREC")
+    title = dr_chang_slide_text(slide.get("title") or topic)
+    body = "" if index == 1 else dr_chang_slide_text(slide.get("body") or "")
+    note = dr_chang_slide_text(slide.get("visual_note") or "DREC educational carousel")
+    takeaway = dr_chang_slide_text(slide.get("bottom_takeaway") or slide.get("takeaway") or "")
     highlighted_keywords = slide.get("highlighted_keywords") or []
 
-    navy = "#0F2A4A"
-    teal = "#1FA9A0"
-    orange = "#F58220"
+    deep_green = "#0A463F"
+    off_white = "#FBF7EF"
+    deep_red = "#C0392B"
+    gold = "#F5C518"
     slate = "#1D2935"
     muted = "#64748B"
-    bg = "#F1F5F8"
+    bg = "#F6F2EA"
 
     image = Image.new("RGB", (1080, 1350), bg)
     draw = ImageDraw.Draw(image)
-    title_font = first_publish_font(60, bold=True)
+    title_font = first_publish_font(58, bold=True)
     body_font = first_publish_font(36)
     small_font = first_publish_font(24)
-    badge_font = first_publish_font(24, bold=True)
     footer_font = first_publish_font(30, bold=True)
 
-    draw.rectangle((0, 0, 1080, 430), fill=navy)
-    draw.rounded_rectangle((68, 76, 284, 124), radius=24, fill=teal)
-    draw.text((96, 90), "DREC EDUCATION", font=badge_font, fill="white")
-    draw.text((858, 88), f"{index:02d}/{total:02d}", font=first_publish_font(30, bold=True), fill="white")
-    draw.rectangle((68, 392, 1012, 430), fill=orange)
+    if index == 1:
+        draw.rectangle((0, 0, 1080, 1350), fill=deep_green)
+        draw.ellipse((710, 105, 1200, 595), fill="#155F55")
+        draw.ellipse((-180, 1010, 360, 1550), fill="#123E38")
+        draw.arc((92, 860, 510, 1278), 195, 348, fill=gold, width=18)
+        draw_dr_chang_logo(draw, image)
+        draw.text((880, 78), f"{index}/{total}", font=first_publish_font(32, bold=True), fill=off_white)
+        draw.text((84, 280), "医生 Chang 控糖科普", font=first_publish_font(32, bold=True), fill=off_white)
+        cover_font = first_publish_font(72, bold=True)
+        y = 370
+        for line_index, line in enumerate(wrap_draw_text(draw, title, cover_font, 600, 5)):
+            draw.text((84, y), line, font=cover_font, fill=gold if line_index == 1 else "white")
+            y += 90
+        paste_image_contain(image, DR_CHANG_DOCTOR_PRESENTING_PATH, (610, 300, 1040, 1285))
+        draw.text((84, 1234), "医生 Chang", font=footer_font, fill=off_white)
+        draw.text((84, 1278), "一般健康教育，不代替个人诊断或治疗建议。", font=first_publish_font(22), fill="#DDEBE6")
+        output = BytesIO()
+        image.save(output, format="PNG", optimize=True)
+        return output.getvalue()
 
-    y = 214
-    for line in wrap_draw_text(draw, title, title_font, 900, 3):
-        draw.text((86, y), line, font=title_font, fill="white")
-        y += 76
+    draw.rectangle((0, 0, 1080, 520), fill=deep_green)
+    draw.ellipse((760, 84, 1120, 444), fill="#155F55")
+    draw.ellipse((105, 210, 235, 340), outline=gold, width=12)
+    draw.line((230, 316, 368, 245, 506, 325, 676, 235, 840, 305), fill=gold, width=16)
+    draw_dr_chang_logo(draw, image)
+    draw.text((880, 78), f"{index}/{total}", font=first_publish_font(32, bold=True), fill=off_white)
+    draw.rounded_rectangle((56, 510, 1024, 1250), radius=34, fill=off_white)
+    draw.rectangle((84, 565, 98, 1168), fill=gold)
+    y = 588
+    for line in wrap_draw_text(draw, title, title_font, 840, 3):
+        draw.text((124, y), line, font=title_font, fill=deep_green)
+        y += 68
 
-    draw.rounded_rectangle((68, 494, 1012, 1064), radius=28, fill="white")
-    draw.rectangle((68, 494, 84, 1064), fill=teal)
-    y = 572
-    for line in wrap_draw_text(draw, body, body_font, 820, 7):
-        draw.text((112, y), line, font=body_font, fill=slate)
+    y = max(y + 24, 790)
+    for line in wrap_draw_text(draw, body, body_font, 830, 6):
+        draw.text((124, y), line, font=body_font, fill=slate)
         y += 52
 
-    keyword_text = "  ".join(str(item) for item in highlighted_keywords[:4])
+    keyword_text = dr_chang_slide_text("  ".join(str(item) for item in highlighted_keywords[:4]))
     if keyword_text:
-        draw.text((112, 1012), keyword_text, font=first_publish_font(28, bold=True), fill=teal)
+        draw.text((124, 1060), keyword_text, font=first_publish_font(30, bold=True), fill=deep_red)
 
-    draw.rounded_rectangle((88, 1105, 992, 1215), radius=18, fill=navy)
+    draw.rounded_rectangle((104, 1125, 976, 1218), radius=18, fill="white")
     footer_text = takeaway or "一般健康教育，不代替个人诊断或治疗建议。"
     for line in wrap_draw_text(draw, footer_text, footer_font, 820, 1):
-        draw.text((120, 1160), line, font=footer_font, fill="white")
+        draw.text((124, 1155), line, font=footer_font, fill=deep_green)
 
-    topic_lines = wrap_draw_text(draw, str(topic), small_font, 880, 1)
+    topic_lines = wrap_draw_text(draw, str(topic), small_font, 760, 1)
     note_lines = wrap_draw_text(draw, str(note), first_publish_font(20), 880, 1)
     if topic_lines:
-        draw.text((88, 1260), topic_lines[0], font=small_font, fill=navy)
+        draw.text((88, 1280), "医生 Chang", font=small_font, fill=deep_green)
+        draw.text((245, 1280), topic_lines[0], font=small_font, fill=deep_green)
     if note_lines:
-        draw.text((88, 1298), note_lines[0], font=first_publish_font(20), fill=muted)
+        draw.text((88, 1314), note_lines[0], font=first_publish_font(20), fill=muted)
 
     output = BytesIO()
     image.save(output, format="PNG", optimize=True)
@@ -4422,9 +4579,9 @@ async def operations_first_publish_doctor_review_sheet_zh(request: Request, _: N
     ]
     if slides:
         for index, slide in enumerate(slides, start=1):
-            visual_note = slide.get("visual_note") or "使用 DREC 深蓝/青绿色模板；不要把过小文字直接烘进图片。"
+            visual_note = slide.get("visual_note") or "使用医生 Chang 深绿/米白轮播模板；正文放在米白文字板上。"
             if visual_note == "Use DREC navy/teal template; no small text baked into generated images.":
-                visual_note = "使用 DREC 深蓝/青绿色模板；不要把过小文字直接烘进图片。"
+                visual_note = "使用医生 Chang 深绿/米白轮播模板；正文放在米白文字板上。"
             lines.extend(
                 [
                     f"### 第 {index} 张",
@@ -5221,7 +5378,7 @@ async def operations_first_publish_media_pack(_: None = Depends(require_access_t
                     "",
                     slide.get("body") or "",
                     "",
-                    f"- Visual note: {slide.get('visual_note') or 'Use DREC navy/teal template.'}",
+                    f"- Visual note: {slide.get('visual_note') or 'Use Dr. Eason Chang readable green carousel template.'}",
                     "",
                 ]
             )
@@ -9225,7 +9382,7 @@ def asset_visual_direction(asset: dict):
         return "One clear educational image or clinic-safe visual with room for short headline text."
     if asset.get("format") == "story":
         return "Vertical story sequence with question/poll-friendly framing and minimal text."
-    return "DREC navy/teal carousel with clear page hierarchy and no tiny medical text baked into the image."
+    return "Dr. Eason Chang readable green carousel with deep green cover, warm off-white text panel, red keywords, gold emphasis, and no tiny medical text."
 
 
 def asset_shot_list(asset: dict):
@@ -11669,7 +11826,7 @@ async def operations_monthly_carousel_production_design_worksheet_csv(_: None = 
                 "preview_url": f"/assets/{asset.get('id')}/carousel-preview/1.png",
                 "canvas_spec": "1080x1350 carousel slides; keep text readable on mobile; use 7-slide DREC educational structure.",
                 "visual_direction": asset_visual_direction(asset),
-                "media_task": "Use generated monthly carousel PNGs as the first review files. If redesigning, keep Mandarin explanation-led layout and DREC blue/green/teal medical style.",
+                "media_task": "Use generated monthly carousel PNGs as the first review files. If redesigning, keep Mandarin explanation-led layout and the Dr. Eason Chang readable green style: #0A463F, #FBF7EF, #C0392B, #F5C518.",
                 "template_suggestion": production_template_suggestion(item),
                 "image_prompt": production_image_prompt(item),
                 "rights_check": "Generated DREC carousel assets may be used for internal review. Before publishing, confirm final files are approved, public/accessible, and free of unlicensed patient-identifiable content.",
@@ -19529,7 +19686,11 @@ def notion_monthly_refresh_workbench_zh_markdown(payload: dict):
         "- Slide 1 不放解释正文。",
         "- Slide 2 起必须保留 Big Title、Explanation Text、Highlighted Keywords、Visual Element、Bottom Takeaway/Teaser。",
         "- 中文为主，给 50 岁左右华语糖尿病/代谢健康受众看得懂。",
-        "- 使用 DREC 蓝、绿、青绿色的专业医疗风格。",
+        "- 使用医生 Chang 可读性优先轮播设计：1080x1350 单页输出，深绿 `#0A463F`，米白 `#FBF7EF`，关键词深红 `#C0392B`，重点亮金 `#F5C518`。",
+        "- 封面/签名页用深绿底、大白字、金色重点；医生照片只放封面，使用已批准品牌素材。",
+        "- 内容页上半部做干净医疗视觉，下半部用米白文字板；解释正文必须放在文字板上，不压在图片上。",
+        "- 每页左上角放 DREC/logo，右上角放 `X/N` 页码，底部小字 `医生 Chang`。",
+        "- 生成文字不要用中文角引号 `「」`，也不要用长破折号 `——`。",
         "- 避免卡通、幼稚、恐吓、夸张装饰、奇迹疗法、保证逆转、直接卖课语言。",
         "",
         "## 每月 19 号操作清单",
@@ -19727,7 +19888,7 @@ def notion_row_to_brief(row: NotionCarouselRowIn):
             "slide_rules": NOTION_CAROUSEL_SOURCE["slide_rules"],
             "image_workflow_rules": NOTION_CAROUSEL_SOURCE["status_rules"],
         },
-        style_hint="DREC blue/green/teal medical style; text-explanation-led educational carousel.",
+        style_hint="dr_chang_readable_green",
         cta_type="soft_save_share_follow",
         target_signal="organic saves, shares, follows, qualified comments",
         language="zh",
@@ -19813,7 +19974,12 @@ async def notion_carousel_image_workflow(_: None = Depends(require_access_token)
         "- Slide 1 must only contain the cover hook and visual support, with no explanation body.",
         "- Slides 2 onward must preserve Big Title, Explanation Text, Highlighted Keywords, Visual Element, and Bottom Takeaway/Teaser.",
         "- Keep visuals small or medium; do not over-enlarge illustrations or replace text with graphics.",
-        "- Use professional DREC blue/green/teal medical styling.",
+        "- Use the Dr. Eason Chang readable carousel design: 1080x1350, deep green `#0A463F`, warm off-white `#FBF7EF`, deep red keywords `#C0392B`, bright gold emphasis `#F5C518`.",
+        "- Brand assets are bundled in the app: `/ui/assets/brand/drec-healthcare-academy-logo.jpeg`, `/ui/assets/brand/dr-eason-presenting.png`, `/ui/assets/brand/dr-eason-standing.png`, `/ui/assets/brand/dr-eason-pointing.jpeg`.",
+        "- Cover/signature slides use deep green, huge white title text, gold key words, and doctor photo only on Slide 1 cover.",
+        "- Content slides use an upper clean visual area plus lower warm off-white text panel; put explanation text on the panel, not over the image.",
+        "- Every slide needs top-left logo, top-right `X/N` page number, and bottom `医生 Chang` label.",
+        "- Do not use Chinese corner quotes `「」` or em dash `——` in generated slide text.",
         "",
         "## Caption AI Boundary",
         "",
@@ -21782,7 +21948,7 @@ def carousel_slides(draft: CreativeDraftIn):
             "slide": index + 1,
             "title": titles[index],
             "body": bodies[index],
-            "visual_note": "Use DREC navy/teal template; no small text baked into generated images.",
+            "visual_note": "Use Dr. Eason Chang readable green carousel: 1080x1350, deep green cover, warm off-white text panel, red keywords, gold emphasis, logo/page number/医生 Chang label.",
         }
         for index in range(6)
     ]
@@ -21877,6 +22043,13 @@ async def creative_style_library_payload():
         )
     return {
         "brand_tokens": CREATIVE_BRAND_TOKENS,
+        "carousel_design_spec": DR_CHANG_CAROUSEL_DESIGN_SPEC,
+        "brand_assets": {
+            "logo": "/ui/assets/brand/drec-healthcare-academy-logo.jpeg",
+            "doctor_cover_presenting": "/ui/assets/brand/dr-eason-presenting.png",
+            "doctor_cover_standing": "/ui/assets/brand/dr-eason-standing.png",
+            "doctor_pointing_photo": "/ui/assets/brand/dr-eason-pointing.jpeg",
+        },
         "styles": styles,
         "style_rules": knowledge.get("style_rules") or [],
         "safety_rules": knowledge.get("safety_rules") or [],
@@ -21898,6 +22071,25 @@ async def creative_style_library(_: None = Depends(require_access_token)):
     return await creative_style_library_payload()
 
 
+@app.get("/creative/carousel-design-spec")
+async def creative_carousel_design_spec(_: None = Depends(require_access_token)):
+    return {
+        "spec": DR_CHANG_CAROUSEL_DESIGN_SPEC,
+        "source": "医生Chang_轮播设计Skill.md.docx",
+        "brand_assets": {
+            "logo": "/ui/assets/brand/drec-healthcare-academy-logo.jpeg",
+            "doctor_cover_presenting": "/ui/assets/brand/dr-eason-presenting.png",
+            "doctor_cover_standing": "/ui/assets/brand/dr-eason-standing.png",
+            "doctor_pointing_photo": "/ui/assets/brand/dr-eason-pointing.jpeg",
+        },
+        "safety": [
+            "This design spec changes carousel artwork guidance only; it does not approve, schedule, or publish content.",
+            "Doctor photos are approved brand assets for cover/manual placement only.",
+            "Medical meaning and Mandarin text still require human review before publishing.",
+        ],
+    }
+
+
 @app.get("/creative/style-guide.md")
 async def creative_style_guide(_: None = Depends(require_access_token)):
     generated_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
@@ -21917,6 +22109,23 @@ async def creative_style_guide(_: None = Depends(require_access_token)):
         "## Style Library",
         "",
     ]
+    spec = library.get("carousel_design_spec") or {}
+    colors = spec.get("colors") or {}
+    lines.extend(
+        [
+            "## 医生 Chang Carousel Design Spec",
+            "",
+            f"- Canvas: `{spec.get('canvas')}` single-slide export; never collage multiple pages.",
+            f"- Deep green: `{colors.get('deep_green')}`",
+            f"- Warm off-white: `{colors.get('warm_off_white')}`",
+            f"- Deep red keywords: `{colors.get('deep_red')}`",
+            f"- Bright gold emphasis: `{colors.get('bright_gold')}`",
+            "- Brand assets: `/ui/assets/brand/drec-healthcare-academy-logo.jpeg`, `/ui/assets/brand/dr-eason-presenting.png`, `/ui/assets/brand/dr-eason-standing.png`.",
+            "- Cover uses doctor photo only; content pages keep explanation text on the solid off-white panel.",
+            "- Do not use `「」` or `——` in generated slide text.",
+            "",
+        ]
+    )
     for style in library.get("styles", []):
         signal = style.get("learning_signal") or {}
         lines.extend(
@@ -21965,7 +22174,9 @@ def template_for_asset(asset: dict):
     metadata = asset.get("metadata") or {}
     style_key = str(metadata.get("style_key") or "").lower()
     fmt = asset.get("format")
-    if "myth" in style_key:
+    if "dr_chang" in style_key or fmt == "carousel":
+        preferred = "dr_chang_readable_carousel"
+    elif "myth" in style_key:
         preferred = "myth_truth_static"
     elif fmt == "single":
         preferred = "single_doctor_quote"
@@ -22046,6 +22257,9 @@ async def template_studio_library_payload():
         "brand_tokens": CREATIVE_BRAND_TOKENS,
         "render_rules": [
             "Use HTML/CSS templates or design exports with exact DREC brand tokens.",
+            "For Dr. Eason Chang carousel assets, use 1080x1350 single slides with #0A463F, #FBF7EF, #C0392B, and #F5C518.",
+            "Use bundled brand assets from /ui/assets/brand for the DREC logo and approved Dr. Eason photos.",
+            "Keep explanation text on the warm off-white panel; visual elements support the explanation and do not replace it.",
             "Render with Playwright or manual design export only after copy and compliance are clear.",
             "Keep text editable until final QA; do not bake dense medical text into generated images.",
             "Export carousel/single as 1080x1350 and stories as 1080x1920.",
@@ -22095,6 +22309,22 @@ async def template_static_render_pack(_: None = Depends(require_access_token)):
         "## Template Library",
         "",
     ]
+    spec = DR_CHANG_CAROUSEL_DESIGN_SPEC
+    colors = spec.get("colors") or {}
+    lines.extend(
+        [
+            "## 医生 Chang Carousel Design Spec",
+            "",
+            f"- Canvas: `{spec.get('canvas')}`，每页独立输出，不要拼成 collage。",
+            f"- Colors: `{colors.get('deep_green')}` deep green, `{colors.get('warm_off_white')}` warm off-white, `{colors.get('deep_red')}` deep red keywords, `{colors.get('bright_gold')}` bright gold emphasis.",
+            "- Brand assets: `/ui/assets/brand/drec-healthcare-academy-logo.jpeg`, `/ui/assets/brand/dr-eason-presenting.png`, `/ui/assets/brand/dr-eason-standing.png`, `/ui/assets/brand/dr-eason-pointing.jpeg`.",
+            "- Cover/signature: deep green background, extra-large white title, gold key words, doctor photo only on cover.",
+            "- Content pages: clean upper visual area and solid warm off-white text panel; explanation text stays on the panel.",
+            "- Every page: top-left logo, top-right X/N page number, bottom small `医生 Chang`.",
+            "- Typography guard: no Chinese corner quotes `「」`; no em dash `——`.",
+            "",
+        ]
+    )
     for template in payload.get("templates") or []:
         lines.extend(
             [
@@ -22840,7 +23070,7 @@ async def create_asset_from_brief(brief_id: str, _: None = Depends(require_revie
         language=brief.get("language") or "zh",
         topic=brief.get("topic") or "DREC education",
         points=draft_points_from_brief(brief),
-        style_key=brief.get("style_hint") or "edu_carousel_navy",
+        style_key=brief.get("style_hint") or ("reel_script_v1" if (brief.get("format") or "carousel") == "reel" else "dr_chang_readable_green"),
         target_signal=brief.get("target_signal"),
     )
     creative = (await create_creative_draft(draft)).get("item", {})
@@ -28861,16 +29091,16 @@ def today_action_from_closeout(closeout: dict):
             "priority": 8,
             "eyebrow": "发布交接下一步",
             "title": f"{scheduled_blocked} 条排程内容先补媒体",
-            "body": "这些内容已经进入交接区，但缺最终公开媒体 URL。先复制媒体补充行，补好后预览并导入。",
+            "body": "这些内容已经进入交接区，但缺最终公开媒体 URL。先复制制作需求给制作人员；拿到公开视频 URL 后，在首页检查并保存媒体证据。",
             "status": "缺媒体 · 不会发布",
             "primary": {"kind": "show_card", "label": "打开补媒体步骤", "target": "publish_closeout"},
             "secondary": [
                 {"kind": "download", "label": "发布交接清单", "path": "/operations/publishing-closeout.zh.md"},
                 {"kind": "show_card", "label": "打开图片回复区", "target": "production_reply"},
             ],
-            "next_steps": ["打开补媒体步骤", "复制媒体补充行", "补 URL 后预览并导入"],
+            "next_steps": ["打开补媒体步骤", "复制制作需求", "粘贴公开视频 URL，检查后保存媒体证据"],
             "safety_note": "补媒体只更新交接资料；不会自动发布到 Facebook / Instagram。",
-            "evidence_required": ["asset_id", "final public media URL", "visual_qa_status=passed", "rights_note"],
+            "evidence_required": ["asset_id", "final public MP4/MOV URL for reel", "visual_qa_status=passed", "rights_note"],
         }
     if scheduled_recordable:
         return {

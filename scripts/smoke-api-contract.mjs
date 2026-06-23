@@ -215,6 +215,7 @@ const requiredRoutes = [
   "GET /briefs/plan.csv",
   "GET /briefs/asset-pack.md",
   "GET /creative/style-library",
+  "GET /creative/carousel-design-spec",
   "GET /creative/style-guide.md",
   "GET /templates/library",
   "GET /templates/static-render-pack.md",
@@ -7394,6 +7395,46 @@ const requiredSnippets = [
     name: "deployment metrics scheduler ready proof",
     file: "docsDeployment",
     text: "least one planned request",
+  },
+  {
+    name: "dr chang carousel design spec",
+    file: "main",
+    text: "DR_CHANG_CAROUSEL_DESIGN_SPEC",
+  },
+  {
+    name: "dr chang deep green token",
+    file: "main",
+    text: "#0A463F",
+  },
+  {
+    name: "dr chang warm off-white token",
+    file: "main",
+    text: "#FBF7EF",
+  },
+  {
+    name: "dr chang red keyword token",
+    file: "main",
+    text: "#C0392B",
+  },
+  {
+    name: "dr chang gold emphasis token",
+    file: "main",
+    text: "#F5C518",
+  },
+  {
+    name: "dr chang bundled logo asset",
+    file: "main",
+    text: "/ui/assets/brand/drec-healthcare-academy-logo.jpeg",
+  },
+  {
+    name: "dr chang bundled doctor asset",
+    file: "main",
+    text: "/ui/assets/brand/dr-eason-presenting.png",
+  },
+  {
+    name: "dr chang web default style",
+    file: "web",
+    text: "dr_chang_readable_green",
   },
   {
     name: "real metrics workflow live heartbeat",
