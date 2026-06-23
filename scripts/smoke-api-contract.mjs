@@ -1210,6 +1210,21 @@ const requiredSnippets = [
     text: "def today_action_from_closeout",
   },
   {
+    name: "today next action due publish outranks monthly doctor",
+    file: "main",
+    text: "\"priority\": 6,\n            \"eyebrow\": \"人工发布下一步\"",
+  },
+  {
+    name: "today next action post id outranks monthly doctor",
+    file: "main",
+    text: "\"priority\": 5,\n            \"eyebrow\": \"发布证据下一步\"",
+  },
+  {
+    name: "today next action metrics outranks monthly doctor",
+    file: "main",
+    text: "\"priority\": 7,\n            \"eyebrow\": \"数据回流下一步\"",
+  },
+  {
     name: "today next action fetches publishing closeout",
     file: "main",
     text: "safe_today_payload(\"publishing_closeout\", publishing_closeout_payload())",

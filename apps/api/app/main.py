@@ -28795,7 +28795,7 @@ def today_action_from_closeout(closeout: dict):
     if scheduled_blocked:
         return {
             "source": "publishing_closeout",
-            "priority": 12,
+            "priority": 8,
             "eyebrow": "发布交接下一步",
             "title": f"{scheduled_blocked} 条排程内容先补媒体",
             "body": "这些内容已经进入交接区，但缺最终公开媒体 URL。先复制媒体补充行，补好后预览并导入。",
@@ -28812,7 +28812,7 @@ def today_action_from_closeout(closeout: dict):
     if scheduled_recordable:
         return {
             "source": "publishing_closeout",
-            "priority": 14,
+            "priority": 6,
             "eyebrow": "人工发布下一步",
             "title": f"{scheduled_recordable} 条内容到点，可交给真人发布",
             "body": action.get("detail") or "下载安全包或复制发布资料；真人发布后，回来填真实 Post ID。",
@@ -28829,7 +28829,7 @@ def today_action_from_closeout(closeout: dict):
     if waiting_for_post_id:
         return {
             "source": "publishing_closeout",
-            "priority": 16,
+            "priority": 5,
             "eyebrow": "发布证据下一步",
             "title": f"{waiting_for_post_id} 条已发布内容缺 Post ID",
             "body": "先补真实 Meta Post ID 或人工标签；没有 ID 时后续数据学习无法闭环。",
@@ -28845,7 +28845,7 @@ def today_action_from_closeout(closeout: dict):
     if waiting_for_metrics:
         return {
             "source": "publishing_closeout",
-            "priority": 22,
+            "priority": 7,
             "eyebrow": "数据回流下一步",
             "title": f"{waiting_for_metrics} 条已发布内容等待表现数据",
             "body": action.get("detail") or "录入 Reach、Likes、Comments、Saves、Shares 等数据，再生成学习结果。",
@@ -28862,7 +28862,7 @@ def today_action_from_closeout(closeout: dict):
     if waiting_for_rollup:
         return {
             "source": "publishing_closeout",
-            "priority": 24,
+            "priority": 9,
             "eyebrow": "学习汇总下一步",
             "title": f"{waiting_for_rollup} 条数据需要汇总成学习结果",
             "body": "已有 raw metrics，但还没有 learning outcome。请从数据回流区保存学习结果。",
