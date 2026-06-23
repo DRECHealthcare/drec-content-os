@@ -3271,6 +3271,21 @@ const requiredSnippets = [
     text: "data-home-open-next",
   },
   {
+    name: "web home progress download next pack",
+    file: "web",
+    text: "data-home-download-next-pack",
+  },
+  {
+    name: "web home progress copy next evidence",
+    file: "web",
+    text: "data-home-copy-next-evidence",
+  },
+  {
+    name: "web home progress next pack filename helper",
+    file: "web",
+    text: "downloadFilenameFromPath",
+  },
+  {
     name: "web home progress next screen router",
     file: "web",
     text: "homeProgressNextScreen",

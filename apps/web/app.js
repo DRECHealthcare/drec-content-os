@@ -1428,6 +1428,13 @@ function guessMimeType(name) {
   return "text/markdown";
 }
 
+function downloadFilenameFromPath(path, fallback = "drec-next-step-pack.md") {
+  const clean = String(path || "").split("?")[0].split("#")[0];
+  const name = clean.split("/").filter(Boolean).pop();
+  if (!name) return fallback;
+  return name.startsWith("drec-") ? name : `drec-${name}`;
+}
+
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (char) => ({
     "&": "&amp;",
@@ -2550,6 +2557,14 @@ function renderHomeProjectCompletion(data) {
   const firstCycle = Math.max(0, Math.min(100, Number(completion.first_cycle_percent || 0)));
   const primaryNext = completion.next_requirement || nextActions[0] || blockers[0] || "继续按首页下一步操作。";
   const nextScreen = homeProgressScreenFromPath(nextUnlock?.link) || homeProgressNextScreen(primaryNext, data);
+  const nextPackPath = nextUnlock?.link || "";
+  const nextEvidenceText = nextUnlock
+    ? [
+        `Gate: ${nextUnlock.gate || ""}`,
+        `下一步: ${nextUnlock.required_action || primaryNext}`,
+        `通过标准: ${nextUnlock.required_evidence || "系统证据更新后，这个 gate 会变成 ready。"}`,
+      ].join("\n")
+    : "";
   card.hidden = false;
   container.innerHTML = `
     <div class="home-progress-head">
@@ -2572,6 +2587,8 @@ function renderHomeProjectCompletion(data) {
         </div>
         <div class="home-unblock-actions">
           <button class="primary" type="button" data-home-open-next="${escapeHtml(nextScreen)}">开始这一步</button>
+          ${nextPackPath ? `<button type="button" data-home-download-next-pack="${escapeHtml(nextPackPath)}">下载这一步资料</button>` : ""}
+          ${nextEvidenceText ? `<button type="button" data-home-copy-next-evidence="${escapeHtml(encodeURIComponent(nextEvidenceText))}">复制通过标准</button>` : ""}
         </div>
       </div>
     ` : ""}
@@ -6968,6 +6985,8 @@ document.getElementById("workflow-next").addEventListener("click", (event) => {
 
 document.getElementById("home-progress-card")?.addEventListener("click", async (event) => {
   const openNext = event.target.closest("[data-home-open-next]");
+  const downloadNextPack = event.target.closest("[data-home-download-next-pack]");
+  const copyNextEvidence = event.target.closest("[data-home-copy-next-evidence]");
   const refresh = event.target.closest("[data-home-refresh-progress]");
   const downloadOperatorGuide = event.target.closest("[data-home-download-operator-guide]");
   const downloadCompletion = event.target.closest("[data-home-download-completion]");
@@ -6977,9 +6996,33 @@ document.getElementById("home-progress-card")?.addEventListener("click", async (
   const downloadServiceRolePack = event.target.closest("[data-home-download-service-role-pack]");
   const runServiceRoleSmoke = event.target.closest("[data-home-run-service-role-smoke]");
   const openSupabaseApi = event.target.closest("[data-home-open-supabase-api]");
-  if (!openNext && !refresh && !downloadOperatorGuide && !downloadCompletion && !downloadUnblock && !downloadDeployment && !copyServiceRoleCommand && !downloadServiceRolePack && !runServiceRoleSmoke && !openSupabaseApi) return;
+  if (!openNext && !downloadNextPack && !copyNextEvidence && !refresh && !downloadOperatorGuide && !downloadCompletion && !downloadUnblock && !downloadDeployment && !copyServiceRoleCommand && !downloadServiceRolePack && !runServiceRoleSmoke && !openSupabaseApi) return;
   if (openNext) {
     showScreen(openNext.dataset.homeOpenNext || "dashboard");
+    return;
+  }
+  if (downloadNextPack) {
+    const path = downloadNextPack.dataset.homeDownloadNextPack;
+    const filename = downloadFilenameFromPath(path, "drec-next-step-pack.md");
+    const container = document.getElementById("home-progress-content");
+    try {
+      await downloadProtectedFile(path, filename, guessMimeType(filename));
+      container?.insertAdjacentHTML("beforeend", "<p class=\"status-note\">这一步资料已下载。</p>");
+    } catch (error) {
+      const note = error.message === "Access token required" ? translateText("Set the access token first.") : "无法下载这一步资料。";
+      container?.insertAdjacentHTML("beforeend", `<p class="status-note">${escapeHtml(note)}</p>`);
+    }
+    return;
+  }
+  if (copyNextEvidence) {
+    const container = document.getElementById("home-progress-content");
+    const text = decodeURIComponent(copyNextEvidence.dataset.homeCopyNextEvidence || "");
+    try {
+      await navigator.clipboard.writeText(text);
+      container?.insertAdjacentHTML("beforeend", "<p class=\"status-note\">通过标准已复制。</p>");
+    } catch {
+      container?.insertAdjacentHTML("beforeend", `<pre class="handoff-panel">${escapeHtml(text)}</pre><p class="status-note">浏览器阻止复制；通过标准已显示在这里。</p>`);
+    }
     return;
   }
   if (refresh) {
