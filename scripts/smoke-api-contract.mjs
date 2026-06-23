@@ -6381,6 +6381,21 @@ const requiredSnippets = [
     text: "data-home-prepare-record-published",
   },
   {
+    name: "web home handoff publish evidence template action",
+    file: "web",
+    text: "data-home-copy-publish-evidence",
+  },
+  {
+    name: "web home handoff publish evidence template helper",
+    file: "web",
+    text: "homeManualPublishEvidenceCsvText",
+  },
+  {
+    name: "web home handoff publish evidence requires publisher",
+    file: "web",
+    text: "published_by",
+  },
+  {
     name: "web home handoff prepare record button copy",
     file: "web",
     text: "发布后填 ID",

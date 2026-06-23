@@ -6247,6 +6247,7 @@ function renderHomePublishingCloseout(data) {
         <div class="home-handoff-actions">
           <button type="button" data-home-copy-handoff-full="${escapeHtml(nextReadyItem.id || "")}">1. 复制发布资料</button>
           <button class="secondary-action" type="button" data-home-prepare-record-published="${escapeHtml(nextReadyItem.id || "")}" ${homeCanRecordPublished(nextReadyItem) ? "" : "disabled"}>${escapeHtml(homeRecordButtonLabel(nextReadyItem))}</button>
+          <button type="button" data-home-copy-publish-evidence="${escapeHtml(nextReadyItem.id || "")}">复制发布证据模板</button>
         </div>
       </article>
     ` : scheduledReady > 0 ? `
@@ -6277,6 +6278,7 @@ function renderHomePublishingCloseout(data) {
               <div class="home-handoff-actions">
                 <button type="button" data-home-copy-handoff-full="${escapeHtml(item.id || "")}">1. 复制发布资料</button>
                 <button class="secondary-action" type="button" data-home-prepare-record-published="${escapeHtml(item.id || "")}" ${homeCanRecordPublished(item) ? "" : "disabled"}>${escapeHtml(homeRecordButtonLabel(item))}</button>
+                <button type="button" data-home-copy-publish-evidence="${escapeHtml(item.id || "")}">复制发布证据模板</button>
               </div>
               ${mediaUrls.length ? `
                 <details class="home-handoff-more">
@@ -6628,6 +6630,59 @@ function homeHandoffText(item) {
     "请把真实 Meta Post ID 填回系统。",
     `如果不是发布在 Meta，才使用人工标签：${manualLabel}`,
     "发布后 7 天请回填 Reach / Likes / Comments / Saves / Shares / Leads / Spend。",
+  ].join("\n");
+}
+
+function homeManualPublishEvidenceCsvText(item) {
+  const columns = [
+    "row_type",
+    "queue_id",
+    "asset_id",
+    "channel",
+    "format",
+    "planned_slot",
+    "planned_slot_myt",
+    "publish_window_status",
+    "publish_timing_label",
+    "manual_label_suggestion",
+    "caption_preview",
+    "media_urls",
+    "pre_publish_checklist",
+    "handoff_blockers",
+    "real_meta_post_id",
+    "posted_url",
+    "posted_at",
+    "published_by",
+    "recorded_in_drec",
+    "metrics_due_date",
+    "notes",
+  ];
+  const row = {
+    row_type: "ready_to_publish",
+    queue_id: item.id || "",
+    asset_id: item.asset_id || "",
+    channel: item.channel || "",
+    format: item.format || "",
+    planned_slot: item.planned_slot || "",
+    planned_slot_myt: item.planned_slot_myt || "",
+    publish_window_status: item.publish_window_status || "",
+    publish_timing_label: homePublishTimingLabel(item),
+    manual_label_suggestion: item.manual_label_suggestion || "",
+    caption_preview: item.caption || "",
+    media_urls: (item.media_urls || []).filter(Boolean).join(" | "),
+    pre_publish_checklist: "doctor/human approved; safety clear; media opens; caption matches plan; publish manually only",
+    handoff_blockers: "",
+    real_meta_post_id: "PASTE_REAL_META_POST_ID_HERE",
+    posted_url: "",
+    posted_at: "YYYY-MM-DD HH:MM",
+    published_by: "NAME_OF_PERSON_WHO_PUBLISHED",
+    recorded_in_drec: "no",
+    metrics_due_date: item.metrics_due_date || "发布后 7 天",
+    notes: "After real manual publishing, replace placeholders, preview this CSV, then import. Do not mark recorded_in_drec=yes until DREC shows the item as published.",
+  };
+  return [
+    columns.join(","),
+    columns.map((column) => csvCell(row[column] || "")).join(","),
   ].join("\n");
 }
 
@@ -7997,6 +8052,7 @@ document.getElementById("home-publish-closeout-status")?.addEventListener("click
   const metricsButton = event.target.closest("[data-home-prepare-metrics]");
   const recordButton = event.target.closest("[data-home-prepare-record-published]");
   const fullButton = event.target.closest("[data-home-copy-handoff-full]");
+  const publishEvidenceButton = event.target.closest("[data-home-copy-publish-evidence]");
   const captionButton = event.target.closest("[data-home-copy-handoff-caption]");
   const mediaButton = event.target.closest("[data-home-copy-handoff-media]");
   const mediaRepairButton = event.target.closest("[data-home-copy-media-repair]");
@@ -8007,7 +8063,7 @@ document.getElementById("home-publish-closeout-status")?.addEventListener("click
   const downloadReelProductionPackButton = event.target.closest("[data-home-download-reel-production-pack]");
   const downloadMediaRepairPackButton = event.target.closest("[data-home-download-media-repair-pack]");
   const openMediaWorkbenchButton = event.target.closest("[data-home-open-media-workbench]");
-  if (!metricsButton && !recordButton && !fullButton && !captionButton && !mediaButton && !mediaRepairButton && !mediaBriefButton && !useDraftReelUrlButton && !previewMediaRepairButton && !importMediaRepairButton && !downloadReelProductionPackButton && !downloadMediaRepairPackButton && !openMediaWorkbenchButton) return;
+  if (!metricsButton && !recordButton && !fullButton && !publishEvidenceButton && !captionButton && !mediaButton && !mediaRepairButton && !mediaBriefButton && !useDraftReelUrlButton && !previewMediaRepairButton && !importMediaRepairButton && !downloadReelProductionPackButton && !downloadMediaRepairPackButton && !openMediaWorkbenchButton) return;
   const message = document.getElementById("home-publish-closeout-message");
   if (useDraftReelUrlButton) {
     const container = document.getElementById("home-publish-closeout-status");
@@ -8117,6 +8173,7 @@ document.getElementById("home-publish-closeout-status")?.addEventListener("click
   }
   const itemId = recordButton?.dataset.homePrepareRecordPublished
     || fullButton?.dataset.homeCopyHandoffFull
+    || publishEvidenceButton?.dataset.homeCopyPublishEvidence
     || captionButton?.dataset.homeCopyHandoffCaption
     || mediaButton?.dataset.homeCopyHandoffMedia
     || "";
@@ -8149,6 +8206,15 @@ document.getElementById("home-publish-closeout-status")?.addEventListener("click
       hint.textContent = `建议人工标签：${suggestedLabel}。数据回填建议：${dueDate}。优先填真实 Meta Post ID；如果不是 Meta 发布，才使用人工标签。`;
     }
     if (message) message.textContent = "已选中这条内容。人工发布完成后，把真实 Meta Post ID 填进来，再按“保存记录（不会发布）”。";
+    return;
+  }
+  if (publishEvidenceButton) {
+    try {
+      await navigator.clipboard.writeText(homeManualPublishEvidenceCsvText(item));
+      if (message) message.textContent = "发布证据 CSV 模板已复制。真人发布后替换 Meta ID/链接、posted_at、published_by，再先预览后导入；不会发布。";
+    } catch {
+      if (message) message.textContent = "浏览器挡住了复制。请下载“发布证据表”填写完整发布记录。";
+    }
     return;
   }
   const text = fullButton
