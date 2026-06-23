@@ -27085,7 +27085,9 @@ def reel_draft_mp4_bytes(item: dict):
         frame_paths = []
         for index, line in enumerate(lines, start=1):
             frame_path = temp_path / f"frame-{index:02d}.png"
-            frame_path.write_bytes(reel_storyboard_frame_png(item, line, index, total))
+            frame = Image.open(BytesIO(reel_storyboard_frame_png(item, line, index, total))).convert("RGB")
+            frame = frame.resize((720, 1280), Image.Resampling.LANCZOS)
+            frame.save(frame_path, format="PNG", optimize=True)
             frame_paths.append(frame_path)
         concat_path = temp_path / "frames.txt"
         concat_lines = []
@@ -27109,8 +27111,16 @@ def reel_draft_mp4_bytes(item: dict):
             str(concat_path),
             "-c:v",
             "libx264",
+            "-preset",
+            "ultrafast",
+            "-crf",
+            "30",
+            "-threads",
+            "1",
             "-vf",
-            "fps=30,format=yuv420p",
+            "fps=12,format=yuv420p",
+            "-x264-params",
+            "rc-lookahead=0:bframes=0:ref=1",
             "-movflags",
             "+faststart",
             str(output_path),
