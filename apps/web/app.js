@@ -2683,18 +2683,23 @@ async function loadProjectCompletionAudit() {
   const card = document.getElementById("home-progress-card");
   const container = document.getElementById("home-progress-content");
   try {
-    const [auditResult, unblockResult] = await Promise.allSettled([
-      fetchJson("/operations/project-completion-audit"),
-      fetchJson("/operations/project-unblock-board"),
-    ]);
-    if (auditResult.status !== "fulfilled") throw auditResult.reason;
-    const data = auditResult.value;
-    if (unblockResult.status === "fulfilled") data.unblock = unblockResult.value;
-    renderHomeProjectCompletion(data);
-  } catch (error) {
-    if (card && container) {
-      card.hidden = false;
-      container.innerHTML = `<p class="status-note">${escapeHtml(error.message === "Access token required" ? translateText("Set the access token first.") : "无法读取项目进度。")}</p>`;
+    const fastData = await fetchJson("/operations/project-completion-summary");
+    renderHomeProjectCompletion(fastData);
+  } catch (fastError) {
+    try {
+      const [auditResult, unblockResult] = await Promise.allSettled([
+        fetchJson("/operations/project-completion-audit"),
+        fetchJson("/operations/project-unblock-board"),
+      ]);
+      if (auditResult.status !== "fulfilled") throw auditResult.reason;
+      const data = auditResult.value;
+      if (unblockResult.status === "fulfilled") data.unblock = unblockResult.value;
+      renderHomeProjectCompletion(data);
+    } catch (error) {
+      if (card && container) {
+        card.hidden = false;
+        container.innerHTML = `<p class="status-note">${escapeHtml((error.message === "Access token required" || fastError.message === "Access token required") ? translateText("Set the access token first.") : "无法读取项目进度。")}</p>`;
+      }
     }
   }
 }

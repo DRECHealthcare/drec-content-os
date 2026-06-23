@@ -75,6 +75,7 @@ const requiredRoutes = [
   "GET /operations/cycle-command-center.md",
   "GET /operations/today-next-action",
   "GET /operations/today-next-action.zh.md",
+  "GET /operations/project-completion-summary",
   "GET /operations/cycle-evidence-ledger.csv",
   "GET /operations/external-setup-board",
   "GET /operations/external-setup-board.csv",
@@ -918,6 +919,26 @@ const requiredSnippets = [
     name: "project completion watch heartbeat route",
     file: "main",
     text: "operations_project_completion_watch_heartbeat",
+  },
+  {
+    name: "project completion fast summary payload",
+    file: "main",
+    text: "project_completion_summary_payload",
+  },
+  {
+    name: "project completion fast summary route",
+    file: "main",
+    text: "operations_project_completion_summary",
+  },
+  {
+    name: "project completion fast summary safety",
+    file: "main",
+    text: "Fast homepage summary only; use the full completion audit download for detailed evidence.",
+  },
+  {
+    name: "web home progress fast summary endpoint",
+    file: "web",
+    text: "/operations/project-completion-summary",
   },
   {
     name: "workflow scheduled queue summary",

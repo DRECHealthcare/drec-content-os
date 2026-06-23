@@ -28632,6 +28632,28 @@ async def today_project_completion_payload():
     return payload
 
 
+async def project_completion_summary_payload():
+    payload = await today_project_completion_payload()
+    unblock = project_unblock_board_from_audit(payload)
+    payload.update(
+        {
+            "mode": "read_only_project_completion_summary",
+            "summary_type": "fast_homepage_summary",
+            "unblock": unblock,
+            "links": {
+                **(payload.get("links") or {}),
+                "project_completion_summary": "/operations/project-completion-summary",
+                "project_unblock_board": "/operations/project-unblock-board.zh.md",
+            },
+            "safety": [
+                "Fast homepage summary only; use the full completion audit download for detailed evidence.",
+                "It does not approve, import, queue, schedule, publish, store secrets, update Notion, or call Meta.",
+            ],
+        }
+    )
+    return payload
+
+
 async def today_cycle_command_payload():
     loop = await build_loop_status()
     workflow = build_workflow_guidance(loop)
@@ -29431,6 +29453,11 @@ async def workflow_status(_: None = Depends(require_access_token)):
 @app.get("/operations/project-completion-audit")
 async def operations_project_completion_audit(_: None = Depends(require_access_token)):
     return await project_completion_audit_payload()
+
+
+@app.get("/operations/project-completion-summary")
+async def operations_project_completion_summary(_: None = Depends(require_access_token)):
+    return await project_completion_summary_payload()
 
 
 @app.get("/operations/project-completion-audit.csv")
