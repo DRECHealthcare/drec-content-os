@@ -219,6 +219,7 @@ const requiredRoutes = [
   "GET /briefs/asset-pack.md",
   "GET /creative/style-library",
   "GET /creative/carousel-design-spec",
+  "GET /creative/carousel-design-qa.zh.md",
   "GET /creative/style-guide.md",
   "GET /templates/library",
   "GET /templates/static-render-pack.md",
@@ -4453,6 +4454,21 @@ const requiredSnippets = [
     name: "web creative style guide endpoint",
     file: "web",
     text: "/creative/style-guide.md",
+  },
+  {
+    name: "web carousel design qa button",
+    file: "webIndex",
+    text: "data-download-carousel-design-qa",
+  },
+  {
+    name: "web carousel design qa endpoint",
+    file: "web",
+    text: "/creative/carousel-design-qa.zh.md",
+  },
+  {
+    name: "web carousel design qa filename",
+    file: "web",
+    text: "dr-chang-carousel-design-qa.zh.md",
   },
   {
     name: "template studio library route",

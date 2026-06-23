@@ -9284,6 +9284,20 @@ document.getElementById("download-static-render-pack")?.addEventListener("click"
   }
 });
 
+document.querySelectorAll("[data-download-carousel-design-qa]").forEach((button) => {
+  button.addEventListener("click", async () => {
+    const message = button.closest("#templates")
+      ? document.getElementById("template-message")
+      : document.getElementById("creative-message");
+    try {
+      await downloadProtectedFile("/creative/carousel-design-qa.zh.md", "dr-chang-carousel-design-qa.zh.md", "text/markdown");
+      if (message) message.textContent = "轮播设计清单已下载：包含 logo、医生照片、封面/内容页和 QA 规则。";
+    } catch (error) {
+      if (message) message.textContent = error.message === "Access token required" ? "请先设置访问码。" : "无法下载轮播设计清单。";
+    }
+  });
+});
+
 document.getElementById("refresh-video-studio")?.addEventListener("click", async () => {
   const button = document.getElementById("refresh-video-studio");
   button.disabled = true;
