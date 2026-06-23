@@ -6310,9 +6310,34 @@ const requiredSnippets = [
     text: "现在先补媒体",
   },
   {
-    name: "web home blocked media primary CTA",
+    name: "web home blocked media primary preview CTA",
     file: "web",
-    text: "1. 复制补媒体行",
+    text: "1. 检查媒体",
+  },
+  {
+    name: "web home blocked media primary import CTA",
+    file: "web",
+    text: "2. 保存媒体证据",
+  },
+  {
+    name: "web home blocked media direct input",
+    file: "web",
+    text: "data-home-media-repair-url",
+  },
+  {
+    name: "web home blocked media preview action",
+    file: "web",
+    text: "data-home-preview-media-repair",
+  },
+  {
+    name: "web home blocked media import action",
+    file: "web",
+    text: "data-home-import-media-repair",
+  },
+  {
+    name: "web home blocked media no publish copy",
+    file: "web",
+    text: "这里只补资料，不会发布 Facebook/IG",
   },
   {
     name: "web home blocked media copy action",
@@ -6333,6 +6358,11 @@ const requiredSnippets = [
     name: "web home blocked media primary styles",
     file: "styles",
     text: ".home-media-repair-feature",
+  },
+  {
+    name: "web home blocked media controls styles",
+    file: "styles",
+    text: ".home-media-repair-controls",
   },
   {
     name: "api blocked media repair context",

@@ -6135,11 +6135,18 @@ function renderHomePublishingCloseout(data) {
           <small>Queue ID: ${escapeHtml(firstBlockedMedia.id || "")}</small>
           <small>Asset ID: ${escapeHtml(firstBlockedMedia.asset_id || "未知")}</small>
           <small>需要补：${escapeHtml((firstBlockedMedia.media_repair || {}).required_media || homeRequiredMediaText(firstBlockedMedia))}</small>
-          <p>复制媒体补充行，把 placeholder 换成最终公开媒体 URL；先预览，再导入。这里不会发布 Facebook/IG。</p>
+          <p>粘贴最终公开图片/视频链接；先检查，再保存媒体证据。这里只补资料，不会发布 Facebook/IG。</p>
         </div>
-        <div class="home-handoff-actions">
-          <button type="button" data-home-copy-media-repair="${escapeHtml(firstBlockedMedia.id || "")}">1. 复制补媒体行</button>
-          <button class="secondary-action" type="button" data-home-open-media-workbench>2. 打开导入位置</button>
+        <div class="home-media-repair-controls">
+          <label>
+            <span>公开媒体 URL</span>
+            <textarea data-home-media-repair-url="${escapeHtml(firstBlockedMedia.id || "")}" rows="2" placeholder="${escapeHtml(homeRequiredMediaText(firstBlockedMedia))}；多张图可每行一个或用逗号分开"></textarea>
+          </label>
+          <div class="home-handoff-actions">
+            <button type="button" data-home-preview-media-repair="${escapeHtml(firstBlockedMedia.id || "")}">1. 检查媒体</button>
+            <button class="secondary-action" type="button" data-home-import-media-repair="${escapeHtml(firstBlockedMedia.id || "")}" disabled>2. 保存媒体证据</button>
+          </div>
+          <button class="quiet-action" type="button" data-home-copy-media-repair="${escapeHtml(firstBlockedMedia.id || "")}">复制 CSV 行</button>
         </div>
       </article>
     ` : ""}
@@ -6314,7 +6321,7 @@ function csvCell(value) {
   return text;
 }
 
-function homeMediaRepairCsvText(item) {
+function homeMediaRepairCsvText(item, mediaUrls = "") {
   const repair = item.media_repair || {};
   const row = repair.csv_row || {
     asset_id: item.asset_id || "",
@@ -6324,11 +6331,102 @@ function homeMediaRepairCsvText(item) {
     producer_name: "",
     production_notes: `Media repair for scheduled queue item ${item.id || ""}. Replace placeholder URL(s) before import.`,
   };
+  const resolvedRow = {
+    ...row,
+    new_media_urls: mediaUrls || row.new_media_urls || "",
+  };
   const columns = repair.csv_columns || ["asset_id", "new_media_urls", "visual_qa_status", "rights_note", "producer_name", "production_notes"];
   return [
     columns.join(","),
-    columns.map((column) => csvCell(row[column] || "")).join(","),
+    columns.map((column) => csvCell(resolvedRow[column] || "")).join(","),
   ].join("\n");
+}
+
+function homeMediaRepairInputValue(itemId) {
+  const inputs = [...document.querySelectorAll("[data-home-media-repair-url]")];
+  const input = inputs.find((node) => node.dataset.homeMediaRepairUrl === itemId);
+  return input?.value?.trim() || "";
+}
+
+function homeMediaRepairUrlsAreValid(text) {
+  const urls = text
+    .split(/[\n,]+/)
+    .map((value) => value.trim())
+    .filter(Boolean);
+  if (!urls.length) return false;
+  return urls.every((url) => {
+    try {
+      const parsed = new URL(url);
+      return ["http:", "https:"].includes(parsed.protocol) && !url.includes("PASTE_PUBLIC_");
+    } catch {
+      return false;
+    }
+  });
+}
+
+function homeSetMediaRepairImportReady(itemId, ready) {
+  const container = document.getElementById("home-publish-closeout-status");
+  if (container) {
+    container.dataset.mediaRepairPreviewReady = ready ? itemId : "";
+  }
+  const buttons = [...document.querySelectorAll("[data-home-import-media-repair]")];
+  buttons.forEach((button) => {
+    button.disabled = !ready || button.dataset.homeImportMediaRepair !== itemId;
+  });
+}
+
+async function homeUploadMediaRepair(item, { dryRun, button }) {
+  const message = document.getElementById("home-publish-closeout-message");
+  const mediaUrls = homeMediaRepairInputValue(item.id || "");
+  if (!homeMediaRepairUrlsAreValid(mediaUrls)) {
+    homeSetMediaRepairImportReady(item.id || "", false);
+    if (message) message.textContent = "请先粘贴公开的 http/https 媒体链接；Reel 用 MP4/MOV 链接，Carousel 可放多张图片链接。";
+    return null;
+  }
+  const container = document.getElementById("home-publish-closeout-status");
+  if (!dryRun && container?.dataset.mediaRepairPreviewReady !== (item.id || "")) {
+    if (message) message.textContent = "先按“检查媒体”，检查通过后再保存媒体证据。这里不会发布。";
+    return null;
+  }
+  const body = new FormData();
+  body.append("file", new Blob([homeMediaRepairCsvText(item, mediaUrls)], { type: "text/csv" }), "home-media-repair.csv");
+  body.append("dry_run", dryRun ? "true" : "false");
+  if (button) button.disabled = true;
+  if (message) message.textContent = dryRun ? "正在检查媒体链接；不会发布..." : "正在保存媒体证据；不会发布...";
+  try {
+    const data = await fetchForm("/operations/import-asset-media-attachments", body);
+    const readyRows = (data.planned || data.imported || []).length;
+    const skippedRows = (data.skipped || []).length;
+    if (dryRun) {
+      const ready = readyRows > 0 && skippedRows === 0;
+      homeSetMediaRepairImportReady(item.id || "", ready);
+      if (message) message.textContent = ready
+        ? "检查通过。现在可以按“保存媒体证据”；仍然不会发布。"
+        : "检查没有通过，请确认链接是公开可访问的最终媒体 URL。";
+    } else {
+      homeSetMediaRepairImportReady(item.id || "", false);
+      if (message) message.textContent = `媒体证据已保存（${readyRows} 行）。接下来系统会重新检查是否可交接；不会发布。`;
+      await Promise.all([
+        loadAssets(),
+        loadPublishQueue(),
+        loadPublishingCloseout(),
+        loadHomePublishingCloseout(),
+        loadLoopStatus(),
+        loadProjectCompletionAudit(),
+      ]);
+    }
+    return data;
+  } catch (error) {
+    homeSetMediaRepairImportReady(item.id || "", false);
+    if (message) message.textContent = error.message === "Access token required"
+      ? "请先输入访问码。"
+      : dryRun
+        ? "媒体检查失败，请确认链接公开可访问。"
+        : "保存媒体证据失败，请稍后再试。";
+    return null;
+  } finally {
+    if (button && dryRun) button.disabled = false;
+  }
 }
 
 function homeMetricsPayload(item) {
@@ -7724,9 +7822,26 @@ document.getElementById("home-publish-closeout-status")?.addEventListener("click
   const captionButton = event.target.closest("[data-home-copy-handoff-caption]");
   const mediaButton = event.target.closest("[data-home-copy-handoff-media]");
   const mediaRepairButton = event.target.closest("[data-home-copy-media-repair]");
+  const previewMediaRepairButton = event.target.closest("[data-home-preview-media-repair]");
+  const importMediaRepairButton = event.target.closest("[data-home-import-media-repair]");
   const openMediaWorkbenchButton = event.target.closest("[data-home-open-media-workbench]");
-  if (!metricsButton && !recordButton && !fullButton && !captionButton && !mediaButton && !mediaRepairButton && !openMediaWorkbenchButton) return;
+  if (!metricsButton && !recordButton && !fullButton && !captionButton && !mediaButton && !mediaRepairButton && !previewMediaRepairButton && !importMediaRepairButton && !openMediaWorkbenchButton) return;
   const message = document.getElementById("home-publish-closeout-message");
+  if (previewMediaRepairButton || importMediaRepairButton) {
+    const container = document.getElementById("home-publish-closeout-status");
+    const blockedItems = JSON.parse(container?.dataset.blockedItems || "[]");
+    const itemId = previewMediaRepairButton?.dataset.homePreviewMediaRepair || importMediaRepairButton?.dataset.homeImportMediaRepair || "";
+    const item = blockedItems.find((row) => row.id === itemId);
+    if (!item) {
+      if (message) message.textContent = "找不到这条 blocked 项目，请刷新。";
+      return;
+    }
+    await homeUploadMediaRepair(item, {
+      dryRun: Boolean(previewMediaRepairButton),
+      button: previewMediaRepairButton || importMediaRepairButton,
+    });
+    return;
+  }
   if (openMediaWorkbenchButton) {
     showScreen("assets");
     if (message) message.textContent = "已打开月度工作台。使用媒体附件 CSV：下载模板、填公开媒体 URL、先预览、再导入。";
@@ -7742,7 +7857,7 @@ document.getElementById("home-publish-closeout-status")?.addEventListener("click
     }
     try {
       await navigator.clipboard.writeText(homeMediaRepairCsvText(item));
-      if (message) message.textContent = "媒体补充 CSV 行已复制。把 placeholder 换成最终公开媒体 URL 后，去月度工作台预览并导入。";
+      if (message) message.textContent = "媒体补充 CSV 行已复制。也可以直接在上方粘贴媒体 URL，先检查，再保存媒体证据。";
     } catch {
       if (message) message.textContent = "浏览器挡住了复制。请打开月度工作台下载媒体附件 CSV。";
     }
@@ -7813,6 +7928,12 @@ document.getElementById("home-publish-closeout-status")?.addEventListener("click
   } catch {
     if (message) message.textContent = "浏览器挡住了复制，请下载安全包后手动复制。";
   }
+});
+
+document.getElementById("home-publish-closeout-status")?.addEventListener("input", (event) => {
+  const input = event.target.closest("[data-home-media-repair-url]");
+  if (!input) return;
+  homeSetMediaRepairImportReady(input.dataset.homeMediaRepairUrl || "", false);
 });
 
 async function downloadHomeLearningHandback(path, filename, mediaType, doneMessage) {

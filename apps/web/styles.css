@@ -1359,6 +1359,44 @@ header span { color: var(--muted); font-size: 12px; }
   color: var(--ink);
 }
 
+.home-media-repair-controls {
+  display: grid;
+  gap: 8px;
+  width: min(360px, 38vw);
+}
+
+.home-media-repair-controls label {
+  display: grid;
+  gap: 5px;
+}
+
+.home-media-repair-controls textarea {
+  width: 100%;
+  min-height: 62px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 10px;
+  font: inherit;
+  color: var(--ink);
+  background: #FFFFFF;
+}
+
+.home-media-repair-controls textarea:focus {
+  outline: 2px solid rgba(45, 212, 191, 0.32);
+  border-color: var(--teal);
+}
+
+.home-media-repair-controls .quiet-action {
+  justify-self: start;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--muted);
+  text-decoration: underline;
+  box-shadow: none;
+}
+
 .home-queue-id {
   display: inline-block;
   margin-top: 6px;
@@ -2752,6 +2790,7 @@ button[type="submit"] {
   .home-stage-guide,
   .home-handoff-feature,
   .home-media-repair-feature { grid-template-columns: 1fr; }
+  .home-media-repair-controls { width: 100%; }
   .home-handoff-feature .home-handoff-actions button,
   .home-media-repair-feature .home-handoff-actions button,
   .home-handoff-item .home-handoff-actions button { width: 100%; }
